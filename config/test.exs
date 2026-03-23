@@ -1,4 +1,8 @@
 import Config
+config :gnome_hub, Oban, testing: :manual
+config :gnome_hub, token_signing_secret: "0yKs9QpG/aUKOWcHig5mxRkK+spiI4IB"
+config :bcrypt_elixir, log_rounds: 1
+config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 
 # Configure your database
 #
@@ -9,6 +13,7 @@ config :gnome_hub, GnomeHub.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
+  port: 5434,
   database: "gnome_hub_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2

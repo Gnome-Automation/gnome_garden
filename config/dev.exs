@@ -1,10 +1,12 @@
 import Config
+config :ash, policies: [show_policy_breakdowns?: true]
 
 # Configure your database
 config :gnome_hub, GnomeHub.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
+  port: 5434,
   database: "gnome_hub_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
@@ -68,7 +70,7 @@ config :gnome_hub, GnomeHubWeb.Endpoint,
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :gnome_hub, dev_routes: true
+config :gnome_hub, dev_routes: true, token_signing_secret: "khxr4f86E//4bLKdD17Hvx9UnUil3B8U"
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

@@ -7,9 +7,163 @@
 # General application configuration
 import Config
 
+config :ex_cldr, default_backend: GnomeHub.Cldr
+config :ash_oban, pro?: false
+
+# Register Z.AI (Zhipu AI) models in LLMDB catalog
+config :llm_db,
+  custom: %{
+    zai: [
+      name: "Z.AI (Zhipu)",
+      models: %{
+        "glm-5" => %{
+          name: "GLM-5",
+          capabilities: %{
+            chat: true,
+            tools: %{enabled: true, streaming: true, strict: false, parallel: true},
+            streaming: %{text: true, tool_calls: true}
+          },
+          limits: %{context_window: 200_000, max_output_tokens: 16384}
+        },
+        "glm-5-turbo" => %{
+          name: "GLM-5 Turbo",
+          capabilities: %{
+            chat: true,
+            tools: %{enabled: true, streaming: true, strict: false, parallel: true},
+            streaming: %{text: true, tool_calls: true}
+          },
+          limits: %{context_window: 200_000, max_output_tokens: 16384}
+        },
+        "glm-4.7" => %{
+          name: "GLM-4.7",
+          capabilities: %{
+            chat: true,
+            tools: %{enabled: true, streaming: true, strict: false, parallel: true},
+            streaming: %{text: true, tool_calls: true}
+          },
+          limits: %{context_window: 200_000, max_output_tokens: 8192}
+        },
+        "glm-4.7-flash" => %{
+          name: "GLM-4.7 Flash",
+          capabilities: %{
+            chat: true,
+            tools: %{enabled: true, streaming: false, strict: false, parallel: false},
+            streaming: %{text: true, tool_calls: false}
+          },
+          limits: %{context_window: 128_000, max_output_tokens: 8192}
+        },
+        "glm-4.6" => %{
+          name: "GLM-4.6",
+          capabilities: %{
+            chat: true,
+            tools: %{enabled: true, streaming: true, strict: false, parallel: true},
+            streaming: %{text: true, tool_calls: true}
+          },
+          limits: %{context_window: 200_000, max_output_tokens: 8192}
+        },
+        "glm-4.5v" => %{
+          name: "GLM-4.5 Vision",
+          capabilities: %{
+            chat: true,
+            vision: true,
+            tools: %{enabled: true, streaming: false, strict: false, parallel: false},
+            streaming: %{text: true, tool_calls: false}
+          },
+          limits: %{context_window: 128_000, max_output_tokens: 4096}
+        },
+        "glm-4.5-air" => %{
+          name: "GLM-4.5 Air",
+          capabilities: %{
+            chat: true,
+            tools: %{enabled: true, streaming: false, strict: false, parallel: false},
+            streaming: %{text: true, tool_calls: false}
+          },
+          limits: %{context_window: 128_000, max_output_tokens: 4096}
+        }
+      }
+    ]
+  }
+
+# Register Z.AI as a custom ReqLLM provider
+config :req_llm,
+  custom_providers: [GnomeHub.Providers.Zai]
+
+# Jido AI model aliases - using Z.AI GLM models via Coding Plan
+# Using zai_coding_plan provider for coding plan API key
+config :jido_ai,
+  model_aliases: %{
+    fast: "zai_coding_plan:glm-4.5-air",
+    capable: "zai_coding_plan:glm-4.7",
+    powerful: "zai_coding_plan:glm-5",
+    coding: "zai_coding_plan:glm-4.7"
+  }
+
+config :jido_ai,
+  llm_defaults: %{
+    text: %{model: :fast, temperature: 0.2, max_tokens: 8192, timeout: 120_000},
+    stream: %{model: :fast, temperature: 0.2, max_tokens: 8192, timeout: 120_000}
+  }
+
+config :gnome_hub, Oban,
+  engine: Oban.Engines.Basic,
+  notifier: Oban.Notifiers.Postgres,
+  queues: [default: 10],
+  repo: GnomeHub.Repo,
+  plugins: [{Oban.Plugins.Cron, []}]
+
+config :ash,
+  allow_forbidden_field_for_relationships_by_default?: true,
+  include_embedded_source_by_default?: false,
+  show_keysets_for_all_actions?: false,
+  default_page_type: :keyset,
+  policies: [no_filter_static_forbidden_reads?: false],
+  keep_read_action_loads_when_loading?: false,
+  default_actions_require_atomic?: true,
+  read_action_after_action_hooks_in_order?: true,
+  bulk_actions_default_to_errors?: true,
+  transaction_rollback_on_error?: true,
+  redact_sensitive_values_in_errors?: true,
+  known_types: [AshPostgres.Timestamptz, AshPostgres.TimestamptzUsec, AshMoney.Types.Money],
+  custom_types: [money: AshMoney.Types.Money]
+
+config :spark,
+  formatter: [
+    remove_parens?: true,
+    "Ash.Resource": [
+      section_order: [
+        :admin,
+        :authentication,
+        :token,
+        :user_identity,
+        :postgres,
+        :resource,
+        :jido,
+        :state_machine,
+        :code_interface,
+        :actions,
+        :policies,
+        :pub_sub,
+        :preparations,
+        :changes,
+        :validations,
+        :multitenancy,
+        :attributes,
+        :relationships,
+        :calculations,
+        :aggregates,
+        :identities
+      ]
+    ],
+    "Ash.Domain": [
+      section_order: [:admin, :resources, :policies, :authorization, :domain, :execution]
+    ]
+  ]
+
 config :gnome_hub,
   ecto_repos: [GnomeHub.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  ash_domains: [GnomeHub.Accounts, GnomeHub.Agents],
+  ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 
 # Configure the endpoint
 config :gnome_hub, GnomeHubWeb.Endpoint,

@@ -1,48 +1,805 @@
-This is a web application written using the Phoenix web framework.
+# GnomeHub Agent Guidelines
 
-## Project guidelines
+This is a Phoenix + Ash + Jido application. Follow these guidelines strictly.
 
-- Use `mix precommit` alias when you are done with all changes and fix any pending issues
-- Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
+## Critical: Documentation Lookup
 
-### Phoenix v1.8 guidelines
+**Always search docs before implementing.** Use these mix tasks:
 
-- **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content
-- The `MyAppWeb.Layouts` module is aliased in the `my_app_web.ex` file, so you can use it without needing to alias it again
-- Anytime you run into errors with no `current_scope` assign:
-  - You failed to follow the Authenticated Routes guidelines, or you failed to pass `current_scope` to `<Layouts.app>`
-  - **Always** fix the `current_scope` error by moving your routes to the proper `live_session` and ensure you pass `current_scope` as needed
-- Phoenix v1.8 moved the `<.flash_group>` component to the `Layouts` module. You are **forbidden** from calling `<.flash_group>` outside of the `layouts.ex` module
-- Out of the box, `core_components.ex` imports an `<.icon name="hero-x-mark" class="w-5 h-5"/>` component for hero icons. **Always** use the `<.icon>` component for icons, **never** use `Heroicons` modules or similar
-- **Always** use the imported `<.input>` component for form inputs from `core_components.ex` when available. `<.input>` is imported and using it will save steps and prevent errors
-- If you override the default input classes (`<.input class="myclass px-2 py-1 rounded-lg">)`) class with your own values, no default classes are inherited, so your
-custom classes must fully style the input
+```bash
+# Get docs for a module or function
+mix usage_rules.docs Ash.Resource
+mix usage_rules.docs Ash.Changeset.for_create/4
 
-### JS and CSS guidelines
+# Search across all package docs
+mix usage_rules.search_docs "code interface"
+mix usage_rules.search_docs "belongs_to" -p ash
+```
 
-- **Use Tailwind CSS classes and custom CSS rules** to create polished, responsive, and visually stunning interfaces.
-- Tailwindcss v4 **no longer needs a tailwind.config.js** and uses a new import syntax in `app.css`:
+## Ash Framework Guidelines
 
-      @import "tailwindcss" source(none);
-      @source "../css";
-      @source "../js";
-      @source "../../lib/my_app_web";
+### Resource Structure
 
-- **Always use and maintain this import syntax** in the app.css file for projects generated with `phx.new`
-- **Never** use `@apply` when writing raw css
-- **Always** manually write your own tailwind-based components instead of using daisyUI for a unique, world-class design
-- Out of the box **only the app.js and app.css bundles are supported**
-  - You cannot reference an external vendor'd script `src` or link `href` in the layouts
-  - You must import the vendor deps into app.js and app.css to use them
-  - **Never write inline <script>custom js</script> tags within templates**
+Resources are the core abstraction. Always structure them as:
 
-### UI/UX & design guidelines
+```elixir
+defmodule GnomeHub.MyDomain.MyResource do
+  use Ash.Resource,
+    otp_app: :gnome_hub,
+    domain: GnomeHub.MyDomain,
+    data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: []  # Add extensions here: AshStateMachine, AshOban, etc.
 
-- **Produce world-class UI designs** with a focus on usability, aesthetics, and modern design principles
-- Implement **subtle micro-interactions** (e.g., button hover effects, and smooth transitions)
-- Ensure **clean typography, spacing, and layout balance** for a refined, premium look
-- Focus on **delightful details** like hover effects, loading states, and smooth page transitions
+  postgres do
+    table "my_resources"
+    repo GnomeHub.Repo
+  end
 
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+
+    # Custom actions go here
+  end
+
+  policies do
+    # Define authorization policies
+  end
+
+  attributes do
+    uuid_primary_key :id
+    # Define attributes
+  end
+
+  relationships do
+    # Define relationships
+  end
+
+  identities do
+    # Define unique constraints
+  end
+end
+```
+
+### Domain Structure with Code Interfaces
+
+Domains group resources and expose code interfaces. **Always define code interfaces for external use:**
+
+```elixir
+defmodule GnomeHub.MyDomain do
+  use Ash.Domain, otp_app: :gnome_hub, extensions: [AshAdmin.Domain]
+
+  admin do
+    show? true
+  end
+
+  resources do
+    resource GnomeHub.MyDomain.MyResource do
+      # Code interfaces - the idiomatic way to call actions
+      define :list_resources, action: :read
+      define :get_resource, action: :read, get_by: :id
+      define :get_resource_by_slug, action: :read, get_by: :slug
+      define :create_resource, action: :create
+      define :update_resource, action: :update
+      define :delete_resource, action: :destroy
+    end
+  end
+end
+```
+
+### Calling Actions - The Idiomatic Way
+
+**NEVER use raw Ecto. NEVER use Repo directly for Ash resources.**
+
+```elixir
+# WRONG - Don't do this
+GnomeHub.Repo.all(MyResource)
+GnomeHub.Repo.insert(%MyResource{name: "foo"})
+
+# CORRECT - Use code interfaces (preferred)
+GnomeHub.MyDomain.list_resources()
+GnomeHub.MyDomain.create_resource(%{name: "foo"})
+GnomeHub.MyDomain.get_resource(id)
+
+# CORRECT - Use Ash directly when code interface isn't defined
+Ash.read!(MyResource)
+Ash.create!(MyResource, %{name: "foo"})
+
+# With actor (current user) for authorization
+GnomeHub.MyDomain.list_resources(actor: current_user)
+Ash.read!(MyResource, actor: current_user)
+```
+
+### Action Patterns
+
+```elixir
+actions do
+  # Default CRUD - use :* to accept all public attributes
+  defaults [:read, :destroy, create: :*, update: :*]
+
+  # Custom read with arguments
+  read :search do
+    argument :query, :string, allow_nil?: false
+    filter expr(contains(name, ^arg(:query)))
+  end
+
+  # Read that returns single record
+  read :get_by_email do
+    get_by :email  # Returns {:ok, record} or {:error, :not_found}
+  end
+
+  # Create with custom logic
+  create :register do
+    accept [:email, :name]
+
+    change set_attribute(:status, :pending)
+    change {MyApp.Changes.SendWelcomeEmail, []}
+  end
+
+  # Update with state machine transition
+  update :publish do
+    require_atomic? false  # Required for complex changes
+    change transition_state(:published)
+  end
+
+  # Generic action (not tied to CRUD)
+  action :send_notification, :boolean do
+    argument :message, :string, allow_nil?: false
+    run fn input, _context ->
+      # Custom logic here
+      {:ok, true}
+    end
+  end
+end
+```
+
+### Relationships
+
+```elixir
+relationships do
+  belongs_to :user, GnomeHub.Accounts.User do
+    allow_nil? false
+  end
+
+  has_many :comments, GnomeHub.Content.Comment do
+    destination_attribute :post_id
+  end
+
+  many_to_many :tags, GnomeHub.Content.Tag do
+    through GnomeHub.Content.PostTag
+    source_attribute_on_join_resource :post_id
+    destination_attribute_on_join_resource :tag_id
+  end
+end
+```
+
+### Calculations and Aggregates
+
+```elixir
+calculations do
+  calculate :full_name, :string, expr(first_name <> " " <> last_name)
+
+  calculate :display_name, :string do
+    calculation fn records, _context ->
+      Enum.map(records, fn record ->
+        record.nickname || record.full_name
+      end)
+    end
+  end
+end
+
+aggregates do
+  count :comment_count, :comments
+  sum :total_amount, :line_items, :amount
+  first :latest_comment, :comments, :body do
+    sort inserted_at: :desc
+  end
+end
+```
+
+### Leverage Ash - Don't Write Custom Functions
+
+**Use Ash's declarative DSL instead of writing Elixir functions.** Ash provides:
+
+#### Changes (for create/update logic)
+```elixir
+# WRONG - Don't write a function
+def set_published_at(record) do
+  Map.put(record, :published_at, DateTime.utc_now())
+end
+
+# CORRECT - Use built-in changes
+create :publish do
+  change set_attribute(:published_at, &DateTime.utc_now/0)
+  change set_attribute(:status, :published)
+  change relate_actor(:published_by)  # Set relationship to current user
+  change {MyApp.Changes.NotifySubscribers, []}  # Custom change module when needed
+end
+```
+
+#### Preparations (for read query logic)
+```elixir
+# WRONG - Don't filter in your LiveView
+def mount(_, _, socket) do
+  posts = MyDomain.list_posts() |> Enum.filter(& &1.published)
+  ...
+end
+
+# CORRECT - Use preparations in the resource
+read :published do
+  filter expr(status == :published)
+  prepare build(sort: [inserted_at: :desc])
+  prepare build(load: [:author, :comment_count])
+end
+
+# Then just call:
+MyDomain.list_published_posts()
+```
+
+#### Calculations (for derived values)
+```elixir
+# WRONG - Don't compute in templates or LiveViews
+def full_name(user), do: "#{user.first_name} #{user.last_name}"
+
+# CORRECT - Define as calculation
+calculations do
+  calculate :full_name, :string, expr(first_name <> " " <> last_name)
+
+  calculate :initials, :string, expr(
+    fragment("substring(? from 1 for 1) || substring(? from 1 for 1)",
+             first_name, last_name)
+  )
+
+  # Complex calculation with module
+  calculate :avatar_url, :string, {MyApp.Calculations.AvatarUrl, []}
+end
+```
+
+#### Aggregates (for counts, sums, etc.)
+```elixir
+# WRONG - Don't count in code
+def comment_count(post) do
+  length(post.comments)
+end
+
+# CORRECT - Define as aggregate
+aggregates do
+  count :comment_count, :comments
+  count :published_comment_count, :comments do
+    filter expr(status == :published)
+  end
+  sum :total_revenue, :orders, :amount
+  first :latest_comment_body, :comments, :body do
+    sort inserted_at: :desc
+  end
+  list :tag_names, :tags, :name
+end
+```
+
+#### Validations (for data integrity)
+```elixir
+# WRONG - Don't validate in controller/LiveView
+def create_post(params) do
+  if String.length(params.title) < 3 do
+    {:error, "Title too short"}
+  else
+    ...
+  end
+end
+
+# CORRECT - Use validations in resource
+validations do
+  validate string_length(:title, min: 3, max: 200)
+  validate match(:email, ~r/@/)
+  validate present(:body, message: "Post body is required")
+  validate {MyApp.Validations.NoProfanity, attribute: :body}
+
+  # Conditional validation
+  validate present(:published_at) do
+    where [status: :published]
+  end
+end
+```
+
+#### Built-in Changes Reference
+```elixir
+# Common built-in changes
+change set_attribute(:field, value)
+change set_attribute(:field, &DateTime.utc_now/0)  # With function
+change relate_actor(:user)                          # Set relationship to actor
+change manage_relationship(:tags, type: :append)   # Manage relationships
+change increment(:view_count)                       # Atomic increment
+change set_new_attribute(:field, value)            # Only if not already set
+change filter expr(author_id == ^actor(:id))       # Filter for authorization
+change after_action(fn changeset, record, _context -> ... end)
+```
+
+#### Built-in Preparations Reference
+```elixir
+# Common built-in preparations
+prepare build(sort: [inserted_at: :desc])
+prepare build(load: [:author, :comments])
+prepare build(limit: 10)
+prepare filter expr(status == :active)
+prepare filter expr(user_id == ^actor(:id))  # Scope to current user
+```
+
+### Common Ash Mistakes to Avoid
+
+1. **Don't write functions when Ash has a DSL feature** - Use changes, preps, calcs, aggs, validations
+2. **Don't use Ecto changesets** - Use Ash actions and changes
+3. **Don't query with Repo** - Use code interfaces or `Ash.read!/2`
+4. **Don't forget the actor** - Pass `actor: user` for authorization
+5. **Don't use `require_atomic? false` without reason** - Only for complex changes
+6. **Don't compute derived values in LiveViews** - Use calculations
+7. **Don't filter/sort in Elixir** - Use preparations and action arguments
+8. **Don't count relationships in code** - Use aggregates
+9. **Don't define relationships without foreign keys in postgres block**:
+   ```elixir
+   postgres do
+     references do
+       reference :user, on_delete: :delete
+     end
+   end
+   ```
+
+### AshPhoenix Forms in LiveViews
+
+**Use `AshPhoenix.Form` for forms, not `to_form` with changesets:**
+
+```elixir
+defmodule GnomeHubWeb.PostLive.New do
+  use GnomeHubWeb, :live_view
+
+  def mount(_params, _session, socket) do
+    form =
+      GnomeHub.Content.Post
+      |> AshPhoenix.Form.for_create(:create,
+        actor: socket.assigns.current_user,
+        forms: [auto?: true]  # Auto-generate nested forms for relationships
+      )
+      |> to_form()
+
+    {:ok, assign(socket, form: form)}
+  end
+
+  def handle_event("validate", %{"form" => params}, socket) do
+    form = AshPhoenix.Form.validate(socket.assigns.form.source, params)
+    {:noreply, assign(socket, form: to_form(form))}
+  end
+
+  def handle_event("save", %{"form" => params}, socket) do
+    case AshPhoenix.Form.submit(socket.assigns.form.source, params: params) do
+      {:ok, post} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Created!")
+         |> push_navigate(to: ~p"/posts/#{post.id}")}
+
+      {:error, form} ->
+        {:noreply, assign(socket, form: to_form(form))}
+    end
+  end
+end
+```
+
+**For updates:**
+```elixir
+def mount(%{"id" => id}, _session, socket) do
+  post = GnomeHub.Content.get_post!(id, actor: socket.assigns.current_user)
+
+  form =
+    post
+    |> AshPhoenix.Form.for_update(:update,
+      actor: socket.assigns.current_user,
+      forms: [auto?: true]
+    )
+    |> to_form()
+
+  {:ok, assign(socket, form: form, post: post)}
+end
+```
+
+### Policies (Authorization)
+
+```elixir
+policies do
+  # Bypass for admins
+  bypass actor_attribute_equals(:role, :admin) do
+    authorize_if always()
+  end
+
+  # Default deny
+  policy always() do
+    forbid_if always()
+  end
+
+  # Allow users to read published posts
+  policy action_type(:read) do
+    authorize_if expr(status == :published)
+    authorize_if relates_to_actor_via(:author)  # Or own drafts
+  end
+
+  # Only author can update
+  policy action_type([:update, :destroy]) do
+    authorize_if relates_to_actor_via(:author)
+  end
+end
+```
+
+### AshStateMachine
+
+```elixir
+use Ash.Resource,
+  extensions: [AshStateMachine]
+
+state_machine do
+  initial_states [:draft]
+  default_initial_state :draft
+
+  transitions do
+    transition :submit, from: :draft, to: :pending_review
+    transition :approve, from: :pending_review, to: :published
+    transition :reject, from: :pending_review, to: :draft
+    transition :archive, from: [:draft, :published], to: :archived
+  end
+end
+
+attributes do
+  attribute :status, :atom do
+    constraints one_of: [:draft, :pending_review, :published, :archived]
+    default :draft
+    allow_nil? false
+  end
+end
+
+actions do
+  update :submit do
+    change transition_state(:pending_review)
+  end
+
+  update :approve do
+    change transition_state(:published)
+    change set_attribute(:published_at, &DateTime.utc_now/0)
+  end
+end
+```
+
+### AshOban (Background Jobs)
+
+```elixir
+use Ash.Resource,
+  extensions: [AshOban]
+
+oban do
+  triggers do
+    trigger :send_welcome_email do
+      action :send_welcome_email
+      where expr(is_nil(welcome_email_sent_at))
+      worker_read_action :read
+    end
+  end
+
+  scheduled_actions do
+    schedule :daily_digest, "0 9 * * *" do  # 9am daily
+      action :send_daily_digest
+    end
+  end
+end
+
+actions do
+  action :send_welcome_email, :boolean do
+    run fn input, context ->
+      # Send email logic
+      {:ok, true}
+    end
+  end
+end
+```
+
+### Loading Relationships & Calculations
+
+```elixir
+# Load in code interface call
+GnomeHub.Content.get_post!(id, load: [:author, :comments, :comment_count])
+
+# Load after the fact
+post = GnomeHub.Content.get_post!(id)
+post = Ash.load!(post, [:author, :comment_count])
+
+# Nested loading
+Ash.load!(post, [comments: [:author]])
+
+# In action preparation (always loads)
+read :with_details do
+  prepare build(load: [:author, :comment_count, comments: [:author]])
+end
+```
+
+### Error Handling
+
+```elixir
+# Use bang (!) when you expect success
+post = GnomeHub.Content.get_post!(id)  # Raises on not found
+
+# Use ok tuple when handling errors
+case GnomeHub.Content.create_post(params, actor: user) do
+  {:ok, post} -> ...
+  {:error, %Ash.Error.Invalid{} = error} ->
+    # Validation errors
+    errors = Ash.Error.to_error_class(error)
+    ...
+  {:error, %Ash.Error.Forbidden{}} ->
+    # Authorization failed
+    ...
+end
+
+# In LiveView with AshPhoenix.Form - errors auto-populate
+case AshPhoenix.Form.submit(form, params: params) do
+  {:ok, record} -> ...
+  {:error, form_with_errors} ->
+    {:noreply, assign(socket, form: to_form(form_with_errors))}
+end
+```
+
+### Testing Ash Resources
+
+```elixir
+defmodule GnomeHub.Content.PostTest do
+  use GnomeHub.DataCase
+
+  describe "create" do
+    test "creates with valid attrs" do
+      user = user_fixture()
+
+      assert {:ok, post} =
+        GnomeHub.Content.create_post(
+          %{title: "Test", body: "Content"},
+          actor: user
+        )
+
+      assert post.title == "Test"
+      assert post.author_id == user.id
+    end
+
+    test "fails without required fields" do
+      user = user_fixture()
+
+      assert {:error, %Ash.Error.Invalid{}} =
+        GnomeHub.Content.create_post(%{}, actor: user)
+    end
+
+    test "forbids without actor" do
+      assert {:error, %Ash.Error.Forbidden{}} =
+        GnomeHub.Content.create_post(%{title: "Test"})
+    end
+  end
+end
+```
+
+## Database & Migrations
+
+### Creating/Modifying Resources
+
+**CRITICAL: Use Ash migration workflow, NOT Ecto migrations:**
+
+```bash
+# 1. After changing resource attributes/relationships, generate migrations:
+mix ash.codegen  # Prompts for migration name
+
+# 2. Apply migrations:
+mix ash.migrate
+
+# NEVER use these for Ash resources:
+# mix ecto.gen.migration  <- WRONG
+# mix ecto.migrate        <- WRONG
+```
+
+### Other Ash Mix Tasks
+
+```bash
+# Generate a new resource
+mix ash.gen.resource MyDomain.MyResource \
+  --domain GnomeHub.MyDomain \
+  --attribute name:string \
+  --relationship belongs_to:user:GnomeHub.Accounts.User
+
+# Generate a new domain
+mix ash.gen.domain MyDomain
+
+# Add extensions to existing resource
+mix ash.extend GnomeHub.MyDomain.MyResource AshStateMachine
+
+# Reset database (drop, create, migrate)
+mix ash.reset
+
+# Rollback last migration
+mix ash.rollback
+```
+
+## Jido Agent Framework
+
+Jido is used for autonomous agents with pure functional design. Agents are immutable data structures.
+
+### Defining an Agent
+
+```elixir
+defmodule GnomeHub.Agents.TaskAgent do
+  use Jido.Agent,
+    name: "task_agent",
+    description: "Manages task workflows",
+    schema: [
+      status: [type: :atom, default: :pending],
+      result: [type: :any, default: nil]
+    ],
+    signal_routes: [
+      {"process", GnomeHub.Actions.ProcessTask},
+      {"complete", GnomeHub.Actions.CompleteTask}
+    ]
+end
+```
+
+### Defining Actions
+
+```elixir
+defmodule GnomeHub.Actions.ProcessTask do
+  use Jido.Action,
+    name: "process_task",
+    description: "Processes a task",
+    schema: [
+      task_id: [type: :string, required: true]
+    ]
+
+  def run(params, context) do
+    # Pure function - return new state
+    {:ok, %{status: :processing, task_id: params.task_id}}
+  end
+end
+```
+
+### Using Agents
+
+```elixir
+# Create agent (pure data)
+agent = GnomeHub.Agents.TaskAgent.new()
+
+# Execute action (pure transformation)
+{agent, directives} = GnomeHub.Agents.TaskAgent.cmd(agent, {ProcessTask, %{task_id: "123"}})
+
+# Deploy to runtime (OTP process)
+{:ok, pid} = GnomeHub.Jido.start_agent(TaskAgent, id: "task-1")
+
+# Send signals
+{:ok, agent} = Jido.AgentServer.call(pid, Jido.Signal.new!("process", %{task_id: "123"}))
+```
+
+### Jido Best Practices
+
+1. **Agents are pure data** - No side effects in `cmd/2`
+2. **Actions return state changes** - Not the side effects themselves
+3. **Directives describe effects** - Emit, Spawn, Schedule, Stop
+4. **Test without processes** - Agent logic is deterministic
+
+## Phoenix & LiveView Guidelines
+
+### Phoenix v1.8
+
+- **Always** wrap LiveView templates with `<Layouts.app flash={@flash} ...>`
+- `core_components.ex` imports `<.icon name="hero-x-mark"/>` - use it
+- Use `<.input>` component for forms, not raw HTML inputs
+- **Never** use `<.flash_group>` outside `layouts.ex`
+
+### LiveView Patterns
+
+```elixir
+defmodule GnomeHubWeb.ResourceLive do
+  use GnomeHubWeb, :live_view
+
+  # For authenticated routes:
+  on_mount {GnomeHubWeb.LiveUserAuth, :live_user_required}
+
+  def mount(_params, _session, socket) do
+    {:ok, stream(socket, :resources, list_resources())}
+  end
+
+  def handle_event("delete", %{"id" => id}, socket) do
+    resource = get_resource!(id)
+    {:ok, _} = delete_resource(resource, actor: socket.assigns.current_user)
+    {:noreply, stream_delete(socket, :resources, resource)}
+  end
+end
+```
+
+### Streams - Always Use for Collections
+
+```heex
+<div id="resources" phx-update="stream">
+  <div :for={{id, resource} <- @streams.resources} id={id}>
+    {resource.name}
+  </div>
+</div>
+```
+
+### Authentication Routes
+
+Routes are pre-configured at:
+- `/auth/*` - Authentication endpoints
+- `/sign-in` - Sign in page
+- `/register` - Registration
+- `/sign-out` - Sign out
+
+Use `on_mount {GnomeHubWeb.LiveUserAuth, :live_user_required}` for protected LiveViews.
+
+## Tailwind CSS v4
+
+```css
+/* app.css uses new import syntax */
+@import "tailwindcss" source(none);
+@source "../css";
+@source "../js";
+@source "../../lib/gnome_hub_web";
+```
+
+- **No** `tailwind.config.js` needed
+- **Never** use `@apply`
+- Write custom Tailwind classes, avoid daisyUI (design your own)
+
+## Development Workflow
+
+1. **I run the server** - Don't start/stop Phoenix
+2. **Generate migrations**: `mix ash.codegen`
+3. **Apply migrations**: `mix ash.migrate`
+4. **Before committing**: `mix precommit`
+
+## Dev Routes
+
+| Path | Description |
+|------|-------------|
+| `/admin` | Ash Admin panel |
+| `/oban` | Oban Web dashboard |
+| `/dev/dashboard` | Phoenix LiveDashboard |
+| `/dev/mailbox` | Swoosh mailbox preview |
+
+## Project Structure
+
+```
+lib/
+  gnome_hub/
+    accounts/           # Auth domain
+      user.ex
+      token.ex
+    accounts.ex         # Domain module
+    repo.ex
+  gnome_hub_web/
+    live/               # LiveViews
+    components/         # Components
+    router.ex
+```
+
+## Common Mix Tasks Reference
+
+```bash
+# Ash
+mix ash.codegen              # Generate migrations for resource changes
+mix ash.migrate              # Run Ash migrations
+mix ash.reset                # Drop, create, migrate
+mix ash.gen.resource         # Generate new resource
+mix ash.gen.domain           # Generate new domain
+mix ash.extend               # Add extension to resource
+
+# Phoenix
+mix phx.routes               # List all routes
+mix phx.gen.live             # Generate LiveView (but prefer Ash patterns)
+
+# Testing
+mix test                     # Run tests
+mix test --failed            # Re-run failed tests
+mix test path:line           # Run specific test
+
+# Quality
+mix precommit                # Format, compile warnings, test
+mix format                   # Format code
+```
 
 <!-- usage-rules-start -->
 
@@ -121,17 +878,6 @@ custom classes must fully style the input
 - `Phoenix.View` no longer is needed or included with Phoenix, don't use it
 <!-- phoenix:phoenix-end -->
 
-<!-- phoenix:ecto-start -->
-## Ecto Guidelines
-
-- **Always** preload Ecto associations in queries when they'll be accessed in templates, ie a message that needs to reference the `message.user.email`
-- Remember `import Ecto.Query` and other supporting modules when you write `seeds.exs`
-- `Ecto.Schema` fields always use the `:string` type, even for `:text`, columns, ie: `field :name, :string`
-- `Ecto.Changeset.validate_number/2` **DOES NOT SUPPORT the `:allow_nil` option**. By default, Ecto validations only run if a change for the given field exists and the change value is not nil, so such as option is never needed
-- You **must** use `Ecto.Changeset.get_field(changeset, :field)` to access changeset fields
-- Fields which are set programmatically, such as `user_id`, must not be listed in `cast` calls or similar for security purposes. Instead they must be explicitly set when creating the struct
-- **Always** invoke `mix ecto.gen.migration migration_name_using_underscores` when generating migration files, so the correct timestamp and conventions are applied
-<!-- phoenix:ecto-end -->
 
 <!-- phoenix:html-start -->
 ## Phoenix HTML guidelines
@@ -140,7 +886,7 @@ custom classes must fully style the input
 - **Always** use the imported `Phoenix.Component.form/1` and `Phoenix.Component.inputs_for/1` function to build forms. **Never** use `Phoenix.HTML.form_for` or `Phoenix.HTML.inputs_for` as they are outdated
 - When building forms **always** use the already imported `Phoenix.Component.to_form/2` (`assign(socket, form: to_form(...))` and `<.form for={@form} id="msg-form">`), then access those forms in the template via `@form[:field]`
 - **Always** add unique DOM IDs to key elements (like forms, buttons, etc) when writing templates, these IDs can later be used in tests (`<.form for={@form} id="product-form">`)
-- For "app wide" template imports, you can import/alias into the `my_app_web.ex`'s `html_helpers` block, so they will be available to all LiveViews, LiveComponent's, and all modules that do `use MyAppWeb, :html` (replace "my_app" by the actual app name)
+- For "app wide" template imports, you can import/alias into the `gnome_hub_web.ex`'s `html_helpers` block, so they will be available to all LiveViews, LiveComponent's, and all modules that do `use GnomeHubWeb, :html`
 
 - Elixir supports `if/else` but **does NOT support `if/else if` or `if/elsif`**. **Never use `else if` or `elseif` in Elixir**, **always** use `cond` or `case` for multiple conditionals.
 
@@ -217,7 +963,7 @@ custom classes must fully style the input
 
 - **Never** use the deprecated `live_redirect` and `live_patch` functions, instead **always** use the `<.link navigate={href}>` and  `<.link patch={href}>` in templates, and `push_navigate` and `push_patch` functions LiveViews
 - **Avoid LiveComponent's** unless you have a strong, specific need for them
-- LiveViews should be named like `AppWeb.WeatherLive`, with a `Live` suffix. When you go to add LiveView routes to the router, the default `:browser` scope is **already aliased** with the `AppWeb` module, so you can just do `live "/weather", WeatherLive`
+- LiveViews should be named like `GnomeHubWeb.WeatherLive`, with a `Live` suffix. When you go to add LiveView routes to the router, the default `:browser` scope is **already aliased** with the `GnomeHubWeb` module, so you can just do `live "/weather", WeatherLive`
 
 ### LiveView streams
 
@@ -383,67 +1129,6 @@ Where the server handled it via:
       matches = LazyHTML.filter(document, "your-complex-selector")
       IO.inspect(matches, label: "Matches")
 
-### Form handling
-
-#### Creating a form from params
-
-If you want to create a form based on `handle_event` params:
-
-    def handle_event("submitted", params, socket) do
-      {:noreply, assign(socket, form: to_form(params))}
-    end
-
-When you pass a map to `to_form/1`, it assumes said map contains the form params, which are expected to have string keys.
-
-You can also specify a name to nest the params:
-
-    def handle_event("submitted", %{"user" => user_params}, socket) do
-      {:noreply, assign(socket, form: to_form(user_params, as: :user))}
-    end
-
-#### Creating a form from changesets
-
-When using changesets, the underlying data, form params, and errors are retrieved from it. The `:as` option is automatically computed too. E.g. if you have a user schema:
-
-    defmodule MyApp.Users.User do
-      use Ecto.Schema
-      ...
-    end
-
-And then you create a changeset that you pass to `to_form`:
-
-    %MyApp.Users.User{}
-    |> Ecto.Changeset.change()
-    |> to_form()
-
-Once the form is submitted, the params will be available under `%{"user" => user_params}`.
-
-In the template, the form form assign can be passed to the `<.form>` function component:
-
-    <.form for={@form} id="todo-form" phx-change="validate" phx-submit="save">
-      <.input field={@form[:field]} type="text" />
-    </.form>
-
-Always give the form an explicit, unique DOM ID, like `id="todo-form"`.
-
-#### Avoiding form errors
-
-**Always** use a form assigned via `to_form/2` in the LiveView, and the `<.input>` component in the template. In the template **always access forms this**:
-
-    <%!-- ALWAYS do this (valid) --%>
-    <.form for={@form} id="my-form">
-      <.input field={@form[:field]} type="text" />
-    </.form>
-
-And **never** do this:
-
-    <%!-- NEVER do this (invalid) --%>
-    <.form for={@changeset} id="my-form">
-      <.input field={@changeset[:field]} type="text" />
-    </.form>
-
-- You are FORBIDDEN from accessing the changeset in the template as it will cause errors
-- **Never** use `<.form let={f} ...>` in the template, instead **always use `<.form for={@form} ...>`**, then drive all form references from the form assign as in `@form[:field]`. The UI should **always** be driven by a `to_form/2` assigned in the LiveView module that is derived from a changeset
 <!-- phoenix:liveview-end -->
 
 <!-- usage-rules-end -->

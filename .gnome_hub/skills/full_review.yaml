@@ -1,0 +1,53 @@
+name: full_review
+description: Comprehensive code review workflow
+
+steps:
+  - name: git_status
+    action: git_status
+    description: Check current repository state
+
+  - name: git_diff
+    action: git_diff
+    description: Get diff of all changes
+
+  - name: search_todos
+    action: search_code
+    params:
+      pattern: "TODO|FIXME|HACK|XXX"
+    description: Find any outstanding TODOs or FIXMEs
+
+  - name: search_debug
+    action: search_code
+    params:
+      pattern: "IO.inspect|dbg|IEx.pry|binding()"
+    description: Find any debug statements that should be removed
+
+  - name: run_tests
+    action: run_command
+    params:
+      command: "mix test"
+    description: Run the test suite
+
+  - name: run_format_check
+    action: run_command
+    params:
+      command: "mix format --check-formatted"
+    description: Check code formatting
+
+  - name: run_credo
+    action: run_command
+    params:
+      command: "mix credo --strict"
+    description: Run static analysis
+
+output:
+  format: markdown
+  sections:
+    - name: Summary
+      description: Overall review status
+    - name: Changes
+      description: List of changed files
+    - name: Issues
+      description: Any problems found
+    - name: Recommendations
+      description: Suggested improvements

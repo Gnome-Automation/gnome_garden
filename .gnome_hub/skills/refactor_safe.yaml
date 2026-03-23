@@ -1,0 +1,55 @@
+name: refactor_safe
+description: Safely refactor code with automatic backup and test verification
+
+steps:
+  - name: backup
+    action: git_status
+    description: Capture current git state before changes
+
+  - name: run_tests_before
+    action: run_command
+    params:
+      command: "mix test"
+    description: Run tests to ensure code is working before refactoring
+
+  - name: analyze
+    action: search_code
+    params:
+      pattern: "{{target_pattern}}"
+    description: Find all occurrences of the pattern to refactor
+
+  - name: refactor
+    action: edit_file
+    params:
+      path: "{{file_path}}"
+      old_string: "{{old_code}}"
+      new_string: "{{new_code}}"
+    description: Apply the refactoring
+
+  - name: run_tests_after
+    action: run_command
+    params:
+      command: "mix test"
+    description: Verify tests still pass after refactoring
+
+  - name: diff
+    action: git_diff
+    description: Show the changes made
+
+params:
+  target_pattern:
+    type: string
+    required: true
+    description: Pattern to search for
+  file_path:
+    type: string
+    required: true
+    description: File to refactor
+  old_code:
+    type: string
+    required: true
+    description: Code to replace
+  new_code:
+    type: string
+    required: true
+    description: New code

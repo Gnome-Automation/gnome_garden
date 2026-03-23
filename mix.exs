@@ -11,7 +11,8 @@ defmodule GnomeHub.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      consolidate_protocols: Mix.env() != :dev
     ]
   end
 
@@ -40,6 +41,48 @@ defmodule GnomeHub.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      # Jido ecosystem (Hex packages)
+      {:jido, "~> 2.1", override: true},
+      {:jido_ai, "~> 2.0"},
+      {:jido_action, "~> 2.1", override: true},
+      {:jido_signal, "~> 2.0"},
+      {:jido_composer, "~> 0.4", override: true},
+      {:libgraph, "~> 0.16", override: true},
+      {:jido_browser, "~> 2.0"},
+      {:req_llm, "~> 1.7"},
+      {:llm_db, "~> 2026.3"},
+
+      # Extended Jido ecosystem (GitHub)
+      # Note: ash_jido removed due to version conflicts - using manual memory tools
+      {:jido_shell, github: "agentjido/jido_shell", branch: "main"},
+      {:jido_vfs, github: "agentjido/jido_vfs", branch: "main"},
+      {:jido_skill, github: "agentjido/jido_skill", branch: "main"},
+      {:jido_mcp, github: "agentjido/jido_mcp", branch: "main"},
+
+      # Data
+      {:yaml_elixir, "~> 2.12"},
+      {:dotenvy, "~> 1.1"},
+
+      # Existing dependencies
+      {:ex_money_sql, "~> 1.0"},
+      {:ex_cldr, "~> 2.0"},
+      {:picosat_elixir, "~> 0.2"},
+      {:sourceror, "~> 1.8", only: [:dev, :test]},
+      {:oban, "~> 2.0"},
+      {:ash_money, "~> 0.2"},
+      {:usage_rules, "~> 1.0", only: [:dev]},
+      {:ash_ai, "~> 0.5"},
+      {:tidewave, "~> 0.5", only: [:dev]},
+      {:live_debugger, "~> 0.7", only: [:dev]},
+      {:ash_state_machine, "~> 0.2"},
+      {:oban_web, "~> 2.0"},
+      {:ash_oban, "~> 0.7"},
+      {:ash_admin, "~> 0.14"},
+      {:ash_authentication_phoenix, "~> 2.0"},
+      {:ash_authentication, "~> 4.0"},
+      {:ash_postgres, "~> 2.0"},
+      {:ash_phoenix, "~> 2.0"},
+      {:ash, "~> 3.0"},
       {:igniter, "~> 0.6", only: [:dev, :test]},
       {:phoenix, "~> 1.8.5"},
       {:phoenix_ecto, "~> 4.5"},
@@ -78,10 +121,10 @@ defmodule GnomeHub.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
+      setup: ["deps.get", "ash.setup", "assets.setup", "assets.build", "run priv/repo/seeds.exs"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      test: ["ash.setup --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind gnome_hub", "esbuild gnome_hub"],
       "assets.deploy": [
