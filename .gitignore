@@ -35,3 +35,10 @@ gnome_hub-*.tar
 npm-debug.log
 /assets/node_modules/
 
+
+# Environment variables
+.env
+.env.*
+
+# Local dependencies
+jido/
