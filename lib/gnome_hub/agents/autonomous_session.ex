@@ -248,8 +248,14 @@ defmodule GnomeHub.Agents.AutonomousSession do
   end
 
   def handle_info({:DOWN, _ref, :process, pid, reason}, %{agent_pid: pid} = state) do
-    broadcast(state.id, {:error, {:agent_died, reason}})
-    {:noreply, %{state | status: :error, error: {:agent_died, reason}, agent_pid: nil}}
+    # Only treat as error if it wasn't a normal shutdown and we haven't completed
+    if reason != :normal and state.status not in [:completed, :done] do
+      broadcast(state.id, {:error, {:agent_died, reason}})
+      {:noreply, %{state | status: :error, error: {:agent_died, reason}, agent_pid: nil}}
+    else
+      # Normal shutdown after completion - just clear the pid
+      {:noreply, %{state | agent_pid: nil}}
+    end
   end
 
   # Handle streaming events from telemetry

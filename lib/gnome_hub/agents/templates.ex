@@ -48,6 +48,24 @@ defmodule GnomeHub.Agents.Templates do
       description: "Refactors code with full tool access",
       model: :fast,
       max_iterations: 25
+    },
+    "bid_scanner" => %{
+      module: GnomeHub.Agents.Workers.BidScanner,
+      description: "Scans procurement portals for bid opportunities",
+      model: :fast,
+      max_iterations: 30
+    },
+    "source_discovery" => %{
+      module: GnomeHub.Agents.Workers.SourceDiscovery,
+      description: "Discovers new procurement portals to monitor",
+      model: :fast,
+      max_iterations: 25
+    },
+    "smart_scanner" => %{
+      module: GnomeHub.Agents.Workers.SmartScanner,
+      description: "Autonomous browser-based scanner that figures out any site",
+      model: :capable,
+      max_iterations: 25
     }
   }
 

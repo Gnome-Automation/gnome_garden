@@ -20,5 +20,8 @@ defmodule GnomeHub.Agents do
     resource GnomeHub.Agents.AgentRun
     resource GnomeHub.Agents.AgentMessage
     resource GnomeHub.Agents.Memory
+    resource GnomeHub.Agents.LeadSource
+    resource GnomeHub.Agents.Bid
+    resource GnomeHub.Agents.Prospect
   end
 end
