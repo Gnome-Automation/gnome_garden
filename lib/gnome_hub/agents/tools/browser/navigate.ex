@@ -7,17 +7,27 @@ defmodule GnomeHub.Agents.Tools.Browser.Navigate do
     name: "browser_navigate",
     description: "Navigate to a URL and get page title. Returns basic page info.",
     schema: [
-      url: [type: :string, required: true, doc: "URL to navigate to"]
+      url: [type: :string, required: true, doc: "URL to navigate to"],
+      wait_for_network: [type: :boolean, default: true, doc: "Wait for network idle after navigation"]
     ]
 
   @browser_path "/home/pc/gnome/gnome_hub/_build/jido_browser-linux_amd64/agent-browser-linux-x64"
+  @browser_args ["--headed", "--args", "--no-sandbox,--disable-blink-features=AutomationControlled"]
 
   @impl true
-  def run(%{url: url}, _context) do
-    case System.cmd(@browser_path, ["open", url, "--timeout", "20000"], stderr_to_stdout: true) do
+  def run(%{url: url} = params, _context) do
+    wait_for_network = Map.get(params, :wait_for_network, true)
+
+    # Navigate to URL
+    case System.cmd(@browser_path, @browser_args ++ ["open", url, "--timeout", "30000"], stderr_to_stdout: true) do
       {output, 0} ->
-        # Parse title from output like "[32m✓[0m [1mPage Title[0m"
         title = parse_title(output)
+
+        # Wait for network idle if requested (important for SPAs)
+        if wait_for_network do
+          System.cmd(@browser_path, ["wait", "--load", "networkidle", "--timeout", "30000"], stderr_to_stdout: true)
+        end
+
         {:ok, %{url: url, title: title, status: :ok}}
 
       {output, _} ->

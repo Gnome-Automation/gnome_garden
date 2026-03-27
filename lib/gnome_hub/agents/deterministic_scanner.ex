@@ -78,7 +78,7 @@ defmodule GnomeHub.Agents.DeterministicScanner do
          {:ok, scored} <- score_bids(bids, source),
          {:ok, saved} <- save_qualifying_bids(scored, source) do
       # Mark as scanned
-      Ash.update!(source, :mark_scanned, %{})
+      Ash.update!(source, %{}, action: :mark_scanned)
 
       {:ok, %{
         source: source.name,

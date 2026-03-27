@@ -30,8 +30,10 @@ defmodule GnomeHub.Agents.Workers.SmartScanner do
       GnomeHub.Agents.Tools.SaveBid
     ],
     streaming: true,
-    tool_timeout_ms: 60_000,
-    stream_timeout_ms: 180_000,
+    tool_timeout_ms: 90_000,
+    stream_timeout_ms: 300_000,
+    stream_receive_timeout_ms: 300_000,
+    llm_opts: [provider_options: [thinking: %{type: "disabled"}]],
     request_transformer: GnomeHub.Agents.RequestTransformer,
     system_prompt: """
     You are an autonomous bid scanner for Gnome Automation LLC, a controls/automation integrator in Orange County, CA.
@@ -98,12 +100,19 @@ defmodule GnomeHub.Agents.Workers.SmartScanner do
     - After clicking, wait and snapshot again to see the new page
     - If a page is blank or says "loading", try snapshot again after a moment
     - Look for pagination to get more results
-    - In discovery mode, ALWAYS call save_discovery at the end
     - Skip bids that are clearly not relevant (HVAC, janitorial, landscaping)
-    """,
-    max_iterations: 25
 
-  @default_timeout 180_000
+    ## CRITICAL for Discovery Mode
+
+    In discovery mode, you MUST call save_discovery before finishing!
+    - Don't over-analyze. Once you find a working listing_selector and title_selector, SAVE IT.
+    - PlanetBids sites use: listing_selector="table tbody tr" or ".results-row"
+    - If unsure, make your best guess and save - we can refine later.
+    - Call save_discovery EARLY rather than running out of iterations.
+    """,
+    max_iterations: 15
+
+  @default_timeout 300_000
 
   @doc """
   Discover how to scrape a site and save the config for future deterministic scans.

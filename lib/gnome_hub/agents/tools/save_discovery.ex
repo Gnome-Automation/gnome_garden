@@ -48,7 +48,7 @@ defmodule GnomeHub.Agents.Tools.SaveDiscovery do
 
     case Ash.get(GnomeHub.Agents.LeadSource, params.lead_source_id) do
       {:ok, source} ->
-        case Ash.update(source, :save_discovery, %{scrape_config: scrape_config}) do
+        case Ash.update(source, %{scrape_config: scrape_config}, action: :save_discovery) do
           {:ok, updated} ->
             {:ok, %{
               saved: true,
