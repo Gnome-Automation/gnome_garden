@@ -1,4 +1,4 @@
-defmodule GnomeHub.Agents.Workers.SmartScanner do
+defmodule GnomeHub.Agents.Workers.Sales.SmartScanner do
   @moduledoc """
   Autonomous bid scanner that figures out any website.
 

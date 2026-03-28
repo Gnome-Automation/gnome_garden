@@ -1,4 +1,4 @@
-defmodule GnomeHub.Agents.Workers.BidScanner do
+defmodule GnomeHub.Agents.Workers.Sales.BidScanner do
   @moduledoc """
   Autonomous agent that scans procurement portals for bid opportunities.
 
@@ -10,16 +10,16 @@ defmodule GnomeHub.Agents.Workers.BidScanner do
 
   ## Usage
 
-      {:ok, pid} = Jido.start_agent(GnomeHub.Jido, GnomeHub.Agents.Workers.BidScanner)
+      {:ok, pid} = Jido.start_agent(GnomeHub.Jido, GnomeHub.Agents.Workers.Sales.BidScanner)
 
       # Scan all sources due for scanning
-      GnomeHub.Agents.Workers.BidScanner.scan_all(pid)
+      GnomeHub.Agents.Workers.Sales.BidScanner.scan_all(pid)
 
       # Scan specific source type
-      GnomeHub.Agents.Workers.BidScanner.scan_type(pid, :planetbids)
+      GnomeHub.Agents.Workers.Sales.BidScanner.scan_type(pid, :planetbids)
 
       # Get today's hot bids
-      GnomeHub.Agents.Workers.BidScanner.hot_bids(pid)
+      GnomeHub.Agents.Workers.Sales.BidScanner.hot_bids(pid)
   """
 
   use Jido.AI.Agent,

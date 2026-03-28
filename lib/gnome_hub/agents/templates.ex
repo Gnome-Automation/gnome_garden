@@ -49,20 +49,21 @@ defmodule GnomeHub.Agents.Templates do
       model: :fast,
       max_iterations: 25
     },
+    # Sales workers
     "bid_scanner" => %{
-      module: GnomeHub.Agents.Workers.BidScanner,
+      module: GnomeHub.Agents.Workers.Sales.BidScanner,
       description: "Scans procurement portals for bid opportunities",
       model: :fast,
       max_iterations: 30
     },
     "source_discovery" => %{
-      module: GnomeHub.Agents.Workers.SourceDiscovery,
+      module: GnomeHub.Agents.Workers.Sales.SourceDiscovery,
       description: "Discovers new procurement portals to monitor",
       model: :fast,
       max_iterations: 25
     },
     "smart_scanner" => %{
-      module: GnomeHub.Agents.Workers.SmartScanner,
+      module: GnomeHub.Agents.Workers.Sales.SmartScanner,
       description: "Autonomous browser-based scanner that figures out any site",
       model: :capable,
       max_iterations: 25

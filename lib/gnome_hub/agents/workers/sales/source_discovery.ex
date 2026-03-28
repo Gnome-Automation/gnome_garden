@@ -1,4 +1,4 @@
-defmodule GnomeHub.Agents.Workers.SourceDiscovery do
+defmodule GnomeHub.Agents.Workers.Sales.SourceDiscovery do
   @moduledoc """
   Autonomous agent that discovers new lead sources.
 
@@ -16,16 +16,16 @@ defmodule GnomeHub.Agents.Workers.SourceDiscovery do
 
   ## Usage
 
-      {:ok, pid} = Jido.start_agent(GnomeHub.Jido, GnomeHub.Agents.Workers.SourceDiscovery)
+      {:ok, pid} = Jido.start_agent(GnomeHub.Jido, GnomeHub.Agents.Workers.Sales.SourceDiscovery)
 
       # Discover portals in a region
-      GnomeHub.Agents.Workers.SourceDiscovery.discover_region(pid, :oc)
+      GnomeHub.Agents.Workers.Sales.SourceDiscovery.discover_region(pid, :oc)
 
       # Search for specific agency
-      GnomeHub.Agents.Workers.SourceDiscovery.find_agency(pid, "City of Mission Viejo")
+      GnomeHub.Agents.Workers.Sales.SourceDiscovery.find_agency(pid, "City of Mission Viejo")
 
       # Discover water districts
-      GnomeHub.Agents.Workers.SourceDiscovery.discover_industry(pid, :water)
+      GnomeHub.Agents.Workers.Sales.SourceDiscovery.discover_industry(pid, :water)
   """
 
   use Jido.AI.Agent,
