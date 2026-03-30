@@ -1,4 +1,4 @@
-defmodule GnomeHub.Repo.Migrations.CreateAgentsDomain do
+defmodule GnomeGarden.Repo.Migrations.CreateAgentsDomain do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
@@ -55,7 +55,8 @@ defmodule GnomeHub.Repo.Migrations.CreateAgentsDomain do
             name: "agent_runs_agent_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
 
       add :parent_run_id,
           references(:agent_runs,
@@ -89,7 +90,8 @@ defmodule GnomeHub.Repo.Migrations.CreateAgentsDomain do
             name: "agent_messages_agent_run_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
     end
 
     create table(:agent_memories, primary_key: false) do

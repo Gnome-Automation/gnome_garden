@@ -201,22 +201,22 @@ Settings
 ## Router Implementation
 
 ```elixir
-# lib/gnome_hub_web/router.ex
+# lib/gnome_garden_web/router.ex
 
-defmodule GnomeHubWeb.Router do
-  use GnomeHubWeb, :router
+defmodule GnomeGardenWeb.Router do
+  use GnomeGardenWeb, :router
 
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_live_flash
-    plug :put_root_layout, html: {GnomeHubWeb.Layouts, :root}
+    plug :put_root_layout, html: {GnomeGardenWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
 
   # Public routes
-  scope "/", GnomeHubWeb do
+  scope "/", GnomeGardenWeb do
     pipe_through :browser
 
     get "/", PageController, :home
@@ -225,7 +225,7 @@ defmodule GnomeHubWeb.Router do
   end
 
   # Authenticated routes
-  scope "/", GnomeHubWeb do
+  scope "/", GnomeGardenWeb do
     pipe_through [:browser, :require_authenticated_user]
 
     ash_authentication_live_session :authenticated_routes do

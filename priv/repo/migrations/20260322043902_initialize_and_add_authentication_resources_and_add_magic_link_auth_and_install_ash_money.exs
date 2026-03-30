@@ -1,4 +1,4 @@
-defmodule GnomeHub.Repo.Migrations.InitializeAndAddAuthenticationResourcesAndAddMagicLinkAuthAndInstallAshMoney do
+defmodule GnomeGarden.Repo.Migrations.InitializeAndAddAuthenticationResourcesAndAddMagicLinkAuthAndInstallAshMoney do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 

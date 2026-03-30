@@ -2,12 +2,12 @@ import Config
 config :ash, policies: [show_policy_breakdowns?: true]
 
 # Configure your database
-config :gnome_hub, GnomeHub.Repo,
+config :gnome_garden, GnomeGarden.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
   port: 5434,
-  database: "gnome_hub_dev",
+  database: "gnome_garden_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
@@ -18,7 +18,7 @@ config :gnome_hub, GnomeHub.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
-config :gnome_hub, GnomeHubWeb.Endpoint,
+config :gnome_garden, GnomeGardenWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}],
@@ -27,8 +27,8 @@ config :gnome_hub, GnomeHubWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "pQr3VX5xXV9sO0JlzuFzIJCCmhrriC2x+rtOoRzyNI6Xd7ByqINO2yows0e3ZL9a",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:gnome_hub, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:gnome_hub, ~w(--watch)]}
+    esbuild: {Esbuild, :install_and_run, [:gnome_garden, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:gnome_garden, ~w(--watch)]}
   ]
 
 # ## SSL Support
@@ -55,7 +55,7 @@ config :gnome_hub, GnomeHubWeb.Endpoint,
 # different ports.
 
 # Reload browser tabs when matching files change.
-config :gnome_hub, GnomeHubWeb.Endpoint,
+config :gnome_garden, GnomeGardenWeb.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
@@ -64,13 +64,13 @@ config :gnome_hub, GnomeHubWeb.Endpoint,
       # Gettext translations
       ~r"priv/gettext/.*\.po$"E,
       # Router, Controllers, LiveViews and LiveComponents
-      ~r"lib/gnome_hub_web/router\.ex$"E,
-      ~r"lib/gnome_hub_web/(controllers|live|components)/.*\.(ex|heex)$"E
+      ~r"lib/gnome_garden_web/router\.ex$"E,
+      ~r"lib/gnome_garden_web/(controllers|live|components)/.*\.(ex|heex)$"E
     ]
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :gnome_hub, dev_routes: true, token_signing_secret: "khxr4f86E//4bLKdD17Hvx9UnUil3B8U"
+config :gnome_garden, dev_routes: true, token_signing_secret: "khxr4f86E//4bLKdD17Hvx9UnUil3B8U"
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

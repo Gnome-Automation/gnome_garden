@@ -7,7 +7,7 @@
 # General application configuration
 import Config
 
-config :ex_cldr, default_backend: GnomeHub.Cldr
+config :ex_cldr, default_backend: GnomeGarden.Cldr
 config :ash_oban, pro?: false
 
 # Register Z.AI (Zhipu AI) models in LLMDB catalog
@@ -86,7 +86,7 @@ config :llm_db,
 
 # Register Z.AI as a custom ReqLLM provider
 config :req_llm,
-  custom_providers: [GnomeHub.Providers.Zai]
+  custom_providers: [GnomeGarden.Providers.Zai]
 
 # Jido AI model aliases - using Z.AI GLM models via Coding Plan
 # Using zai_coding_plan provider for coding plan API key
@@ -104,11 +104,11 @@ config :jido_ai,
     stream: %{model: :fast, temperature: 0.2, max_tokens: 8192, timeout: 120_000}
   }
 
-config :gnome_hub, Oban,
+config :gnome_garden, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
   queues: [default: 10],
-  repo: GnomeHub.Repo,
+  repo: GnomeGarden.Repo,
   plugins: [{Oban.Plugins.Cron, []}]
 
 config :ash,
@@ -159,21 +159,21 @@ config :spark,
     ]
   ]
 
-config :gnome_hub,
-  ecto_repos: [GnomeHub.Repo],
+config :gnome_garden,
+  ecto_repos: [GnomeGarden.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [GnomeHub.Accounts, GnomeHub.Agents],
+  ash_domains: [GnomeGarden.Accounts, GnomeGarden.Agents, GnomeGarden.Sales],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 
 # Configure the endpoint
-config :gnome_hub, GnomeHubWeb.Endpoint,
+config :gnome_garden, GnomeGardenWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: GnomeHubWeb.ErrorHTML, json: GnomeHubWeb.ErrorJSON],
+    formats: [html: GnomeGardenWeb.ErrorHTML, json: GnomeGardenWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: GnomeHub.PubSub,
+  pubsub_server: GnomeGarden.PubSub,
   live_view: [signing_salt: "rmT3yBmS"]
 
 # Configure the mailer
@@ -183,12 +183,12 @@ config :gnome_hub, GnomeHubWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :gnome_hub, GnomeHub.Mailer, adapter: Swoosh.Adapters.Local
+config :gnome_garden, GnomeGarden.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
-  gnome_hub: [
+  gnome_garden: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
@@ -198,7 +198,7 @@ config :esbuild,
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.1.12",
-  gnome_hub: [
+  gnome_garden: [
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/css/app.css

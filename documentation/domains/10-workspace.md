@@ -1,7 +1,7 @@
 # Workspace Domain
 
-**CSIA Area:** — (GnomeHub Unique)
-**Module:** `GnomeHub.Workspace`
+**CSIA Area:** — (GnomeGarden Unique)
+**Module:** `GnomeGarden.Workspace`
 **Purpose:** Personal productivity, quick capture, inbox management
 
 ---
@@ -249,7 +249,7 @@ Workspace is optimized for mobile:
 ## File Structure
 
 ```
-lib/gnome_hub/
+lib/gnome_garden/
 ├── workspace.ex
 └── workspace/
     ├── capture.ex

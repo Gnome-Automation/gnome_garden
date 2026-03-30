@@ -4,16 +4,16 @@
 
 | # | Domain | Module | CSIA Area | Resources | Status |
 |---|--------|--------|-----------|-----------|--------|
-| 1 | Management | `GnomeHub.Management` | General Management | 3 | 🆕 New |
-| 2 | HR | `GnomeHub.HR` | Human Resources | 3 | 🆕 New |
-| 3 | Finance | `GnomeHub.Finance` | Financial Management | 4 | 🆕 New |
-| 4 | Projects | `GnomeHub.Projects` | Project Management | 6 | 🆕 New |
-| 5 | Engineering | `GnomeHub.Engineering` | System Development | 8 | 🆕 New |
-| 6 | Sales | `GnomeHub.Sales` | Marketing/Sales | 10 | 🆕 New |
-| 7 | Quality | `GnomeHub.Quality` | Quality Assurance | 3 | 📋 Phase 2 |
-| 8 | Service | `GnomeHub.Service` | Customer Service | 4 | 🆕 New |
-| 9 | Agents | `GnomeHub.Agents` | AI Platform | 6 | ✅ Existing |
-| 10 | Workspace | `GnomeHub.Workspace` | Personal Productivity | 3 | 🆕 New |
+| 1 | Management | `GnomeGarden.Management` | General Management | 3 | 🆕 New |
+| 2 | HR | `GnomeGarden.HR` | Human Resources | 3 | 🆕 New |
+| 3 | Finance | `GnomeGarden.Finance` | Financial Management | 4 | 🆕 New |
+| 4 | Projects | `GnomeGarden.Projects` | Project Management | 6 | 🆕 New |
+| 5 | Engineering | `GnomeGarden.Engineering` | System Development | 8 | 🆕 New |
+| 6 | Sales | `GnomeGarden.Sales` | Marketing/Sales | 10 | 🆕 New |
+| 7 | Quality | `GnomeGarden.Quality` | Quality Assurance | 3 | 📋 Phase 2 |
+| 8 | Service | `GnomeGarden.Service` | Customer Service | 4 | 🆕 New |
+| 9 | Agents | `GnomeGarden.Agents` | AI Platform | 6 | ✅ Existing |
+| 10 | Workspace | `GnomeGarden.Workspace` | Personal Productivity | 3 | 🆕 New |
 
 **Total: 50 Resources**
 
@@ -187,13 +187,13 @@
 
 | Domain | Domain File | Resources Directory |
 |--------|-------------|---------------------|
-| Management | `lib/gnome_hub/management.ex` | `lib/gnome_hub/management/` |
-| HR | `lib/gnome_hub/hr.ex` | `lib/gnome_hub/hr/` |
-| Finance | `lib/gnome_hub/finance.ex` | `lib/gnome_hub/finance/` |
-| Projects | `lib/gnome_hub/projects.ex` | `lib/gnome_hub/projects/` |
-| Engineering | `lib/gnome_hub/engineering.ex` | `lib/gnome_hub/engineering/` |
-| Sales | `lib/gnome_hub/sales.ex` | `lib/gnome_hub/sales/` |
-| Quality | `lib/gnome_hub/quality.ex` | `lib/gnome_hub/quality/` |
-| Service | `lib/gnome_hub/service.ex` | `lib/gnome_hub/service/` |
-| Agents | `lib/gnome_hub/agents.ex` | `lib/gnome_hub/agents/` |
-| Workspace | `lib/gnome_hub/workspace.ex` | `lib/gnome_hub/workspace/` |
+| Management | `lib/gnome_garden/management.ex` | `lib/gnome_garden/management/` |
+| HR | `lib/gnome_garden/hr.ex` | `lib/gnome_garden/hr/` |
+| Finance | `lib/gnome_garden/finance.ex` | `lib/gnome_garden/finance/` |
+| Projects | `lib/gnome_garden/projects.ex` | `lib/gnome_garden/projects/` |
+| Engineering | `lib/gnome_garden/engineering.ex` | `lib/gnome_garden/engineering/` |
+| Sales | `lib/gnome_garden/sales.ex` | `lib/gnome_garden/sales/` |
+| Quality | `lib/gnome_garden/quality.ex` | `lib/gnome_garden/quality/` |
+| Service | `lib/gnome_garden/service.ex` | `lib/gnome_garden/service/` |
+| Agents | `lib/gnome_garden/agents.ex` | `lib/gnome_garden/agents/` |
+| Workspace | `lib/gnome_garden/workspace.ex` | `lib/gnome_garden/workspace/` |

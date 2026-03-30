@@ -1,7 +1,7 @@
 # Management Domain
 
 **CSIA Area:** General Management
-**Module:** `GnomeHub.Management`
+**Module:** `GnomeGarden.Management`
 **Purpose:** Identity, authentication, company settings
 
 ---
@@ -117,7 +117,7 @@ Company-wide configuration.
 ## File Structure
 
 ```
-lib/gnome_hub/
+lib/gnome_garden/
 ├── management.ex
 └── management/
     ├── user.ex

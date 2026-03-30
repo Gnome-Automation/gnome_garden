@@ -1,7 +1,7 @@
 # Engineering Domain
 
 **CSIA Area:** System Development Lifecycle
-**Module:** `GnomeHub.Engineering`
+**Module:** `GnomeGarden.Engineering`
 **Purpose:** Assets, BOMs, parts catalog, vendors, control templates
 
 ---
@@ -279,7 +279,7 @@ Project (Projects)
 ## File Structure
 
 ```
-lib/gnome_hub/
+lib/gnome_garden/
 ├── engineering.ex
 └── engineering/
     ├── asset.ex

@@ -1,0 +1,102 @@
+<div class="space-y-6">
+  <%!-- Stats Overview --%>
+  <div class="stats stats-vertical lg:stats-horizontal shadow w-full bg-base-100">
+    <div class="stat">
+      <div class="stat-figure text-primary">
+        <.icon name="hero-document-text" class="size-8" />
+      </div>
+      <div class="stat-title">Active Bids</div>
+      <div class="stat-value text-primary">5</div>
+      <div class="stat-desc">2 HOT, 1 WARM</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-figure text-secondary">
+        <.icon name="hero-building-office-2" class="size-8" />
+      </div>
+      <div class="stat-title">Companies</div>
+      <div class="stat-value text-secondary">0</div>
+      <div class="stat-desc">In CRM</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-figure text-accent">
+        <.icon name="hero-globe-alt" class="size-8" />
+      </div>
+      <div class="stat-title">Lead Sources</div>
+      <div class="stat-value">41</div>
+      <div class="stat-desc">Discovered</div>
+    </div>
+  </div>
+
+  <%!-- Quick Actions --%>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <a href="/agent" class="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+      <div class="card-body">
+        <div class="flex items-center gap-3">
+          <div class="p-3 bg-primary/10 rounded-lg">
+            <.icon name="hero-chat-bubble-left-right" class="size-6 text-primary" />
+          </div>
+          <div>
+            <h2 class="card-title text-lg">Agent Chat</h2>
+            <p class="text-sm text-base-content/70">Chat with AI agents</p>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <a href="/admin/agents/bid" class="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+      <div class="card-body">
+        <div class="flex items-center gap-3">
+          <div class="p-3 bg-secondary/10 rounded-lg">
+            <.icon name="hero-document-text" class="size-6 text-secondary" />
+          </div>
+          <div>
+            <h2 class="card-title text-lg">View Bids</h2>
+            <p class="text-sm text-base-content/70">Review discovered opportunities</p>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <a href="/admin/agents/lead_source" class="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+      <div class="card-body">
+        <div class="flex items-center gap-3">
+          <div class="p-3 bg-accent/10 rounded-lg">
+            <.icon name="hero-globe-alt" class="size-6 text-accent" />
+          </div>
+          <div>
+            <h2 class="card-title text-lg">Lead Sources</h2>
+            <p class="text-sm text-base-content/70">Manage bid portals</p>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <%!-- Recent Bids Table Placeholder --%>
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h2 class="card-title">Recent Bids</h2>
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Score</th>
+              <th>Tier</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="4" class="text-center text-base-content/50 py-8">
+                <a href="/admin/agents/bid" class="link link-primary">View all bids in Ash Admin</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

@@ -2,7 +2,7 @@
 #
 # Run with: mix run priv/repo/seeds/lead_sources.exs
 
-alias GnomeHub.Agents.LeadSource
+alias GnomeGarden.Agents.LeadSource
 
 IO.puts("Seeding lead sources...")
 

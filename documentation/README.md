@@ -1,10 +1,10 @@
-# GnomeHub Platform Documentation
+# GnomeGarden Platform Documentation
 
 **Vertical SaaS for Controls Integrators: CRM + PSA + Service + Engineering + AI**
 
-## What is GnomeHub?
+## What is GnomeGarden?
 
-GnomeHub is a comprehensive business platform designed specifically for building controls integrators. It combines customer relationship management, professional services automation, service management, and specialized engineering tools into a single, AI-powered system.
+GnomeGarden is a comprehensive business platform designed specifically for building controls integrators. It combines customer relationship management, professional services automation, service management, and specialized engineering tools into a single, AI-powered system.
 
 The domain structure is aligned with [CSIA Best Practices](https://controlsys.org/) — the industry standard for control system integration business management.
 

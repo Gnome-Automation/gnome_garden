@@ -1,4 +1,4 @@
-# GnomeHub Agent Guidelines
+# GnomeGarden Agent Guidelines
 
 This is a Phoenix + Ash + Jido application. Follow these guidelines strictly.
 
@@ -23,17 +23,17 @@ mix usage_rules.search_docs "belongs_to" -p ash
 Resources are the core abstraction. Always structure them as:
 
 ```elixir
-defmodule GnomeHub.MyDomain.MyResource do
+defmodule GnomeGarden.MyDomain.MyResource do
   use Ash.Resource,
-    otp_app: :gnome_hub,
-    domain: GnomeHub.MyDomain,
+    otp_app: :gnome_garden,
+    domain: GnomeGarden.MyDomain,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
     extensions: []  # Add extensions here: AshStateMachine, AshOban, etc.
 
   postgres do
     table "my_resources"
-    repo GnomeHub.Repo
+    repo GnomeGarden.Repo
   end
 
   actions do
@@ -66,15 +66,15 @@ end
 Domains group resources and expose code interfaces. **Always define code interfaces for external use:**
 
 ```elixir
-defmodule GnomeHub.MyDomain do
-  use Ash.Domain, otp_app: :gnome_hub, extensions: [AshAdmin.Domain]
+defmodule GnomeGarden.MyDomain do
+  use Ash.Domain, otp_app: :gnome_garden, extensions: [AshAdmin.Domain]
 
   admin do
     show? true
   end
 
   resources do
-    resource GnomeHub.MyDomain.MyResource do
+    resource GnomeGarden.MyDomain.MyResource do
       # Code interfaces - the idiomatic way to call actions
       define :list_resources, action: :read
       define :get_resource, action: :read, get_by: :id
@@ -93,20 +93,20 @@ end
 
 ```elixir
 # WRONG - Don't do this
-GnomeHub.Repo.all(MyResource)
-GnomeHub.Repo.insert(%MyResource{name: "foo"})
+GnomeGarden.Repo.all(MyResource)
+GnomeGarden.Repo.insert(%MyResource{name: "foo"})
 
 # CORRECT - Use code interfaces (preferred)
-GnomeHub.MyDomain.list_resources()
-GnomeHub.MyDomain.create_resource(%{name: "foo"})
-GnomeHub.MyDomain.get_resource(id)
+GnomeGarden.MyDomain.list_resources()
+GnomeGarden.MyDomain.create_resource(%{name: "foo"})
+GnomeGarden.MyDomain.get_resource(id)
 
 # CORRECT - Use Ash directly when code interface isn't defined
 Ash.read!(MyResource)
 Ash.create!(MyResource, %{name: "foo"})
 
 # With actor (current user) for authorization
-GnomeHub.MyDomain.list_resources(actor: current_user)
+GnomeGarden.MyDomain.list_resources(actor: current_user)
 Ash.read!(MyResource, actor: current_user)
 ```
 
@@ -157,16 +157,16 @@ end
 
 ```elixir
 relationships do
-  belongs_to :user, GnomeHub.Accounts.User do
+  belongs_to :user, GnomeGarden.Accounts.User do
     allow_nil? false
   end
 
-  has_many :comments, GnomeHub.Content.Comment do
+  has_many :comments, GnomeGarden.Content.Comment do
     destination_attribute :post_id
   end
 
-  many_to_many :tags, GnomeHub.Content.Tag do
-    through GnomeHub.Content.PostTag
+  many_to_many :tags, GnomeGarden.Content.Tag do
+    through GnomeGarden.Content.PostTag
     source_attribute_on_join_resource :post_id
     destination_attribute_on_join_resource :tag_id
   end
@@ -348,12 +348,12 @@ prepare filter expr(user_id == ^actor(:id))  # Scope to current user
 **Use `AshPhoenix.Form` for forms, not `to_form` with changesets:**
 
 ```elixir
-defmodule GnomeHubWeb.PostLive.New do
-  use GnomeHubWeb, :live_view
+defmodule GnomeGardenWeb.PostLive.New do
+  use GnomeGardenWeb, :live_view
 
   def mount(_params, _session, socket) do
     form =
-      GnomeHub.Content.Post
+      GnomeGarden.Content.Post
       |> AshPhoenix.Form.for_create(:create,
         actor: socket.assigns.current_user,
         forms: [auto?: true]  # Auto-generate nested forms for relationships
@@ -386,7 +386,7 @@ end
 **For updates:**
 ```elixir
 def mount(%{"id" => id}, _session, socket) do
-  post = GnomeHub.Content.get_post!(id, actor: socket.assigns.current_user)
+  post = GnomeGarden.Content.get_post!(id, actor: socket.assigns.current_user)
 
   form =
     post
@@ -501,10 +501,10 @@ end
 
 ```elixir
 # Load in code interface call
-GnomeHub.Content.get_post!(id, load: [:author, :comments, :comment_count])
+GnomeGarden.Content.get_post!(id, load: [:author, :comments, :comment_count])
 
 # Load after the fact
-post = GnomeHub.Content.get_post!(id)
+post = GnomeGarden.Content.get_post!(id)
 post = Ash.load!(post, [:author, :comment_count])
 
 # Nested loading
@@ -520,10 +520,10 @@ end
 
 ```elixir
 # Use bang (!) when you expect success
-post = GnomeHub.Content.get_post!(id)  # Raises on not found
+post = GnomeGarden.Content.get_post!(id)  # Raises on not found
 
 # Use ok tuple when handling errors
-case GnomeHub.Content.create_post(params, actor: user) do
+case GnomeGarden.Content.create_post(params, actor: user) do
   {:ok, post} -> ...
   {:error, %Ash.Error.Invalid{} = error} ->
     # Validation errors
@@ -545,15 +545,15 @@ end
 ### Testing Ash Resources
 
 ```elixir
-defmodule GnomeHub.Content.PostTest do
-  use GnomeHub.DataCase
+defmodule GnomeGarden.Content.PostTest do
+  use GnomeGarden.DataCase
 
   describe "create" do
     test "creates with valid attrs" do
       user = user_fixture()
 
       assert {:ok, post} =
-        GnomeHub.Content.create_post(
+        GnomeGarden.Content.create_post(
           %{title: "Test", body: "Content"},
           actor: user
         )
@@ -566,12 +566,12 @@ defmodule GnomeHub.Content.PostTest do
       user = user_fixture()
 
       assert {:error, %Ash.Error.Invalid{}} =
-        GnomeHub.Content.create_post(%{}, actor: user)
+        GnomeGarden.Content.create_post(%{}, actor: user)
     end
 
     test "forbids without actor" do
       assert {:error, %Ash.Error.Forbidden{}} =
-        GnomeHub.Content.create_post(%{title: "Test"})
+        GnomeGarden.Content.create_post(%{title: "Test"})
     end
   end
 end
@@ -600,15 +600,15 @@ mix ash.migrate
 ```bash
 # Generate a new resource
 mix ash.gen.resource MyDomain.MyResource \
-  --domain GnomeHub.MyDomain \
+  --domain GnomeGarden.MyDomain \
   --attribute name:string \
-  --relationship belongs_to:user:GnomeHub.Accounts.User
+  --relationship belongs_to:user:GnomeGarden.Accounts.User
 
 # Generate a new domain
 mix ash.gen.domain MyDomain
 
 # Add extensions to existing resource
-mix ash.extend GnomeHub.MyDomain.MyResource AshStateMachine
+mix ash.extend GnomeGarden.MyDomain.MyResource AshStateMachine
 
 # Reset database (drop, create, migrate)
 mix ash.reset
@@ -624,7 +624,7 @@ Jido is used for autonomous agents with pure functional design. Agents are immut
 ### Defining an Agent
 
 ```elixir
-defmodule GnomeHub.Agents.TaskAgent do
+defmodule GnomeGarden.Agents.TaskAgent do
   use Jido.Agent,
     name: "task_agent",
     description: "Manages task workflows",
@@ -633,8 +633,8 @@ defmodule GnomeHub.Agents.TaskAgent do
       result: [type: :any, default: nil]
     ],
     signal_routes: [
-      {"process", GnomeHub.Actions.ProcessTask},
-      {"complete", GnomeHub.Actions.CompleteTask}
+      {"process", GnomeGarden.Actions.ProcessTask},
+      {"complete", GnomeGarden.Actions.CompleteTask}
     ]
 end
 ```
@@ -642,7 +642,7 @@ end
 ### Defining Actions
 
 ```elixir
-defmodule GnomeHub.Actions.ProcessTask do
+defmodule GnomeGarden.Actions.ProcessTask do
   use Jido.Action,
     name: "process_task",
     description: "Processes a task",
@@ -661,13 +661,13 @@ end
 
 ```elixir
 # Create agent (pure data)
-agent = GnomeHub.Agents.TaskAgent.new()
+agent = GnomeGarden.Agents.TaskAgent.new()
 
 # Execute action (pure transformation)
-{agent, directives} = GnomeHub.Agents.TaskAgent.cmd(agent, {ProcessTask, %{task_id: "123"}})
+{agent, directives} = GnomeGarden.Agents.TaskAgent.cmd(agent, {ProcessTask, %{task_id: "123"}})
 
 # Deploy to runtime (OTP process)
-{:ok, pid} = GnomeHub.Jido.start_agent(TaskAgent, id: "task-1")
+{:ok, pid} = GnomeGarden.Jido.start_agent(TaskAgent, id: "task-1")
 
 # Send signals
 {:ok, agent} = Jido.AgentServer.call(pid, Jido.Signal.new!("process", %{task_id: "123"}))
@@ -692,11 +692,11 @@ agent = GnomeHub.Agents.TaskAgent.new()
 ### LiveView Patterns
 
 ```elixir
-defmodule GnomeHubWeb.ResourceLive do
-  use GnomeHubWeb, :live_view
+defmodule GnomeGardenWeb.ResourceLive do
+  use GnomeGardenWeb, :live_view
 
   # For authenticated routes:
-  on_mount {GnomeHubWeb.LiveUserAuth, :live_user_required}
+  on_mount {GnomeGardenWeb.LiveUserAuth, :live_user_required}
 
   def mount(_params, _session, socket) do
     {:ok, stream(socket, :resources, list_resources())}
@@ -728,7 +728,7 @@ Routes are pre-configured at:
 - `/register` - Registration
 - `/sign-out` - Sign out
 
-Use `on_mount {GnomeHubWeb.LiveUserAuth, :live_user_required}` for protected LiveViews.
+Use `on_mount {GnomeGardenWeb.LiveUserAuth, :live_user_required}` for protected LiveViews.
 
 ## Tailwind CSS v4
 
@@ -737,7 +737,7 @@ Use `on_mount {GnomeHubWeb.LiveUserAuth, :live_user_required}` for protected Liv
 @import "tailwindcss" source(none);
 @source "../css";
 @source "../js";
-@source "../../lib/gnome_hub_web";
+@source "../../lib/gnome_garden_web";
 ```
 
 - **No** `tailwind.config.js` needed
@@ -764,13 +764,13 @@ Use `on_mount {GnomeHubWeb.LiveUserAuth, :live_user_required}` for protected Liv
 
 ```
 lib/
-  gnome_hub/
+  gnome_garden/
     accounts/           # Auth domain
       user.ex
       token.ex
     accounts.ex         # Domain module
     repo.ex
-  gnome_hub_web/
+  gnome_garden_web/
     live/               # LiveViews
     components/         # Components
     router.ex
@@ -886,7 +886,7 @@ mix format                   # Format code
 - **Always** use the imported `Phoenix.Component.form/1` and `Phoenix.Component.inputs_for/1` function to build forms. **Never** use `Phoenix.HTML.form_for` or `Phoenix.HTML.inputs_for` as they are outdated
 - When building forms **always** use the already imported `Phoenix.Component.to_form/2` (`assign(socket, form: to_form(...))` and `<.form for={@form} id="msg-form">`), then access those forms in the template via `@form[:field]`
 - **Always** add unique DOM IDs to key elements (like forms, buttons, etc) when writing templates, these IDs can later be used in tests (`<.form for={@form} id="product-form">`)
-- For "app wide" template imports, you can import/alias into the `gnome_hub_web.ex`'s `html_helpers` block, so they will be available to all LiveViews, LiveComponent's, and all modules that do `use GnomeHubWeb, :html`
+- For "app wide" template imports, you can import/alias into the `gnome_garden_web.ex`'s `html_helpers` block, so they will be available to all LiveViews, LiveComponent's, and all modules that do `use GnomeGardenWeb, :html`
 
 - Elixir supports `if/else` but **does NOT support `if/else if` or `if/elsif`**. **Never use `else if` or `elseif` in Elixir**, **always** use `cond` or `case` for multiple conditionals.
 
@@ -963,7 +963,7 @@ mix format                   # Format code
 
 - **Never** use the deprecated `live_redirect` and `live_patch` functions, instead **always** use the `<.link navigate={href}>` and  `<.link patch={href}>` in templates, and `push_navigate` and `push_patch` functions LiveViews
 - **Avoid LiveComponent's** unless you have a strong, specific need for them
-- LiveViews should be named like `GnomeHubWeb.WeatherLive`, with a `Live` suffix. When you go to add LiveView routes to the router, the default `:browser` scope is **already aliased** with the `GnomeHubWeb` module, so you can just do `live "/weather", WeatherLive`
+- LiveViews should be named like `GnomeGardenWeb.WeatherLive`, with a `Live` suffix. When you go to add LiveView routes to the router, the default `:browser` scope is **already aliased** with the `GnomeGardenWeb` module, so you can just do `live "/weather", WeatherLive`
 
 ### LiveView streams
 

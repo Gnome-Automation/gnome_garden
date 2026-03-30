@@ -1,6 +1,6 @@
 import Config
-config :gnome_hub, Oban, testing: :manual
-config :gnome_hub, token_signing_secret: "0yKs9QpG/aUKOWcHig5mxRkK+spiI4IB"
+config :gnome_garden, Oban, testing: :manual
+config :gnome_garden, token_signing_secret: "0yKs9QpG/aUKOWcHig5mxRkK+spiI4IB"
 config :bcrypt_elixir, log_rounds: 1
 config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 
@@ -9,24 +9,24 @@ config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
-config :gnome_hub, GnomeHub.Repo,
+config :gnome_garden, GnomeGarden.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
   port: 5434,
-  database: "gnome_hub_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database: "gnome_garden_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :gnome_hub, GnomeHubWeb.Endpoint,
+config :gnome_garden, GnomeGardenWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "qV1/9y2Qk3h3UT33CEF6qDbQpWjv2zlop5zWbCs/d5NyDmSVK2xuRG/cX+q3jSRT",
   server: false
 
 # In test we don't send emails
-config :gnome_hub, GnomeHub.Mailer, adapter: Swoosh.Adapters.Test
+config :gnome_garden, GnomeGarden.Mailer, adapter: Swoosh.Adapters.Test
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false

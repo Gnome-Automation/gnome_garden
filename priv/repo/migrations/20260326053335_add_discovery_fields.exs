@@ -1,4 +1,4 @@
-defmodule GnomeHub.Repo.Migrations.AddDiscoveryFields do
+defmodule GnomeGarden.Repo.Migrations.AddDiscoveryFields do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 

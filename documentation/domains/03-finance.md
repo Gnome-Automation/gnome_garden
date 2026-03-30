@@ -1,7 +1,7 @@
 # Finance Domain
 
 **CSIA Area:** Financial Management
-**Module:** `GnomeHub.Finance`
+**Module:** `GnomeGarden.Finance`
 **Purpose:** Invoicing, payments, retainers, cash flow
 
 ---
@@ -188,7 +188,7 @@ Hours exceeded?
 ## File Structure
 
 ```
-lib/gnome_hub/
+lib/gnome_garden/
 ├── finance.ex
 └── finance/
     ├── invoice.ex

@@ -1,7 +1,7 @@
 # Service Domain
 
 **CSIA Area:** Customer Service
-**Module:** `GnomeHub.Service`
+**Module:** `GnomeGarden.Service`
 **Purpose:** Support tickets, work orders, SLAs
 
 ---
@@ -231,7 +231,7 @@ Tickets from retainer customers:
 ## File Structure
 
 ```
-lib/gnome_hub/
+lib/gnome_garden/
 ├── service.ex
 └── service/
     ├── ticket.ex

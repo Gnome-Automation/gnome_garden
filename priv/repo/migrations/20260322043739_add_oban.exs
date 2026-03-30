@@ -1,4 +1,4 @@
-defmodule GnomeHub.Repo.Migrations.AddOban do
+defmodule GnomeGarden.Repo.Migrations.AddOban do
   use Ecto.Migration
 
   def up, do: Oban.Migration.up()

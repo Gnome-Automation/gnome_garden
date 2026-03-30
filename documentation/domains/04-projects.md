@@ -1,7 +1,7 @@
 # Projects Domain
 
 **CSIA Area:** Project Management + Project Delivery
-**Module:** `GnomeHub.Projects`
+**Module:** `GnomeGarden.Projects`
 **Purpose:** Project execution, task management, time tracking, expenses
 
 ---
@@ -210,7 +210,7 @@ Resource allocation to projects.
 ## File Structure
 
 ```
-lib/gnome_hub/
+lib/gnome_garden/
 ├── projects.ex
 └── projects/
     ├── project.ex

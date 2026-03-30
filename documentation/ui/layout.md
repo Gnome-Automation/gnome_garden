@@ -2,7 +2,7 @@
 
 ## Mobile-First Design
 
-GnomeHub uses a mobile-first responsive design built with DaisyUI and Tailwind CSS. The layout adapts seamlessly between mobile and desktop experiences.
+GnomeGarden uses a mobile-first responsive design built with DaisyUI and Tailwind CSS. The layout adapts seamlessly between mobile and desktop experiences.
 
 ---
 
@@ -22,7 +22,7 @@ GnomeHub uses a mobile-first responsive design built with DaisyUI and Tailwind C
 ```
 ┌─────────────────────────────┐
 │         Header              │
-│  [☰]  GnomeHub    [🔔] [👤] │
+│  [☰]  GnomeGarden    [🔔] [👤] │
 ├─────────────────────────────┤
 │                             │
 │                             │
@@ -113,7 +113,7 @@ GnomeHub uses a mobile-first responsive design built with DaisyUI and Tailwind C
 
   <!-- Logo -->
   <div class="flex-1">
-    <a href="/" class="btn btn-ghost text-xl">GnomeHub</a>
+    <a href="/" class="btn btn-ghost text-xl">GnomeGarden</a>
   </div>
 
   <!-- Search (desktop) -->
@@ -139,7 +139,7 @@ GnomeHub uses a mobile-first responsive design built with DaisyUI and Tailwind C
   <div class="p-4 border-b">
     <a href="/" class="flex items-center gap-2">
       <img src="/images/logo.svg" class="h-8" />
-      <span class="font-bold text-lg">GnomeHub</span>
+      <span class="font-bold text-lg">GnomeGarden</span>
     </a>
   </div>
 

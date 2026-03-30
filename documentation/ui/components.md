@@ -2,7 +2,7 @@
 
 ## DaisyUI Components Used
 
-GnomeHub uses DaisyUI as the primary component library, extended with custom Phoenix components.
+GnomeGarden uses DaisyUI as the primary component library, extended with custom Phoenix components.
 
 ---
 
@@ -61,7 +61,7 @@ GnomeHub uses DaisyUI as the primary component library, extended with custom Pho
 ```heex
 <div class="navbar bg-base-100">
   <div class="flex-1">
-    <a class="btn btn-ghost text-xl">GnomeHub</a>
+    <a class="btn btn-ghost text-xl">GnomeGarden</a>
   </div>
   <div class="flex-none gap-2">
     <div class="dropdown dropdown-end">

@@ -4,7 +4,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         GnomeHub Platform (CSIA-Aligned)                     │
+│                         GnomeGarden Platform (CSIA-Aligned)                     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
@@ -36,9 +36,9 @@
 
 ## CSIA Alignment
 
-GnomeHub domains map directly to [CSIA Best Practices](https://controlsys.org/) management areas:
+GnomeGarden domains map directly to [CSIA Best Practices](https://controlsys.org/) management areas:
 
-| CSIA Area | GnomeHub Domain | Key Focus |
+| CSIA Area | GnomeGarden Domain | Key Focus |
 |-----------|-----------------|-----------|
 | General Management | Management | Users, roles, company settings |
 | Human Resources | HR | Team, skills, capacity |

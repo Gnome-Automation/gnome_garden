@@ -1,4 +1,4 @@
-defmodule GnomeHub.Repo.Migrations.CreateLeadSourcesBidsProspects do
+defmodule GnomeGarden.Repo.Migrations.CreateLeadSourcesBidsProspects do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 

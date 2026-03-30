@@ -1,7 +1,7 @@
 # Quality Domain
 
 **CSIA Area:** Quality Assurance Management
-**Module:** `GnomeHub.Quality`
+**Module:** `GnomeGarden.Quality`
 **Purpose:** Checklists, inspections, non-conformance tracking
 
 **Status:** 📋 Phase 2 — Not implemented in initial release
@@ -151,7 +151,7 @@ FAT Complete → Proceed to SAT
 ## File Structure (Planned)
 
 ```
-lib/gnome_hub/
+lib/gnome_garden/
 ├── quality.ex
 └── quality/
     ├── checklist.ex

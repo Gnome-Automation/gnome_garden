@@ -1,7 +1,7 @@
 # Sales Domain
 
 **CSIA Area:** Marketing/Business Development/Sales Management
-**Module:** `GnomeHub.Sales`
+**Module:** `GnomeGarden.Sales`
 **Purpose:** CRM, pipeline, proposals, contracts, services
 
 ---
@@ -336,7 +336,7 @@ Contract + Project
 ## File Structure
 
 ```
-lib/gnome_hub/
+lib/gnome_garden/
 ├── sales.ex
 └── sales/
     ├── company.ex

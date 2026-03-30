@@ -1,7 +1,7 @@
 # Agents Domain
 
-**CSIA Area:** — (GnomeHub Unique)
-**Module:** `GnomeHub.Agents`
+**CSIA Area:** — (GnomeGarden Unique)
+**Module:** `GnomeGarden.Agents`
 **Purpose:** AI automation, bid discovery, agent orchestration
 **Status:** ✅ Existing (with scaling architecture)
 
@@ -9,7 +9,7 @@
 
 ## Overview
 
-The Agents domain is GnomeHub's AI platform. It powers automated bid discovery from government sources, conversational agents, and memory persistence. Built on the **Jido agent framework**.
+The Agents domain is GnomeGarden's AI platform. It powers automated bid discovery from government sources, conversational agents, and memory persistence. Built on the **Jido agent framework**.
 
 ---
 
@@ -17,7 +17,7 @@ The Agents domain is GnomeHub's AI platform. It powers automated bid discovery f
 
 ### Jido Framework
 
-GnomeHub agents use the Jido framework which provides:
+GnomeGarden agents use the Jido framework which provides:
 
 | Component | Purpose |
 |-----------|---------|
@@ -82,10 +82,10 @@ Current bid scanning uses a hybrid LLM + deterministic approach:
 
 ```elixir
 # PlanetBids sites share same structure - auto-discover
-GnomeHub.Agents.BatchDiscovery.discover_all_planetbids()
+GnomeGarden.Agents.BatchDiscovery.discover_all_planetbids()
 
 # Scan all ready sources
-GnomeHub.Agents.DeterministicScanner.scan_all_ready()
+GnomeGarden.Agents.DeterministicScanner.scan_all_ready()
 ```
 
 ---
@@ -393,11 +393,11 @@ Hot Bid (auto or manual)
 
 ```elixir
 # In config/runtime.exs or application.ex
-config :gnome_hub, Oban,
+config :gnome_garden, Oban,
   queues: [agents: 10, scanners: 5],
   plugins: [
     {Oban.Plugins.Cron, crontab: [
-      {"0 */4 * * *", GnomeHub.Agents.Jobs.ScanAllSources}
+      {"0 */4 * * *", GnomeGarden.Agents.Jobs.ScanAllSources}
     ]}
   ]
 ```
@@ -420,7 +420,7 @@ config :gnome_hub, Oban,
 ## File Structure
 
 ```
-lib/gnome_hub/
+lib/gnome_garden/
 ├── agents.ex                    # Domain module
 └── agents/
     ├── agent.ex                 # Agent resource

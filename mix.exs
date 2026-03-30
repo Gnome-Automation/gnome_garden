@@ -1,9 +1,9 @@
-defmodule GnomeHub.MixProject do
+defmodule GnomeGarden.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :gnome_hub,
+      app: :gnome_garden,
       version: "0.1.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -21,7 +21,7 @@ defmodule GnomeHub.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {GnomeHub.Application, []},
+      mod: {GnomeGarden.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -78,6 +78,7 @@ defmodule GnomeHub.MixProject do
       {:oban_web, "~> 2.0"},
       {:ash_oban, "~> 0.7"},
       {:ash_admin, "~> 0.14"},
+      {:cinder, "~> 0.12.1"},
       {:ash_authentication_phoenix, "~> 2.0"},
       {:ash_authentication, "~> 4.0"},
       {:ash_postgres, "~> 2.0"},
@@ -126,10 +127,10 @@ defmodule GnomeHub.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ash.setup --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind gnome_hub", "esbuild gnome_hub"],
+      "assets.build": ["compile", "tailwind gnome_garden", "esbuild gnome_garden"],
       "assets.deploy": [
-        "tailwind gnome_hub --minify",
-        "esbuild gnome_hub --minify",
+        "tailwind gnome_garden --minify",
+        "esbuild gnome_garden --minify",
         "phx.digest"
       ],
       precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
