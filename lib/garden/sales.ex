@@ -9,7 +9,7 @@ defmodule GnomeGarden.Sales do
 
   use Ash.Domain,
     otp_app: :gnome_garden,
-    extensions: [AshAdmin.Domain]
+    extensions: [AshAdmin.Domain, AshPhoenix]
 
   admin do
     show? true
@@ -21,11 +21,15 @@ defmodule GnomeGarden.Sales do
     resource GnomeGarden.Sales.Company do
       define :list_companies, action: :read
       define :get_company, action: :read, get_by: [:id]
+      define :create_company, action: :create
+      define :update_company, action: :update
     end
 
     resource GnomeGarden.Sales.Contact do
       define :list_contacts, action: :read
       define :get_contact, action: :read, get_by: [:id]
+      define :create_contact, action: :create
+      define :update_contact, action: :update
     end
 
     resource GnomeGarden.Sales.Activity
@@ -36,16 +40,22 @@ defmodule GnomeGarden.Sales do
     resource GnomeGarden.Sales.Task do
       define :list_tasks, action: :read
       define :get_task, action: :read, get_by: [:id]
+      define :create_task, action: :create
+      define :update_task, action: :update
     end
 
     resource GnomeGarden.Sales.Opportunity do
       define :list_opportunities, action: :read
       define :get_opportunity, action: :read, get_by: [:id]
+      define :create_opportunity, action: :create
+      define :update_opportunity, action: :update
     end
 
     resource GnomeGarden.Sales.Lead do
       define :list_leads, action: :read
       define :get_lead, action: :read, get_by: [:id]
+      define :create_lead, action: :create
+      define :update_lead, action: :update
     end
 
     resource GnomeGarden.Sales.ResearchRequest

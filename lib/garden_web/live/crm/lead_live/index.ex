@@ -1,4 +1,4 @@
-defmodule GnomeGardenWeb.CRM.LeadsLive do
+defmodule GnomeGardenWeb.CRM.LeadLive.Index do
   use GnomeGardenWeb, :live_view
 
   alias GnomeGarden.Sales.Lead
@@ -11,14 +11,11 @@ defmodule GnomeGardenWeb.CRM.LeadsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-4">
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Leads</h1>
-        <div class="flex gap-2">
-          <a href="/admin/sales/lead?action=create" class="btn btn-sm btn-primary">
-            <.icon name="hero-plus" class="size-4" /> Add Lead
-          </a>
-        </div>
+    <div class="space-y-6">
+      <div class="flex justify-end">
+        <.button navigate={~p"/crm/leads/new"} variant="primary">
+          <.icon name="hero-plus" class="size-4" /> Add Lead
+        </.button>
       </div>
 
       <Cinder.collection
@@ -26,25 +23,30 @@ defmodule GnomeGardenWeb.CRM.LeadsLive do
         actor={@current_user}
         search={[placeholder: "Search leads..."]}
       >
-        <:col :let={lead} field="first_name" label="Name" filter sort search>
-          <span class="font-medium">{lead.first_name} {lead.last_name}</span>
+        <:col :let={lead} field="first_name" label="Name" sort search>
+          <.link navigate={~p"/crm/leads/#{lead}"} class="font-medium hover:text-emerald-600">
+            {lead.first_name} {lead.last_name}
+          </.link>
         </:col>
-        <:col :let={lead} field="company_name" label="Company" filter search>
+        <:col :let={lead} field="company_name" label="Company" search>
           {lead.company_name || "-"}
         </:col>
-        <:col :let={lead} field="email" label="Email" filter search>
+        <:col :let={lead} field="email" label="Email" search>
           {lead.email || "-"}
         </:col>
-        <:col :let={lead} field="status" label="Status" filter sort>
+        <:col :let={lead} field="status" label="Status" sort>
           <span class={status_badge(lead.status)}>{format_status(lead.status)}</span>
         </:col>
-        <:col :let={lead} field="source" label="Source" filter>
+        <:col :let={lead} field="source" label="Source">
           {format_source(lead.source)}
         </:col>
         <:col :let={lead} label="">
-          <a href={"/admin/sales/lead/#{lead.id}"} class="btn btn-xs btn-ghost">
+          <.link
+            navigate={~p"/crm/leads/#{lead}/edit"}
+            class="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-900/5 hover:text-zinc-600 dark:hover:bg-white/5 dark:hover:text-zinc-300"
+          >
             <.icon name="hero-pencil" class="size-4" />
-          </a>
+          </.link>
         </:col>
       </Cinder.collection>
     </div>

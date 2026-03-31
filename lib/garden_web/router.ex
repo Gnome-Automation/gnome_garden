@@ -26,15 +26,39 @@ defmodule GnomeGardenWeb.Router do
     pipe_through :browser
 
     ash_authentication_live_session :authenticated_routes,
+      layout: {GnomeGardenWeb.Layouts, :app},
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_optional}] do
       live "/agent", AgentLive
 
-      # CRM
-      live "/crm/companies", CRM.CompaniesLive
-      live "/crm/contacts", CRM.ContactsLive
-      live "/crm/opportunities", CRM.OpportunitiesLive
-      live "/crm/leads", CRM.LeadsLive
-      live "/crm/tasks", CRM.TasksLive
+      # CRM - Companies
+      live "/crm/companies", CRM.CompanyLive.Index, :index
+      live "/crm/companies/new", CRM.CompanyLive.Form, :new
+      live "/crm/companies/:id", CRM.CompanyLive.Show, :show
+      live "/crm/companies/:id/edit", CRM.CompanyLive.Form, :edit
+
+      # CRM - Contacts
+      live "/crm/contacts", CRM.ContactLive.Index, :index
+      live "/crm/contacts/new", CRM.ContactLive.Form, :new
+      live "/crm/contacts/:id", CRM.ContactLive.Show, :show
+      live "/crm/contacts/:id/edit", CRM.ContactLive.Form, :edit
+
+      # CRM - Leads
+      live "/crm/leads", CRM.LeadLive.Index, :index
+      live "/crm/leads/new", CRM.LeadLive.Form, :new
+      live "/crm/leads/:id", CRM.LeadLive.Show, :show
+      live "/crm/leads/:id/edit", CRM.LeadLive.Form, :edit
+
+      # CRM - Opportunities
+      live "/crm/opportunities", CRM.OpportunityLive.Index, :index
+      live "/crm/opportunities/new", CRM.OpportunityLive.Form, :new
+      live "/crm/opportunities/:id", CRM.OpportunityLive.Show, :show
+      live "/crm/opportunities/:id/edit", CRM.OpportunityLive.Form, :edit
+
+      # CRM - Tasks
+      live "/crm/tasks", CRM.TaskLive.Index, :index
+      live "/crm/tasks/new", CRM.TaskLive.Form, :new
+      live "/crm/tasks/:id", CRM.TaskLive.Show, :show
+      live "/crm/tasks/:id/edit", CRM.TaskLive.Form, :edit
 
       # Agents - Sales Discovery
       live "/agents/sales/bids", Agents.Sales.BidsLive

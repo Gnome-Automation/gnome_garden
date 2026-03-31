@@ -1,4 +1,4 @@
-defmodule GnomeGardenWeb.CRM.OpportunitiesLive do
+defmodule GnomeGardenWeb.CRM.OpportunityLive.Index do
   use GnomeGardenWeb, :live_view
 
   alias GnomeGarden.Sales.Opportunity
@@ -11,14 +11,11 @@ defmodule GnomeGardenWeb.CRM.OpportunitiesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-4">
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Opportunities</h1>
-        <div class="flex gap-2">
-          <a href="/admin/sales/opportunity?action=create" class="btn btn-sm btn-primary">
-            <.icon name="hero-plus" class="size-4" /> Add Opportunity
-          </a>
-        </div>
+    <div class="space-y-6">
+      <div class="flex justify-end">
+        <.button navigate={~p"/crm/opportunities/new"} variant="primary">
+          <.icon name="hero-plus" class="size-4" /> Add Opportunity
+        </.button>
       </div>
 
       <Cinder.collection
@@ -26,10 +23,12 @@ defmodule GnomeGardenWeb.CRM.OpportunitiesLive do
         actor={@current_user}
         search={[placeholder: "Search opportunities..."]}
       >
-        <:col :let={opp} field="name" label="Name" filter sort search>
-          <span class="font-medium">{opp.name}</span>
+        <:col :let={opp} field="name" label="Name" sort search>
+          <.link navigate={~p"/crm/opportunities/#{opp}"} class="font-medium hover:text-emerald-600">
+            {opp.name}
+          </.link>
         </:col>
-        <:col :let={opp} field="stage" label="Stage" filter sort>
+        <:col :let={opp} field="stage" label="Stage" sort>
           <span class={stage_badge(opp.stage)}>{format_stage(opp.stage)}</span>
         </:col>
         <:col :let={opp} field="amount" label="Amount" sort>
@@ -42,9 +41,12 @@ defmodule GnomeGardenWeb.CRM.OpportunitiesLive do
           {format_date(opp.expected_close_date)}
         </:col>
         <:col :let={opp} label="">
-          <a href={"/admin/sales/opportunity/#{opp.id}"} class="btn btn-xs btn-ghost">
+          <.link
+            navigate={~p"/crm/opportunities/#{opp}/edit"}
+            class="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-900/5 hover:text-zinc-600 dark:hover:bg-white/5 dark:hover:text-zinc-300"
+          >
             <.icon name="hero-pencil" class="size-4" />
-          </a>
+          </.link>
         </:col>
       </Cinder.collection>
     </div>
