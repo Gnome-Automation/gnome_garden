@@ -23,7 +23,7 @@ erl_crash.dump
 /tmp/
 
 # Ignore package tarball (built via "mix hex.build").
-gnome_hub-*.tar
+gnome_garden-*.tar
 
 # Ignore assets that are produced by build tools.
 /priv/static/assets/
@@ -42,3 +42,6 @@ npm-debug.log
 
 # Local dependencies
 jido/
+
+# Claude Code local cache
+.claude/
