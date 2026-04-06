@@ -11,7 +11,8 @@ defmodule GnomeGarden.Sales.Lead do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Sales,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource, AshJido],
+    notifiers: [AshJido.Notifier, Ash.Notifier.PubSub]
 
   admin do
     table_columns [:id, :first_name, :last_name, :company_name, :status, :source, :inserted_at]
@@ -20,6 +21,15 @@ defmodule GnomeGarden.Sales.Lead do
   postgres do
     table "leads"
     repo GnomeGarden.Repo
+  end
+
+  jido do
+    signal_bus(GnomeGarden.SignalBus)
+
+    publish :create, "sales.lead.created", include: :all
+    publish :qualify, "sales.lead.qualified", include: :all
+    publish :reject_lead, "sales.lead.rejected", include: :all
+    publish :convert, "sales.lead.converted", include: :all
   end
 
   actions do
@@ -37,7 +47,10 @@ defmodule GnomeGarden.Sales.Lead do
         :company_name,
         :source,
         :source_details,
+        :source_url,
+        :description,
         :owner_id,
+        :company_id,
         :prospect_id
       ]
 
@@ -55,8 +68,16 @@ defmodule GnomeGarden.Sales.Lead do
         :status,
         :source,
         :source_details,
-        :owner_id
+        :source_url,
+        :description,
+        :owner_id,
+        :company_id
       ]
+    end
+
+    update :screen do
+      accept []
+      change set_attribute(:status, :screening)
     end
 
     update :qualify do
@@ -64,9 +85,24 @@ defmodule GnomeGarden.Sales.Lead do
       change set_attribute(:status, :qualified)
     end
 
-    update :disqualify do
+    update :start_outreach do
       accept []
-      change set_attribute(:status, :unqualified)
+      change set_attribute(:status, :outreach)
+    end
+
+    update :set_meeting do
+      accept []
+      change set_attribute(:status, :meeting)
+    end
+
+    update :send_proposal do
+      accept []
+      change set_attribute(:status, :proposal)
+    end
+
+    update :reject_lead do
+      accept [:rejection_reason, :rejection_notes]
+      change set_attribute(:status, :rejected)
     end
 
     update :convert do
@@ -114,6 +150,25 @@ defmodule GnomeGarden.Sales.Lead do
       filter expr(source == ^arg(:source) and status in [:new, :contacted, :qualified])
       prepare build(sort: [inserted_at: :desc])
     end
+
+    create :quick_add do
+      accept [:company_name, :source, :source_details, :source_url, :description]
+      change set_attribute(:status, :new)
+      change set_attribute(:first_name, "Unknown")
+      change set_attribute(:last_name, "Unknown")
+    end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "lead"
+
+    publish :create, "created"
+    publish :update, "updated"
+    publish :qualify, "qualified"
+    publish :reject_lead, "rejected"
+    publish :start_outreach, "updated"
+    publish :convert, "converted"
   end
 
   attributes do
@@ -154,9 +209,37 @@ defmodule GnomeGarden.Sales.Lead do
     attribute :status, :atom do
       default :new
       public? true
-      constraints one_of: [:new, :contacted, :qualified, :unqualified, :converted]
+
+      constraints one_of: [
+                    :new,
+                    :screening,
+                    :qualified,
+                    :outreach,
+                    :meeting,
+                    :proposal,
+                    :converted,
+                    :rejected
+                  ]
+
       description "Lead status"
     end
+
+    attribute :rejection_reason, :atom do
+      public? true
+
+      constraints one_of: [
+                    :not_a_fit,
+                    :too_large,
+                    :too_small,
+                    :wrong_industry,
+                    :wrong_region,
+                    :duplicate,
+                    :no_budget,
+                    :other
+                  ]
+    end
+
+    attribute :rejection_notes, :string, public?: true
 
     attribute :source, :atom do
       public? true
@@ -166,7 +249,17 @@ defmodule GnomeGarden.Sales.Lead do
 
     attribute :source_details, :string do
       public? true
-      description "Additional source info"
+      description "Signal — why this is a lead right now"
+    end
+
+    attribute :source_url, :string do
+      public? true
+      description "URL where we found this lead"
+    end
+
+    attribute :description, :string do
+      public? true
+      description "What the company does and why they need our services"
     end
 
     attribute :converted_at, :utc_datetime do
@@ -193,6 +286,11 @@ defmodule GnomeGarden.Sales.Lead do
   end
 
   relationships do
+    belongs_to :company, GnomeGarden.Sales.Company do
+      public? true
+      description "Company this lead is for"
+    end
+
     belongs_to :owner, GnomeGarden.Accounts.User do
       public? true
       description "User who owns this lead"
@@ -201,6 +299,10 @@ defmodule GnomeGarden.Sales.Lead do
     belongs_to :prospect, GnomeGarden.Agents.Prospect do
       public? true
       description "Source prospect if created from agent discovery"
+    end
+
+    has_many :activities, GnomeGarden.Sales.Activity do
+      public? true
     end
   end
 

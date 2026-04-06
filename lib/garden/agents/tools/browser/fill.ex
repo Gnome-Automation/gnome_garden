@@ -11,13 +11,13 @@ defmodule GnomeGarden.Agents.Tools.Browser.Fill do
       text: [type: :string, required: true, doc: "Text to fill in"]
     ]
 
-  @browser_path "/home/pc/gnome/garden/_build/jido_browser-linux_amd64/agent-browser-linux-x64"
+  alias GnomeGarden.Agents.Tools.Browser
 
   @impl true
   def run(%{ref: ref, text: text}, _context) do
     ref = if String.match?(ref, ~r/^e\d+$/), do: "@#{ref}", else: ref
 
-    case System.cmd(@browser_path, ["fill", ref, text], stderr_to_stdout: true) do
+    case System.cmd(Browser.binary_path(), ["fill", ref, text], stderr_to_stdout: true) do
       {_output, 0} ->
         {:ok, %{filled: ref, text: text, status: :ok}}
 

@@ -10,11 +10,11 @@ defmodule GnomeGarden.Agents.Tools.Browser.Extract do
       js: [type: :string, required: true, doc: "JavaScript code to run. Should return data."]
     ]
 
-  @browser_path "/home/pc/gnome/garden/_build/jido_browser-linux_amd64/agent-browser-linux-x64"
+  alias GnomeGarden.Agents.Tools.Browser
 
   @impl true
   def run(%{js: js}, _context) do
-    case System.cmd(@browser_path, ["eval", js], stderr_to_stdout: true) do
+    case System.cmd(Browser.binary_path(), ["eval", js], stderr_to_stdout: true) do
       {output, 0} ->
         # Try to parse as JSON
         case Jason.decode(output) do

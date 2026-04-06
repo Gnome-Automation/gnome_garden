@@ -1,54 +1,65 @@
-defmodule GnomeGardenWeb.Agents.Sales.BidsLive do
+defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
   use GnomeGardenWeb, :live_view
 
   alias GnomeGarden.Agents.Bid
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("bid:created")
+      GnomeGardenWeb.Endpoint.subscribe("bid:scored")
+    end
+
     {:ok, assign(socket, :page_title, "Bids")}
+  end
+
+  @impl true
+  def handle_info(%{topic: "bid:" <> _}, socket) do
+    {:noreply, Cinder.refresh_table(socket, "bids")}
   end
 
   @impl true
   def render(assigns) do
     ~H"""
     <div class="space-y-4">
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Bids</h1>
-        <a href="/admin/agents/bid" class="btn btn-sm btn-ghost">
+      <div class="flex justify-end">
+        <a href="/admin/agents/bid" class="btn btn-sm btn-ghost gap-1">
           Open in Admin <.icon name="hero-arrow-top-right-on-square" class="size-4" />
         </a>
       </div>
 
       <Cinder.collection
+        id="bids"
         resource={Bid}
         actor={@current_user}
         search={[placeholder: "Search bids..."]}
       >
-        <:col :let={bid} field="title" label="Title" filter sort search>
-          <span class="font-medium max-w-xs truncate" title={bid.title}>{bid.title}</span>
+        <:col :let={bid} field="title" label="Title" sort search>
+          <.link
+            navigate={~p"/agents/sales/bids/#{bid}"}
+            class="font-medium text-sm leading-tight max-w-[250px] break-words whitespace-normal hover:text-emerald-600"
+            title={bid.title}
+          >
+            {bid.title}
+          </.link>
         </:col>
         <:col :let={bid} field="score_total" label="Score" sort>
           <span class={score_color(bid.score_total)}>{bid.score_total || "-"}</span>
         </:col>
-        <:col :let={bid} field="score_tier" label="Tier" filter sort>
+        <:col :let={bid} field="score_tier" label="Tier" sort>
           <span class={tier_badge(bid.score_tier)}>{format_tier(bid.score_tier)}</span>
         </:col>
-        <:col :let={bid} field="agency" label="Agency" filter search>
+        <:col :let={bid} field="agency" label="Agency" search>
           <span class="max-w-[150px] truncate">{bid.agency}</span>
         </:col>
-        <:col :let={bid} field="region" label="Region" filter sort>
+        <:col :let={bid} field="region" label="Region" sort>
           {format_region(bid.region)}
         </:col>
         <:col :let={bid} field="due_at" label="Due" sort>
           {format_date(bid.due_at)}
         </:col>
-        <:col :let={bid} field="status" label="Status" filter sort>
-          <span class={status_badge(bid.status)}>{format_status(bid.status)}</span>
-        </:col>
-        <:col :let={bid} label="">
-          <a href={"/admin/agents/bid/#{bid.id}"} class="btn btn-xs btn-ghost">
-            <.icon name="hero-pencil" class="size-4" />
-          </a>
+        <:col :let={bid} field="status" label="Status" sort>
+          <span class={badge_class(bid.status)}>{format_status(bid.status)}</span>
         </:col>
       </Cinder.collection>
     </div>
@@ -69,14 +80,14 @@ defmodule GnomeGardenWeb.Agents.Sales.BidsLive do
   defp format_tier(nil), do: "-"
   defp format_tier(tier), do: tier |> to_string() |> String.upcase()
 
-  defp status_badge(nil), do: "badge badge-ghost badge-sm"
-  defp status_badge(:new), do: "badge badge-primary badge-sm"
-  defp status_badge(:reviewing), do: "badge badge-info badge-sm"
-  defp status_badge(:submitted), do: "badge badge-success badge-sm"
-  defp status_badge(:won), do: "badge badge-success badge-sm"
-  defp status_badge(:lost), do: "badge badge-error badge-sm"
-  defp status_badge(:passed), do: "badge badge-ghost badge-sm"
-  defp status_badge(_), do: "badge badge-ghost badge-sm"
+  defp badge_class(nil), do: "badge badge-ghost badge-sm"
+  defp badge_class(:new), do: "badge badge-primary badge-sm"
+  defp badge_class(:reviewing), do: "badge badge-info badge-sm"
+  defp badge_class(:submitted), do: "badge badge-success badge-sm"
+  defp badge_class(:won), do: "badge badge-success badge-sm"
+  defp badge_class(:lost), do: "badge badge-error badge-sm"
+  defp badge_class(:passed), do: "badge badge-ghost badge-sm"
+  defp badge_class(_), do: "badge badge-ghost badge-sm"
 
   defp format_status(nil), do: "new"
   defp format_status(status), do: status |> to_string() |> String.replace("_", " ")

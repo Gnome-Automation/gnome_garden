@@ -18,7 +18,10 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
      socket
      |> assign(:opportunity, opportunity)
      |> assign(:companies, companies)
-     |> assign(:page_title, if(opportunity, do: "Edit #{opportunity.name}", else: "New Opportunity"))
+     |> assign(
+       :page_title,
+       if(opportunity, do: "Edit #{opportunity.name}", else: "New Opportunity")
+     )
      |> assign_form()}
   end
 
@@ -40,7 +43,13 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
       {@page_title}
     </.header>
 
-    <.form for={@form} id="opportunity-form" phx-change="validate" phx-submit="save" class="space-y-6 max-w-2xl">
+    <.form
+      for={@form}
+      id="opportunity-form"
+      phx-change="validate"
+      phx-submit="save"
+      class="space-y-6 max-w-2xl"
+    >
       <.input field={@form[:name]} label="Opportunity Name" required />
 
       <.input
@@ -54,17 +63,14 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
 
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <.input
-          field={@form[:stage]}
+          field={@form[:workflow]}
           type="select"
-          label="Stage"
+          label="Workflow"
+          prompt="Select workflow..."
           options={[
-            {"Discovery", :discovery},
-            {"Qualification", :qualification},
-            {"Demo", :demo},
-            {"Proposal", :proposal},
-            {"Negotiation", :negotiation},
-            {"Closed Won", :closed_won},
-            {"Closed Lost", :closed_lost}
+            {"Bid Response (RFP/RFI)", :bid_response},
+            {"Outreach (cold call)", :outreach},
+            {"Inbound (referral)", :inbound}
           ]}
         />
         <.input
@@ -83,9 +89,20 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
         />
       </div>
 
+      <div :if={@opportunity} class="text-sm text-zinc-500">
+        Current stage: <span class="font-medium">{format_stage(@opportunity.stage)}</span>
+        <span class="text-zinc-400">(use stage buttons on the opportunity page to advance)</span>
+      </div>
+
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <.input field={@form[:amount]} label="Deal Amount ($)" type="number" step="0.01" />
-        <.input field={@form[:probability]} label="Probability (%)" type="number" min="0" max="100" />
+        <.input
+          field={@form[:probability]}
+          label="Probability (%)"
+          type="number"
+          min="0"
+          max="100"
+        />
       </div>
 
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -101,7 +118,7 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
       <.input field={@form[:description]} type="textarea" label="Description" />
 
       <.input
-        :if={@opportunity && @form[:stage].value in [:closed_lost]}
+        :if={@opportunity && to_string(@opportunity.stage) == "closed_lost"}
         field={@form[:loss_reason]}
         type="textarea"
         label="Loss Reason"
@@ -119,20 +136,28 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
-    form = AshPhoenix.Form.validate(socket.assigns.form.source, params)
+    form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, form: to_form(form))}
   end
 
+  @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    case AshPhoenix.Form.submit(socket.assigns.form.source, params: params) do
+    case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, opportunity} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Opportunity #{if socket.assigns.opportunity, do: "updated", else: "created"}")
+         |> put_flash(
+           :info,
+           "Opportunity #{if socket.assigns.opportunity, do: "updated", else: "created"}"
+         )
          |> push_navigate(to: ~p"/crm/opportunities/#{opportunity}")}
 
       {:error, form} ->
         {:noreply, assign(socket, form: to_form(form))}
     end
+  end
+
+  defp format_stage(stage) do
+    stage |> to_string() |> String.replace("_", " ") |> String.capitalize()
   end
 end

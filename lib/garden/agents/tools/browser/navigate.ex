@@ -15,27 +15,21 @@ defmodule GnomeGarden.Agents.Tools.Browser.Navigate do
       ]
     ]
 
-  @browser_path "/home/pc/gnome/garden/_build/jido_browser-linux_amd64/agent-browser-linux-x64"
-  @browser_args [
-    "--headed",
-    "--args",
-    "--no-sandbox,--disable-blink-features=AutomationControlled"
-  ]
+  alias GnomeGarden.Agents.Tools.Browser
 
   @impl true
   def run(%{url: url} = params, _context) do
     wait_for_network = Map.get(params, :wait_for_network, true)
+    browser = Browser.binary_path()
 
-    # Navigate to URL
-    case System.cmd(@browser_path, @browser_args ++ ["open", url, "--timeout", "30000"],
+    case System.cmd(browser, Browser.default_args() ++ ["open", url, "--timeout", "30000"],
            stderr_to_stdout: true
          ) do
       {output, 0} ->
         title = parse_title(output)
 
-        # Wait for network idle if requested (important for SPAs)
         if wait_for_network do
-          System.cmd(@browser_path, ["wait", "--load", "networkidle", "--timeout", "30000"],
+          System.cmd(browser, ["wait", "--load", "networkidle", "--timeout", "30000"],
             stderr_to_stdout: true
           )
         end

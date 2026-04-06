@@ -42,7 +42,13 @@ defmodule GnomeGardenWeb.CRM.TaskLive.Form do
       {@page_title}
     </.header>
 
-    <.form for={@form} id="task-form" phx-change="validate" phx-submit="save" class="space-y-6 max-w-2xl">
+    <.form
+      for={@form}
+      id="task-form"
+      phx-change="validate"
+      phx-submit="save"
+      class="space-y-6 max-w-2xl"
+    >
       <.input field={@form[:title]} label="Title" required />
 
       <.input field={@form[:description]} type="textarea" label="Description" />
@@ -120,12 +126,13 @@ defmodule GnomeGardenWeb.CRM.TaskLive.Form do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
-    form = AshPhoenix.Form.validate(socket.assigns.form.source, params)
+    form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, form: to_form(form))}
   end
 
+  @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    case AshPhoenix.Form.submit(socket.assigns.form.source, params: params) do
+    case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, task} ->
         {:noreply,
          socket

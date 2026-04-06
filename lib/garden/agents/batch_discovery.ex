@@ -23,7 +23,17 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
     # Get all sources and filter in Elixir
     sources =
       Ash.read!(LeadSource)
-      |> Enum.filter(fn s -> s.source_type == :planetbids and s.discovery_status == :pending end)
+      |> Enum.filter(fn s ->
+        s.source_type == :planetbids and s.config_status in [:found, :pending]
+      end)
+      |> Enum.map(fn source ->
+        # Ensure source is in :pending state for the configure transition
+        if source.config_status == :found do
+          Ash.update!(source, %{}, action: :queue)
+        else
+          source
+        end
+      end)
 
     Logger.info("Batch discovering #{length(sources)} PlanetBids sites...")
 
@@ -89,9 +99,6 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
 
       {:ok, %{status: :error, error: err}} ->
         {:error, "Navigation failed: #{err}"}
-
-      {:error, err} ->
-        {:error, "Error: #{inspect(err)}"}
     end
   end
 end

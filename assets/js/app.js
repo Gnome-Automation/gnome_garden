@@ -25,11 +25,46 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/gnome_garden"
 import topbar from "../vendor/topbar"
 
+// Sidebar collapse hook — persists state in localStorage
+const SidebarCollapse = {
+  mounted() {
+    this.apply(localStorage.getItem("sidebar-collapsed") === "true")
+
+    window.addEventListener("phx:toggle-sidebar", () => {
+      const next = localStorage.getItem("sidebar-collapsed") !== "true"
+      localStorage.setItem("sidebar-collapsed", next)
+      this.apply(next)
+    })
+  },
+
+  apply(collapsed) {
+    const expanded = document.getElementById("sidebar-expanded")
+    const collapsedEl = document.getElementById("sidebar-collapsed")
+    const main = document.getElementById("main-content")
+
+    if (collapsed) {
+      expanded?.classList.add("!hidden")
+      expanded?.classList.remove("lg:flex")
+      collapsedEl?.classList.remove("hidden")
+      collapsedEl?.classList.add("lg:flex")
+      main?.classList.remove("lg:pl-72")
+      main?.classList.add("lg:pl-20")
+    } else {
+      expanded?.classList.remove("!hidden")
+      expanded?.classList.add("lg:flex")
+      collapsedEl?.classList.add("hidden")
+      collapsedEl?.classList.remove("lg:flex")
+      main?.classList.remove("lg:pl-20")
+      main?.classList.add("lg:pl-72")
+    }
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, SidebarCollapse},
 })
 
 // Show progress bar on live navigation and form submits

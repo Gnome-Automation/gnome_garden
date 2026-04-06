@@ -15,7 +15,10 @@ defmodule GnomeGardenWeb.CRM.ContactLive.Form do
     {:ok,
      socket
      |> assign(:contact, contact)
-     |> assign(:page_title, if(contact, do: "Edit #{contact.first_name} #{contact.last_name}", else: "New Contact"))
+     |> assign(
+       :page_title,
+       if(contact, do: "Edit #{contact.first_name} #{contact.last_name}", else: "New Contact")
+     )
      |> assign_form()}
   end
 
@@ -37,7 +40,13 @@ defmodule GnomeGardenWeb.CRM.ContactLive.Form do
       {@page_title}
     </.header>
 
-    <.form for={@form} id="contact-form" phx-change="validate" phx-submit="save" class="space-y-6 max-w-2xl">
+    <.form
+      for={@form}
+      id="contact-form"
+      phx-change="validate"
+      phx-submit="save"
+      class="space-y-6 max-w-2xl"
+    >
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <.input field={@form[:first_name]} label="First Name" required />
         <.input field={@form[:last_name]} label="Last Name" required />
@@ -93,16 +102,20 @@ defmodule GnomeGardenWeb.CRM.ContactLive.Form do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
-    form = AshPhoenix.Form.validate(socket.assigns.form.source, params)
+    form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, form: to_form(form))}
   end
 
+  @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    case AshPhoenix.Form.submit(socket.assigns.form.source, params: params) do
+    case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, contact} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Contact #{if socket.assigns.contact, do: "updated", else: "created"}")
+         |> put_flash(
+           :info,
+           "Contact #{if socket.assigns.contact, do: "updated", else: "created"}"
+         )
          |> push_navigate(to: ~p"/crm/contacts/#{contact}")}
 
       {:error, form} ->
