@@ -177,39 +177,43 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
       </button>
     </div>
 
-    <%!-- Close modal --%>
-    <div
-      :if={@closing}
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      phx-window-keydown="cancel_close"
-      phx-key="Escape"
-    >
-      <div class="modal-box w-full max-w-sm bg-base-100 shadow-xl" phx-click-away="cancel_close">
-        <%= if @closing == "won" do %>
-          <h3 class="font-bold text-lg mb-4">Mark as Won</h3>
-          <p class="text-sm text-zinc-500 mb-4">Congratulations! Mark this opportunity as won.</p>
-          <div class="modal-action">
-            <button phx-click="cancel_close" class="btn btn-ghost">Cancel</button>
-            <button phx-click="close_won" class="btn btn-success">Confirm Won</button>
-          </div>
-        <% else %>
-          <h3 class="font-bold text-lg mb-4">Mark as Lost</h3>
-          <form phx-submit="close_lost">
-            <.input
-              name="loss_reason"
-              value=""
-              label="Why did we lose this?"
-              type="textarea"
-              required
-            />
-            <div class="modal-action">
-              <button type="button" phx-click="cancel_close" class="btn btn-ghost">Cancel</button>
-              <button type="submit" class="btn btn-error">Confirm Lost</button>
-            </div>
-          </form>
-        <% end %>
+    <%!-- Close Won dialog --%>
+    <dialog :if={@closing == "won"} id="close-won-dialog" class="modal" phx-hook="ShowModal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Mark as Won</h3>
+        <p class="text-sm text-zinc-500 mb-4">Congratulations! Mark this opportunity as won.</p>
+        <div class="modal-action">
+          <button phx-click="cancel_close" class="btn btn-ghost">Cancel</button>
+          <button phx-click="close_won" class="btn btn-success">Confirm Won</button>
+        </div>
       </div>
-    </div>
+      <form method="dialog" class="modal-backdrop">
+        <button phx-click="cancel_close">close</button>
+      </form>
+    </dialog>
+
+    <%!-- Close Lost dialog --%>
+    <dialog :if={@closing == "lost"} id="close-lost-dialog" class="modal" phx-hook="ShowModal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Mark as Lost</h3>
+        <form phx-submit="close_lost">
+          <.input
+            name="loss_reason"
+            value=""
+            label="Why did we lose this?"
+            type="textarea"
+            required
+          />
+          <div class="modal-action">
+            <button type="button" phx-click="cancel_close" class="btn btn-ghost">Cancel</button>
+            <button type="submit" class="btn btn-error">Confirm Lost</button>
+          </div>
+        </form>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button phx-click="cancel_close">close</button>
+      </form>
+    </dialog>
 
     <%!-- Details grid --%>
     <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
