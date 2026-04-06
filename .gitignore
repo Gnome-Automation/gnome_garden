@@ -34,7 +34,13 @@ gnome_garden-*.tar
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/
+/node_modules/
 
+# Playwright / E2E artifacts
+/test-results/
+/e2e/screenshots/
+playwright-report/
+.last-run.json
 
 # Environment variables
 .env
