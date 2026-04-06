@@ -60,11 +60,22 @@ const SidebarCollapse = {
   }
 }
 
+// ShowModal hook — calls showModal() to render in browser's top layer
+// This is required because <dialog open> only shows inline, not as a modal
+const ShowModal = {
+  mounted() {
+    this.el.showModal()
+  },
+  updated() {
+    if (!this.el.open) this.el.showModal()
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, SidebarCollapse},
+  hooks: {...colocatedHooks, SidebarCollapse, ShowModal},
 })
 
 // Show progress bar on live navigation and form submits

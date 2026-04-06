@@ -357,7 +357,7 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
       </div>
 
       <%!-- Pursue modal — uses DaisyUI dialog to escape stacking contexts --%>
-      <dialog :if={@pursue_item} id="pursue-dialog" class="modal modal-open" open>
+      <dialog :if={@pursue_item} id="pursue-dialog" class="modal" phx-hook="ShowModal">
         <div class="modal-box">
           <h3 class="font-bold text-lg mb-4">
             Pursue this opportunity
@@ -464,7 +464,7 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
       </dialog>
 
       <%!-- Pass dialog --%>
-      <dialog :if={@pass_item} id="pass-dialog" class="modal modal-open" open>
+      <dialog :if={@pass_item} id="pass-dialog" class="modal" phx-hook="ShowModal">
         <div class="modal-box">
           <h3 class="font-bold text-lg mb-2">Pass on this?</h3>
           <p class="text-sm text-zinc-500 mb-4">
@@ -505,7 +505,7 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
       </dialog>
 
       <%!-- Park dialog --%>
-      <dialog :if={@park_item} id="park-dialog" class="modal modal-open" open>
+      <dialog :if={@park_item} id="park-dialog" class="modal" phx-hook="ShowModal">
         <div class="modal-box">
           <h3 class="font-bold text-lg mb-2">Park for later</h3>
           <p class="text-sm text-zinc-500 mb-4">
@@ -598,7 +598,7 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
             <%!-- Agency + location + due --%>
             <div class="text-sm text-zinc-500 mt-1">
               <span :if={@bid.agency} class="font-medium">{@bid.agency}</span>
-              <span :if={@bid.location}> —          {@bid.location}</span>
+              <span :if={@bid.location}> —           {@bid.location}</span>
               <span :if={@bid.due_at} class="ml-2 text-zinc-400">
                 Due {format_date(@bid.due_at)}
               </span>
@@ -687,7 +687,7 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
             <%!-- Contact if known --%>
             <div :if={@lead.first_name != "Unknown"} class="text-sm text-zinc-500 mt-1">
               Contact: {@lead.first_name} {@lead.last_name}
-              <span :if={@lead.title}> —          {@lead.title}</span>
+              <span :if={@lead.title}> —           {@lead.title}</span>
             </div>
 
             <%!-- Link if available --%>

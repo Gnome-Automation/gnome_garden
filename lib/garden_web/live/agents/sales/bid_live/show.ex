@@ -323,7 +323,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     </div>
 
     <%!-- Pursue dialog --%>
-    <dialog :if={@action_dialog && @action_dialog.type == :pursue} class="modal modal-open" open>
+    <dialog :if={@action_dialog && @action_dialog.type == :pursue} class="modal" phx-hook="ShowModal">
       <div class="modal-box">
         <h3 class="font-bold text-lg mb-4">Pursue this opportunity</h3>
         <p class="text-sm text-zinc-500 mb-4">
@@ -428,7 +428,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     </dialog>
 
     <%!-- Pass dialog --%>
-    <dialog :if={@action_dialog && @action_dialog.type == :pass} class="modal modal-open" open>
+    <dialog :if={@action_dialog && @action_dialog.type == :pass} class="modal" phx-hook="ShowModal">
       <div class="modal-box">
         <h3 class="font-bold text-lg mb-2">Pass on this bid?</h3>
         <p class="text-sm text-zinc-500 mb-4">{@bid.title}</p>
@@ -465,7 +465,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     </dialog>
 
     <%!-- Park dialog --%>
-    <dialog :if={@action_dialog && @action_dialog.type == :park} class="modal modal-open" open>
+    <dialog :if={@action_dialog && @action_dialog.type == :park} class="modal" phx-hook="ShowModal">
       <div class="modal-box">
         <h3 class="font-bold text-lg mb-2">Park for later</h3>
         <p class="text-sm text-zinc-500 mb-4">{@bid.title}</p>
