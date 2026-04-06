@@ -13,19 +13,46 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
      socket
      |> assign(:page_title, opportunity.name)
      |> assign(:opportunity, opportunity)
-     |> assign(:closing, nil)}
+     |> assign(:closing, nil)
+     |> assign(:advancing, nil)
+     |> assign(:events, load_events(opportunity.id))}
   end
 
   @impl true
-  def handle_event("advance", %{"action" => action_name}, socket) do
+  def handle_event("open_advance", %{"action" => action_name, "label" => label}, socket) do
+    {:noreply, assign(socket, :advancing, %{action: action_name, label: label})}
+  end
+
+  def handle_event("cancel_advance", _, socket) do
+    {:noreply, assign(socket, :advancing, nil)}
+  end
+
+  def handle_event("submit_advance", %{"notes" => notes}, socket) do
     opp = socket.assigns.opportunity
+    %{action: action_name} = socket.assigns.advancing
     action = String.to_existing_atom(action_name)
+    from_stage = opp.stage
 
     case Ash.update(opp, %{}, action: action) do
       {:ok, updated} ->
+        Sales.log_pipeline_event(%{
+          event_type: :stage_advanced,
+          subject_type: "opportunity",
+          subject_id: opp.id,
+          summary: "#{format_stage(from_stage)} → #{format_stage(updated.stage)}",
+          reason: notes,
+          from_state: to_string(from_stage),
+          to_state: to_string(updated.stage),
+          opportunity_id: opp.id,
+          company_id: opp.company_id,
+          actor_id: socket.assigns.current_user && socket.assigns.current_user.id
+        })
+
         {:noreply,
          socket
          |> assign(:opportunity, Ash.load!(updated, [:company]))
+         |> assign(:advancing, nil)
+         |> assign(:events, load_events(opp.id))
          |> put_flash(:info, "Advanced to #{format_stage(updated.stage)}")}
 
       {:error, error} ->
@@ -41,13 +68,29 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
     {:noreply, assign(socket, :closing, nil)}
   end
 
-  def handle_event("close_won", _, socket) do
-    case Ash.update(socket.assigns.opportunity, %{}, action: :close_won) do
+  def handle_event("close_won", %{"notes" => notes}, socket) do
+    opp = socket.assigns.opportunity
+
+    case Ash.update(opp, %{}, action: :close_won) do
       {:ok, updated} ->
+        Sales.log_pipeline_event(%{
+          event_type: :closed_won,
+          subject_type: "opportunity",
+          subject_id: opp.id,
+          summary: "Won — #{opp.name}",
+          reason: notes,
+          from_state: to_string(opp.stage),
+          to_state: "closed_won",
+          opportunity_id: opp.id,
+          company_id: opp.company_id,
+          actor_id: socket.assigns.current_user && socket.assigns.current_user.id
+        })
+
         {:noreply,
          socket
          |> assign(:opportunity, Ash.load!(updated, [:company]))
          |> assign(:closing, nil)
+         |> assign(:events, load_events(opp.id))
          |> put_flash(:info, "Opportunity won!")}
 
       {:error, error} ->
@@ -55,13 +98,36 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
     end
   end
 
-  def handle_event("close_lost", %{"loss_reason" => reason}, socket) do
-    case Ash.update(socket.assigns.opportunity, %{loss_reason: reason}, action: :close_lost) do
+  def handle_event("close_won", _params, socket) do
+    # Fallback when no notes field
+    handle_event("close_won", %{"notes" => ""}, socket)
+  end
+
+  def handle_event("close_lost", %{"loss_reason" => reason} = params, socket) do
+    opp = socket.assigns.opportunity
+    notes = params["notes"] || ""
+
+    case Ash.update(opp, %{loss_reason: reason}, action: :close_lost) do
       {:ok, updated} ->
+        Sales.log_pipeline_event(%{
+          event_type: :closed_lost,
+          subject_type: "opportunity",
+          subject_id: opp.id,
+          summary: "Lost — #{opp.name}",
+          reason: reason,
+          from_state: to_string(opp.stage),
+          to_state: "closed_lost",
+          opportunity_id: opp.id,
+          company_id: opp.company_id,
+          actor_id: socket.assigns.current_user && socket.assigns.current_user.id,
+          metadata: %{notes: notes}
+        })
+
         {:noreply,
          socket
          |> assign(:opportunity, Ash.load!(updated, [:company]))
          |> assign(:closing, nil)
+         |> assign(:events, load_events(opp.id))
          |> put_flash(:info, "Opportunity closed")}
 
       {:error, error} ->
@@ -159,8 +225,9 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
     <div :if={!@closed?} class="mt-4 flex flex-wrap gap-2">
       <button
         :for={{label, action} <- @next_actions}
-        phx-click="advance"
+        phx-click="open_advance"
         phx-value-action={action}
+        phx-value-label={label}
         class="btn btn-sm btn-primary"
       >
         <.icon name="hero-arrow-right-mini" class="size-4" />
@@ -177,15 +244,50 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
       </button>
     </div>
 
+    <%!-- Advance dialog --%>
+    <dialog :if={@advancing} id="advance-dialog" class="modal" phx-hook="ShowModal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-2">{@advancing.label}</h3>
+        <p class="text-sm text-zinc-500 mb-4">
+          Moving from {format_stage(@opportunity.stage)} to next stage.
+        </p>
+        <form phx-submit="submit_advance">
+          <.input
+            name="notes"
+            value=""
+            label="Notes (optional)"
+            type="textarea"
+            placeholder="What's happening at this stage? Any context for the team?"
+          />
+          <div class="modal-action">
+            <button type="button" phx-click="cancel_advance" class="btn btn-ghost">Cancel</button>
+            <button type="submit" class="btn btn-primary">Advance</button>
+          </div>
+        </form>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button phx-click="cancel_advance">close</button>
+      </form>
+    </dialog>
+
     <%!-- Close Won dialog --%>
     <dialog :if={@closing == "won"} id="close-won-dialog" class="modal" phx-hook="ShowModal">
       <div class="modal-box">
         <h3 class="font-bold text-lg mb-4">Mark as Won</h3>
         <p class="text-sm text-zinc-500 mb-4">Congratulations! Mark this opportunity as won.</p>
-        <div class="modal-action">
-          <button phx-click="cancel_close" class="btn btn-ghost">Cancel</button>
-          <button phx-click="close_won" class="btn btn-success">Confirm Won</button>
-        </div>
+        <form phx-submit="close_won">
+          <.input
+            name="notes"
+            value=""
+            label="Notes (optional)"
+            type="textarea"
+            placeholder="Any details about the win?"
+          />
+          <div class="modal-action">
+            <button type="button" phx-click="cancel_close" class="btn btn-ghost">Cancel</button>
+            <button type="submit" class="btn btn-success">Confirm Won</button>
+          </div>
+        </form>
       </div>
       <form method="dialog" class="modal-backdrop">
         <button phx-click="cancel_close">close</button>
@@ -260,7 +362,48 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
         {@opportunity.loss_reason}
       </p>
     </div>
+
+    <%!-- Event timeline --%>
+    <div :if={@events != []} class="mt-8">
+      <.heading level={3}>Activity</.heading>
+      <div class="mt-4 space-y-3">
+        <div :for={event <- @events} class="flex gap-3 text-sm">
+          <div class="shrink-0 mt-0.5">
+            <span class={event_icon_class(event.event_type)} />
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-zinc-900 dark:text-white">{event.summary}</div>
+            <div
+              :if={event.reason && event.reason != ""}
+              class="text-zinc-600 dark:text-zinc-400 mt-0.5"
+            >
+              {event.reason}
+            </div>
+            <div class="text-xs text-zinc-400 mt-0.5">
+              {Calendar.strftime(event.inserted_at, "%b %d, %Y at %H:%M")}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     """
+  end
+
+  defp event_icon_class(:pursued), do: "inline-block size-2 rounded-full bg-success mt-1"
+  defp event_icon_class(:stage_advanced), do: "inline-block size-2 rounded-full bg-primary mt-1"
+  defp event_icon_class(:closed_won), do: "inline-block size-2 rounded-full bg-success mt-1"
+  defp event_icon_class(:closed_lost), do: "inline-block size-2 rounded-full bg-error mt-1"
+  defp event_icon_class(:parked), do: "inline-block size-2 rounded-full bg-warning mt-1"
+  defp event_icon_class(:passed), do: "inline-block size-2 rounded-full bg-error mt-1"
+  defp event_icon_class(_), do: "inline-block size-2 rounded-full bg-base-300 mt-1"
+
+  defp load_events(opportunity_id) do
+    require Ash.Query
+
+    GnomeGarden.Sales.Event
+    |> Ash.Query.filter(opportunity_id == ^opportunity_id)
+    |> Ash.Query.sort(inserted_at: :desc)
+    |> Ash.read!()
   end
 
   # -- Workflow stage definitions --
