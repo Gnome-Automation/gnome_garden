@@ -34,11 +34,11 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
   """
   def scan(lead_source_id) when is_binary(lead_source_id) do
     case Ash.get(LeadSource, lead_source_id) do
-      {:ok, %{discovery_status: :discovered, scrape_config: config} = source}
+      {:ok, %{config_status: :configured, scrape_config: config} = source}
       when config != %{} ->
         do_scan(source)
 
-      {:ok, %{discovery_status: status}} ->
+      {:ok, %{config_status: status}} ->
         {:error, "Source not ready for scanning. Status: #{status}. Run discovery first."}
 
       {:error, _} ->
@@ -80,10 +80,14 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
 
     with {:ok, _} <- Navigate.run(%{url: listing_url}, %{}),
          # Wait for SPA content to load
-         :ok <- (Process.sleep(2500); :ok),
+         :ok <-
+           (
+             Process.sleep(2500)
+             :ok
+           ),
          {:ok, bids} <- extract_bids(config),
          {:ok, scored} <- score_bids(bids, source),
-         {:ok, saved} <- save_qualifying_bids(scored, source) do
+         {:ok, saved} <- save_qualifying_bids(scored, source, listing_url) do
       # Mark as scanned
       Ash.update!(source, %{}, action: :mark_scanned)
 
@@ -98,6 +102,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
     else
       {:error, reason} ->
         Logger.error("Scan failed for #{source.name}: #{inspect(reason)}")
+        Ash.update(source, %{}, action: :scan_fail)
         {:error, reason}
     end
   end
@@ -115,7 +120,10 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
     Array.from(document.querySelectorAll('#{escape_js(listing_selector)}')).map(row => {
       const title = row.querySelector('#{escape_js(title_selector)}')?.innerText?.trim() || '';
       const date = #{if date_selector, do: "row.querySelector('#{escape_js(date_selector)}')?.innerText?.trim() || ''", else: "''"};
-      const link = #{if link_selector, do: "row.querySelector('#{escape_js(link_selector)}')?.href || ''", else: "''"};
+      const linkEl = #{if link_selector, do: "row.querySelector('#{escape_js(link_selector)}')", else: "null"};
+      // Try: direct href, nested <a>, PlanetBids rowattribute/data-itemid
+      const pbId = row.getAttribute('rowattribute') || row.querySelector('[data-itemid]')?.getAttribute('data-itemid') || '';
+      const link = linkEl?.href || linkEl?.querySelector('a')?.href || (pbId ? 'bo-detail/' + pbId : '');
       const description = #{if description_selector, do: "row.querySelector('#{escape_js(description_selector)}')?.innerText?.trim() || ''", else: "''"};
       const agency = #{if agency_selector, do: "row.querySelector('#{escape_js(agency_selector)}')?.innerText?.trim() || ''", else: "''"};
       return { title, date, link, description, agency };
@@ -144,33 +152,36 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
         params = %{
           title: bid["title"] || "",
           description: bid["description"] || "",
-          agency: bid["agency"] || source.name,
+          agency: source.name,
           location: region_to_location(source.region)
         }
 
-        case ScoreBid.run(params, %{}) do
-          {:ok, score_result} ->
-            Map.merge(bid, %{
-              "score" => score_result,
-              "source_id" => source.id,
-              "source_url" => source.url
-            })
+        {:ok, score_result} = ScoreBid.run(params, %{})
 
-          {:error, _} ->
-            Map.put(bid, "score", nil)
-        end
+        Map.merge(bid, %{
+          "score" => score_result,
+          "source_id" => source.id,
+          "source_url" => source.url
+        })
       end)
       |> Enum.reject(&is_nil(&1["score"]))
 
     {:ok, scored}
   end
 
-  defp save_qualifying_bids(scored_bids, source) do
-    # Save bids that have at least one keyword match - filtering by score happens in UI
+  defp save_qualifying_bids(scored_bids, source, listing_url) do
     relevant =
-      Enum.filter(scored_bids, fn bid ->
+      scored_bids
+      |> Enum.filter(fn bid ->
         score = bid["score"]
-        score && score.keywords_matched && length(score.keywords_matched) > 0
+        # Must have keyword matches and not be rejected
+        score && score.score_tier != :rejected &&
+          score.keywords_matched && length(score.keywords_matched) > 0
+      end)
+      |> Enum.reject(fn bid ->
+        # Skip expired bids
+        due = parse_date(bid["date"])
+        due != nil and DateTime.compare(due, DateTime.utc_now()) == :lt
       end)
 
     saved =
@@ -180,8 +191,8 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
         params = %{
           title: bid["title"],
           description: bid["description"] || "",
-          url: bid["link"] || source.url,
-          agency: bid["agency"] || source.name,
+          url: resolve_bid_url(bid["link"], listing_url),
+          agency: source.name,
           location: region_to_location(source.region),
           region: source.region,
           due_at: parse_date(bid["date"]),
@@ -198,14 +209,30 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
         }
 
         case SaveBid.run(params, %{}) do
-          {:ok, result} -> result
-          {:error, _} -> nil
+          {:ok, result} ->
+            result
+
+          {:error, reason} ->
+            Logger.warning("SaveBid failed for '#{bid["title"]}': #{inspect(reason)}")
+            nil
         end
       end)
       |> Enum.reject(&is_nil/1)
 
     {:ok, saved}
   end
+
+  defp resolve_bid_url(nil, source_url), do: source_url
+  defp resolve_bid_url("", source_url), do: source_url
+
+  defp resolve_bid_url("bo-detail/" <> _ = relative, source_url) do
+    # Relative PlanetBids detail URL — resolve against source base
+    base = source_url |> String.replace(~r"/bo/bo-search.*", "")
+    "#{base}/bo/#{relative}#bidInformation"
+  end
+
+  defp resolve_bid_url("http" <> _ = absolute, _source_url), do: absolute
+  defp resolve_bid_url(_other, source_url), do: source_url
 
   defp region_to_location(:oc), do: "Orange County, CA"
   defp region_to_location(:la), do: "Los Angeles County, CA"

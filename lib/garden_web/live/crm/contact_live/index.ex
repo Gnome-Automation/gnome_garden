@@ -1,11 +1,13 @@
 defmodule GnomeGardenWeb.CRM.ContactLive.Index do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.CRM.Helpers
+
   alias GnomeGarden.Sales.Contact
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Contacts")}
+    {:ok, assign(socket, page_title: "Contacts")}
   end
 
   @impl true
@@ -19,6 +21,7 @@ defmodule GnomeGardenWeb.CRM.ContactLive.Index do
       </div>
 
       <Cinder.collection
+        id="contacts"
         resource={Contact}
         actor={@current_user}
         search={[placeholder: "Search contacts..."]}
@@ -35,7 +38,9 @@ defmodule GnomeGardenWeb.CRM.ContactLive.Index do
           {contact.phone || "-"}
         </:col>
         <:col :let={contact} field="status" label="Status" sort>
-          <span class={status_class(contact.status)}>{format_status(contact.status)}</span>
+          <.status_badge status={contact_status(contact.status)}>
+            {format_atom(contact.status)}
+          </.status_badge>
         </:col>
         <:col :let={contact} label="">
           <.link
@@ -49,12 +54,4 @@ defmodule GnomeGardenWeb.CRM.ContactLive.Index do
     </div>
     """
   end
-
-  defp status_class(nil), do: "badge badge-ghost badge-sm"
-  defp status_class(:active), do: "badge badge-success badge-sm"
-  defp status_class(:inactive), do: "badge badge-warning badge-sm"
-  defp status_class(_), do: "badge badge-ghost badge-sm"
-
-  defp format_status(nil), do: "active"
-  defp format_status(status), do: status |> to_string() |> String.replace("_", " ")
 end

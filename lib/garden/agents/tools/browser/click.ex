@@ -10,14 +10,13 @@ defmodule GnomeGarden.Agents.Tools.Browser.Click do
       ref: [type: :string, required: true, doc: "Element ref like '@e9' or CSS selector"]
     ]
 
-  @browser_path "/home/pc/gnome/garden/_build/jido_browser-linux_amd64/agent-browser-linux-x64"
+  alias GnomeGarden.Agents.Tools.Browser
 
   @impl true
   def run(%{ref: ref}, _context) do
-    # Ensure ref starts with @ if it's a ref number
     ref = if String.match?(ref, ~r/^e\d+$/), do: "@#{ref}", else: ref
 
-    case System.cmd(@browser_path, ["click", ref], stderr_to_stdout: true) do
+    case System.cmd(Browser.binary_path(), ["click", ref], stderr_to_stdout: true) do
       {_output, 0} ->
         # Wait a moment for page to update
         Process.sleep(1500)

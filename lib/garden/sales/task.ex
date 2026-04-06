@@ -86,8 +86,9 @@ defmodule GnomeGarden.Sales.Task do
       filter expr(
                status in [:pending, :in_progress] and
                  not is_nil(due_at) and
-                 due_at < ^DateTime.utc_now()
+                 due_at < now()
              )
+
       prepare build(sort: [due_at: :asc])
     end
 
@@ -97,6 +98,7 @@ defmodule GnomeGarden.Sales.Task do
                  not is_nil(due_at) and
                  fragment("DATE(?) = CURRENT_DATE", due_at)
              )
+
       prepare build(sort: [due_at: :asc])
     end
 

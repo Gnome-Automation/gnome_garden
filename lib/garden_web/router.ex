@@ -30,6 +30,9 @@ defmodule GnomeGardenWeb.Router do
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_optional}] do
       live "/agent", AgentLive
 
+      # CRM - Review Queue
+      live "/crm/review", CRM.ReviewLive, :index
+
       # CRM - Companies
       live "/crm/companies", CRM.CompanyLive.Index, :index
       live "/crm/companies/new", CRM.CompanyLive.Form, :new
@@ -61,7 +64,8 @@ defmodule GnomeGardenWeb.Router do
       live "/crm/tasks/:id/edit", CRM.TaskLive.Form, :edit
 
       # Agents - Sales Discovery
-      live "/agents/sales/bids", Agents.Sales.BidsLive
+      live "/agents/sales/bids", Agents.Sales.BidLive.Index, :index
+      live "/agents/sales/bids/:id", Agents.Sales.BidLive.Show, :show
       live "/agents/sales/prospects", Agents.Sales.ProspectsLive
       live "/agents/sales/lead-sources", Agents.Sales.LeadSourcesLive
     end
@@ -94,12 +98,18 @@ defmodule GnomeGardenWeb.Router do
     # Remove this if you do not use the confirmation strategy
     confirm_route GnomeGarden.Accounts.User, :confirm_new_user,
       auth_routes_prefix: "/auth",
-      overrides: [GnomeGardenWeb.AuthOverrides, Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI]
+      overrides: [
+        GnomeGardenWeb.AuthOverrides,
+        Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI
+      ]
 
     # Remove this if you do not use the magic link strategy.
     magic_sign_in_route(GnomeGarden.Accounts.User, :magic_link,
       auth_routes_prefix: "/auth",
-      overrides: [GnomeGardenWeb.AuthOverrides, Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI]
+      overrides: [
+        GnomeGardenWeb.AuthOverrides,
+        Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI
+      ]
     )
   end
 

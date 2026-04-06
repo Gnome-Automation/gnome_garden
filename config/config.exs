@@ -7,6 +7,7 @@
 # General application configuration
 import Config
 
+config :cinder, default_theme: GnomeGardenWeb.CinderTheme
 config :ex_cldr, default_backend: GnomeGarden.Cldr
 config :ash_oban, pro?: false
 
@@ -107,7 +108,7 @@ config :jido_ai,
 config :gnome_garden, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
-  queues: [default: 10],
+  queues: [default: 10, lead_scanning: 2],
   repo: GnomeGarden.Repo,
   plugins: [{Oban.Plugins.Cron, []}]
 

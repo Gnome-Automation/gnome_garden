@@ -9,11 +9,39 @@ defmodule GnomeGarden.Agents.Bid do
   use Ash.Resource,
     otp_app: :gnome_garden,
     domain: GnomeGarden.Agents,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshJido, AshStateMachine],
+    notifiers: [AshJido.Notifier, Ash.Notifier.PubSub]
 
   postgres do
     table "bids"
     repo GnomeGarden.Repo
+  end
+
+  jido do
+    signal_bus(GnomeGarden.SignalBus)
+
+    publish :create, "sales.bid.created", include: :all
+    publish :score, "sales.bid.scored", include: :all
+  end
+
+  state_machine do
+    initial_states [:new]
+    default_initial_state :new
+    state_attribute :status
+
+    transitions do
+      transition :start_review, from: :new, to: :reviewing
+      transition :pursue, from: [:new, :reviewing], to: :pursuing
+      transition :submit, from: :pursuing, to: :submitted
+      transition :mark_won, from: :submitted, to: :won
+      transition :mark_lost, from: [:submitted, :pursuing], to: :lost
+      transition :reject, from: [:new, :reviewing], to: :rejected
+      transition :park, from: [:new, :reviewing], to: :parked
+      transition :unpark, from: :parked, to: :new
+      transition :expire, from: :*, to: :expired
+      transition :convert_to_opportunity, from: [:new, :reviewing, :pursuing], to: :pursuing
+    end
   end
 
   actions do
@@ -26,6 +54,7 @@ defmodule GnomeGarden.Agents.Bid do
         :title,
         :description,
         :external_id,
+        :bid_type,
         :url,
         :source_url,
         :agency,
@@ -50,21 +79,70 @@ defmodule GnomeGarden.Agents.Bid do
       ]
 
       change set_attribute(:discovered_at, &DateTime.utc_now/0)
-      change set_attribute(:status, :new)
     end
 
     update :update do
-      accept [:status, :notes, :metadata, :owner_id, :agency_company_id]
+      accept [:notes, :metadata, :owner_id, :agency_company_id]
+    end
+
+    # -- State transitions --
+
+    update :start_review do
+      accept []
+      change transition_state(:reviewing)
+    end
+
+    update :pursue do
+      accept []
+      change transition_state(:pursuing)
     end
 
     update :convert_to_opportunity do
+      require_atomic? false
       description "Link bid to an opportunity when pursuing as a deal"
       argument :opportunity_id, :uuid, allow_nil?: false
       change set_attribute(:opportunity_id, arg(:opportunity_id))
-      change set_attribute(:status, :submitted)
+      change transition_state(:pursuing)
+    end
+
+    update :submit do
+      accept []
+      change transition_state(:submitted)
+    end
+
+    update :mark_won do
+      accept []
+      change transition_state(:won)
+    end
+
+    update :mark_lost do
+      accept [:notes]
+      change transition_state(:lost)
+    end
+
+    update :reject do
+      accept [:notes]
+      change transition_state(:rejected)
+    end
+
+    update :park do
+      accept [:notes]
+      change transition_state(:parked)
+    end
+
+    update :unpark do
+      accept []
+      change transition_state(:new)
+    end
+
+    update :expire do
+      accept []
+      change transition_state(:expired)
     end
 
     update :score do
+      require_atomic? false
+
       accept [
         :score_service_match,
         :score_geography,
@@ -75,7 +153,6 @@ defmodule GnomeGarden.Agents.Bid do
       ]
 
       change fn changeset, _ctx ->
-        # Calculate total and tier
         total =
           (Ash.Changeset.get_attribute(changeset, :score_service_match) || 0) +
             (Ash.Changeset.get_attribute(changeset, :score_geography) || 0) +
@@ -96,6 +173,8 @@ defmodule GnomeGarden.Agents.Bid do
         |> Ash.Changeset.change_attribute(:score_tier, tier)
       end
     end
+
+    # -- Reads --
 
     read :hot do
       filter expr(score_tier == :hot and status in [:new, :reviewing])
@@ -119,6 +198,25 @@ defmodule GnomeGarden.Agents.Bid do
       argument :status, :atom, allow_nil?: false
       filter expr(status == ^arg(:status))
     end
+
+    read :needs_review do
+      filter expr(status == :new)
+      prepare build(sort: [score_total: :desc, inserted_at: :desc])
+    end
+
+    read :parked do
+      filter expr(status == :parked)
+      prepare build(sort: [updated_at: :desc])
+    end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "bid"
+
+    publish :create, "created"
+    publish :update, "updated"
+    publish :score, "scored"
   end
 
   attributes do
@@ -127,6 +225,11 @@ defmodule GnomeGarden.Agents.Bid do
     attribute :title, :string, allow_nil?: false, public?: true
     attribute :description, :string, public?: true
     attribute :external_id, :string, public?: true, description: "ID from the source system"
+
+    attribute :bid_type, :atom,
+      public?: true,
+      constraints: [one_of: [:rfi, :rfp, :rfq, :ifb, :soq, :other]],
+      description: "RFI, RFP, RFQ, IFB, SOQ"
 
     attribute :url, :string, allow_nil?: false, public?: true
 
@@ -142,10 +245,21 @@ defmodule GnomeGarden.Agents.Bid do
       constraints: [one_of: [:oc, :la, :ie, :sd, :socal, :norcal, :ca, :national, :other]]
 
     attribute :status, :atom,
+      allow_nil?: false,
       default: :new,
       public?: true,
       constraints: [
-        one_of: [:new, :reviewing, :pursuing, :submitted, :won, :lost, :expired, :rejected]
+        one_of: [
+          :new,
+          :reviewing,
+          :pursuing,
+          :submitted,
+          :won,
+          :lost,
+          :expired,
+          :rejected,
+          :parked
+        ]
       ]
 
     # Dates
@@ -226,6 +340,10 @@ defmodule GnomeGarden.Agents.Bid do
     belongs_to :agency_company, GnomeGarden.Sales.Company do
       public? true
       description "Company record for the agency posting the bid"
+    end
+
+    has_many :activities, GnomeGarden.Sales.Activity do
+      public? true
     end
   end
 

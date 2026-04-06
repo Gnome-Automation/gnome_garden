@@ -22,7 +22,11 @@ defmodule GnomeGarden.Application do
       {Registry, keys: :unique, name: GnomeGarden.Agents.SessionRegistry},
       {DynamicSupervisor, name: GnomeGarden.Agents.AgentSupervisor, strategy: :one_for_one},
       GnomeGarden.Agents.AgentTracker,
+      {Jido.Signal.Bus, name: GnomeGarden.SignalBus},
       GnomeGarden.Jido,
+
+      # Lead pipeline — reacts to bid/lead signals
+      GnomeGarden.Agents.Pipeline.PipelineSupervisor,
 
       # Start to serve requests, typically the last entry
       GnomeGardenWeb.Endpoint,

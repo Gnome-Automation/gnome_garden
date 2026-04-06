@@ -28,36 +28,100 @@ planetbids_ie = [
 
 # OpenGov portals
 opengov = [
-  %{name: "County of Orange", url: "https://procurement.opengov.com/portal/ocgov", portal_id: "ocgov", region: :oc},
-  %{name: "OC Public Works", url: "https://procurement.opengov.com/portal/ocgov", portal_id: "ocgov", region: :oc},
-  %{name: "City of Tustin", url: "https://procurement.opengov.com/portal/tustin", portal_id: "tustin", region: :oc},
-  %{name: "City of Lake Forest", url: "https://procurement.opengov.com/portal/lakeforestca", portal_id: "lakeforestca", region: :oc},
-  %{name: "City of Fullerton", url: "https://procurement.opengov.com/portal/cityoffullerton", portal_id: "cityoffullerton", region: :oc}
+  %{
+    name: "County of Orange",
+    url: "https://procurement.opengov.com/portal/ocgov",
+    portal_id: "ocgov",
+    region: :oc
+  },
+  %{
+    name: "OC Public Works",
+    url: "https://procurement.opengov.com/portal/ocgov",
+    portal_id: "ocgov",
+    region: :oc
+  },
+  %{
+    name: "City of Tustin",
+    url: "https://procurement.opengov.com/portal/tustin",
+    portal_id: "tustin",
+    region: :oc
+  },
+  %{
+    name: "City of Lake Forest",
+    url: "https://procurement.opengov.com/portal/lakeforestca",
+    portal_id: "lakeforestca",
+    region: :oc
+  },
+  %{
+    name: "City of Fullerton",
+    url: "https://procurement.opengov.com/portal/cityoffullerton",
+    portal_id: "cityoffullerton",
+    region: :oc
+  }
 ]
 
 # Utilities
 utilities = [
-  %{name: "LADWP", url: "https://www.ladwp.com/doing-business-with-ladwp/procurement-contracts/current-bids", region: :la, priority: :high},
-  %{name: "MWD (Metropolitan Water)", url: "https://www.mwdh2o.com/doing-business-with-mwd/", region: :socal, priority: :high},
-  %{name: "IEUA (Inland Empire)", url: "https://www.ieua.org/doing-business-with-us/", region: :ie},
+  %{
+    name: "LADWP",
+    url: "https://www.ladwp.com/doing-business-with-ladwp/procurement-contracts/current-bids",
+    region: :la,
+    priority: :high
+  },
+  %{
+    name: "MWD (Metropolitan Water)",
+    url: "https://www.mwdh2o.com/doing-business-with-mwd/",
+    region: :socal,
+    priority: :high
+  },
+  %{
+    name: "IEUA (Inland Empire)",
+    url: "https://www.ieua.org/doing-business-with-us/",
+    region: :ie
+  },
   %{name: "OCWD", url: "https://www.ocwd.com/doing-business-with-ocwd/", region: :oc},
-  %{name: "EMWD (Eastern Municipal)", url: "https://www.emwd.org/doing-business-emwd", region: :ie}
+  %{
+    name: "EMWD (Eastern Municipal)",
+    url: "https://www.emwd.org/doing-business-emwd",
+    region: :ie
+  }
 ]
 
 # Ports
 ports = [
-  %{name: "Port of Long Beach", url: "https://polb.com/business/doing-business-with-us/", region: :la},
-  %{name: "Port of Los Angeles", url: "https://www.portoflosangeles.org/business/contracting-opportunities", region: :la}
+  %{
+    name: "Port of Long Beach",
+    url: "https://polb.com/business/doing-business-with-us/",
+    region: :la
+  },
+  %{
+    name: "Port of Los Angeles",
+    url: "https://www.portoflosangeles.org/business/contracting-opportunities",
+    region: :la
+  }
 ]
 
 # Federal
 federal = [
-  %{name: "SAM.gov", url: "https://sam.gov", source_type: :sam_gov, region: :national, priority: :high, api_available: true}
+  %{
+    name: "SAM.gov",
+    url: "https://sam.gov",
+    source_type: :sam_gov,
+    region: :national,
+    priority: :high,
+    api_available: true
+  }
 ]
 
 # State
 state = [
-  %{name: "Cal eProcure", url: "https://caleprocure.ca.gov", source_type: :cal_eprocure, region: :ca, api_available: true}
+  %{
+    name: "Cal eProcure",
+    url: "https://caleprocure.ca.gov",
+    source_type: :cal_eprocure,
+    region: :ca,
+    api_available: true
+  }
 ]
 
 # Helper to create PlanetBids sources
@@ -72,8 +136,8 @@ create_planetbids = fn sources, base_url ->
       portal_id: source.portal_id,
       region: source.region,
       priority: Map.get(source, :priority, :medium),
-      discovered_by: :import,
-      discovery_notes: "Imported from lead-sources.md",
+      added_by: :import,
+      notes: "Imported from lead-sources.md",
       enabled: true
     }
 
@@ -95,8 +159,8 @@ create_sources = fn sources, source_type ->
       region: source.region,
       priority: Map.get(source, :priority, :medium),
       api_available: Map.get(source, :api_available, false),
-      discovered_by: :import,
-      discovery_notes: "Imported from lead-sources.md",
+      added_by: :import,
+      notes: "Imported from lead-sources.md",
       enabled: true
     }
 

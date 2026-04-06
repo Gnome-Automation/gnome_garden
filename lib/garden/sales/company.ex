@@ -10,7 +10,8 @@ defmodule GnomeGarden.Sales.Company do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Sales,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource, AshStateMachine],
+    notifiers: [Ash.Notifier.PubSub]
 
   admin do
     table_columns [:id, :name, :company_type, :status, :city, :state, :inserted_at]
@@ -19,6 +20,20 @@ defmodule GnomeGarden.Sales.Company do
   postgres do
     table "companies"
     repo GnomeGarden.Repo
+  end
+
+  state_machine do
+    state_attribute :review_status
+    initial_states [:new]
+    default_initial_state :new
+
+    transitions do
+      transition :accept, from: [:new, :snoozed], to: :accepted
+      transition :reject, from: [:new, :snoozed], to: :rejected
+      transition :snooze, from: [:new], to: :snoozed
+      transition :activate, from: [:accepted], to: :active
+      transition :reopen, from: [:rejected], to: :new
+    end
   end
 
   actions do
@@ -88,6 +103,65 @@ defmodule GnomeGarden.Sales.Company do
     read :prospects do
       filter expr(company_type == :prospect and status == :active)
     end
+
+    read :needs_review do
+      filter expr(review_status == :new)
+      prepare build(sort: [inserted_at: :desc])
+    end
+
+    read :snoozed do
+      filter expr(review_status == :snoozed and snoozed_until <= ^DateTime.utc_now())
+      prepare build(sort: [snoozed_until: :asc])
+    end
+
+    # Review actions
+
+    update :accept do
+      accept []
+      change transition_state(:accepted)
+    end
+
+    update :reject do
+      accept [:rejection_reason, :rejection_notes]
+      change transition_state(:rejected)
+    end
+
+    update :snooze do
+      require_atomic? false
+      argument :days, :integer, default: 7
+      accept []
+      change transition_state(:snoozed)
+
+      change fn changeset, _ctx ->
+        days = Ash.Changeset.get_argument(changeset, :days)
+        until = DateTime.add(DateTime.utc_now(), days, :day)
+        Ash.Changeset.change_attribute(changeset, :snoozed_until, until)
+      end
+    end
+
+    update :activate do
+      accept []
+      change transition_state(:active)
+    end
+
+    update :reopen do
+      accept []
+      change transition_state(:new)
+      change set_attribute(:rejection_reason, nil)
+      change set_attribute(:rejection_notes, nil)
+    end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "company"
+
+    publish :create, "created"
+    publish :update, "updated"
+    publish :accept, "accepted"
+    publish :reject, "rejected"
+    publish :snooze, "snoozed"
+    publish :activate, "activated"
   end
 
   attributes do
@@ -119,6 +193,30 @@ defmodule GnomeGarden.Sales.Company do
       constraints one_of: [:active, :inactive, :churned]
       description "Account status"
     end
+
+    attribute :review_status, :atom do
+      allow_nil? false
+      default :new
+      public? true
+      constraints one_of: [:new, :accepted, :rejected, :snoozed, :active]
+    end
+
+    attribute :rejection_reason, :atom do
+      public? true
+
+      constraints one_of: [
+                    :not_a_fit,
+                    :too_large,
+                    :too_small,
+                    :wrong_industry,
+                    :wrong_region,
+                    :duplicate,
+                    :other
+                  ]
+    end
+
+    attribute :rejection_notes, :string, public?: true
+    attribute :snoozed_until, :utc_datetime, public?: true
 
     attribute :website, :string do
       public? true
@@ -156,9 +254,9 @@ defmodule GnomeGarden.Sales.Company do
       description "Number of employees"
     end
 
-    attribute :annual_revenue, :decimal do
+    attribute :annual_revenue, :money do
       public? true
-      description "Annual revenue in dollars"
+      description "Annual revenue"
     end
 
     attribute :region, :atom do
@@ -191,10 +289,6 @@ defmodule GnomeGarden.Sales.Company do
       description "Primary contact at this company"
     end
 
-    has_many :contacts, GnomeGarden.Sales.Contact do
-      public? true
-    end
-
     has_many :activities, GnomeGarden.Sales.Activity do
       public? true
     end
@@ -223,6 +317,14 @@ defmodule GnomeGarden.Sales.Company do
 
     has_many :incoming_relationships, GnomeGarden.Sales.CompanyRelationship do
       destination_attribute :to_company_id
+      public? true
+    end
+
+    has_many :leads, GnomeGarden.Sales.Lead do
+      public? true
+    end
+
+    has_many :lead_sources, GnomeGarden.Agents.LeadSource do
       public? true
     end
   end

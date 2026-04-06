@@ -1,11 +1,13 @@
 defmodule GnomeGardenWeb.CRM.OpportunityLive.Index do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.CRM.Helpers
+
   alias GnomeGarden.Sales.Opportunity
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Opportunities")}
+    {:ok, assign(socket, page_title: "Opportunities")}
   end
 
   @impl true
@@ -19,6 +21,7 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Index do
       </div>
 
       <Cinder.collection
+        id="opportunities"
         resource={Opportunity}
         actor={@current_user}
         search={[placeholder: "Search opportunities..."]}
@@ -29,7 +32,9 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Index do
           </.link>
         </:col>
         <:col :let={opp} field="stage" label="Stage" sort>
-          <span class={stage_badge(opp.stage)}>{format_stage(opp.stage)}</span>
+          <.status_badge status={opportunity_stage(opp.stage)}>
+            {format_atom(opp.stage)}
+          </.status_badge>
         </:col>
         <:col :let={opp} field="amount" label="Amount" sort>
           {format_amount(opp.amount)}
@@ -52,22 +57,4 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Index do
     </div>
     """
   end
-
-  defp stage_badge(:discovery), do: "badge badge-info badge-sm"
-  defp stage_badge(:qualification), do: "badge badge-info badge-sm"
-  defp stage_badge(:demo), do: "badge badge-warning badge-sm"
-  defp stage_badge(:proposal), do: "badge badge-warning badge-sm"
-  defp stage_badge(:negotiation), do: "badge badge-primary badge-sm"
-  defp stage_badge(:closed_won), do: "badge badge-success badge-sm"
-  defp stage_badge(:closed_lost), do: "badge badge-error badge-sm"
-  defp stage_badge(_), do: "badge badge-ghost badge-sm"
-
-  defp format_stage(nil), do: "-"
-  defp format_stage(stage), do: stage |> to_string() |> String.replace("_", " ")
-
-  defp format_amount(nil), do: "-"
-  defp format_amount(amount), do: "$#{Decimal.to_string(amount)}"
-
-  defp format_date(nil), do: "-"
-  defp format_date(date), do: Calendar.strftime(date, "%b %d, %Y")
 end

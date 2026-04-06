@@ -52,8 +52,8 @@ defmodule GnomeGarden.MixProject do
       {:req_llm, "~> 1.7"},
       {:llm_db, "~> 2026.3"},
 
-      # Extended Jido ecosystem (GitHub)
-      # Note: ash_jido removed due to version conflicts - using manual memory tools
+      # Extended Jido ecosystem
+      {:ash_jido, path: "../jido/ash_jido", override: true},
       {:jido_shell, github: "agentjido/jido_shell", branch: "main"},
       {:jido_vfs, github: "agentjido/jido_vfs", branch: "main"},
       {:jido_skill, github: "agentjido/jido_skill", branch: "main"},

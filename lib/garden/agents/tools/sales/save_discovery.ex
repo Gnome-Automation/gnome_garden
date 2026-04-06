@@ -65,14 +65,14 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
 
     case Ash.get(GnomeGarden.Agents.LeadSource, params.lead_source_id) do
       {:ok, source} ->
-        case Ash.update(source, %{scrape_config: scrape_config}, action: :save_discovery) do
+        case Ash.update(source, %{scrape_config: scrape_config}, action: :configure) do
           {:ok, updated} ->
             {:ok,
              %{
                saved: true,
                lead_source_id: updated.id,
                name: updated.name,
-               discovery_status: :discovered,
+               config_status: :configured,
                message:
                  "Scraping config saved! Future scans will use deterministic scraping (no LLM)."
              }}

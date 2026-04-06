@@ -102,15 +102,6 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
     end
   end
 
-  defp maybe_score(bid, nil), do: bid
-
-  defp maybe_score(bid, scores) when is_map(scores) do
-    case Ash.update(bid, :score, scores) do
-      {:ok, updated} -> updated
-      _ -> bid
-    end
-  end
-
   defp parse_datetime(nil), do: nil
   defp parse_datetime(%DateTime{} = dt), do: dt
 

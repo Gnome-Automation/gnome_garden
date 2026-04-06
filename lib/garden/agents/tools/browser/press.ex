@@ -14,11 +14,11 @@ defmodule GnomeGarden.Agents.Tools.Browser.Press do
       ]
     ]
 
-  @browser_path "/home/pc/gnome/garden/_build/jido_browser-linux_amd64/agent-browser-linux-x64"
+  alias GnomeGarden.Agents.Tools.Browser
 
   @impl true
   def run(%{key: key}, _context) do
-    case System.cmd(@browser_path, ["press", key], stderr_to_stdout: true) do
+    case System.cmd(Browser.binary_path(), ["press", key], stderr_to_stdout: true) do
       {_output, 0} ->
         Process.sleep(500)
         {:ok, %{pressed: key, status: :ok}}

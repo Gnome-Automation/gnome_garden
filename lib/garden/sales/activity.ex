@@ -37,7 +37,10 @@ defmodule GnomeGarden.Sales.Activity do
         :outcome,
         :company_id,
         :contact_id,
-        :owner_id
+        :owner_id,
+        :bid_id,
+        :lead_id,
+        :opportunity_id
       ]
     end
 
@@ -52,7 +55,10 @@ defmodule GnomeGarden.Sales.Activity do
         :outcome,
         :company_id,
         :contact_id,
-        :owner_id
+        :owner_id,
+        :bid_id,
+        :lead_id,
+        :opportunity_id
       ]
     end
 
@@ -84,7 +90,18 @@ defmodule GnomeGarden.Sales.Activity do
     attribute :activity_type, :atom do
       allow_nil? false
       public? true
-      constraints one_of: [:call, :email, :meeting, :site_visit, :demo, :linkedin_message, :proposal_sent, :text]
+
+      constraints one_of: [
+                    :call,
+                    :email,
+                    :meeting,
+                    :site_visit,
+                    :demo,
+                    :linkedin_message,
+                    :proposal_sent,
+                    :text
+                  ]
+
       description "Type of interaction"
     end
 
@@ -118,7 +135,19 @@ defmodule GnomeGarden.Sales.Activity do
 
     attribute :outcome, :atom do
       public? true
-      constraints one_of: [:connected, :voicemail, :no_answer, :left_message, :sent, :opened, :bounced, :scheduled, :completed]
+
+      constraints one_of: [
+                    :connected,
+                    :voicemail,
+                    :no_answer,
+                    :left_message,
+                    :sent,
+                    :opened,
+                    :bounced,
+                    :scheduled,
+                    :completed
+                  ]
+
       description "Result of the activity"
     end
 
@@ -139,6 +168,21 @@ defmodule GnomeGarden.Sales.Activity do
     belongs_to :owner, GnomeGarden.Accounts.User do
       public? true
       description "User who owns/performed this activity"
+    end
+
+    belongs_to :bid, GnomeGarden.Agents.Bid do
+      public? true
+      description "Related bid (if activity is about a bid)"
+    end
+
+    belongs_to :lead, GnomeGarden.Sales.Lead do
+      public? true
+      description "Related lead (if activity is about a lead)"
+    end
+
+    belongs_to :opportunity, GnomeGarden.Sales.Opportunity do
+      public? true
+      description "Related opportunity (if activity is about a deal)"
     end
   end
 end

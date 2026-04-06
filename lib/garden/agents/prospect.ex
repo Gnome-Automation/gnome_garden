@@ -12,7 +12,8 @@ defmodule GnomeGarden.Agents.Prospect do
   use Ash.Resource,
     otp_app: :gnome_garden,
     domain: GnomeGarden.Agents,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    notifiers: [Ash.Notifier.PubSub]
 
   postgres do
     table "prospects"
@@ -125,6 +126,25 @@ defmodule GnomeGarden.Agents.Prospect do
     read :active do
       filter expr(status not in [:won, :lost, :dormant])
     end
+
+    read :needs_review do
+      filter expr(status == :researched)
+      prepare build(sort: [signal_strength: :desc, inserted_at: :desc])
+    end
+
+    update :reject do
+      accept [:notes]
+      change set_attribute(:status, :lost)
+    end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "prospect"
+
+    publish :create, "created"
+    publish :update, "updated"
+    publish :reject, "rejected"
   end
 
   attributes do

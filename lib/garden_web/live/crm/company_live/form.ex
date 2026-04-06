@@ -37,7 +37,13 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Form do
       {@page_title}
     </.header>
 
-    <.form for={@form} id="company-form" phx-change="validate" phx-submit="save" class="space-y-6 max-w-2xl">
+    <.form
+      for={@form}
+      id="company-form"
+      phx-change="validate"
+      phx-submit="save"
+      class="space-y-6 max-w-2xl"
+    >
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <.input field={@form[:name]} label="Company Name" required />
         <.input field={@form[:legal_name]} label="Legal Name" />
@@ -132,16 +138,20 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Form do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
-    form = AshPhoenix.Form.validate(socket.assigns.form.source, params)
+    form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, form: to_form(form))}
   end
 
+  @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    case AshPhoenix.Form.submit(socket.assigns.form.source, params: params) do
+    case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, company} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Company #{if socket.assigns.company, do: "updated", else: "created"}")
+         |> put_flash(
+           :info,
+           "Company #{if socket.assigns.company, do: "updated", else: "created"}"
+         )
          |> push_navigate(to: ~p"/crm/companies/#{company}")}
 
       {:error, form} ->

@@ -6,19 +6,21 @@ defmodule GnomeGardenWeb.LiveUserAuth do
   import Phoenix.Component
   use GnomeGardenWeb, :verified_routes
 
-  # This is used for nested liveviews to fetch the current user.
-  # To use, place the following at the top of that liveview:
-  # on_mount {GnomeGardenWeb.LiveUserAuth, :current_user}
+  require Ash.Query
+
   def on_mount(:current_user, _params, session, socket) do
     {:cont, AshAuthentication.Phoenix.LiveSession.assign_new_resources(socket, session)}
   end
 
   def on_mount(:live_user_optional, _params, _session, socket) do
-    if socket.assigns[:current_user] do
-      {:cont, socket}
-    else
-      {:cont, assign(socket, :current_user, nil)}
-    end
+    socket =
+      socket
+      |> assign_new(:current_user, fn -> nil end)
+      |> assign_new(:current_path, fn -> "/" end)
+      |> assign_nav_counts()
+      |> Phoenix.LiveView.attach_hook(:set_current_path, :handle_params, &set_current_path/3)
+
+    {:cont, socket}
   end
 
   def on_mount(:live_user_required, _params, _session, socket) do
@@ -35,5 +37,43 @@ defmodule GnomeGardenWeb.LiveUserAuth do
     else
       {:cont, assign(socket, :current_user, nil)}
     end
+  end
+
+  defp set_current_path(_params, uri, socket) do
+    path = URI.parse(uri).path || "/"
+    {:cont, assign(socket, :current_path, path)}
+  end
+
+  defp assign_nav_counts(socket) do
+    if Phoenix.LiveView.connected?(socket) do
+      counts = load_nav_counts()
+      assign(socket, :nav_counts, counts)
+    else
+      assign(socket, :nav_counts, %{})
+    end
+  end
+
+  defp load_nav_counts do
+    review_bids =
+      GnomeGarden.Agents.Bid
+      |> Ash.Query.filter(status == :new)
+      |> Ash.count!()
+
+    review_leads =
+      GnomeGarden.Sales.Lead
+      |> Ash.Query.filter(status == :new)
+      |> Ash.count!()
+
+    review_prospects =
+      GnomeGarden.Agents.Prospect
+      |> Ash.Query.filter(status == :researched)
+      |> Ash.count!()
+
+    %{
+      review: review_bids + review_leads + review_prospects,
+      bids: review_bids,
+      leads: review_leads,
+      prospects: review_prospects
+    }
   end
 end

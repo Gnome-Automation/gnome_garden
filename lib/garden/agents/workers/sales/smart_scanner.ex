@@ -110,9 +110,9 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
     - If unsure, make your best guess and save - we can refine later.
     - Call save_discovery EARLY rather than running out of iterations.
     """,
-    max_iterations: 15
+    max_iterations: 30
 
-  @default_timeout 300_000
+  @default_timeout 600_000
 
   @doc """
   Discover how to scrape a site and save the config for future deterministic scans.
@@ -163,7 +163,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   Discover all pending lead sources.
   """
   def discover_all_pending(pid, opts \\ []) do
-    sources = Ash.read!(GnomeGarden.Agents.LeadSource, action: :needs_discovery)
+    sources = Ash.read!(GnomeGarden.Agents.LeadSource, action: :needs_configuration)
 
     results =
       Enum.map(sources, fn source ->

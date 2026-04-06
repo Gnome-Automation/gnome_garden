@@ -1,5 +1,6 @@
 [
   import_deps: [
+    :cinder,
     :ash_ai,
     :ash_state_machine,
     :ash_oban,

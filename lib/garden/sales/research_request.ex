@@ -13,7 +13,15 @@ defmodule GnomeGarden.Sales.ResearchRequest do
     extensions: [AshStateMachine, AshAdmin.Resource]
 
   admin do
-    table_columns [:id, :state, :research_type, :priority, :researchable_type, :due_at, :inserted_at]
+    table_columns [
+      :id,
+      :state,
+      :research_type,
+      :priority,
+      :researchable_type,
+      :due_at,
+      :inserted_at
+    ]
   end
 
   postgres do
@@ -101,7 +109,12 @@ defmodule GnomeGarden.Sales.ResearchRequest do
     read :for_entity do
       argument :researchable_type, :string, allow_nil?: false
       argument :researchable_id, :uuid, allow_nil?: false
-      filter expr(researchable_type == ^arg(:researchable_type) and researchable_id == ^arg(:researchable_id))
+
+      filter expr(
+               researchable_type == ^arg(:researchable_type) and
+                 researchable_id == ^arg(:researchable_id)
+             )
+
       prepare build(sort: [inserted_at: :desc])
     end
 
@@ -111,6 +124,7 @@ defmodule GnomeGarden.Sales.ResearchRequest do
                  not is_nil(due_at) and
                  due_at < ^DateTime.utc_now()
              )
+
       prepare build(sort: [due_at: :asc])
     end
 
@@ -141,7 +155,16 @@ defmodule GnomeGarden.Sales.ResearchRequest do
     attribute :research_type, :atom do
       allow_nil? false
       public? true
-      constraints one_of: [:enrichment, :verification, :contact_discovery, :qualification, :competitive_intel, :other]
+
+      constraints one_of: [
+                    :enrichment,
+                    :verification,
+                    :contact_discovery,
+                    :qualification,
+                    :competitive_intel,
+                    :other
+                  ]
+
       description "Type of research needed"
     end
 
@@ -202,20 +225,50 @@ defmodule GnomeGarden.Sales.ResearchRequest do
       public? true
       description "User assigned to do the research"
     end
+
+    has_many :research_links, GnomeGarden.Sales.ResearchLink do
+      public? true
+    end
+
+    many_to_many :bids, GnomeGarden.Agents.Bid do
+      through GnomeGarden.Sales.ResearchLink
+      source_attribute_on_join_resource :research_request_id
+      destination_attribute_on_join_resource :bid_id
+    end
+
+    many_to_many :companies, GnomeGarden.Sales.Company do
+      through GnomeGarden.Sales.ResearchLink
+      source_attribute_on_join_resource :research_request_id
+      destination_attribute_on_join_resource :company_id
+    end
+
+    many_to_many :opportunities, GnomeGarden.Sales.Opportunity do
+      through GnomeGarden.Sales.ResearchLink
+      source_attribute_on_join_resource :research_request_id
+      destination_attribute_on_join_resource :opportunity_id
+    end
+
+    many_to_many :events, GnomeGarden.Sales.Event do
+      through GnomeGarden.Sales.ResearchLink
+      source_attribute_on_join_resource :research_request_id
+      destination_attribute_on_join_resource :event_id
+    end
   end
 
   calculations do
-    calculate :priority_sort, :integer, expr(
-      cond do
-        priority == :urgent -> 1
-        priority == :high -> 2
-        priority == :normal -> 3
-        true -> 4
-      end
-    )
+    calculate :priority_sort,
+              :integer,
+              expr(
+                cond do
+                  priority == :urgent -> 1
+                  priority == :high -> 2
+                  priority == :normal -> 3
+                  true -> 4
+                end
+              )
 
-    calculate :is_overdue, :boolean, expr(
-      state in [:requested, :in_progress] and not is_nil(due_at) and due_at < now()
-    )
+    calculate :is_overdue,
+              :boolean,
+              expr(state in [:requested, :in_progress] and not is_nil(due_at) and due_at < now())
   end
 end

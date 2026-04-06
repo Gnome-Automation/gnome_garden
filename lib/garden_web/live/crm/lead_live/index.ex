@@ -1,11 +1,24 @@
 defmodule GnomeGardenWeb.CRM.LeadLive.Index do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.CRM.Helpers
+
   alias GnomeGarden.Sales.Lead
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Leads")}
+    if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("lead:created")
+      GnomeGardenWeb.Endpoint.subscribe("lead:qualified")
+      GnomeGardenWeb.Endpoint.subscribe("lead:updated")
+    end
+
+    {:ok, assign(socket, page_title: "Leads")}
+  end
+
+  @impl true
+  def handle_info(%{topic: "lead:" <> _}, socket) do
+    {:noreply, Cinder.refresh_table(socket, "leads")}
   end
 
   @impl true
@@ -19,6 +32,7 @@ defmodule GnomeGardenWeb.CRM.LeadLive.Index do
       </div>
 
       <Cinder.collection
+        id="leads"
         resource={Lead}
         actor={@current_user}
         search={[placeholder: "Search leads..."]}
@@ -35,7 +49,9 @@ defmodule GnomeGardenWeb.CRM.LeadLive.Index do
           {lead.email || "-"}
         </:col>
         <:col :let={lead} field="status" label="Status" sort>
-          <span class={status_badge(lead.status)}>{format_status(lead.status)}</span>
+          <.status_badge status={lead_status(lead.status)}>
+            {format_atom(lead.status)}
+          </.status_badge>
         </:col>
         <:col :let={lead} field="source" label="Source">
           {format_source(lead.source)}
@@ -52,17 +68,4 @@ defmodule GnomeGardenWeb.CRM.LeadLive.Index do
     </div>
     """
   end
-
-  defp status_badge(:new), do: "badge badge-primary badge-sm"
-  defp status_badge(:contacted), do: "badge badge-info badge-sm"
-  defp status_badge(:qualified), do: "badge badge-success badge-sm"
-  defp status_badge(:unqualified), do: "badge badge-warning badge-sm"
-  defp status_badge(:converted), do: "badge badge-accent badge-sm"
-  defp status_badge(_), do: "badge badge-ghost badge-sm"
-
-  defp format_status(nil), do: "new"
-  defp format_status(status), do: status |> to_string() |> String.replace("_", " ")
-
-  defp format_source(nil), do: "-"
-  defp format_source(source), do: source |> to_string() |> String.replace("_", " ")
 end
