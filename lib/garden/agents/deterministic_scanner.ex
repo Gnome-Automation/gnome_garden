@@ -91,12 +91,16 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
       # Mark as scanned
       Ash.update!(source, %{}, action: :mark_scanned)
 
+      # Enrich newly saved bids with detail page data
+      enriched = enrich_bids(saved)
+
       {:ok,
        %{
          source: source.name,
          extracted: length(bids),
          scored: length(scored),
          saved: length(saved),
+         enriched: enriched,
          bids: saved
        }}
     else
@@ -233,6 +237,127 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
 
   defp resolve_bid_url("http" <> _ = absolute, _source_url), do: absolute
   defp resolve_bid_url(_other, source_url), do: source_url
+
+  # -- Bid enrichment (detail page scraping) --
+
+  defp enrich_bids(saved_bids) do
+    to_enrich =
+      saved_bids
+      |> Enum.filter(fn result ->
+        is_map(result) && result[:id] && result[:url] &&
+          String.contains?(to_string(result[:url]), "bo-detail")
+      end)
+
+    Enum.reduce(to_enrich, 0, fn result, count ->
+      case enrich_bid(result[:id]) do
+        :ok ->
+          Process.sleep(1500)
+          count + 1
+
+        :skip ->
+          count
+      end
+    end)
+  end
+
+  defp enrich_bid(bid_id) do
+    case Ash.get(GnomeGarden.Agents.Bid, bid_id) do
+      {:ok, bid} ->
+        if String.contains?(bid.url || "", "bo-detail") &&
+             (is_nil(bid.description) || String.length(bid.description || "") < 20) do
+          do_enrich_bid(bid)
+        else
+          :skip
+        end
+
+      _ ->
+        :skip
+    end
+  end
+
+  defp do_enrich_bid(bid) do
+    # Strip the #bidInformation fragment for navigation
+    url = bid.url |> String.replace(~r/#.*$/, "")
+
+    with {:ok, _} <- Navigate.run(%{url: url}, %{}),
+         :ok <- (Process.sleep(2500) && :ok) || :ok,
+         {:ok, %{data: data}} when is_map(data) <- Extract.run(%{js: enrich_js()}, %{}) do
+      updates =
+        %{}
+        |> maybe_enrich(:description, data["description"], bid.description)
+        |> maybe_enrich_bid_type(data["bid_type"], bid.bid_type)
+
+      if map_size(updates) > 0 do
+        Ash.update(bid, updates, action: :update)
+        Logger.info("Enriched #{bid.title}: #{inspect(Map.keys(updates))}")
+      end
+
+      :ok
+    else
+      _ ->
+        Logger.warning("Enrichment failed for #{bid.title}")
+        :skip
+    end
+  end
+
+  defp enrich_js do
+    ~S"""
+    (function() {
+      var lines = document.body.innerText.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+
+      var descIdx = -1;
+      for (var i = 0; i < lines.length; i++) {
+        if (/^(description|scope of (work|services))/i.test(lines[i])) { descIdx = i; break; }
+      }
+      var desc = descIdx > -1 ? lines.slice(descIdx + 1, descIdx + 6).filter(function(l) { return l.length > 10; }).join(' ') : '';
+
+      var typeIdx = -1;
+      for (var j = 0; j < lines.length; j++) {
+        if (/^project type$/i.test(lines[j])) { typeIdx = j; break; }
+      }
+      var bidType = typeIdx > -1 && lines[typeIdx + 1] ? lines[typeIdx + 1].trim() : '';
+
+      return { description: desc, bid_type: bidType };
+    })()
+    """
+  end
+
+  defp maybe_enrich(map, _key, nil, _existing), do: map
+  defp maybe_enrich(map, _key, "", _existing), do: map
+
+  defp maybe_enrich(map, key, value, existing) do
+    if is_nil(existing) || String.length(existing || "") < 20 do
+      Map.put(map, key, value)
+    else
+      map
+    end
+  end
+
+  defp maybe_enrich_bid_type(map, nil, _existing), do: map
+  defp maybe_enrich_bid_type(map, "", _existing), do: map
+
+  defp maybe_enrich_bid_type(map, type_str, existing) do
+    if is_nil(existing) do
+      Map.put(map, :bid_type, parse_bid_type(type_str))
+    else
+      map
+    end
+  end
+
+  defp parse_bid_type(str) when is_binary(str) do
+    s = String.downcase(str)
+
+    cond do
+      String.contains?(s, "rfp") || String.contains?(s, "request for proposal") -> :rfp
+      String.contains?(s, "rfi") || String.contains?(s, "request for information") -> :rfi
+      String.contains?(s, "rfq") || String.contains?(s, "request for qual") -> :rfq
+      String.contains?(s, "ifb") || String.contains?(s, "invitation for bid") -> :ifb
+      String.contains?(s, "soq") -> :soq
+      true -> :other
+    end
+  end
+
+  defp parse_bid_type(_), do: :other
 
   defp region_to_location(:oc), do: "Orange County, CA"
   defp region_to_location(:la), do: "Los Angeles County, CA"

@@ -82,7 +82,7 @@ defmodule GnomeGarden.Agents.Bid do
     end
 
     update :update do
-      accept [:notes, :metadata, :owner_id, :agency_company_id]
+      accept [:description, :bid_type, :due_at, :notes, :metadata, :owner_id, :agency_company_id]
     end
 
     # -- State transitions --
