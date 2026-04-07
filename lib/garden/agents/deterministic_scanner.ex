@@ -305,12 +305,26 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
     (function() {
       var lines = document.body.innerText.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
 
+      // Find description — look for "Description" heading, then grab paragraph content
+      // Skip short lines (sub-headings like "Scope of Services", "Other Details")
       var descIdx = -1;
       for (var i = 0; i < lines.length; i++) {
-        if (/^(description|scope of (work|services))/i.test(lines[i])) { descIdx = i; break; }
+        if (/^description$/i.test(lines[i])) { descIdx = i; break; }
       }
-      var desc = descIdx > -1 ? lines.slice(descIdx + 1, descIdx + 6).filter(function(l) { return l.length > 10; }).join(' ') : '';
+      var desc = '';
+      if (descIdx > -1) {
+        var paras = [];
+        for (var k = descIdx + 1; k < Math.min(descIdx + 15, lines.length); k++) {
+          var line = lines[k];
+          // Stop at next section heading
+          if (/^(other details|special notices|notes|bid detail|documents|addenda)/i.test(line)) break;
+          // Only grab lines that look like actual content (>30 chars)
+          if (line.length > 30) paras.push(line);
+        }
+        desc = paras.join(' ');
+      }
 
+      // Find project type
       var typeIdx = -1;
       for (var j = 0; j < lines.length; j++) {
         if (/^project type$/i.test(lines[j])) { typeIdx = j; break; }
