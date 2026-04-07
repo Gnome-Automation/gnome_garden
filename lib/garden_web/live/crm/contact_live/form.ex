@@ -40,61 +40,81 @@ defmodule GnomeGardenWeb.CRM.ContactLive.Form do
       {@page_title}
     </.header>
 
-    <.form
-      for={@form}
-      id="contact-form"
-      phx-change="validate"
-      phx-submit="save"
-      class="space-y-6 max-w-2xl"
-    >
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <.input field={@form[:first_name]} label="First Name" required />
-        <.input field={@form[:last_name]} label="Last Name" required />
+    <.form for={@form} id="contact-form" phx-change="validate" phx-submit="save">
+      <div class="space-y-12">
+        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
+          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">
+            Personal Information
+          </h2>
+          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+            Name and contact details.
+          </p>
+          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+            <div class="sm:col-span-3">
+              <.input field={@form[:first_name]} label="First Name" required />
+            </div>
+            <div class="sm:col-span-3">
+              <.input field={@form[:last_name]} label="Last Name" required />
+            </div>
+            <div class="sm:col-span-3">
+              <.input field={@form[:email]} label="Email" type="email" />
+            </div>
+            <div class="sm:col-span-3">
+              <.input field={@form[:phone]} label="Phone" type="tel" />
+            </div>
+            <div class="sm:col-span-3">
+              <.input field={@form[:mobile]} label="Mobile" type="tel" />
+            </div>
+            <div class="sm:col-span-3">
+              <.input field={@form[:linkedin_url]} label="LinkedIn URL" type="url" />
+            </div>
+          </div>
+        </div>
+
+        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
+          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Preferences</h2>
+          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+            Status, contact preferences, and communication opt-outs.
+          </p>
+          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:status]}
+                type="select"
+                label="Status"
+                options={[
+                  {"Active", :active},
+                  {"Inactive", :inactive}
+                ]}
+              />
+            </div>
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:preferred_contact_method]}
+                type="select"
+                label="Preferred Contact Method"
+                prompt="Select..."
+                options={[
+                  {"Email", :email},
+                  {"Phone", :phone},
+                  {"LinkedIn", :linkedin},
+                  {"Any", :any}
+                ]}
+              />
+            </div>
+            <div class="sm:col-span-3">
+              <.input field={@form[:do_not_call]} type="checkbox" label="Do Not Call" />
+            </div>
+            <div class="sm:col-span-3">
+              <.input field={@form[:do_not_email]} type="checkbox" label="Do Not Email" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <.input field={@form[:email]} label="Email" type="email" />
-        <.input field={@form[:phone]} label="Phone" type="tel" />
-      </div>
-
-      <.input field={@form[:mobile]} label="Mobile" type="tel" />
-
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <.input
-          field={@form[:status]}
-          type="select"
-          label="Status"
-          options={[
-            {"Active", :active},
-            {"Inactive", :inactive}
-          ]}
-        />
-        <.input
-          field={@form[:preferred_contact_method]}
-          type="select"
-          label="Preferred Contact Method"
-          prompt="Select..."
-          options={[
-            {"Email", :email},
-            {"Phone", :phone},
-            {"LinkedIn", :linkedin},
-            {"Any", :any}
-          ]}
-        />
-      </div>
-
-      <.input field={@form[:linkedin_url]} label="LinkedIn URL" type="url" />
-
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <.input field={@form[:do_not_call]} type="checkbox" label="Do Not Call" />
-        <.input field={@form[:do_not_email]} type="checkbox" label="Do Not Email" />
-      </div>
-
-      <div class="flex gap-4 pt-4">
-        <.button type="submit" variant="primary" phx-disable-with="Saving...">
-          Save Contact
-        </.button>
+      <div class="mt-6 flex items-center justify-end gap-x-6">
         <.button type="button" navigate={~p"/crm/contacts"}>Cancel</.button>
+        <.button type="submit" variant="primary" phx-disable-with="Saving...">Save</.button>
       </div>
     </.form>
     """

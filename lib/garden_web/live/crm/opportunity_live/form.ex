@@ -43,92 +43,117 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
       {@page_title}
     </.header>
 
-    <.form
-      for={@form}
-      id="opportunity-form"
-      phx-change="validate"
-      phx-submit="save"
-      class="space-y-6 max-w-2xl"
-    >
-      <.input field={@form[:name]} label="Opportunity Name" required />
+    <.form for={@form} id="opportunity-form" phx-change="validate" phx-submit="save">
+      <div class="space-y-12">
+        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
+          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">
+            Opportunity Details
+          </h2>
+          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+            Name, company, workflow, and source information.
+          </p>
+          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+            <div class="sm:col-span-4">
+              <.input field={@form[:name]} label="Opportunity Name" required />
+            </div>
+            <div class="sm:col-span-4">
+              <.input
+                field={@form[:company_id]}
+                type="select"
+                label="Company"
+                required
+                prompt="Select company..."
+                options={Enum.map(@companies, &{&1.name, &1.id})}
+              />
+            </div>
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:workflow]}
+                type="select"
+                label="Workflow"
+                prompt="Select workflow..."
+                options={[
+                  {"Bid Response (RFP/RFI)", :bid_response},
+                  {"Outreach (cold call)", :outreach},
+                  {"Inbound (referral)", :inbound}
+                ]}
+              />
+            </div>
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:source]}
+                type="select"
+                label="Source"
+                prompt="Select source..."
+                options={[
+                  {"Bid", :bid},
+                  {"Prospect", :prospect},
+                  {"Referral", :referral},
+                  {"Inbound", :inbound},
+                  {"Outbound", :outbound},
+                  {"Other", :other}
+                ]}
+              />
+            </div>
+            <div :if={@opportunity} class="col-span-full text-sm text-zinc-500">
+              Current stage: <span class="font-medium">{format_stage(@opportunity.stage)}</span>
+              <span class="text-zinc-400">
+                (use stage buttons on the opportunity page to advance)
+              </span>
+            </div>
+          </div>
+        </div>
 
-      <.input
-        field={@form[:company_id]}
-        type="select"
-        label="Company"
-        required
-        prompt="Select company..."
-        options={Enum.map(@companies, &{&1.name, &1.id})}
-      />
-
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <.input
-          field={@form[:workflow]}
-          type="select"
-          label="Workflow"
-          prompt="Select workflow..."
-          options={[
-            {"Bid Response (RFP/RFI)", :bid_response},
-            {"Outreach (cold call)", :outreach},
-            {"Inbound (referral)", :inbound}
-          ]}
-        />
-        <.input
-          field={@form[:source]}
-          type="select"
-          label="Source"
-          prompt="Select source..."
-          options={[
-            {"Bid", :bid},
-            {"Prospect", :prospect},
-            {"Referral", :referral},
-            {"Inbound", :inbound},
-            {"Outbound", :outbound},
-            {"Other", :other}
-          ]}
-        />
+        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
+          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">
+            Financials & Timeline
+          </h2>
+          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+            Deal value, probability, and key dates.
+          </p>
+          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+            <div class="sm:col-span-3">
+              <.input field={@form[:amount]} label="Deal Amount ($)" type="number" step="0.01" />
+            </div>
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:probability]}
+                label="Probability (%)"
+                type="number"
+                min="0"
+                max="100"
+              />
+            </div>
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:expected_close_date]}
+                label="Expected Close Date"
+                type="date"
+              />
+            </div>
+            <div :if={@opportunity} class="sm:col-span-3">
+              <.input
+                field={@form[:actual_close_date]}
+                label="Actual Close Date"
+                type="date"
+              />
+            </div>
+            <div class="col-span-full">
+              <.input field={@form[:description]} type="textarea" label="Description" />
+            </div>
+            <div
+              :if={@opportunity && to_string(@opportunity.stage) == "closed_lost"}
+              class="col-span-full"
+            >
+              <.input field={@form[:loss_reason]} type="textarea" label="Loss Reason" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div :if={@opportunity} class="text-sm text-zinc-500">
-        Current stage: <span class="font-medium">{format_stage(@opportunity.stage)}</span>
-        <span class="text-zinc-400">(use stage buttons on the opportunity page to advance)</span>
-      </div>
-
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <.input field={@form[:amount]} label="Deal Amount ($)" type="number" step="0.01" />
-        <.input
-          field={@form[:probability]}
-          label="Probability (%)"
-          type="number"
-          min="0"
-          max="100"
-        />
-      </div>
-
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <.input field={@form[:expected_close_date]} label="Expected Close Date" type="date" />
-        <.input
-          :if={@opportunity}
-          field={@form[:actual_close_date]}
-          label="Actual Close Date"
-          type="date"
-        />
-      </div>
-
-      <.input field={@form[:description]} type="textarea" label="Description" />
-
-      <.input
-        :if={@opportunity && to_string(@opportunity.stage) == "closed_lost"}
-        field={@form[:loss_reason]}
-        type="textarea"
-        label="Loss Reason"
-      />
-
-      <div class="flex gap-4 pt-4">
-        <.button type="submit" variant="primary" phx-disable-with="Saving...">
-          Save Opportunity
-        </.button>
+      <div class="mt-6 flex items-center justify-end gap-x-6">
         <.button type="button" navigate={~p"/crm/opportunities"}>Cancel</.button>
+        <.button type="submit" variant="primary" phx-disable-with="Saving...">Save</.button>
       </div>
     </.form>
     """
