@@ -1,6 +1,6 @@
 defmodule GnomeGarden.Agents.Workers.Sales.SourceDiscovery do
   @moduledoc """
-  Autonomous agent that discovers new lead sources.
+  Autonomous agent that discovers new procurement sources.
 
   Expands Gnome Automation's reach by finding new procurement portals:
   1. Searches for government procurement portals
@@ -36,7 +36,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SourceDiscovery do
       GnomeGarden.Agents.Tools.WebSearch,
       GnomeGarden.Agents.Tools.BrowseWeb,
       GnomeGarden.Agents.Tools.AnalyzePage,
-      GnomeGarden.Agents.Tools.SaveLeadSource,
+      GnomeGarden.Agents.Tools.SaveProcurementSource,
 
       # Memory for tracking
       GnomeGarden.Agents.Tools.MemoryRemember,
@@ -72,7 +72,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SourceDiscovery do
     2. Analyze the page to verify it's a bid portal
     3. Identify the portal type (PlanetBids, OpenGov, custom)
     4. Extract the portal ID if applicable
-    5. Save to lead sources if confidence >= 60%
+    5. Save to procurement sources if confidence >= 60%
 
     ## What Makes a Good Source
     - Has active bid listings
@@ -168,7 +168,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SourceDiscovery do
     For each:
     1. Search for "[city name] procurement portal" or "[city name] bid opportunities"
     2. Analyze the page to verify it's a bid portal
-    3. If confidence >= 60%, save it as a new lead source
+    3. If confidence >= 60%, save it as a new procurement source
     4. Note the portal type (PlanetBids, OpenGov, custom)
 
     Report which ones you found and saved.
@@ -289,7 +289,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SourceDiscovery do
   end
 
   defp load_existing_sources do
-    case Ash.read(GnomeGarden.Agents.LeadSource) do
+    case Ash.read(GnomeGarden.Procurement.ProcurementSource) do
       {:ok, sources} ->
         sources
         |> Enum.map(& &1.url)

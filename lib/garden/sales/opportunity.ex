@@ -342,7 +342,7 @@ defmodule GnomeGarden.Sales.Opportunity do
       description "Primary contact for this opportunity"
     end
 
-    belongs_to :bid, GnomeGarden.Agents.Bid do
+    belongs_to :bid, GnomeGarden.Procurement.Bid do
       public? true
       description "Source bid if created from a bid"
     end

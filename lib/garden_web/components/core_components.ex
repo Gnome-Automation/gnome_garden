@@ -357,6 +357,63 @@ defmodule GnomeGardenWeb.CoreComponents do
   end
 
   @doc """
+  Renders a centered modal dialog.
+
+  Pass a JS command to `on_cancel` to close the modal from the backdrop,
+  close button, or escape key.
+  """
+  attr :id, :string, required: true
+  attr :on_cancel, :any, default: nil
+
+  slot :title
+  slot :inner_block, required: true
+  slot :actions
+
+  def modal(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class="fixed inset-0 z-50 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      phx-window-keydown={@on_cancel}
+      phx-key="escape"
+    >
+      <div class="fixed inset-0 bg-zinc-950/70" aria-hidden="true" phx-click={@on_cancel} />
+
+      <div class="flex min-h-full items-end justify-center p-4 sm:items-center">
+        <div class="relative w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+          <div class="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+            <div>
+              <h2 :if={@title != []} class="text-lg font-semibold text-zinc-900 dark:text-white">
+                {render_slot(@title)}
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              class="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              phx-click={@on_cancel}
+              aria-label={gettext("close")}
+            >
+              <.icon name="hero-x-mark" class="size-5" />
+            </button>
+          </div>
+
+          <div class="px-5 py-4">
+            {render_slot(@inner_block)}
+          </div>
+
+          <div :if={@actions != []} class="flex items-center justify-end gap-3 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+            {render_slot(@actions)}
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a table with generic styling.
 
   ## Examples
@@ -465,11 +522,12 @@ defmodule GnomeGardenWeb.CoreComponents do
       <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
   """
   attr :name, :string, required: true
+  attr :id, :any, default: nil
   attr :class, :any, default: "size-4"
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span id={@id} class={[@name, @class]} />
     """
   end
 

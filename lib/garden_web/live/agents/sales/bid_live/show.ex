@@ -1,13 +1,13 @@
 defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Agents
-  alias GnomeGarden.Agents.Bid
-  alias GnomeGarden.Sales
+  alias GnomeGarden.CRM.PipelineEvents
+  alias GnomeGarden.CRM.Review
+  alias GnomeGarden.Procurement
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    bid = Agents.get_bid!(id, actor: socket.assigns.current_user)
+    bid = Procurement.get_bid!(id, actor: socket.assigns.current_user)
 
     {:ok,
      socket
@@ -75,7 +75,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
       bid_id: bid.id
     }
 
-    case Sales.accept_review_item(pursue_params, actor: socket.assigns.current_user) do
+    case Review.accept_review_item(pursue_params, actor: socket.assigns.current_user) do
       {:ok, %{opportunity: opp}} ->
         {:noreply,
          socket
@@ -91,21 +91,24 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     bid = socket.assigns.bid
     Ash.update!(bid, %{notes: reason}, action: :reject)
 
-    Sales.log_pipeline_event(%{
-      event_type: :passed,
-      subject_type: "bid",
-      subject_id: bid.id,
-      summary: "Passed on #{bid.title}",
-      reason: reason,
-      from_state: to_string(bid.status),
-      to_state: "rejected",
-      actor_id: socket.assigns.current_user && socket.assigns.current_user.id
-    })
+    PipelineEvents.log(
+      %{
+        event_type: :passed,
+        subject_type: "bid",
+        subject_id: bid.id,
+        summary: "Passed on #{bid.title}",
+        reason: reason,
+        from_state: to_string(bid.status),
+        to_state: "rejected",
+        actor_id: socket.assigns.current_user && socket.assigns.current_user.id
+      },
+      actor: socket.assigns.current_user
+    )
 
     {:noreply,
      socket
      |> put_flash(:info, "Passed — #{bid.title}")
-     |> push_navigate(to: ~p"/agents/sales/bids")}
+     |> push_navigate(to: ~p"/procurement/bids")}
   end
 
   def handle_event("submit_park", params, socket) do
@@ -116,16 +119,19 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     Ash.update!(bid, %{notes: reason}, action: :park)
 
     {:ok, event} =
-      Sales.log_pipeline_event(%{
-        event_type: :parked,
-        subject_type: "bid",
-        subject_id: bid.id,
-        summary: "Parked — #{bid.title}",
-        reason: reason,
-        from_state: to_string(bid.status),
-        to_state: "parked",
-        actor_id: socket.assigns.current_user && socket.assigns.current_user.id
-      })
+      PipelineEvents.log(
+        %{
+          event_type: :parked,
+          subject_type: "bid",
+          subject_id: bid.id,
+          summary: "Parked — #{bid.title}",
+          reason: reason,
+          from_state: to_string(bid.status),
+          to_state: "parked",
+          actor_id: socket.assigns.current_user && socket.assigns.current_user.id
+        },
+        actor: socket.assigns.current_user
+      )
 
     if research_note && research_note != "" do
       {:ok, research} =
@@ -148,7 +154,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     {:noreply,
      socket
      |> put_flash(:info, "Parked — #{bid.title}")
-     |> push_navigate(to: ~p"/agents/sales/bids")}
+     |> push_navigate(to: ~p"/procurement/bids")}
   end
 
   def handle_event("delete_bid", _, socket) do
@@ -157,7 +163,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     {:noreply,
      socket
      |> put_flash(:info, "Deleted")
-     |> push_navigate(to: ~p"/agents/sales/bids")}
+     |> push_navigate(to: ~p"/procurement/bids")}
   end
 
   def handle_event("unpark", _, socket) do
@@ -179,7 +185,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
       {@bid.title}
       <:subtitle :if={@bid.agency}>{@bid.agency}</:subtitle>
       <:actions>
-        <.button navigate={~p"/agents/sales/bids"}>
+        <.button navigate={~p"/procurement/bids"}>
           <.icon name="hero-arrow-left" class="size-4" /> Back
         </.button>
         <a :if={@bid.url} href={@bid.url} target="_blank" class="btn btn-sm btn-primary gap-1">
@@ -463,7 +469,11 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
           />
           <div class="modal-action">
             <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>
-            <.button type="submit" variant="error" phx-disable-with="Passing...">
+            <.button
+              type="submit"
+              class="rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500"
+              phx-disable-with="Passing..."
+            >
               Confirm Pass
             </.button>
           </div>
@@ -513,7 +523,13 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
           </div>
           <div class="modal-action">
             <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>
-            <.button type="submit" variant="warning" phx-disable-with="Parking...">Park</.button>
+            <.button
+              type="submit"
+              class="rounded-md bg-amber-500 px-3 py-2 text-sm font-semibold text-zinc-950 shadow-xs hover:bg-amber-400"
+              phx-disable-with="Parking..."
+            >
+              Park
+            </.button>
           </div>
         </form>
       </div>

@@ -4,6 +4,9 @@ config :gnome_garden, token_signing_secret: "0yKs9QpG/aUKOWcHig5mxRkK+spiI4IB"
 config :bcrypt_elixir, log_rounds: 1
 config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 
+db_host = System.get_env("GNOME_GARDEN_DB_HOST", "localhost")
+db_port = String.to_integer(System.get_env("GNOME_GARDEN_DB_PORT", "5435"))
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used
@@ -12,8 +15,8 @@ config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 config :gnome_garden, GnomeGarden.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "localhost",
-  port: 5432,
+  hostname: db_host,
+  port: db_port,
   database: "gnome_garden_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2

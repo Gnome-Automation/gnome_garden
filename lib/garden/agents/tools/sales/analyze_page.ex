@@ -12,7 +12,7 @@ defmodule GnomeGarden.Agents.Tools.AnalyzePage do
   use Jido.Action,
     name: "analyze_page",
     description:
-      "Analyze a web page to determine if it's a procurement portal worth adding as a lead source",
+      "Analyze a web page to determine if it's a procurement portal worth adding as a procurement source",
     schema: [
       url: [type: :string, required: true, doc: "URL to analyze"],
       content: [type: :string, doc: "Page content (if already fetched)"]
@@ -172,7 +172,7 @@ defmodule GnomeGarden.Agents.Tools.AnalyzePage do
   end
 
   defp build_recommendation(true, confidence, portal_type) when confidence >= 80 do
-    "STRONG MATCH (#{confidence}%) - This appears to be a #{portal_type} procurement portal. Recommend adding to lead sources."
+    "STRONG MATCH (#{confidence}%) - This appears to be a #{portal_type} procurement portal. Recommend adding to procurement sources."
   end
 
   defp build_recommendation(true, confidence, portal_type) do

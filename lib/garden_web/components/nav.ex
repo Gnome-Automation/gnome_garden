@@ -103,7 +103,15 @@ defmodule GnomeGardenWeb.Nav do
             current_path={@current_path}
           >
             <.nav_item
-              path={~p"/agents/sales/bids"}
+              path={~p"/console/agents"}
+              current_path={@current_path}
+              icon="hero-cpu-chip"
+              collapsed={@collapsed}
+            >
+              Console
+            </.nav_item>
+            <.nav_item
+              path={~p"/procurement/bids"}
               current_path={@current_path}
               icon="hero-document-text"
               collapsed={@collapsed}
@@ -121,12 +129,12 @@ defmodule GnomeGardenWeb.Nav do
               Prospects
             </.nav_item>
             <.nav_item
-              path={~p"/agents/sales/lead-sources"}
+              path={~p"/procurement/sources"}
               current_path={@current_path}
               icon="hero-globe-alt"
               collapsed={@collapsed}
             >
-              Lead Sources
+              Procurement Sources
             </.nav_item>
             <.nav_item
               path={~p"/agent"}

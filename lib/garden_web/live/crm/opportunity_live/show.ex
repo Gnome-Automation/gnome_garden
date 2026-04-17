@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
 
   import GnomeGardenWeb.CRM.Helpers
 
+  alias GnomeGarden.CRM.PipelineEvents
   alias GnomeGarden.Sales
 
   @impl true
@@ -35,18 +36,21 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
 
     case Ash.update(opp, %{}, action: action) do
       {:ok, updated} ->
-        Sales.log_pipeline_event(%{
-          event_type: :stage_advanced,
-          subject_type: "opportunity",
-          subject_id: opp.id,
-          summary: "#{format_stage(from_stage)} → #{format_stage(updated.stage)}",
-          reason: notes,
-          from_state: to_string(from_stage),
-          to_state: to_string(updated.stage),
-          opportunity_id: opp.id,
-          company_id: opp.company_id,
-          actor_id: socket.assigns.current_user && socket.assigns.current_user.id
-        })
+        PipelineEvents.log(
+          %{
+            event_type: :stage_advanced,
+            subject_type: "opportunity",
+            subject_id: opp.id,
+            summary: "#{format_stage(from_stage)} → #{format_stage(updated.stage)}",
+            reason: notes,
+            from_state: to_string(from_stage),
+            to_state: to_string(updated.stage),
+            opportunity_id: opp.id,
+            company_id: opp.company_id,
+            actor_id: socket.assigns.current_user && socket.assigns.current_user.id
+          },
+          actor: socket.assigns.current_user
+        )
 
         {:noreply,
          socket
@@ -73,18 +77,21 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
 
     case Ash.update(opp, %{}, action: :close_won) do
       {:ok, updated} ->
-        Sales.log_pipeline_event(%{
-          event_type: :closed_won,
-          subject_type: "opportunity",
-          subject_id: opp.id,
-          summary: "Won — #{opp.name}",
-          reason: notes,
-          from_state: to_string(opp.stage),
-          to_state: "closed_won",
-          opportunity_id: opp.id,
-          company_id: opp.company_id,
-          actor_id: socket.assigns.current_user && socket.assigns.current_user.id
-        })
+        PipelineEvents.log(
+          %{
+            event_type: :closed_won,
+            subject_type: "opportunity",
+            subject_id: opp.id,
+            summary: "Won — #{opp.name}",
+            reason: notes,
+            from_state: to_string(opp.stage),
+            to_state: "closed_won",
+            opportunity_id: opp.id,
+            company_id: opp.company_id,
+            actor_id: socket.assigns.current_user && socket.assigns.current_user.id
+          },
+          actor: socket.assigns.current_user
+        )
 
         {:noreply,
          socket
@@ -109,19 +116,22 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Show do
 
     case Ash.update(opp, %{loss_reason: reason}, action: :close_lost) do
       {:ok, updated} ->
-        Sales.log_pipeline_event(%{
-          event_type: :closed_lost,
-          subject_type: "opportunity",
-          subject_id: opp.id,
-          summary: "Lost — #{opp.name}",
-          reason: reason,
-          from_state: to_string(opp.stage),
-          to_state: "closed_lost",
-          opportunity_id: opp.id,
-          company_id: opp.company_id,
-          actor_id: socket.assigns.current_user && socket.assigns.current_user.id,
-          metadata: %{notes: notes}
-        })
+        PipelineEvents.log(
+          %{
+            event_type: :closed_lost,
+            subject_type: "opportunity",
+            subject_id: opp.id,
+            summary: "Lost — #{opp.name}",
+            reason: reason,
+            from_state: to_string(opp.stage),
+            to_state: "closed_lost",
+            opportunity_id: opp.id,
+            company_id: opp.company_id,
+            actor_id: socket.assigns.current_user && socket.assigns.current_user.id,
+            metadata: %{notes: notes}
+          },
+          actor: socket.assigns.current_user
+        )
 
         {:noreply,
          socket

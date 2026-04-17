@@ -3,12 +3,13 @@ defmodule GnomeGarden.Agents.ScannerRouter do
   Routes scan requests to the appropriate scanner based on source_type.
   """
 
-  alias GnomeGarden.Agents.{DeterministicScanner, CompanyScanner, LeadSource}
+  alias GnomeGarden.Agents.{DeterministicScanner, CompanyScanner}
+  alias GnomeGarden.Procurement.ProcurementSource
 
   require Logger
 
-  def scan(%LeadSource{} = source) do
-    strategy = LeadSource.scanner_strategy(source.source_type)
+  def scan(%ProcurementSource{} = source) do
+    strategy = ProcurementSource.scanner_strategy(source.source_type)
     Logger.info("[ScannerRouter] #{source.name} → #{strategy}")
 
     case strategy do

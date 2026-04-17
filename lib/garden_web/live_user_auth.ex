@@ -55,7 +55,7 @@ defmodule GnomeGardenWeb.LiveUserAuth do
 
   defp load_nav_counts do
     review_bids =
-      GnomeGarden.Agents.Bid
+      GnomeGarden.Procurement.Bid
       |> Ash.Query.filter(status == :new)
       |> Ash.count!()
 

@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Bid do
+defmodule GnomeGarden.Procurement.Bid do
   @moduledoc """
   Discovered bid/RFP opportunity.
 
@@ -8,7 +8,7 @@ defmodule GnomeGarden.Agents.Bid do
 
   use Ash.Resource,
     otp_app: :gnome_garden,
-    domain: GnomeGarden.Agents,
+    domain: GnomeGarden.Procurement,
     data_layer: AshPostgres.DataLayer,
     extensions: [AshJido, AshStateMachine],
     notifiers: [AshJido.Notifier, Ash.Notifier.PubSub]
@@ -325,7 +325,10 @@ defmodule GnomeGarden.Agents.Bid do
   end
 
   relationships do
-    belongs_to :lead_source, GnomeGarden.Agents.LeadSource, public?: true
+    belongs_to :procurement_source, GnomeGarden.Procurement.ProcurementSource do
+      source_attribute :lead_source_id
+      public? true
+    end
 
     belongs_to :owner, GnomeGarden.Accounts.User do
       public? true

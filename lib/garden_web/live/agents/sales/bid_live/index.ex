@@ -1,7 +1,7 @@
 defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Agents.Bid
+  alias GnomeGarden.Procurement.Bid
 
   @impl true
   def mount(_params, _session, socket) do
@@ -36,7 +36,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
       >
         <:col :let={bid} field="title" label="Title" sort search>
           <.link
-            navigate={~p"/agents/sales/bids/#{bid}"}
+            navigate={~p"/procurement/bids/#{bid}"}
             class="font-medium text-sm leading-tight max-w-[250px] break-words whitespace-normal hover:text-emerald-600"
             title={bid.title}
           >

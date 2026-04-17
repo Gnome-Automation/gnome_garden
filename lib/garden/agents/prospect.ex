@@ -77,6 +77,7 @@ defmodule GnomeGarden.Agents.Prospect do
     end
 
     update :add_contact do
+      require_atomic? false
       argument :contact, :map, allow_nil?: false
 
       change fn changeset, _ctx ->
@@ -87,6 +88,7 @@ defmodule GnomeGarden.Agents.Prospect do
     end
 
     update :add_signal do
+      require_atomic? false
       argument :signal, :string, allow_nil?: false
 
       change fn changeset, _ctx ->

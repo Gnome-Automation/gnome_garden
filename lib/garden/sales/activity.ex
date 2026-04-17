@@ -170,7 +170,7 @@ defmodule GnomeGarden.Sales.Activity do
       description "User who owns/performed this activity"
     end
 
-    belongs_to :bid, GnomeGarden.Agents.Bid do
+    belongs_to :bid, GnomeGarden.Procurement.Bid do
       public? true
       description "Related bid (if activity is about a bid)"
     end

@@ -197,7 +197,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
 
     # Check if source already exists
     existing =
-      GnomeGarden.Agents.LeadSource
+      GnomeGarden.Procurement.ProcurementSource
       |> Ash.Query.filter(url == ^url)
       |> Ash.Query.limit(1)
       |> Ash.read!()
@@ -208,7 +208,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
 
       [] ->
         Ash.create(
-          GnomeGarden.Agents.LeadSource,
+          GnomeGarden.Procurement.ProcurementSource,
           %{
             name: company.name,
             url: url,

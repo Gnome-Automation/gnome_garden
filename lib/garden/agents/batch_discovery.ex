@@ -8,7 +8,7 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
 
   alias GnomeGarden.Agents.Tools.Browser.Navigate
   alias GnomeGarden.Agents.Tools.SaveDiscovery
-  alias GnomeGarden.Agents.LeadSource
+  alias GnomeGarden.Procurement.ProcurementSource
 
   require Logger
 
@@ -22,9 +22,10 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
   def discover_all_planetbids do
     # Get all sources and filter in Elixir
     sources =
-      Ash.read!(LeadSource)
+      Ash.read!(ProcurementSource)
       |> Enum.filter(fn s ->
-        s.source_type == :planetbids and s.config_status in [:found, :pending]
+        s.source_type == :planetbids and s.status == :approved and
+          s.config_status in [:found, :pending]
       end)
       |> Enum.map(fn source ->
         # Ensure source is in :pending state for the configure transition
@@ -69,13 +70,13 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
   Discover a single PlanetBids site by ID.
   """
   def discover_one(lead_source_id) when is_binary(lead_source_id) do
-    case Ash.get(LeadSource, lead_source_id) do
+    case Ash.get(ProcurementSource, lead_source_id) do
       {:ok, source} -> discover_one(source)
       {:error, _} -> {:error, "Lead source not found"}
     end
   end
 
-  def discover_one(%LeadSource{} = source) do
+  def discover_one(%ProcurementSource{} = source) do
     # Navigate to the site with headed browser
     case Navigate.run(%{url: source.url, wait_for_network: true}, %{}) do
       {:ok, %{status: :ok, title: title}} ->

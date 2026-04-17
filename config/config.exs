@@ -110,7 +110,10 @@ config :gnome_garden, Oban,
   notifier: Oban.Notifiers.Postgres,
   queues: [default: 10, lead_scanning: 2],
   repo: GnomeGarden.Repo,
-  plugins: [{Oban.Plugins.Cron, []}]
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [{"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker}], timezone: "Etc/UTC"}
+  ]
 
 config :ash,
   allow_forbidden_field_for_relationships_by_default?: true,
@@ -163,7 +166,7 @@ config :spark,
 config :gnome_garden,
   ecto_repos: [GnomeGarden.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [GnomeGarden.Accounts, GnomeGarden.Agents, GnomeGarden.Sales],
+  ash_domains: [GnomeGarden.Accounts, GnomeGarden.Agents, GnomeGarden.Sales, GnomeGarden.Procurement],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 
 # Configure the endpoint

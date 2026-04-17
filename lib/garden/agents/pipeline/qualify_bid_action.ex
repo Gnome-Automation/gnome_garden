@@ -81,7 +81,7 @@ defmodule GnomeGarden.Agents.Pipeline.QualifyBidAction do
   defp link_bid_to_company(bid_id, nil), do: {:ok, bid_id}
 
   defp link_bid_to_company(bid_id, company_id) do
-    case Ash.get(GnomeGarden.Agents.Bid, bid_id) do
+    case Ash.get(GnomeGarden.Procurement.Bid, bid_id) do
       {:ok, bid} ->
         Ash.update(bid, %{agency_company_id: company_id}, action: :update)
         :ok

@@ -5,6 +5,7 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
 
   require Ash.Query
 
+  alias GnomeGarden.Procurement
   alias GnomeGarden.Sales
 
   @impl true
@@ -12,12 +13,12 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
     company =
       Sales.get_company!(id,
         actor: socket.assigns.current_user,
-        load: [:leads, :lead_sources, :activities, :opportunities]
+        load: [:leads, :procurement_sources, :activities, :opportunities]
       )
 
     # Load bids linked to this company
     bids =
-      GnomeGarden.Agents.Bid
+      Procurement.Bid
       |> Ash.Query.filter(agency_company_id == ^id)
       |> Ash.Query.sort(inserted_at: :desc)
       |> Ash.read!()
@@ -93,7 +94,7 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
         <.tab_button tab="bids" current={@tab}>Bids ({length(@bids)})</.tab_button>
         <.tab_button tab="contacts" current={@tab}>Contacts ({length(@contacts)})</.tab_button>
         <.tab_button tab="sources" current={@tab}>
-          Sources ({length(@company.lead_sources)})
+          Sources ({length(@company.procurement_sources)})
         </.tab_button>
         <.tab_button tab="activity" current={@tab}>
           Activity ({length(@company.activities)})
@@ -182,7 +183,7 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
             <div class="flex justify-between items-center">
               <div>
                 <.link
-                  navigate={~p"/agents/sales/bids/#{bid}"}
+                  navigate={~p"/procurement/bids/#{bid}"}
                   class="font-medium hover:text-emerald-600"
                 >
                   {bid.title}
@@ -212,11 +213,11 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
       </div>
 
       <div :if={@tab == "sources"}>
-        <div :if={@company.lead_sources == []} class="text-center py-8 text-zinc-400">
+        <div :if={@company.procurement_sources == []} class="text-center py-8 text-zinc-400">
           No monitored sources
         </div>
         <div
-          :for={source <- @company.lead_sources}
+          :for={source <- @company.procurement_sources}
           class="card bg-base-100 shadow-sm border border-base-200 mb-3"
         >
           <div class="card-body p-4">

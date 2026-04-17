@@ -15,7 +15,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
   and Sales.Lead for hiring/expansion signals.
   """
 
-  alias GnomeGarden.Agents.LeadSource
+  alias GnomeGarden.Procurement.ProcurementSource
   alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
 
   require Logger
@@ -24,7 +24,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
   @career_paths ["/careers", "/jobs", "/career", "/join-us", "/employment", "/work-with-us"]
   @news_paths ["/news", "/press", "/blog", "/press-releases", "/announcements"]
 
-  def scan(%LeadSource{source_type: :company_site, company_id: company_id} = source)
+  def scan(%ProcurementSource{source_type: :company_site, company_id: company_id} = source)
       when not is_nil(company_id) do
     Logger.info("[CompanyScanner] Scanning #{source.name} at #{source.url}")
 
@@ -53,7 +53,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
       {:error, Exception.message(e)}
   end
 
-  def scan(%LeadSource{} = source) do
+  def scan(%ProcurementSource{} = source) do
     Logger.warning("[CompanyScanner] #{source.name} has no company_id, skipping")
     {:ok, %{skipped: true, reason: "no company_id"}}
   end
@@ -140,9 +140,6 @@ defmodule GnomeGarden.Agents.CompanyScanner do
 
       {:ok, %{status: :error}} ->
         :not_found
-
-      {:error, reason} ->
-        {:error, inspect(reason)}
     end
   end
 

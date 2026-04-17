@@ -9,3 +9,13 @@
 #
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
+
+alias GnomeGarden.Agents.DefaultDeployments
+
+result = DefaultDeployments.ensure_defaults()
+
+IO.puts("""
+Seeded agent deployments.
+Created: #{Enum.join(result.created, ", ")}
+Existing: #{Enum.join(result.existing, ", ")}
+""")

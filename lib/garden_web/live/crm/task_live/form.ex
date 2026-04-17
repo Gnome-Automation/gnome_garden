@@ -1,19 +1,19 @@
 defmodule GnomeGardenWeb.CRM.TaskLive.Form do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Sales
+  alias GnomeGarden.CRM.Forms, as: CRMForms
 
   @impl true
   def mount(params, _session, socket) do
     task =
       if id = params["id"] do
-        Sales.get_task!(id, actor: socket.assigns.current_user)
+        CRMForms.get_task!(id, actor: socket.assigns.current_user)
       else
         nil
       end
 
-    companies = Sales.list_companies!(actor: socket.assigns.current_user)
-    contacts = Sales.list_contacts!(actor: socket.assigns.current_user)
+    companies = CRMForms.list_companies!(actor: socket.assigns.current_user)
+    contacts = CRMForms.list_contacts!(actor: socket.assigns.current_user)
 
     {:ok,
      socket
@@ -27,9 +27,9 @@ defmodule GnomeGardenWeb.CRM.TaskLive.Form do
   defp assign_form(%{assigns: %{task: task, current_user: actor}} = socket) do
     form =
       if task do
-        Sales.form_to_update_task(task, actor: actor)
+        CRMForms.form_to_update_task(task, actor: actor)
       else
-        Sales.form_to_create_task(actor: actor)
+        CRMForms.form_to_create_task(actor: actor)
       end
 
     assign(socket, form: to_form(form))

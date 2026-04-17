@@ -1,13 +1,13 @@
 defmodule GnomeGardenWeb.CRM.LeadLive.Form do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Sales
+  alias GnomeGarden.CRM.Forms, as: CRMForms
 
   @impl true
   def mount(params, _session, socket) do
     lead =
       if id = params["id"] do
-        Sales.get_lead!(id, actor: socket.assigns.current_user)
+        CRMForms.get_lead!(id, actor: socket.assigns.current_user)
       else
         nil
       end
@@ -25,9 +25,9 @@ defmodule GnomeGardenWeb.CRM.LeadLive.Form do
   defp assign_form(%{assigns: %{lead: lead, current_user: actor}} = socket) do
     form =
       if lead do
-        Sales.form_to_update_lead(lead, actor: actor)
+        CRMForms.form_to_update_lead(lead, actor: actor)
       else
-        Sales.form_to_create_lead(actor: actor)
+        CRMForms.form_to_create_lead(actor: actor)
       end
 
     assign(socket, form: to_form(form))

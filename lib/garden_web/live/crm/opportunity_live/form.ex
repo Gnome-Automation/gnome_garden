@@ -1,18 +1,18 @@
 defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Sales
+  alias GnomeGarden.CRM.Forms, as: CRMForms
 
   @impl true
   def mount(params, _session, socket) do
     opportunity =
       if id = params["id"] do
-        Sales.get_opportunity!(id, actor: socket.assigns.current_user)
+        CRMForms.get_opportunity!(id, actor: socket.assigns.current_user)
       else
         nil
       end
 
-    companies = Sales.list_companies!(actor: socket.assigns.current_user)
+    companies = CRMForms.list_companies!(actor: socket.assigns.current_user)
 
     {:ok,
      socket
@@ -28,9 +28,9 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
   defp assign_form(%{assigns: %{opportunity: opportunity, current_user: actor}} = socket) do
     form =
       if opportunity do
-        Sales.form_to_update_opportunity(opportunity, actor: actor)
+        CRMForms.form_to_update_opportunity(opportunity, actor: actor)
       else
-        Sales.form_to_create_opportunity(actor: actor)
+        CRMForms.form_to_create_opportunity(actor: actor)
       end
 
     assign(socket, form: to_form(form))

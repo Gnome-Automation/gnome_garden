@@ -1,7 +1,9 @@
 defmodule GnomeGardenWeb.CRM.ReviewLive do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Sales
+  alias GnomeGarden.CRM.Forms, as: CRMForms
+  alias GnomeGarden.CRM.PipelineEvents
+  alias GnomeGarden.CRM.Review
   alias GnomeGarden.Sales.Lead
   alias GnomeGarden.Agents.{Bid, Prospect}
 
@@ -71,7 +73,7 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
       }
       |> put_source_id(type, record)
 
-    case Sales.accept_review_item(pursue_params, actor: socket.assigns.current_user) do
+    case Review.accept_review_item(pursue_params, actor: socket.assigns.current_user) do
       {:ok, %{opportunity: opp}} ->
         {:noreply,
          socket
@@ -113,16 +115,19 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
     end
 
     # Log the pass event
-    Sales.log_pipeline_event(%{
-      event_type: :passed,
-      subject_type: type,
-      subject_id: id,
-      summary: "Passed on #{title}",
-      reason: reason,
-      from_state: "new",
-      to_state: "rejected",
-      actor_id: socket.assigns.current_user && socket.assigns.current_user.id
-    })
+    PipelineEvents.log(
+      %{
+        event_type: :passed,
+        subject_type: type,
+        subject_id: id,
+        summary: "Passed on #{title}",
+        reason: reason,
+        from_state: "new",
+        to_state: "rejected",
+        actor_id: socket.assigns.current_user && socket.assigns.current_user.id
+      },
+      actor: socket.assigns.current_user
+    )
 
     {:noreply,
      socket
@@ -163,16 +168,19 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
 
     # Log the park event
     {:ok, event} =
-      Sales.log_pipeline_event(%{
-        event_type: :parked,
-        subject_type: type,
-        subject_id: id,
-        summary: "Parked — #{title}",
-        reason: reason,
-        from_state: "new",
-        to_state: "parked",
-        actor_id: socket.assigns.current_user && socket.assigns.current_user.id
-      })
+      PipelineEvents.log(
+        %{
+          event_type: :parked,
+          subject_type: type,
+          subject_id: id,
+          summary: "Parked — #{title}",
+          reason: reason,
+          from_state: "new",
+          to_state: "parked",
+          actor_id: socket.assigns.current_user && socket.assigns.current_user.id
+        },
+        actor: socket.assigns.current_user
+      )
 
     # Create research request if provided
     if research_note && research_note != "" do
@@ -228,7 +236,7 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
 
     form =
       if open do
-        Sales.form_to_quick_add_lead(actor: socket.assigns.current_user)
+        CRMForms.form_to_quick_add_lead(actor: socket.assigns.current_user)
         |> then(&to_form/1)
       else
         nil
@@ -493,7 +501,11 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
               <button type="button" phx-click="close_pass" class="btn btn-ghost">
                 Cancel
               </button>
-              <.button type="submit" variant="error" phx-disable-with="Passing...">
+              <.button
+                type="submit"
+                class="rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500"
+                phx-disable-with="Passing..."
+              >
                 Confirm Pass
               </.button>
             </div>
@@ -542,7 +554,11 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
               <button type="button" phx-click="close_park" class="btn btn-ghost">
                 Cancel
               </button>
-              <.button type="submit" variant="warning" phx-disable-with="Parking...">
+              <.button
+                type="submit"
+                class="rounded-md bg-amber-500 px-3 py-2 text-sm font-semibold text-zinc-950 shadow-xs hover:bg-amber-400"
+                phx-disable-with="Parking..."
+              >
                 Park
               </.button>
             </div>
@@ -589,7 +605,7 @@ defmodule GnomeGardenWeb.CRM.ReviewLive do
 
             <%!-- Title --%>
             <.link
-              navigate={~p"/agents/sales/bids/#{@bid}"}
+              navigate={~p"/procurement/bids/#{@bid}"}
               class="font-bold text-base mt-1 block hover:text-emerald-600 truncate"
             >
               {@bid.title}

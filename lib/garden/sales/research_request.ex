@@ -230,7 +230,7 @@ defmodule GnomeGarden.Sales.ResearchRequest do
       public? true
     end
 
-    many_to_many :bids, GnomeGarden.Agents.Bid do
+    many_to_many :bids, GnomeGarden.Procurement.Bid do
       through GnomeGarden.Sales.ResearchLink
       source_attribute_on_join_resource :research_request_id
       destination_attribute_on_join_resource :bid_id

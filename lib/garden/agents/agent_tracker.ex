@@ -52,7 +52,7 @@ defmodule GnomeGarden.Agents.AgentTracker do
   end
 
   @doc "Mark an agent as completed with optional result."
-  def mark_complete(id, status \\ :done, result \\ nil) when status in [:done, :error] do
+  def mark_complete(id, status \\ :done, result \\ nil) when status in [:done, :error, :cancelled] do
     GenServer.cast(__MODULE__, {:mark_complete, id, status, result})
   end
 
@@ -197,12 +197,21 @@ defmodule GnomeGarden.Agents.AgentTracker do
 
         state =
           update_agent(state, agent_id, fn entry ->
-            %{
-              entry
-              | status: :error,
-                finished_at: System.monotonic_time(:millisecond),
-                error: inspect(reason)
-            }
+            cond do
+              entry.status in [:done, :error, :cancelled] ->
+                %{entry | finished_at: entry.finished_at || System.monotonic_time(:millisecond)}
+
+              reason in [:normal, :shutdown] ->
+                %{entry | status: :done, finished_at: System.monotonic_time(:millisecond)}
+
+              true ->
+                %{
+                  entry
+                  | status: :error,
+                    finished_at: System.monotonic_time(:millisecond),
+                    error: inspect(reason)
+                }
+            end
           end)
 
         {:noreply, state}

@@ -17,7 +17,7 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
       location: [type: :string, doc: "Location"],
       region: [type: :atom, doc: "Region code"],
       source_url: [type: :string, doc: "URL of the source that found this"],
-      lead_source_id: [type: :string, doc: "ID of the LeadSource"],
+      lead_source_id: [type: :string, doc: "ID of the ProcurementSource"],
       posted_at: [type: :string, doc: "Posted date (ISO8601)"],
       due_at: [type: :string, doc: "Due date (ISO8601)"],
       estimated_value: [type: :float, doc: "Estimated value"],
@@ -26,11 +26,15 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
 
   require Logger
 
+  alias GnomeGarden.Agents.RunOutputLogger
+
   @impl true
-  def run(params, _context) do
+  def run(params, context) do
     # Check if bid already exists
     case find_existing(params) do
       {:ok, existing} ->
+        log_output(context, :existing, existing)
+
         {:ok,
          %{
            id: existing.id,
@@ -40,19 +44,19 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
          }}
 
       :not_found ->
-        create_bid(params)
+        create_bid(params, context)
     end
   end
 
   defp find_existing(%{url: url}) do
-    case Ash.read(GnomeGarden.Agents.Bid, filter: [url: url]) do
+    case Ash.read(GnomeGarden.Procurement.Bid, filter: [url: url]) do
       {:ok, [existing | _]} -> {:ok, existing}
       {:ok, []} -> :not_found
       _ -> :not_found
     end
   end
 
-  defp create_bid(params) do
+  defp create_bid(params, context) do
     attrs =
       %{
         title: params.title,
@@ -82,11 +86,12 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()
 
-    case Ash.create(GnomeGarden.Agents.Bid, attrs) do
+    case Ash.create(GnomeGarden.Procurement.Bid, attrs) do
       {:ok, bid} ->
         Logger.info(
           "[SaveBid] Created bid: #{bid.title} (score: #{bid.score_total}, tier: #{bid.score_tier})"
         )
+        log_output(context, :created, bid)
 
         {:ok,
          %{
@@ -113,4 +118,24 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
   end
 
   defp parse_datetime(_), do: nil
+
+  defp log_output(context, event, bid) do
+    RunOutputLogger.log(context, %{
+      output_type: :bid,
+      output_id: bid.id,
+      event: event,
+      label: bid.title,
+      summary: "#{event_label(event)} bid #{bid.title}",
+      metadata: %{
+        url: bid.url,
+        agency: bid.agency,
+        score_total: bid.score_total,
+        score_tier: bid.score_tier,
+        lead_source_id: bid.lead_source_id
+      }
+    })
+  end
+
+  defp event_label(:created), do: "Created"
+  defp event_label(:existing), do: "Reused existing"
 end

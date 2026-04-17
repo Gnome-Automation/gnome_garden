@@ -1,12 +1,15 @@
 import Config
 config :ash, policies: [show_policy_breakdowns?: true]
 
+db_host = System.get_env("GNOME_GARDEN_DB_HOST", "localhost")
+db_port = String.to_integer(System.get_env("GNOME_GARDEN_DB_PORT", "5435"))
+
 # Configure your database
 config :gnome_garden, GnomeGarden.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "localhost",
-  port: 5432,
+  hostname: db_host,
+  port: db_port,
   database: "gnome_garden_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,

@@ -1,13 +1,13 @@
 defmodule GnomeGardenWeb.CRM.ContactLive.Form do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Sales
+  alias GnomeGarden.CRM.Forms, as: CRMForms
 
   @impl true
   def mount(params, _session, socket) do
     contact =
       if id = params["id"] do
-        Sales.get_contact!(id, actor: socket.assigns.current_user)
+        CRMForms.get_contact!(id, actor: socket.assigns.current_user)
       else
         nil
       end
@@ -25,9 +25,9 @@ defmodule GnomeGardenWeb.CRM.ContactLive.Form do
   defp assign_form(%{assigns: %{contact: contact, current_user: actor}} = socket) do
     form =
       if contact do
-        Sales.form_to_update_contact(contact, actor: actor)
+        CRMForms.form_to_update_contact(contact, actor: actor)
       else
-        Sales.form_to_create_contact(actor: actor)
+        CRMForms.form_to_create_contact(actor: actor)
       end
 
     assign(socket, form: to_form(form))

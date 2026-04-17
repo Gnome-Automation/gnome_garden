@@ -127,12 +127,12 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
 
   """
   def discover_site(pid, lead_source_id, opts \\ []) do
-    case Ash.get(GnomeGarden.Agents.LeadSource, lead_source_id) do
+    case Ash.get(GnomeGarden.Procurement.ProcurementSource, lead_source_id) do
       {:ok, source} ->
         query = """
         DISCOVERY MODE - Figure out how to scrape this site and save the config.
 
-        Lead Source ID: #{lead_source_id}
+        Procurement Source ID: #{lead_source_id}
         Name: #{source.name}
         URL: #{source.url}
 
@@ -160,10 +160,10 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   end
 
   @doc """
-  Discover all pending lead sources.
+  Discover all pending procurement sources.
   """
   def discover_all_pending(pid, opts \\ []) do
-    sources = Ash.read!(GnomeGarden.Agents.LeadSource, action: :needs_configuration)
+    sources = Ash.read!(GnomeGarden.Procurement.ProcurementSource, action: :needs_configuration)
 
     results =
       Enum.map(sources, fn source ->
@@ -207,13 +207,13 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   end
 
   @doc """
-  Scan a lead source by ID.
+  Scan a procurement source by ID.
   """
   def scan_lead_source(pid, lead_source_id, opts \\ []) do
-    case Ash.get(GnomeGarden.Agents.LeadSource, lead_source_id) do
+    case Ash.get(GnomeGarden.Procurement.ProcurementSource, lead_source_id) do
       {:ok, source} ->
         query = """
-        Scan this lead source: #{source.name}
+        Scan this procurement source: #{source.name}
         URL: #{source.url}
         Type: #{source.source_type}
 
@@ -228,14 +228,14 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   end
 
   @doc """
-  Scan all enabled lead sources that don't require login.
+  Scan all enabled procurement sources that don't require login.
   """
   def scan_all_enabled(pid, opts \\ []) do
     sources =
-      Ash.read!(GnomeGarden.Agents.LeadSource, filter: [enabled: true, requires_login: false])
+      Ash.read!(GnomeGarden.Procurement.ProcurementSource, filter: [enabled: true, requires_login: false])
 
     query = """
-    Scan these #{length(sources)} lead sources for bids:
+    Scan these #{length(sources)} procurement sources for bids:
 
     #{Enum.map_join(sources, "\n", fn s -> "- #{s.name}: #{s.url}" end)}
 

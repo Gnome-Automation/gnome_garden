@@ -8,7 +8,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
 
   ## Flow
 
-  1. Load LeadSource with scrape_config
+  1. Load ProcurementSource with scrape_config
   2. Navigate to listing_url using browser
   3. Extract bids using saved selectors
   4. Score bids using LLM (only LLM usage - minimal tokens)
@@ -23,17 +23,17 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
       {:ok, results} = DeterministicScanner.scan_all_ready()
   """
 
-  alias GnomeGarden.Agents.LeadSource
+  alias GnomeGarden.Procurement.ProcurementSource
   alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
   alias GnomeGarden.Agents.Tools.{ScoreBid, SaveBid}
 
   require Logger
 
   @doc """
-  Scan a single lead source using its saved scrape_config.
+  Scan a single procurement source using its saved scrape_config.
   """
   def scan(lead_source_id) when is_binary(lead_source_id) do
-    case Ash.get(LeadSource, lead_source_id) do
+    case Ash.get(ProcurementSource, lead_source_id) do
       {:ok, %{config_status: :configured, scrape_config: config} = source}
       when config != %{} ->
         do_scan(source)
@@ -53,7 +53,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
     since_hours = Keyword.get(opts, :since_hours, 24)
 
     sources =
-      LeadSource
+      ProcurementSource
       |> Ash.Query.for_read(:ready_for_scan, %{since_hours: since_hours})
       |> Ash.read!()
 
@@ -261,7 +261,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
   end
 
   defp enrich_bid(bid_id) do
-    case Ash.get(GnomeGarden.Agents.Bid, bid_id) do
+    case Ash.get(GnomeGarden.Procurement.Bid, bid_id) do
       {:ok, bid} ->
         if String.contains?(bid.url || "", "bo-detail") &&
              (is_nil(bid.description) || String.length(bid.description || "") < 20) do

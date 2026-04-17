@@ -53,7 +53,7 @@ defmodule GnomeGarden.Sales.ResearchLink do
       public? true
     end
 
-    belongs_to :bid, GnomeGarden.Agents.Bid do
+    belongs_to :bid, GnomeGarden.Procurement.Bid do
       public? true
     end
 

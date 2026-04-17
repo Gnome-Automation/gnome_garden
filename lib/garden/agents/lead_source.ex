@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.LeadSource do
+defmodule GnomeGarden.Procurement.ProcurementSource do
   @moduledoc """
   Universal monitored URL.
 
@@ -35,7 +35,7 @@ defmodule GnomeGarden.Agents.LeadSource do
 
   use Ash.Resource,
     otp_app: :gnome_garden,
-    domain: GnomeGarden.Agents,
+    domain: GnomeGarden.Procurement,
     data_layer: AshPostgres.DataLayer,
     extensions: [AshOban, AshStateMachine],
     notifiers: [Ash.Notifier.PubSub]
@@ -50,11 +50,14 @@ defmodule GnomeGarden.Agents.LeadSource do
       trigger :scheduled_scan do
         action :scan
         scheduler_cron "0 */6 * * *"
+        worker_module_name __MODULE__.AshOban.Worker.ScheduledScan
+        scheduler_module_name __MODULE__.AshOban.Scheduler.ScheduledScan
         queue :lead_scanning
         max_attempts 3
 
         where expr(
                 enabled == true and
+                  status == :approved and
                   config_status == :configured and
                   (is_nil(last_scanned_at) or
                      last_scanned_at < ago(scan_frequency_hours, :hour))
@@ -100,7 +103,8 @@ defmodule GnomeGarden.Agents.LeadSource do
         :metadata,
         :added_by,
         :notes,
-        :company_id
+        :company_id,
+        :status
       ]
     end
 
@@ -122,6 +126,7 @@ defmodule GnomeGarden.Agents.LeadSource do
       change set_attribute(:config_status, :configured)
       change set_attribute(:configured_at, &DateTime.utc_now/0)
       change set_attribute(:added_by, :agent)
+      change set_attribute(:status, :approved)
     end
 
     update :update do
@@ -134,8 +139,37 @@ defmodule GnomeGarden.Agents.LeadSource do
         :scrape_selector,
         :scrape_config,
         :metadata,
-        :last_scanned_at
+        :last_scanned_at,
+        :status
       ]
+    end
+
+    update :approve do
+      description "Approve this source for configuration and scanning"
+      accept []
+      change set_attribute(:status, :approved)
+      change set_attribute(:enabled, true)
+    end
+
+    update :ignore do
+      description "Ignore this source without scanning it"
+      accept []
+      change set_attribute(:status, :ignored)
+      change set_attribute(:enabled, false)
+    end
+
+    update :block do
+      description "Block this source from future scanning"
+      accept []
+      change set_attribute(:status, :blocked)
+      change set_attribute(:enabled, false)
+    end
+
+    update :reconsider do
+      description "Move this source back into the candidate pool"
+      accept []
+      change set_attribute(:status, :candidate)
+      change set_attribute(:enabled, true)
     end
 
     # State transitions
@@ -157,6 +191,7 @@ defmodule GnomeGarden.Agents.LeadSource do
 
     update :scan do
       description "Run scanner on this source (routed by source_type)"
+      require_atomic? false
       accept []
 
       change fn changeset, _ctx ->
@@ -202,6 +237,7 @@ defmodule GnomeGarden.Agents.LeadSource do
 
       filter expr(
                enabled == true and
+                 status == :approved and
                  requires_login == false and
                  config_status in [:found, :pending]
              )
@@ -213,6 +249,7 @@ defmodule GnomeGarden.Agents.LeadSource do
 
       filter expr(
                enabled == true and
+                 status == :approved and
                  config_status == :configured and
                  (is_nil(last_scanned_at) or last_scanned_at < ago(^arg(:since_hours), :hour))
              )
@@ -220,12 +257,12 @@ defmodule GnomeGarden.Agents.LeadSource do
 
     read :by_type do
       argument :source_type, :atom, allow_nil?: false
-      filter expr(source_type == ^arg(:source_type) and enabled == true)
+      filter expr(source_type == ^arg(:source_type) and enabled == true and status == :approved)
     end
 
     read :by_region do
       argument :region, :atom, allow_nil?: false
-      filter expr(region == ^arg(:region) and enabled == true)
+      filter expr(region == ^arg(:region) and enabled == true and status == :approved)
     end
 
     read :by_company do
@@ -236,11 +273,15 @@ defmodule GnomeGarden.Agents.LeadSource do
     read :failed do
       filter expr(config_status in [:config_failed, :scan_failed])
     end
+
+    read :console do
+      prepare build(sort: [updated_at: :desc, inserted_at: :desc])
+    end
   end
 
   pub_sub do
     module GnomeGardenWeb.Endpoint
-    prefix "lead_source"
+    prefix "procurement_source"
 
     publish :configure, "configured"
     publish :config_fail, "config_failed"
@@ -307,6 +348,13 @@ defmodule GnomeGarden.Agents.LeadSource do
       constraints: [
         one_of: [:found, :pending, :configured, :config_failed, :scan_failed, :manual]
       ]
+
+    attribute :status, :atom do
+      allow_nil? false
+      default :candidate
+      public? true
+      constraints one_of: [:candidate, :approved, :ignored, :blocked]
+    end
 
     attribute :configured_at, :utc_datetime do
       public? true

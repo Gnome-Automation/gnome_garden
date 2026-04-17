@@ -2,7 +2,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
   @moduledoc """
   Autonomous agent that scans procurement portals for bid opportunities.
 
-  Monitors lead sources (PlanetBids, SAM.gov, OpenGov, etc.) and:
+  Monitors procurement sources (PlanetBids, SAM.gov, OpenGov, etc.) and:
   1. Fetches new bid listings from each source
   2. Scores each bid using the Gnome Automation rubric
   3. Saves scored bids to the database
@@ -94,11 +94,11 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
   @default_timeout 180_000
 
   @doc """
-  Scan all lead sources that are due for scanning.
+  Scan all procurement sources that are due for scanning.
   """
   def scan_all(pid, opts \\ []) do
     query = """
-    Scan all lead sources that are due for scanning. For each source:
+    Scan all procurement sources that are due for scanning. For each source:
     1. Use the appropriate scanning tool (scan_planetbids for PlanetBids, query_sam_gov for SAM.gov)
     2. Score each bid found
     3. Save bids with score >= 30
@@ -111,12 +111,12 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
   end
 
   @doc """
-  Scan a specific type of lead source.
+  Scan a specific type of procurement source.
   """
   def scan_type(pid, source_type, opts \\ [])
       when source_type in [:planetbids, :sam_gov, :opengov] do
     query = """
-    Scan all #{source_type} lead sources. For each portal:
+    Scan all #{source_type} procurement sources. For each portal:
     1. Fetch current bid listings
     2. Score each bid using our rubric
     3. Save bids scoring 30+
@@ -177,10 +177,10 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
 
   @impl true
   def on_before_cmd(agent, {:ai_react_start, params} = _action) do
-    # Inject API keys and lead sources into context
+    # Inject API keys and procurement sources into context
     sam_key = System.get_env("SAM_GOV_API_KEY")
 
-    # Load lead sources from database
+    # Load procurement sources from database
     sources = load_lead_sources()
 
     context =
@@ -204,7 +204,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
   end
 
   defp load_lead_sources do
-    case Ash.read(GnomeGarden.Agents.LeadSource, filter: [enabled: true]) do
+    case Ash.read(GnomeGarden.Procurement.ProcurementSource, filter: [enabled: true, status: :approved]) do
       {:ok, sources} ->
         Enum.map(sources, fn s ->
           %{

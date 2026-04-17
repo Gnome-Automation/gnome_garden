@@ -17,6 +17,7 @@ defmodule GnomeGarden.Application do
          Application.fetch_env!(:gnome_garden, Oban)
        )},
       {Phoenix.PubSub, name: GnomeGarden.PubSub},
+      {Task.Supervisor, name: GnomeGarden.AsyncSupervisor},
 
       # Jido agent infrastructure
       {Registry, keys: :unique, name: GnomeGarden.Agents.SessionRegistry},

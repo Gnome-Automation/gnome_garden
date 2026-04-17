@@ -18,6 +18,10 @@ defmodule GnomeGarden.Agents.AgentMessage do
   postgres do
     table "agent_messages"
     repo GnomeGarden.Repo
+
+    references do
+      reference :agent_run, on_delete: :delete
+    end
   end
 
   actions do
@@ -30,6 +34,7 @@ defmodule GnomeGarden.Agents.AgentMessage do
     read :by_run do
       argument :agent_run_id, :uuid, allow_nil?: false
       filter expr(agent_run_id == ^arg(:agent_run_id))
+      prepare build(sort: [inserted_at: :asc])
     end
 
     read :recent do

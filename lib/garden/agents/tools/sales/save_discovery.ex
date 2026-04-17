@@ -1,6 +1,6 @@
 defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
   @moduledoc """
-  Save discovered scraping configuration for a lead source.
+  Save discovered scraping configuration for a procurement source.
 
   This tool is used by SmartScanner after it figures out how to scrape a site.
   The saved config allows future scans to be deterministic (no LLM needed).
@@ -14,7 +14,7 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
     The saved config will be used for future deterministic (fast, cheap) scans.
     """,
     schema: [
-      lead_source_id: [type: :string, required: true, doc: "ID of the LeadSource to update"],
+      lead_source_id: [type: :string, required: true, doc: "ID of the ProcurementSource to update"],
       listing_url: [
         type: :string,
         required: true,
@@ -63,7 +63,7 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
       notes: params[:notes]
     }
 
-    case Ash.get(GnomeGarden.Agents.LeadSource, params.lead_source_id) do
+    case Ash.get(GnomeGarden.Procurement.ProcurementSource, params.lead_source_id) do
       {:ok, source} ->
         case Ash.update(source, %{scrape_config: scrape_config}, action: :configure) do
           {:ok, updated} ->

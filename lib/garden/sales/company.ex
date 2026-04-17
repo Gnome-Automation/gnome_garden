@@ -324,7 +324,7 @@ defmodule GnomeGarden.Sales.Company do
       public? true
     end
 
-    has_many :lead_sources, GnomeGarden.Agents.LeadSource do
+    has_many :procurement_sources, GnomeGarden.Procurement.ProcurementSource do
       public? true
     end
   end

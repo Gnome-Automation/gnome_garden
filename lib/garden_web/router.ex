@@ -29,6 +29,10 @@ defmodule GnomeGardenWeb.Router do
       layout: {GnomeGardenWeb.Layouts, :app},
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_optional}] do
       live "/agent", AgentLive
+      live "/console/agents", Console.AgentsLive
+      live "/console/agents/deployments/new", Console.AgentDeploymentFormLive
+      live "/console/agents/deployments/:id/edit", Console.AgentDeploymentFormLive
+      live "/console/agents/runs/:id", Console.AgentRunLive
 
       # CRM - Review Queue
       live "/crm/review", CRM.ReviewLive, :index
@@ -64,10 +68,10 @@ defmodule GnomeGardenWeb.Router do
       live "/crm/tasks/:id/edit", CRM.TaskLive.Form, :edit
 
       # Agents - Sales Discovery
-      live "/agents/sales/bids", Agents.Sales.BidLive.Index, :index
-      live "/agents/sales/bids/:id", Agents.Sales.BidLive.Show, :show
+      live "/procurement/bids", Agents.Sales.BidLive.Index, :index
+      live "/procurement/bids/:id", Agents.Sales.BidLive.Show, :show
       live "/agents/sales/prospects", Agents.Sales.ProspectsLive
-      live "/agents/sales/lead-sources", Agents.Sales.LeadSourcesLive
+      live "/procurement/sources", Agents.Sales.LeadSourcesLive
     end
   end
 
