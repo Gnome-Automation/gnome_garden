@@ -170,6 +170,7 @@ config :gnome_garden,
     GnomeGarden.Accounts,
     GnomeGarden.Agents,
     GnomeGarden.Commercial,
+    GnomeGarden.Execution,
     GnomeGarden.Operations,
     GnomeGarden.Sales,
     GnomeGarden.Procurement
