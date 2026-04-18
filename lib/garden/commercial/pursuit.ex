@@ -145,13 +145,21 @@ defmodule GnomeGarden.Commercial.Pursuit do
 
     read :active do
       filter expr(stage in [:new, :qualified, :estimating, :proposed, :negotiating, :reopened])
-      prepare build(sort: [expected_close_on: :asc, inserted_at: :desc], load: [:organization, :site])
+
+      prepare build(
+                sort: [expected_close_on: :asc, inserted_at: :desc],
+                load: [:organization, :site, :proposals]
+              )
     end
 
     read :for_organization do
       argument :organization_id, :uuid, allow_nil?: false
       filter expr(organization_id == ^arg(:organization_id))
-      prepare build(sort: [expected_close_on: :asc, inserted_at: :desc], load: [:organization, :site])
+
+      prepare build(
+                sort: [expected_close_on: :asc, inserted_at: :desc],
+                load: [:organization, :site, :proposals]
+              )
     end
   end
 
@@ -285,9 +293,19 @@ defmodule GnomeGarden.Commercial.Pursuit do
     has_many :agreements, GnomeGarden.Commercial.Agreement do
       public? true
     end
+
+    has_many :proposals, GnomeGarden.Commercial.Proposal do
+      public? true
+    end
   end
 
   calculations do
     calculate :weighted_value, :decimal, expr(target_value * probability / 100)
+  end
+
+  aggregates do
+    count :proposal_count, :proposals do
+      public? true
+    end
   end
 end

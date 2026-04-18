@@ -46,6 +46,29 @@ defmodule GnomeGarden.Commercial do
       define :list_pursuits_for_organization, action: :for_organization
     end
 
+    resource GnomeGarden.Commercial.Proposal do
+      define :list_proposals, action: :read
+      define :get_proposal, action: :read, get_by: [:id]
+      define :create_proposal, action: :create
+      define :update_proposal, action: :update
+      define :issue_proposal, action: :issue
+      define :accept_proposal, action: :accept
+      define :reject_proposal, action: :reject
+      define :expire_proposal, action: :expire
+      define :supersede_proposal, action: :supersede
+      define :reopen_proposal, action: :reopen
+      define :list_active_proposals, action: :active
+      define :list_proposals_for_pursuit, action: :for_pursuit
+    end
+
+    resource GnomeGarden.Commercial.ProposalLine do
+      define :list_proposal_lines, action: :read
+      define :get_proposal_line, action: :read, get_by: [:id]
+      define :create_proposal_line, action: :create
+      define :update_proposal_line, action: :update
+      define :list_lines_for_proposal, action: :for_proposal
+    end
+
     resource GnomeGarden.Commercial.Agreement do
       define :list_agreements, action: :read
       define :get_agreement, action: :read, get_by: [:id]

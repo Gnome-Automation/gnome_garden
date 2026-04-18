@@ -6110,6 +6110,21 @@
             },
             {
               "default": null,
+              "name": "proposal_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "proposal_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
               "name": "pursuit_id",
               "type": "Ash.Type.UUID",
               "description": null,
@@ -6403,6 +6418,7 @@
               "type": "create",
               "accept": [
                 "pursuit_id",
+                "proposal_id",
                 "organization_id",
                 "site_id",
                 "managed_system_id",
@@ -6560,6 +6576,7 @@
               "type": "update",
               "accept": [
                 "pursuit_id",
+                "proposal_id",
                 "organization_id",
                 "site_id",
                 "managed_system_id",
@@ -6732,6 +6749,24 @@
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
               "destination_domain": "GnomeGarden.Execution"
+            },
+            {
+              "name": "proposal",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Proposal",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "proposal_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": false,
+              "destination_domain": "GnomeGarden.Commercial"
             },
             {
               "name": "pursuit",
@@ -7372,6 +7407,1649 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ]
+        },
+        {
+          "attributes": [
+            {
+              "default": null,
+              "name": "accepted_on",
+              "type": "Ash.Type.Date",
+              "description": null,
+              "source": "accepted_on",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "USD",
+                "computed?": false
+              },
+              "name": "currency_code",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "currency_code",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "project",
+                "computed?": false
+              },
+              "name": "delivery_model",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "source": "delivery_model",
+              "constraints": [
+                {
+                  "value": [
+                    "project",
+                    "service",
+                    "maintenance",
+                    "retainer",
+                    "mixed"
+                  ],
+                  "key": "one_of"
+                },
+                {
+                  "value": false,
+                  "key": "unsafe_to_atom?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "description",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "description",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "&Ash.UUID.generate/0",
+                "computed?": true
+              },
+              "name": "id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": false,
+              "generated?": false,
+              "primary_key?": true,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "&DateTime.utc_now/0",
+                "computed?": true
+              },
+              "name": "inserted_at",
+              "type": "Ash.Type.UtcDatetimeUsec",
+              "description": null,
+              "source": "inserted_at",
+              "constraints": [
+                {
+                  "value": "microsecond",
+                  "key": "precision"
+                },
+                {
+                  "value": "start_of_day",
+                  "key": "cast_dates_as"
+                },
+                {
+                  "value": "utc",
+                  "key": "timezone"
+                }
+              ],
+              "public?": false,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": false,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "issued_on",
+              "type": "Ash.Type.Date",
+              "description": null,
+              "source": "issued_on",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "managed_system_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "managed_system_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "name",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "name",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "notes",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "notes",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "organization_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "organization_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "owner_user_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "owner_user_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "fixed_fee",
+                "computed?": false
+              },
+              "name": "pricing_model",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "source": "pricing_model",
+              "constraints": [
+                {
+                  "value": [
+                    "fixed_fee",
+                    "time_and_materials",
+                    "retainer",
+                    "milestone",
+                    "unit",
+                    "mixed"
+                  ],
+                  "key": "one_of"
+                },
+                {
+                  "value": false,
+                  "key": "unsafe_to_atom?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "proposal_number",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "proposal_number",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "pursuit_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "pursuit_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": 1,
+                "computed?": false
+              },
+              "name": "revision_number",
+              "type": "Ash.Type.Integer",
+              "description": null,
+              "source": "revision_number",
+              "constraints": [
+                {
+                  "value": 1,
+                  "key": "min"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "site_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "site_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "draft",
+                "computed?": false
+              },
+              "name": "status",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "source": "status",
+              "constraints": [
+                {
+                  "value": [
+                    "draft",
+                    "issued",
+                    "accepted",
+                    "rejected",
+                    "expired",
+                    "superseded"
+                  ],
+                  "key": "one_of"
+                },
+                {
+                  "value": false,
+                  "key": "unsafe_to_atom?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "&DateTime.utc_now/0",
+                "computed?": true
+              },
+              "name": "updated_at",
+              "type": "Ash.Type.UtcDatetimeUsec",
+              "description": null,
+              "source": "updated_at",
+              "constraints": [
+                {
+                  "value": "microsecond",
+                  "key": "precision"
+                },
+                {
+                  "value": "start_of_day",
+                  "key": "cast_dates_as"
+                },
+                {
+                  "value": "utc",
+                  "key": "timezone"
+                }
+              ],
+              "public?": false,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": false,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": {
+                "value": "&DateTime.utc_now/0",
+                "computed?": true
+              }
+            },
+            {
+              "default": null,
+              "name": "valid_until_on",
+              "type": "Ash.Type.Date",
+              "description": null,
+              "source": "valid_until_on",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            }
+          ],
+          "module": "GnomeGarden.Commercial.Proposal",
+          "name": "Proposal",
+          "table": "commercial_proposals",
+          "domain": "GnomeGarden.Commercial",
+          "description": "Commercial proposal or estimate prepared for a pursuit.\n\nProposals sit between internal pursuit qualification and signed agreements,\nallowing Gnome to track issued quotes, revisions, acceptance, and expiry.\n\n\n\n",
+          "extensions": [
+            "Ash.Resource.Dsl",
+            "AshAdmin.Resource",
+            "AshPostgres.DataLayer",
+            "AshStateMachine"
+          ],
+          "source_path": "lib/garden/commercial/proposal.ex",
+          "state_machine": {
+            "all_states": [
+              "draft",
+              "expired",
+              "rejected",
+              "issued",
+              "accepted",
+              "superseded"
+            ],
+            "default_initial_state": "draft",
+            "initial_states": [
+              "draft"
+            ],
+            "state_attribute": "status",
+            "transitions": [
+              {
+                "action": "issue",
+                "to": [
+                  "issued"
+                ],
+                "from": [
+                  "draft",
+                  "expired",
+                  "rejected"
+                ]
+              },
+              {
+                "action": "accept",
+                "to": [
+                  "accepted"
+                ],
+                "from": [
+                  "issued"
+                ]
+              },
+              {
+                "action": "reject",
+                "to": [
+                  "rejected"
+                ],
+                "from": [
+                  "issued"
+                ]
+              },
+              {
+                "action": "expire",
+                "to": [
+                  "expired"
+                ],
+                "from": [
+                  "issued"
+                ]
+              },
+              {
+                "action": "supersede",
+                "to": [
+                  "superseded"
+                ],
+                "from": [
+                  "draft",
+                  "issued",
+                  "rejected",
+                  "expired"
+                ]
+              },
+              {
+                "action": "reopen",
+                "to": [
+                  "draft"
+                ],
+                "from": [
+                  "rejected",
+                  "expired",
+                  "superseded"
+                ]
+              }
+            ]
+          },
+          "actions": [
+            {
+              "name": "accept",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "active",
+              "type": "read",
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": null
+            },
+            {
+              "name": "create",
+              "type": "create",
+              "accept": [
+                "pursuit_id",
+                "organization_id",
+                "site_id",
+                "managed_system_id",
+                "owner_user_id",
+                "proposal_number",
+                "name",
+                "description",
+                "revision_number",
+                "pricing_model",
+                "currency_code",
+                "valid_until_on",
+                "delivery_model",
+                "notes"
+              ],
+              "description": null,
+              "arguments": [],
+              "primary?": true,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "upsert?": false,
+              "upsert_identity": null
+            },
+            {
+              "name": "destroy",
+              "type": "destroy",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": true,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false,
+              "soft?": false
+            },
+            {
+              "name": "expire",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "for_pursuit",
+              "type": "read",
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "pursuit_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": null
+            },
+            {
+              "name": "issue",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "read",
+              "type": "read",
+              "description": null,
+              "arguments": [],
+              "primary?": true,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": {
+                "required?": false,
+                "keyset?": true,
+                "offset?": true,
+                "default_limit": null,
+                "max_page_size": 250,
+                "countable": true
+              }
+            },
+            {
+              "name": "reject",
+              "type": "update",
+              "accept": [
+                "notes"
+              ],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "reopen",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "supersede",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "update",
+              "type": "update",
+              "accept": [
+                "pursuit_id",
+                "organization_id",
+                "site_id",
+                "managed_system_id",
+                "owner_user_id",
+                "proposal_number",
+                "name",
+                "description",
+                "revision_number",
+                "pricing_model",
+                "currency_code",
+                "valid_until_on",
+                "delivery_model",
+                "notes"
+              ],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            }
+          ],
+          "relationships": [
+            {
+              "name": "agreements",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Agreement",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "proposal_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": false,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
+              "name": "managed_system",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Operations.ManagedSystem",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "managed_system_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Operations"
+            },
+            {
+              "name": "organization",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Operations.Organization",
+              "public?": true,
+              "allow_nil?": false,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "organization_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Operations"
+            },
+            {
+              "name": "owner_user",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Accounts.User",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "owner_user_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Accounts"
+            },
+            {
+              "name": "proposal_lines",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.ProposalLine",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "proposal_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": false,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
+              "name": "pursuit",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Pursuit",
+              "public?": true,
+              "allow_nil?": false,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "pursuit_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": false,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
+              "name": "site",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Operations.Site",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "site_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Operations"
+            }
+          ],
+          "calculations": [],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "line_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "proposal_lines"
+              ]
+            },
+            {
+              "default": null,
+              "name": "total_amount",
+              "type": "nil",
+              "description": null,
+              "field": "line_total",
+              "kind": "sum",
+              "public?": true,
+              "relationship_path": [
+                "proposal_lines"
+              ]
+            }
+          ],
+          "identities": [
+            {
+              "name": "unique_proposal_number",
+              "keys": [
+                "proposal_number"
+              ],
+              "description": null,
+              "where": null,
+              "nils_distinct?": true,
+              "all_tenants?": false
+            }
+          ],
+          "schema": null,
+          "primary_key": [
+            "id"
+          ],
+          "code_interfaces": [
+            {
+              "args": [],
+              "name": "list_proposals",
+              "kind": "action",
+              "action": "read",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "get_proposal",
+              "kind": "action",
+              "action": "read",
+              "get?": true,
+              "get_by": [
+                "id"
+              ],
+              "get_by_identity": null,
+              "require_reference?": false
+            },
+            {
+              "args": [],
+              "name": "create_proposal",
+              "kind": "action",
+              "action": "create",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "update_proposal",
+              "kind": "action",
+              "action": "update",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "issue_proposal",
+              "kind": "action",
+              "action": "issue",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "accept_proposal",
+              "kind": "action",
+              "action": "accept",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "reject_proposal",
+              "kind": "action",
+              "action": "reject",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "expire_proposal",
+              "kind": "action",
+              "action": "expire",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "supersede_proposal",
+              "kind": "action",
+              "action": "supersede",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "reopen_proposal",
+              "kind": "action",
+              "action": "reopen",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "list_active_proposals",
+              "kind": "action",
+              "action": "active",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "list_proposals_for_pursuit",
+              "kind": "action",
+              "action": "for_pursuit",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            }
+          ],
+          "cross_domain_relationships": [
+            {
+              "name": "managed_system",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Operations.ManagedSystem",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "managed_system_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Operations"
+            },
+            {
+              "name": "organization",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Operations.Organization",
+              "public?": true,
+              "allow_nil?": false,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "organization_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Operations"
+            },
+            {
+              "name": "owner_user",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Accounts.User",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "owner_user_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Accounts"
+            },
+            {
+              "name": "site",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Operations.Site",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "site_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Operations"
+            }
+          ]
+        },
+        {
+          "attributes": [
+            {
+              "default": null,
+              "name": "description",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "description",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "&Ash.UUID.generate/0",
+                "computed?": true
+              },
+              "name": "id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": false,
+              "generated?": false,
+              "primary_key?": true,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "&DateTime.utc_now/0",
+                "computed?": true
+              },
+              "name": "inserted_at",
+              "type": "Ash.Type.UtcDatetimeUsec",
+              "description": null,
+              "source": "inserted_at",
+              "constraints": [
+                {
+                  "value": "microsecond",
+                  "key": "precision"
+                },
+                {
+                  "value": "start_of_day",
+                  "key": "cast_dates_as"
+                },
+                {
+                  "value": "utc",
+                  "key": "timezone"
+                }
+              ],
+              "public?": false,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": false,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "other",
+                "computed?": false
+              },
+              "name": "line_kind",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "source": "line_kind",
+              "constraints": [
+                {
+                  "value": [
+                    "engineering",
+                    "software",
+                    "hardware",
+                    "materials",
+                    "commissioning",
+                    "service",
+                    "allowance",
+                    "adjustment",
+                    "other"
+                  ],
+                  "key": "one_of"
+                },
+                {
+                  "value": false,
+                  "key": "unsafe_to_atom?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": 1,
+                "computed?": false
+              },
+              "name": "line_number",
+              "type": "Ash.Type.Integer",
+              "description": null,
+              "source": "line_number",
+              "constraints": [
+                {
+                  "value": 1,
+                  "key": "min"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "line_total",
+              "type": "Ash.Type.Decimal",
+              "description": null,
+              "source": "line_total",
+              "constraints": [
+                {
+                  "value": "arbitrary",
+                  "key": "precision"
+                },
+                {
+                  "value": "arbitrary",
+                  "key": "scale"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "notes",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "notes",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "proposal_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "proposal_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "quantity",
+              "type": "Ash.Type.Decimal",
+              "description": null,
+              "source": "quantity",
+              "constraints": [
+                {
+                  "value": "arbitrary",
+                  "key": "precision"
+                },
+                {
+                  "value": "arbitrary",
+                  "key": "scale"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "unit_price",
+              "type": "Ash.Type.Decimal",
+              "description": null,
+              "source": "unit_price",
+              "constraints": [
+                {
+                  "value": "arbitrary",
+                  "key": "precision"
+                },
+                {
+                  "value": "arbitrary",
+                  "key": "scale"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "&DateTime.utc_now/0",
+                "computed?": true
+              },
+              "name": "updated_at",
+              "type": "Ash.Type.UtcDatetimeUsec",
+              "description": null,
+              "source": "updated_at",
+              "constraints": [
+                {
+                  "value": "microsecond",
+                  "key": "precision"
+                },
+                {
+                  "value": "start_of_day",
+                  "key": "cast_dates_as"
+                },
+                {
+                  "value": "utc",
+                  "key": "timezone"
+                }
+              ],
+              "public?": false,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": false,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": {
+                "value": "&DateTime.utc_now/0",
+                "computed?": true
+              }
+            }
+          ],
+          "module": "GnomeGarden.Commercial.ProposalLine",
+          "name": "ProposalLine",
+          "table": "commercial_proposal_lines",
+          "domain": "GnomeGarden.Commercial",
+          "description": "Line item on a commercial proposal.\n\nProposal lines capture the priced scope that ultimately rolls up into a\ncustomer-facing quote or estimate.\n\n\n\n",
+          "extensions": [
+            "Ash.Resource.Dsl",
+            "AshAdmin.Resource",
+            "AshPostgres.DataLayer"
+          ],
+          "source_path": "lib/garden/commercial/proposal_line.ex",
+          "state_machine": null,
+          "actions": [
+            {
+              "name": "create",
+              "type": "create",
+              "accept": [
+                "proposal_id",
+                "line_number",
+                "line_kind",
+                "description",
+                "quantity",
+                "unit_price",
+                "line_total",
+                "notes"
+              ],
+              "description": null,
+              "arguments": [],
+              "primary?": true,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "upsert?": false,
+              "upsert_identity": null
+            },
+            {
+              "name": "destroy",
+              "type": "destroy",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": true,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false,
+              "soft?": false
+            },
+            {
+              "name": "for_proposal",
+              "type": "read",
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "proposal_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": null
+            },
+            {
+              "name": "read",
+              "type": "read",
+              "description": null,
+              "arguments": [],
+              "primary?": true,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": {
+                "required?": false,
+                "keyset?": true,
+                "offset?": true,
+                "default_limit": null,
+                "max_page_size": 250,
+                "countable": true
+              }
+            },
+            {
+              "name": "update",
+              "type": "update",
+              "accept": [
+                "proposal_id",
+                "line_number",
+                "line_kind",
+                "description",
+                "quantity",
+                "unit_price",
+                "line_total",
+                "notes"
+              ],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            }
+          ],
+          "relationships": [
+            {
+              "name": "proposal",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Proposal",
+              "public?": true,
+              "allow_nil?": false,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "proposal_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": false,
+              "destination_domain": "GnomeGarden.Commercial"
+            }
+          ],
+          "calculations": [],
+          "aggregates": [],
+          "identities": [
+            {
+              "name": "unique_line_number_per_proposal",
+              "keys": [
+                "proposal_id",
+                "line_number"
+              ],
+              "description": null,
+              "where": null,
+              "nils_distinct?": true,
+              "all_tenants?": false
+            }
+          ],
+          "schema": null,
+          "primary_key": [
+            "id"
+          ],
+          "code_interfaces": [
+            {
+              "args": [],
+              "name": "list_proposal_lines",
+              "kind": "action",
+              "action": "read",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "get_proposal_line",
+              "kind": "action",
+              "action": "read",
+              "get?": true,
+              "get_by": [
+                "id"
+              ],
+              "get_by_identity": null,
+              "require_reference?": false
+            },
+            {
+              "args": [],
+              "name": "create_proposal_line",
+              "kind": "action",
+              "action": "create",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "update_proposal_line",
+              "kind": "action",
+              "action": "update",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "list_lines_for_proposal",
+              "kind": "action",
+              "action": "for_proposal",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            }
+          ],
+          "cross_domain_relationships": []
         },
         {
           "attributes": [
@@ -8296,6 +9974,24 @@
               "destination_domain": "GnomeGarden.Accounts"
             },
             {
+              "name": "proposals",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Proposal",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "pursuit_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": false,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
               "name": "signal",
               "type": "belongs_to",
               "description": null,
@@ -8343,7 +10039,20 @@
               "async?": false
             }
           ],
-          "aggregates": [],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "proposal_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "proposals"
+              ]
+            }
+          ],
           "identities": [],
           "schema": null,
           "primary_key": [
@@ -11881,7 +13590,7 @@
           ]
         }
       ],
-      "resource_count": 6
+      "resource_count": 8
     },
     {
       "module": "GnomeGarden.Execution",
@@ -40825,8 +42534,8 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-18T15:11:10Z",
-  "resource_count": 48,
+  "generated_at": "2026-04-18T15:15:59Z",
+  "resource_count": 50,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
       "attributes": [
@@ -52267,6 +53976,506 @@
         }
       ]
     },
+    "GnomeGarden.Commercial.ProposalLine": {
+      "attributes": [
+        {
+          "default": null,
+          "name": "description",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "description",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "&Ash.UUID.generate/0",
+            "computed?": true
+          },
+          "name": "id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": false,
+          "generated?": false,
+          "primary_key?": true,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "&DateTime.utc_now/0",
+            "computed?": true
+          },
+          "name": "inserted_at",
+          "type": "Ash.Type.UtcDatetimeUsec",
+          "description": null,
+          "source": "inserted_at",
+          "constraints": [
+            {
+              "value": "microsecond",
+              "key": "precision"
+            },
+            {
+              "value": "start_of_day",
+              "key": "cast_dates_as"
+            },
+            {
+              "value": "utc",
+              "key": "timezone"
+            }
+          ],
+          "public?": false,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": false,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "other",
+            "computed?": false
+          },
+          "name": "line_kind",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "source": "line_kind",
+          "constraints": [
+            {
+              "value": [
+                "engineering",
+                "software",
+                "hardware",
+                "materials",
+                "commissioning",
+                "service",
+                "allowance",
+                "adjustment",
+                "other"
+              ],
+              "key": "one_of"
+            },
+            {
+              "value": false,
+              "key": "unsafe_to_atom?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": 1,
+            "computed?": false
+          },
+          "name": "line_number",
+          "type": "Ash.Type.Integer",
+          "description": null,
+          "source": "line_number",
+          "constraints": [
+            {
+              "value": 1,
+              "key": "min"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "line_total",
+          "type": "Ash.Type.Decimal",
+          "description": null,
+          "source": "line_total",
+          "constraints": [
+            {
+              "value": "arbitrary",
+              "key": "precision"
+            },
+            {
+              "value": "arbitrary",
+              "key": "scale"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "notes",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "proposal_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "proposal_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "quantity",
+          "type": "Ash.Type.Decimal",
+          "description": null,
+          "source": "quantity",
+          "constraints": [
+            {
+              "value": "arbitrary",
+              "key": "precision"
+            },
+            {
+              "value": "arbitrary",
+              "key": "scale"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "unit_price",
+          "type": "Ash.Type.Decimal",
+          "description": null,
+          "source": "unit_price",
+          "constraints": [
+            {
+              "value": "arbitrary",
+              "key": "precision"
+            },
+            {
+              "value": "arbitrary",
+              "key": "scale"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "&DateTime.utc_now/0",
+            "computed?": true
+          },
+          "name": "updated_at",
+          "type": "Ash.Type.UtcDatetimeUsec",
+          "description": null,
+          "source": "updated_at",
+          "constraints": [
+            {
+              "value": "microsecond",
+              "key": "precision"
+            },
+            {
+              "value": "start_of_day",
+              "key": "cast_dates_as"
+            },
+            {
+              "value": "utc",
+              "key": "timezone"
+            }
+          ],
+          "public?": false,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": false,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": {
+            "value": "&DateTime.utc_now/0",
+            "computed?": true
+          }
+        }
+      ],
+      "module": "GnomeGarden.Commercial.ProposalLine",
+      "name": "ProposalLine",
+      "table": "commercial_proposal_lines",
+      "domain": "GnomeGarden.Commercial",
+      "description": "Line item on a commercial proposal.\n\nProposal lines capture the priced scope that ultimately rolls up into a\ncustomer-facing quote or estimate.\n\n\n\n",
+      "extensions": [
+        "Ash.Resource.Dsl",
+        "AshAdmin.Resource",
+        "AshPostgres.DataLayer"
+      ],
+      "source_path": "lib/garden/commercial/proposal_line.ex",
+      "state_machine": null,
+      "actions": [
+        {
+          "name": "create",
+          "type": "create",
+          "accept": [
+            "proposal_id",
+            "line_number",
+            "line_kind",
+            "description",
+            "quantity",
+            "unit_price",
+            "line_total",
+            "notes"
+          ],
+          "description": null,
+          "arguments": [],
+          "primary?": true,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "upsert?": false,
+          "upsert_identity": null
+        },
+        {
+          "name": "destroy",
+          "type": "destroy",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": true,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false,
+          "soft?": false
+        },
+        {
+          "name": "for_proposal",
+          "type": "read",
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "proposal_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": null
+        },
+        {
+          "name": "read",
+          "type": "read",
+          "description": null,
+          "arguments": [],
+          "primary?": true,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": {
+            "required?": false,
+            "keyset?": true,
+            "offset?": true,
+            "default_limit": null,
+            "max_page_size": 250,
+            "countable": true
+          }
+        },
+        {
+          "name": "update",
+          "type": "update",
+          "accept": [
+            "proposal_id",
+            "line_number",
+            "line_kind",
+            "description",
+            "quantity",
+            "unit_price",
+            "line_total",
+            "notes"
+          ],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        }
+      ],
+      "relationships": [
+        {
+          "name": "proposal",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Proposal",
+          "public?": true,
+          "allow_nil?": false,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "proposal_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": false,
+          "destination_domain": "GnomeGarden.Commercial"
+        }
+      ],
+      "calculations": [],
+      "aggregates": [],
+      "identities": [
+        {
+          "name": "unique_line_number_per_proposal",
+          "keys": [
+            "proposal_id",
+            "line_number"
+          ],
+          "description": null,
+          "where": null,
+          "nils_distinct?": true,
+          "all_tenants?": false
+        }
+      ],
+      "schema": null,
+      "primary_key": [
+        "id"
+      ],
+      "code_interfaces": [
+        {
+          "args": [],
+          "name": "list_proposal_lines",
+          "kind": "action",
+          "action": "read",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "get_proposal_line",
+          "kind": "action",
+          "action": "read",
+          "get?": true,
+          "get_by": [
+            "id"
+          ],
+          "get_by_identity": null,
+          "require_reference?": false
+        },
+        {
+          "args": [],
+          "name": "create_proposal_line",
+          "kind": "action",
+          "action": "create",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "update_proposal_line",
+          "kind": "action",
+          "action": "update",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "list_lines_for_proposal",
+          "kind": "action",
+          "action": "for_proposal",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        }
+      ],
+      "cross_domain_relationships": []
+    },
     "GnomeGarden.Accounts.Token": {
       "attributes": [
         {
@@ -62992,6 +65201,24 @@
           "destination_domain": "GnomeGarden.Accounts"
         },
         {
+          "name": "proposals",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Proposal",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "pursuit_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": false,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
           "name": "signal",
           "type": "belongs_to",
           "description": null,
@@ -63039,7 +65266,20 @@
           "async?": false
         }
       ],
-      "aggregates": [],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "proposal_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "proposals"
+          ]
+        }
+      ],
       "identities": [],
       "schema": null,
       "primary_key": [
@@ -69218,6 +71458,1149 @@
         }
       ]
     },
+    "GnomeGarden.Commercial.Proposal": {
+      "attributes": [
+        {
+          "default": null,
+          "name": "accepted_on",
+          "type": "Ash.Type.Date",
+          "description": null,
+          "source": "accepted_on",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "USD",
+            "computed?": false
+          },
+          "name": "currency_code",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "currency_code",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "project",
+            "computed?": false
+          },
+          "name": "delivery_model",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "source": "delivery_model",
+          "constraints": [
+            {
+              "value": [
+                "project",
+                "service",
+                "maintenance",
+                "retainer",
+                "mixed"
+              ],
+              "key": "one_of"
+            },
+            {
+              "value": false,
+              "key": "unsafe_to_atom?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "description",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "description",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "&Ash.UUID.generate/0",
+            "computed?": true
+          },
+          "name": "id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": false,
+          "generated?": false,
+          "primary_key?": true,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "&DateTime.utc_now/0",
+            "computed?": true
+          },
+          "name": "inserted_at",
+          "type": "Ash.Type.UtcDatetimeUsec",
+          "description": null,
+          "source": "inserted_at",
+          "constraints": [
+            {
+              "value": "microsecond",
+              "key": "precision"
+            },
+            {
+              "value": "start_of_day",
+              "key": "cast_dates_as"
+            },
+            {
+              "value": "utc",
+              "key": "timezone"
+            }
+          ],
+          "public?": false,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": false,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "issued_on",
+          "type": "Ash.Type.Date",
+          "description": null,
+          "source": "issued_on",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "managed_system_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "managed_system_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "name",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "name",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "notes",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "organization_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "organization_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "owner_user_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "owner_user_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "fixed_fee",
+            "computed?": false
+          },
+          "name": "pricing_model",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "source": "pricing_model",
+          "constraints": [
+            {
+              "value": [
+                "fixed_fee",
+                "time_and_materials",
+                "retainer",
+                "milestone",
+                "unit",
+                "mixed"
+              ],
+              "key": "one_of"
+            },
+            {
+              "value": false,
+              "key": "unsafe_to_atom?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "proposal_number",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "proposal_number",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "pursuit_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "pursuit_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": 1,
+            "computed?": false
+          },
+          "name": "revision_number",
+          "type": "Ash.Type.Integer",
+          "description": null,
+          "source": "revision_number",
+          "constraints": [
+            {
+              "value": 1,
+              "key": "min"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "site_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "site_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "draft",
+            "computed?": false
+          },
+          "name": "status",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "source": "status",
+          "constraints": [
+            {
+              "value": [
+                "draft",
+                "issued",
+                "accepted",
+                "rejected",
+                "expired",
+                "superseded"
+              ],
+              "key": "one_of"
+            },
+            {
+              "value": false,
+              "key": "unsafe_to_atom?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "&DateTime.utc_now/0",
+            "computed?": true
+          },
+          "name": "updated_at",
+          "type": "Ash.Type.UtcDatetimeUsec",
+          "description": null,
+          "source": "updated_at",
+          "constraints": [
+            {
+              "value": "microsecond",
+              "key": "precision"
+            },
+            {
+              "value": "start_of_day",
+              "key": "cast_dates_as"
+            },
+            {
+              "value": "utc",
+              "key": "timezone"
+            }
+          ],
+          "public?": false,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": false,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": {
+            "value": "&DateTime.utc_now/0",
+            "computed?": true
+          }
+        },
+        {
+          "default": null,
+          "name": "valid_until_on",
+          "type": "Ash.Type.Date",
+          "description": null,
+          "source": "valid_until_on",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        }
+      ],
+      "module": "GnomeGarden.Commercial.Proposal",
+      "name": "Proposal",
+      "table": "commercial_proposals",
+      "domain": "GnomeGarden.Commercial",
+      "description": "Commercial proposal or estimate prepared for a pursuit.\n\nProposals sit between internal pursuit qualification and signed agreements,\nallowing Gnome to track issued quotes, revisions, acceptance, and expiry.\n\n\n\n",
+      "extensions": [
+        "Ash.Resource.Dsl",
+        "AshAdmin.Resource",
+        "AshPostgres.DataLayer",
+        "AshStateMachine"
+      ],
+      "source_path": "lib/garden/commercial/proposal.ex",
+      "state_machine": {
+        "all_states": [
+          "draft",
+          "expired",
+          "rejected",
+          "issued",
+          "accepted",
+          "superseded"
+        ],
+        "default_initial_state": "draft",
+        "initial_states": [
+          "draft"
+        ],
+        "state_attribute": "status",
+        "transitions": [
+          {
+            "action": "issue",
+            "to": [
+              "issued"
+            ],
+            "from": [
+              "draft",
+              "expired",
+              "rejected"
+            ]
+          },
+          {
+            "action": "accept",
+            "to": [
+              "accepted"
+            ],
+            "from": [
+              "issued"
+            ]
+          },
+          {
+            "action": "reject",
+            "to": [
+              "rejected"
+            ],
+            "from": [
+              "issued"
+            ]
+          },
+          {
+            "action": "expire",
+            "to": [
+              "expired"
+            ],
+            "from": [
+              "issued"
+            ]
+          },
+          {
+            "action": "supersede",
+            "to": [
+              "superseded"
+            ],
+            "from": [
+              "draft",
+              "issued",
+              "rejected",
+              "expired"
+            ]
+          },
+          {
+            "action": "reopen",
+            "to": [
+              "draft"
+            ],
+            "from": [
+              "rejected",
+              "expired",
+              "superseded"
+            ]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "name": "accept",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "active",
+          "type": "read",
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": null
+        },
+        {
+          "name": "create",
+          "type": "create",
+          "accept": [
+            "pursuit_id",
+            "organization_id",
+            "site_id",
+            "managed_system_id",
+            "owner_user_id",
+            "proposal_number",
+            "name",
+            "description",
+            "revision_number",
+            "pricing_model",
+            "currency_code",
+            "valid_until_on",
+            "delivery_model",
+            "notes"
+          ],
+          "description": null,
+          "arguments": [],
+          "primary?": true,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "upsert?": false,
+          "upsert_identity": null
+        },
+        {
+          "name": "destroy",
+          "type": "destroy",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": true,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false,
+          "soft?": false
+        },
+        {
+          "name": "expire",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "for_pursuit",
+          "type": "read",
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "pursuit_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": null
+        },
+        {
+          "name": "issue",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "read",
+          "type": "read",
+          "description": null,
+          "arguments": [],
+          "primary?": true,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": {
+            "required?": false,
+            "keyset?": true,
+            "offset?": true,
+            "default_limit": null,
+            "max_page_size": 250,
+            "countable": true
+          }
+        },
+        {
+          "name": "reject",
+          "type": "update",
+          "accept": [
+            "notes"
+          ],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "reopen",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "supersede",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "update",
+          "type": "update",
+          "accept": [
+            "pursuit_id",
+            "organization_id",
+            "site_id",
+            "managed_system_id",
+            "owner_user_id",
+            "proposal_number",
+            "name",
+            "description",
+            "revision_number",
+            "pricing_model",
+            "currency_code",
+            "valid_until_on",
+            "delivery_model",
+            "notes"
+          ],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        }
+      ],
+      "relationships": [
+        {
+          "name": "agreements",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Agreement",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "proposal_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": false,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
+          "name": "managed_system",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Operations.ManagedSystem",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "managed_system_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Operations"
+        },
+        {
+          "name": "organization",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Operations.Organization",
+          "public?": true,
+          "allow_nil?": false,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "organization_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Operations"
+        },
+        {
+          "name": "owner_user",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Accounts.User",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "owner_user_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Accounts"
+        },
+        {
+          "name": "proposal_lines",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.ProposalLine",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "proposal_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": false,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
+          "name": "pursuit",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Pursuit",
+          "public?": true,
+          "allow_nil?": false,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "pursuit_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": false,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
+          "name": "site",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Operations.Site",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "site_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Operations"
+        }
+      ],
+      "calculations": [],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "line_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "proposal_lines"
+          ]
+        },
+        {
+          "default": null,
+          "name": "total_amount",
+          "type": "nil",
+          "description": null,
+          "field": "line_total",
+          "kind": "sum",
+          "public?": true,
+          "relationship_path": [
+            "proposal_lines"
+          ]
+        }
+      ],
+      "identities": [
+        {
+          "name": "unique_proposal_number",
+          "keys": [
+            "proposal_number"
+          ],
+          "description": null,
+          "where": null,
+          "nils_distinct?": true,
+          "all_tenants?": false
+        }
+      ],
+      "schema": null,
+      "primary_key": [
+        "id"
+      ],
+      "code_interfaces": [
+        {
+          "args": [],
+          "name": "list_proposals",
+          "kind": "action",
+          "action": "read",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "get_proposal",
+          "kind": "action",
+          "action": "read",
+          "get?": true,
+          "get_by": [
+            "id"
+          ],
+          "get_by_identity": null,
+          "require_reference?": false
+        },
+        {
+          "args": [],
+          "name": "create_proposal",
+          "kind": "action",
+          "action": "create",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "update_proposal",
+          "kind": "action",
+          "action": "update",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "issue_proposal",
+          "kind": "action",
+          "action": "issue",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "accept_proposal",
+          "kind": "action",
+          "action": "accept",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "reject_proposal",
+          "kind": "action",
+          "action": "reject",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "expire_proposal",
+          "kind": "action",
+          "action": "expire",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "supersede_proposal",
+          "kind": "action",
+          "action": "supersede",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "reopen_proposal",
+          "kind": "action",
+          "action": "reopen",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "list_active_proposals",
+          "kind": "action",
+          "action": "active",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "list_proposals_for_pursuit",
+          "kind": "action",
+          "action": "for_pursuit",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        }
+      ],
+      "cross_domain_relationships": [
+        {
+          "name": "managed_system",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Operations.ManagedSystem",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "managed_system_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Operations"
+        },
+        {
+          "name": "organization",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Operations.Organization",
+          "public?": true,
+          "allow_nil?": false,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "organization_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Operations"
+        },
+        {
+          "name": "owner_user",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Accounts.User",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "owner_user_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Accounts"
+        },
+        {
+          "name": "site",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Operations.Site",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "site_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Operations"
+        }
+      ]
+    },
     "GnomeGarden.Commercial.Agreement": {
       "attributes": [
         {
@@ -69508,6 +72891,21 @@
           "type": "Ash.Type.UUID",
           "description": null,
           "source": "owner_user_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "proposal_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "proposal_id",
           "constraints": [],
           "public?": true,
           "allow_nil?": true,
@@ -69812,6 +73210,7 @@
           "type": "create",
           "accept": [
             "pursuit_id",
+            "proposal_id",
             "organization_id",
             "site_id",
             "managed_system_id",
@@ -69969,6 +73368,7 @@
           "type": "update",
           "accept": [
             "pursuit_id",
+            "proposal_id",
             "organization_id",
             "site_id",
             "managed_system_id",
@@ -70141,6 +73541,24 @@
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
           "destination_domain": "GnomeGarden.Execution"
+        },
+        {
+          "name": "proposal",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Proposal",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "proposal_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": false,
+          "destination_domain": "GnomeGarden.Commercial"
         },
         {
           "name": "pursuit",
@@ -81586,6 +85004,7 @@
     "commercial_agreements": "GnomeGarden.Commercial.Agreement",
     "research_requests": "GnomeGarden.Sales.ResearchRequest",
     "industries": "GnomeGarden.Sales.Industry",
+    "commercial_proposals": "GnomeGarden.Commercial.Proposal",
     "finance_invoice_lines": "GnomeGarden.Finance.InvoiceLine",
     "agent_runs": "GnomeGarden.Agents.AgentRun",
     "finance_payment_applications": "GnomeGarden.Finance.PaymentApplication",
@@ -81616,6 +85035,7 @@
     "addresses": "GnomeGarden.Sales.Address",
     "people": "GnomeGarden.Operations.Person",
     "commercial_service_entitlements": "GnomeGarden.Commercial.ServiceEntitlement",
+    "commercial_proposal_lines": "GnomeGarden.Commercial.ProposalLine",
     "execution_service_tickets": "GnomeGarden.Execution.ServiceTicket",
     "execution_work_orders": "GnomeGarden.Execution.WorkOrder",
     "research_links": "GnomeGarden.Sales.ResearchLink",

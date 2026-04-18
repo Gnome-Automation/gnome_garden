@@ -34,6 +34,7 @@ defmodule GnomeGarden.Commercial.Agreement do
 
     references do
       reference :pursuit, on_delete: :nilify
+      reference :proposal, on_delete: :nilify
       reference :organization, on_delete: :delete
       reference :site, on_delete: :nilify
       reference :managed_system, on_delete: :nilify
@@ -64,6 +65,7 @@ defmodule GnomeGarden.Commercial.Agreement do
 
       accept [
         :pursuit_id,
+        :proposal_id,
         :organization_id,
         :site_id,
         :managed_system_id,
@@ -85,6 +87,7 @@ defmodule GnomeGarden.Commercial.Agreement do
     update :update do
       accept [
         :pursuit_id,
+        :proposal_id,
         :organization_id,
         :site_id,
         :managed_system_id,
@@ -141,6 +144,7 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :organization,
                   :site,
                   :pursuit,
+                  :proposal,
                   :service_tickets,
                   :service_level_policies,
                   :service_entitlements,
@@ -165,6 +169,7 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :organization,
                   :site,
                   :pursuit,
+                  :proposal,
                   :service_tickets,
                   :service_level_policies,
                   :service_entitlements,
@@ -274,6 +279,10 @@ defmodule GnomeGarden.Commercial.Agreement do
 
   relationships do
     belongs_to :pursuit, GnomeGarden.Commercial.Pursuit do
+      public? true
+    end
+
+    belongs_to :proposal, GnomeGarden.Commercial.Proposal do
       public? true
     end
 
