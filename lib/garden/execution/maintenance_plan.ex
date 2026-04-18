@@ -7,7 +7,7 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Execution,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource, AshStateMachine]
+    extensions: [AshAdmin.Resource, AshOban, AshStateMachine]
 
   admin do
     table_columns [
@@ -17,6 +17,8 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
       :plan_type,
       :status,
       :next_due_on,
+      :last_generated_due_on,
+      :generation_lead_days,
       :interval_unit,
       :interval_value
     ]
@@ -33,6 +35,27 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
       reference :asset, on_delete: :delete
       reference :agreement, on_delete: :nilify
       reference :assigned_user, on_delete: :nilify
+    end
+  end
+
+  oban do
+    triggers do
+      trigger :auto_generate_work_order do
+        action :generate_work_order
+        scheduler_cron "0 5 * * *"
+        worker_module_name __MODULE__.AshOban.Worker.AutoGenerateWorkOrder
+        scheduler_module_name __MODULE__.AshOban.Scheduler.AutoGenerateWorkOrder
+        queue :default
+        max_attempts 3
+
+        where expr(
+                status == :active and
+                  auto_create_work_orders == true and
+                  not is_nil(next_due_on) and
+                  next_due_on <= from_now(generation_lead_days, :day) and
+                  (is_nil(last_generated_due_on) or last_generated_due_on < next_due_on)
+              )
+      end
     end
   end
 
@@ -69,6 +92,7 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
         :interval_value,
         :next_due_on,
         :auto_create_work_orders,
+        :generation_lead_days,
         :billable,
         :estimated_minutes,
         :priority,
@@ -91,6 +115,7 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
         :interval_value,
         :next_due_on,
         :auto_create_work_orders,
+        :generation_lead_days,
         :billable,
         :estimated_minutes,
         :priority,
@@ -125,9 +150,19 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
       change GnomeGarden.Execution.Changes.AdvanceMaintenancePlanSchedule
     end
 
+    update :generate_work_order do
+      require_atomic? false
+      accept []
+      change GnomeGarden.Execution.Changes.GenerateMaintenanceWorkOrder
+    end
+
     read :active do
       filter expr(status == :active)
-      prepare build(sort: [next_due_on: :asc, inserted_at: :asc], load: [:asset, :managed_system, :assigned_user])
+
+      prepare build(
+                sort: [next_due_on: :asc, inserted_at: :asc],
+                load: [:asset, :managed_system, :assigned_user, :work_orders]
+              )
     end
 
     read :due_soon do
@@ -139,7 +174,10 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
                  next_due_on < from_now(^arg(:days), :day)
              )
 
-      prepare build(sort: [next_due_on: :asc, inserted_at: :asc], load: [:asset, :managed_system, :assigned_user])
+      prepare build(
+                sort: [next_due_on: :asc, inserted_at: :asc],
+                load: [:asset, :managed_system, :assigned_user, :work_orders]
+              )
     end
 
     read :for_asset do
@@ -200,6 +238,10 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
       public? true
     end
 
+    attribute :last_generated_due_on, :date do
+      public? true
+    end
+
     attribute :status, :atom do
       allow_nil? false
       default :active
@@ -212,6 +254,13 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
       allow_nil? false
       default false
       public? true
+    end
+
+    attribute :generation_lead_days, :integer do
+      allow_nil? false
+      default 0
+      public? true
+      constraints min: 0
     end
 
     attribute :billable, :boolean do

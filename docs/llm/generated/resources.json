@@ -13722,6 +13722,29 @@
             },
             {
               "default": {
+                "value": 0,
+                "computed?": false
+              },
+              "name": "generation_lead_days",
+              "type": "Ash.Type.Integer",
+              "description": null,
+              "source": "generation_lead_days",
+              "constraints": [
+                {
+                  "value": 0,
+                  "key": "min"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
                 "value": "&Ash.UUID.generate/0",
                 "computed?": true
               },
@@ -13831,6 +13854,21 @@
               "type": "Ash.Type.Date",
               "description": null,
               "source": "last_completed_on",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "last_generated_due_on",
+              "type": "Ash.Type.Date",
+              "description": null,
+              "source": "last_generated_due_on",
               "constraints": [],
               "public?": true,
               "allow_nil?": true,
@@ -14089,6 +14127,7 @@
           "extensions": [
             "Ash.Resource.Dsl",
             "AshAdmin.Resource",
+            "AshOban",
             "AshPostgres.DataLayer",
             "AshStateMachine"
           ],
@@ -14191,6 +14230,7 @@
                 "interval_value",
                 "next_due_on",
                 "auto_create_work_orders",
+                "generation_lead_days",
                 "billable",
                 "estimated_minutes",
                 "priority",
@@ -14275,6 +14315,21 @@
               "get?": false,
               "get_by": [],
               "pagination": null
+            },
+            {
+              "name": "generate_work_order",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": false,
+              "manual?": false
             },
             {
               "name": "read",
@@ -14385,6 +14440,7 @@
                 "interval_value",
                 "next_due_on",
                 "auto_create_work_orders",
+                "generation_lead_days",
                 "billable",
                 "estimated_minutes",
                 "priority",
@@ -14625,6 +14681,16 @@
               "name": "record_maintenance_completion",
               "kind": "action",
               "action": "record_completion",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "generate_maintenance_plan_work_order",
+              "kind": "action",
+              "action": "generate_work_order",
               "get?": false,
               "get_by": null,
               "get_by_identity": null,
@@ -42534,7 +42600,7 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-18T15:15:59Z",
+  "generated_at": "2026-04-18T15:19:08Z",
   "resource_count": 50,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -74963,6 +75029,29 @@
         },
         {
           "default": {
+            "value": 0,
+            "computed?": false
+          },
+          "name": "generation_lead_days",
+          "type": "Ash.Type.Integer",
+          "description": null,
+          "source": "generation_lead_days",
+          "constraints": [
+            {
+              "value": 0,
+              "key": "min"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
             "value": "&Ash.UUID.generate/0",
             "computed?": true
           },
@@ -75072,6 +75161,21 @@
           "type": "Ash.Type.Date",
           "description": null,
           "source": "last_completed_on",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "last_generated_due_on",
+          "type": "Ash.Type.Date",
+          "description": null,
+          "source": "last_generated_due_on",
           "constraints": [],
           "public?": true,
           "allow_nil?": true,
@@ -75330,6 +75434,7 @@
       "extensions": [
         "Ash.Resource.Dsl",
         "AshAdmin.Resource",
+        "AshOban",
         "AshPostgres.DataLayer",
         "AshStateMachine"
       ],
@@ -75432,6 +75537,7 @@
             "interval_value",
             "next_due_on",
             "auto_create_work_orders",
+            "generation_lead_days",
             "billable",
             "estimated_minutes",
             "priority",
@@ -75516,6 +75622,21 @@
           "get?": false,
           "get_by": [],
           "pagination": null
+        },
+        {
+          "name": "generate_work_order",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": false,
+          "manual?": false
         },
         {
           "name": "read",
@@ -75626,6 +75747,7 @@
             "interval_value",
             "next_due_on",
             "auto_create_work_orders",
+            "generation_lead_days",
             "billable",
             "estimated_minutes",
             "priority",
@@ -75866,6 +75988,16 @@
           "name": "record_maintenance_completion",
           "kind": "action",
           "action": "record_completion",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "generate_maintenance_plan_work_order",
+          "kind": "action",
+          "action": "generate_work_order",
           "get?": false,
           "get_by": null,
           "get_by_identity": null,

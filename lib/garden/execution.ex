@@ -87,6 +87,7 @@ defmodule GnomeGarden.Execution do
       define :retire_maintenance_plan, action: :retire
       define :reopen_maintenance_plan, action: :reopen
       define :record_maintenance_completion, action: :record_completion
+      define :generate_maintenance_plan_work_order, action: :generate_work_order
       define :list_active_maintenance_plans, action: :active
       define :list_due_soon_maintenance_plans, action: :due_soon
       define :list_maintenance_plans_for_asset, action: :for_asset
