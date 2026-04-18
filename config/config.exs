@@ -166,7 +166,13 @@ config :spark,
 config :gnome_garden,
   ecto_repos: [GnomeGarden.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [GnomeGarden.Accounts, GnomeGarden.Agents, GnomeGarden.Sales, GnomeGarden.Procurement],
+  ash_domains: [
+    GnomeGarden.Accounts,
+    GnomeGarden.Agents,
+    GnomeGarden.Operations,
+    GnomeGarden.Sales,
+    GnomeGarden.Procurement
+  ],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 
 # Configure the endpoint
