@@ -72,5 +72,26 @@ defmodule GnomeGarden.Commercial do
       define :list_active_service_level_policies, action: :active
       define :list_policies_for_agreement, action: :for_agreement
     end
+
+    resource GnomeGarden.Commercial.ServiceEntitlement do
+      define :list_service_entitlements, action: :read
+      define :get_service_entitlement, action: :read, get_by: [:id]
+      define :create_service_entitlement, action: :create
+      define :update_service_entitlement, action: :update
+      define :activate_service_entitlement, action: :activate
+      define :retire_service_entitlement, action: :retire
+      define :reopen_service_entitlement, action: :reopen
+      define :list_active_service_entitlements, action: :active
+      define :list_entitlements_for_agreement, action: :for_agreement
+    end
+
+    resource GnomeGarden.Commercial.ServiceEntitlementUsage do
+      define :list_service_entitlement_usages, action: :read
+      define :get_service_entitlement_usage, action: :read, get_by: [:id]
+      define :create_service_entitlement_usage, action: :create
+      define :update_service_entitlement_usage, action: :update
+      define :list_usage_for_entitlement, action: :for_entitlement
+      define :list_usage_for_agreement, action: :for_agreement
+    end
   end
 end

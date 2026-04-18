@@ -309,5 +309,9 @@ defmodule GnomeGarden.Execution.WorkOrder do
     belongs_to :assigned_user, GnomeGarden.Accounts.User do
       public? true
     end
+
+    has_many :service_entitlement_usages, GnomeGarden.Commercial.ServiceEntitlementUsage do
+      public? true
+    end
   end
 end

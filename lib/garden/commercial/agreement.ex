@@ -143,6 +143,7 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :pursuit,
                   :service_tickets,
                   :service_level_policies,
+                  :service_entitlements,
                   :invoices,
                   :payments
                 ]
@@ -166,6 +167,7 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :pursuit,
                   :service_tickets,
                   :service_level_policies,
+                  :service_entitlements,
                   :invoices,
                   :payments
                 ]
@@ -304,6 +306,14 @@ defmodule GnomeGarden.Commercial.Agreement do
       public? true
     end
 
+    has_many :service_entitlements, GnomeGarden.Commercial.ServiceEntitlement do
+      public? true
+    end
+
+    has_many :service_entitlement_usages, GnomeGarden.Commercial.ServiceEntitlementUsage do
+      public? true
+    end
+
     has_many :work_orders, GnomeGarden.Execution.WorkOrder do
       public? true
     end
@@ -357,6 +367,10 @@ defmodule GnomeGarden.Commercial.Agreement do
     end
 
     count :maintenance_plan_count, :maintenance_plans do
+      public? true
+    end
+
+    count :service_entitlement_count, :service_entitlements do
       public? true
     end
 
