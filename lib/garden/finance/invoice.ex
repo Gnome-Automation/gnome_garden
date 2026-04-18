@@ -122,12 +122,18 @@ defmodule GnomeGarden.Finance.Invoice do
 
     read :open do
       filter expr(status == :issued)
-      prepare build(sort: [due_on: :asc, inserted_at: :desc], load: [:organization, :agreement, :project, :work_order])
+      prepare build(
+                sort: [due_on: :asc, inserted_at: :desc],
+                load: [:organization, :agreement, :project, :work_order, :invoice_lines, :payment_applications]
+              )
     end
 
     read :overdue do
       filter expr(status == :issued and not is_nil(due_on) and due_on < ^Date.utc_today())
-      prepare build(sort: [due_on: :asc], load: [:organization, :agreement, :project, :work_order])
+      prepare build(
+                sort: [due_on: :asc],
+                load: [:organization, :agreement, :project, :work_order, :invoice_lines, :payment_applications]
+              )
     end
   end
 
@@ -207,6 +213,14 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     belongs_to :work_order, GnomeGarden.Execution.WorkOrder do
+      public? true
+    end
+
+    has_many :invoice_lines, GnomeGarden.Finance.InvoiceLine do
+      public? true
+    end
+
+    has_many :payment_applications, GnomeGarden.Finance.PaymentApplication do
       public? true
     end
   end

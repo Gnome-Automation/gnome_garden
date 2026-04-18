@@ -53,5 +53,32 @@ defmodule GnomeGarden.Finance do
       define :list_open_invoices, action: :open
       define :list_overdue_invoices, action: :overdue
     end
+
+    resource GnomeGarden.Finance.InvoiceLine do
+      define :list_invoice_lines, action: :read
+      define :get_invoice_line, action: :read, get_by: [:id]
+      define :create_invoice_line, action: :create
+      define :update_invoice_line, action: :update
+      define :list_invoice_lines_for_invoice, action: :for_invoice
+    end
+
+    resource GnomeGarden.Finance.Payment do
+      define :list_payments, action: :read
+      define :get_payment, action: :read, get_by: [:id]
+      define :create_payment, action: :create
+      define :update_payment, action: :update
+      define :deposit_payment, action: :deposit
+      define :reverse_payment, action: :reverse
+      define :list_open_payments, action: :open
+    end
+
+    resource GnomeGarden.Finance.PaymentApplication do
+      define :list_payment_applications, action: :read
+      define :get_payment_application, action: :read, get_by: [:id]
+      define :create_payment_application, action: :create
+      define :update_payment_application, action: :update
+      define :list_payment_applications_for_invoice, action: :for_invoice
+      define :list_payment_applications_for_payment, action: :for_payment
+    end
   end
 end
