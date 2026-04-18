@@ -74,6 +74,18 @@ defmodule GnomeGarden.Finance.Invoice do
       ]
     end
 
+    create :create_from_agreement_sources do
+      argument :agreement_id, :uuid, allow_nil?: false
+
+      accept [
+        :invoice_number,
+        :due_on,
+        :notes
+      ]
+
+      change GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSources
+    end
+
     update :update do
       accept [
         :organization_id,
@@ -124,17 +136,33 @@ defmodule GnomeGarden.Finance.Invoice do
 
     read :open do
       filter expr(status == :issued)
+
       prepare build(
                 sort: [due_on: :asc, inserted_at: :desc],
-                load: [:organization, :agreement, :project, :work_order, :invoice_lines, :payment_applications]
+                load: [
+                  :organization,
+                  :agreement,
+                  :project,
+                  :work_order,
+                  :invoice_lines,
+                  :payment_applications
+                ]
               )
     end
 
     read :overdue do
       filter expr(status == :issued and not is_nil(due_on) and due_on < ^Date.utc_today())
+
       prepare build(
                 sort: [due_on: :asc],
-                load: [:organization, :agreement, :project, :work_order, :invoice_lines, :payment_applications]
+                load: [
+                  :organization,
+                  :agreement,
+                  :project,
+                  :work_order,
+                  :invoice_lines,
+                  :payment_applications
+                ]
               )
     end
   end

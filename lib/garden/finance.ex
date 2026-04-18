@@ -26,6 +26,7 @@ defmodule GnomeGarden.Finance do
       define :bill_time_entry, action: :mark_billed
       define :reopen_time_entry, action: :reopen
       define :list_open_time_entries, action: :open
+      define :list_billable_time_entries_for_agreement, action: :billable_for_agreement
     end
 
     resource GnomeGarden.Finance.Expense do
@@ -39,12 +40,14 @@ defmodule GnomeGarden.Finance do
       define :bill_expense, action: :mark_billed
       define :reopen_expense, action: :reopen
       define :list_open_expenses, action: :open
+      define :list_billable_expenses_for_agreement, action: :billable_for_agreement
     end
 
     resource GnomeGarden.Finance.Invoice do
       define :list_invoices, action: :read
       define :get_invoice, action: :read, get_by: [:id]
       define :create_invoice, action: :create
+      define :create_invoice_from_agreement_sources, action: :create_from_agreement_sources
       define :update_invoice, action: :update
       define :issue_invoice, action: :issue
       define :pay_invoice, action: :mark_paid

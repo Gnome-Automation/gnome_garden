@@ -127,7 +127,26 @@ defmodule GnomeGarden.Finance.TimeEntry do
 
     read :open do
       filter expr(status in [:draft, :submitted, :approved])
-      prepare build(sort: [work_date: :desc, inserted_at: :desc], load: [:project, :work_order, :member_user])
+
+      prepare build(
+                sort: [work_date: :desc, inserted_at: :desc],
+                load: [:project, :work_order, :member_user]
+              )
+    end
+
+    read :billable_for_agreement do
+      argument :agreement_id, :uuid, allow_nil?: false
+
+      filter expr(
+               agreement_id == ^arg(:agreement_id) and
+                 status == :approved and
+                 billable == true
+             )
+
+      prepare build(
+                sort: [work_date: :asc, inserted_at: :asc],
+                load: [:project, :work_order, :member_user]
+              )
     end
   end
 

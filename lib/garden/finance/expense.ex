@@ -123,7 +123,26 @@ defmodule GnomeGarden.Finance.Expense do
 
     read :open do
       filter expr(status in [:draft, :submitted, :approved])
-      prepare build(sort: [incurred_on: :desc, inserted_at: :desc], load: [:project, :work_order, :incurred_by_user])
+
+      prepare build(
+                sort: [incurred_on: :desc, inserted_at: :desc],
+                load: [:project, :work_order, :incurred_by_user]
+              )
+    end
+
+    read :billable_for_agreement do
+      argument :agreement_id, :uuid, allow_nil?: false
+
+      filter expr(
+               agreement_id == ^arg(:agreement_id) and
+                 status == :approved and
+                 billable == true
+             )
+
+      prepare build(
+                sort: [incurred_on: :asc, inserted_at: :asc],
+                load: [:project, :work_order, :incurred_by_user]
+              )
     end
   end
 
