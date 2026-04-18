@@ -290,6 +290,14 @@ defmodule GnomeGarden.Execution.Project do
       public? true
     end
 
+    has_many :assignments, GnomeGarden.Execution.Assignment do
+      public? true
+    end
+
+    has_many :material_usages, GnomeGarden.Execution.MaterialUsage do
+      public? true
+    end
+
     has_many :work_items, GnomeGarden.Execution.WorkItem do
       public? true
     end

@@ -15,6 +15,22 @@ defmodule GnomeGarden.Execution do
   end
 
   resources do
+    resource GnomeGarden.Execution.Assignment do
+      define :list_assignments, action: :read
+      define :get_assignment, action: :read, get_by: [:id]
+      define :create_assignment, action: :create
+      define :update_assignment, action: :update
+      define :confirm_assignment, action: :confirm
+      define :start_assignment, action: :start
+      define :complete_assignment, action: :complete
+      define :cancel_assignment, action: :cancel
+      define :reopen_assignment, action: :reopen
+      define :list_open_assignments, action: :open
+      define :list_assignments_for_assigned_user, action: :for_assigned_user
+      define :list_assignments_for_project, action: :for_project
+      define :list_assignments_for_work_order, action: :for_work_order
+    end
+
     resource GnomeGarden.Execution.Project do
       define :list_projects, action: :read
       define :get_project, action: :read, get_by: [:id]
@@ -92,6 +108,21 @@ defmodule GnomeGarden.Execution do
       define :list_active_maintenance_plans, action: :active
       define :list_due_soon_maintenance_plans, action: :due_soon
       define :list_maintenance_plans_for_asset, action: :for_asset
+    end
+
+    resource GnomeGarden.Execution.MaterialUsage do
+      define :list_material_usages, action: :read
+      define :get_material_usage, action: :read, get_by: [:id]
+      define :create_material_usage, action: :create
+      define :update_material_usage, action: :update
+      define :issue_material_usage, action: :issue
+      define :use_material_usage, action: :use
+      define :return_material_usage, action: :return
+      define :cancel_material_usage, action: :cancel
+      define :reopen_material_usage, action: :reopen
+      define :list_open_material_usages, action: :open
+      define :list_material_usages_for_project, action: :for_project
+      define :list_material_usages_for_work_order, action: :for_work_order
     end
   end
 end

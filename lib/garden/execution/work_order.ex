@@ -321,5 +321,13 @@ defmodule GnomeGarden.Execution.WorkOrder do
     has_many :service_entitlement_usages, GnomeGarden.Commercial.ServiceEntitlementUsage do
       public? true
     end
+
+    has_many :assignments, GnomeGarden.Execution.Assignment do
+      public? true
+    end
+
+    has_many :material_usages, GnomeGarden.Execution.MaterialUsage do
+      public? true
+    end
   end
 end

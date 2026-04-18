@@ -67,5 +67,14 @@ defmodule GnomeGarden.Operations do
       define :list_assets_for_managed_system, action: :for_managed_system
       define :list_root_assets, action: :root_assets
     end
+
+    resource GnomeGarden.Operations.InventoryItem do
+      define :list_inventory_items, action: :read
+      define :get_inventory_item, action: :read, get_by: [:id]
+      define :create_inventory_item, action: :create
+      define :update_inventory_item, action: :update
+      define :list_active_inventory_items, action: :active
+      define :list_low_stock_inventory_items, action: :low_stock
+    end
   end
 end

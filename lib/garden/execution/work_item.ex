@@ -130,13 +130,21 @@ defmodule GnomeGarden.Execution.WorkItem do
 
     read :open do
       filter expr(status in [:backlog, :ready, :in_progress, :blocked, :review])
-      prepare build(sort: [due_on: :asc, sort_order: :asc, inserted_at: :asc], load: [:project, :owner_user])
+
+      prepare build(
+                sort: [due_on: :asc, sort_order: :asc, inserted_at: :asc],
+                load: [:project, :owner_user]
+              )
     end
 
     read :for_project do
       argument :project_id, :uuid, allow_nil?: false
       filter expr(project_id == ^arg(:project_id))
-      prepare build(sort: [sort_order: :asc, inserted_at: :asc], load: [:project, :owner_user, :child_work_items])
+
+      prepare build(
+                sort: [sort_order: :asc, inserted_at: :asc],
+                load: [:project, :owner_user, :child_work_items]
+              )
     end
   end
 
@@ -252,6 +260,14 @@ defmodule GnomeGarden.Execution.WorkItem do
 
     has_many :child_work_items, GnomeGarden.Execution.WorkItem do
       destination_attribute :parent_work_item_id
+      public? true
+    end
+
+    has_many :assignments, GnomeGarden.Execution.Assignment do
+      public? true
+    end
+
+    has_many :material_usages, GnomeGarden.Execution.MaterialUsage do
       public? true
     end
   end

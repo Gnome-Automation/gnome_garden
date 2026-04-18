@@ -89,12 +89,20 @@ defmodule GnomeGarden.Operations.Asset do
     read :for_managed_system do
       argument :managed_system_id, :uuid, allow_nil?: false
       filter expr(managed_system_id == ^arg(:managed_system_id))
-      prepare build(sort: [name: :asc], load: [:organization, :site, :managed_system, :child_assets])
+
+      prepare build(
+                sort: [name: :asc],
+                load: [:organization, :site, :managed_system, :child_assets]
+              )
     end
 
     read :root_assets do
       filter expr(is_nil(parent_asset_id))
-      prepare build(sort: [name: :asc], load: [:organization, :site, :managed_system, :child_assets])
+
+      prepare build(
+                sort: [name: :asc],
+                load: [:organization, :site, :managed_system, :child_assets]
+              )
     end
 
     read :active do
@@ -216,6 +224,10 @@ defmodule GnomeGarden.Operations.Asset do
     end
 
     has_many :work_orders, GnomeGarden.Execution.WorkOrder do
+      public? true
+    end
+
+    has_many :material_usages, GnomeGarden.Execution.MaterialUsage do
       public? true
     end
   end
