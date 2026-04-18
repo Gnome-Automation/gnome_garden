@@ -133,7 +133,10 @@ defmodule GnomeGarden.Commercial.Agreement do
 
     read :active do
       filter expr(status == :active)
-      prepare build(sort: [end_on: :asc, inserted_at: :desc], load: [:organization, :site, :pursuit])
+      prepare build(
+                sort: [end_on: :asc, inserted_at: :desc],
+                load: [:organization, :site, :pursuit, :service_tickets, :invoices, :payments]
+              )
     end
 
     read :expiring_soon do
@@ -145,7 +148,10 @@ defmodule GnomeGarden.Commercial.Agreement do
                  end_on < from_now(^arg(:days), :day)
              )
 
-      prepare build(sort: [end_on: :asc], load: [:organization, :site, :pursuit])
+      prepare build(
+                sort: [end_on: :asc],
+                load: [:organization, :site, :pursuit, :service_tickets, :invoices, :payments]
+              )
     end
   end
 
@@ -266,6 +272,68 @@ defmodule GnomeGarden.Commercial.Agreement do
 
     belongs_to :owner_user, GnomeGarden.Accounts.User do
       public? true
+    end
+
+    has_many :projects, GnomeGarden.Execution.Project do
+      public? true
+    end
+
+    has_many :service_tickets, GnomeGarden.Execution.ServiceTicket do
+      public? true
+    end
+
+    has_many :work_orders, GnomeGarden.Execution.WorkOrder do
+      public? true
+    end
+
+    has_many :maintenance_plans, GnomeGarden.Execution.MaintenancePlan do
+      public? true
+    end
+
+    has_many :time_entries, GnomeGarden.Finance.TimeEntry do
+      public? true
+    end
+
+    has_many :expenses, GnomeGarden.Finance.Expense do
+      public? true
+    end
+
+    has_many :invoices, GnomeGarden.Finance.Invoice do
+      public? true
+    end
+
+    has_many :payments, GnomeGarden.Finance.Payment do
+      public? true
+    end
+  end
+
+  aggregates do
+    count :project_count, :projects do
+      public? true
+    end
+
+    count :open_service_ticket_count, :service_tickets do
+      public? true
+      filter expr(status in [:new, :triaged, :in_progress, :waiting_on_customer, :resolved])
+    end
+
+    count :open_work_order_count, :work_orders do
+      public? true
+      filter expr(status in [:new, :scheduled, :dispatched, :in_progress])
+    end
+
+    sum :invoiced_amount, :invoices, :total_amount do
+      public? true
+    end
+
+    sum :received_amount, :payments, :amount do
+      public? true
+      filter expr(status in [:received, :deposited])
+    end
+
+    sum :billable_minutes, :time_entries, :minutes do
+      public? true
+      filter expr(billable == true)
     end
   end
 end

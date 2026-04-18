@@ -61,6 +61,22 @@ defmodule GnomeGarden.Execution do
       define :list_work_orders_for_organization, action: :for_organization
     end
 
+    resource GnomeGarden.Execution.ServiceTicket do
+      define :list_service_tickets, action: :read
+      define :get_service_ticket, action: :read, get_by: [:id]
+      define :create_service_ticket, action: :create
+      define :update_service_ticket, action: :update
+      define :triage_service_ticket, action: :triage
+      define :start_service_ticket, action: :start
+      define :pause_service_ticket, action: :pause
+      define :resolve_service_ticket, action: :resolve
+      define :close_service_ticket, action: :close
+      define :cancel_service_ticket, action: :cancel
+      define :reopen_service_ticket, action: :reopen
+      define :list_open_service_tickets, action: :open
+      define :list_service_tickets_for_organization, action: :for_organization
+    end
+
     resource GnomeGarden.Execution.MaintenancePlan do
       define :list_maintenance_plans, action: :read
       define :get_maintenance_plan, action: :read, get_by: [:id]
