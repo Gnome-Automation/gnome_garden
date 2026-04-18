@@ -156,38 +156,46 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-8">
-      <section class="grid gap-4 md:grid-cols-3">
-        <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Deployments</p>
-          <p class="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white">
-            {@deployment_count}
-          </p>
-          <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Configured agent instances with ownership, schedule, and scope.
-          </p>
-        </div>
+    <.page class="pb-8">
+      <.page_header eyebrow="Console">
+        Agents Console
+        <:subtitle>
+          Orchestrate templates, deployments, durable runs, and runtime cache from one operational workspace.
+        </:subtitle>
+        <:actions>
+          <button type="button" class="btn btn-sm" phx-click="bootstrap_defaults">
+            Bootstrap Defaults
+          </button>
 
-        <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Active Runs</p>
-          <p class="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white">
-            {@active_run_count}
-          </p>
-          <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Durable run records still pending or executing.
-          </p>
-        </div>
+          <.link navigate={~p"/console/agents/deployments/new"} class="btn btn-sm btn-primary gap-1">
+            <.icon name="hero-plus" class="size-4" /> New Deployment
+          </.link>
+        </:actions>
+      </.page_header>
 
-        <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Live Runtime</p>
-          <p class="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white">
-            {@runtime_count}
-          </p>
-          <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Running Jido instances on this node, keyed by `AgentRun`.
-          </p>
-        </div>
-      </section>
+      <div class="grid gap-4 md:grid-cols-3">
+        <.stat_card
+          title="Deployments"
+          value={to_string(@deployment_count)}
+          description="Configured agent instances with ownership, schedule, and scope."
+          icon="hero-rectangle-stack"
+          accent="emerald"
+        />
+        <.stat_card
+          title="Active Runs"
+          value={to_string(@active_run_count)}
+          description="Durable run records still pending or executing."
+          icon="hero-bolt"
+          accent="sky"
+        />
+        <.stat_card
+          title="Live Runtime"
+          value={to_string(@runtime_count)}
+          description="Running Jido instances on this node, keyed by AgentRun."
+          icon="hero-cpu-chip"
+          accent="amber"
+        />
+      </div>
 
       <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div class="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
@@ -199,10 +207,6 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
           </div>
 
           <div class="flex items-center gap-2">
-            <button type="button" class="btn btn-sm" phx-click="bootstrap_defaults">
-              Bootstrap Defaults
-            </button>
-
             <.link navigate={~p"/console/agents/deployments/new"} class="btn btn-sm btn-primary gap-1">
               <.icon name="hero-plus" class="size-4" /> New Deployment
             </.link>
@@ -223,7 +227,11 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                 <th class="px-5 py-3 font-medium text-zinc-500 dark:text-zinc-400">Actions</th>
               </tr>
             </thead>
-            <tbody id="agent-deployments" phx-update="stream" class="divide-y divide-zinc-200 dark:divide-zinc-800">
+            <tbody
+              id="agent-deployments"
+              phx-update="stream"
+              class="divide-y divide-zinc-200 dark:divide-zinc-800"
+            >
               <tr class="hidden only:table-row">
                 <td colspan="8" class="px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
                   No deployments yet. Create one from the deployment form to start running configured agents.
@@ -233,7 +241,10 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
               <tr :for={{row_id, deployment} <- @streams.deployments} id={row_id}>
                 <td class="px-5 py-4">
                   <div class="font-medium text-zinc-900 dark:text-white">{deployment.name}</div>
-                  <div :if={deployment.description} class="mt-1 max-w-md text-xs text-zinc-500 dark:text-zinc-400">
+                  <div
+                    :if={deployment.description}
+                    class="mt-1 max-w-md text-xs text-zinc-500 dark:text-zinc-400"
+                  >
                     {deployment.description}
                   </div>
                 </td>
@@ -241,7 +252,9 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                   {deployment.agent && deployment.agent.name}
                 </td>
                 <td class="px-5 py-4">
-                  <span class={visibility_badge(deployment.visibility)}>{format_atom(deployment.visibility)}</span>
+                  <span class={visibility_badge(deployment.visibility)}>
+                    {format_atom(deployment.visibility)}
+                  </span>
                 </td>
                 <td class="px-5 py-4 text-zinc-700 dark:text-zinc-300">
                   {owner_label(deployment)}
@@ -260,7 +273,10 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                     <span class={enabled_badge(deployment.enabled)}>
                       {if(deployment.enabled, do: "enabled", else: "paused")}
                     </span>
-                    <span :if={deployment.last_run_state} class={run_state_badge(deployment.last_run_state)}>
+                    <span
+                      :if={deployment.last_run_state}
+                      class={run_state_badge(deployment.last_run_state)}
+                    >
                       {format_atom(deployment.last_run_state)}
                     </span>
                   </div>
@@ -297,7 +313,10 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                       Resume
                     </button>
 
-                    <.link navigate={~p"/console/agents/deployments/#{deployment.id}/edit"} class="btn btn-sm">
+                    <.link
+                      navigate={~p"/console/agents/deployments/#{deployment.id}/edit"}
+                      class="btn btn-sm"
+                    >
                       Edit
                     </.link>
 
@@ -339,9 +358,16 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                   <th class="px-5 py-3 font-medium text-zinc-500 dark:text-zinc-400">Actions</th>
                 </tr>
               </thead>
-              <tbody id="agent-runs" phx-update="stream" class="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <tbody
+                id="agent-runs"
+                phx-update="stream"
+                class="divide-y divide-zinc-200 dark:divide-zinc-800"
+              >
                 <tr class="hidden only:table-row">
-                  <td colspan="7" class="px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                  <td
+                    colspan="7"
+                    class="px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400"
+                  >
                     No AgentRun records yet.
                   </td>
                 </tr>
@@ -372,7 +398,10 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                   </td>
                   <td class="px-5 py-4 text-zinc-700 dark:text-zinc-300">
                     <div class="font-medium">{run.output_count || 0}</div>
-                    <div :if={(run.output_count || 0) > 0} class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <div
+                      :if={(run.output_count || 0) > 0}
+                      class="mt-1 text-xs text-zinc-500 dark:text-zinc-400"
+                    >
                       {output_breakdown(run)}
                     </div>
                   </td>
@@ -414,7 +443,11 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
               </span>
             </div>
 
-            <div id="runtime-instances" phx-update="stream" class="divide-y divide-zinc-200 dark:divide-zinc-800">
+            <div
+              id="runtime-instances"
+              phx-update="stream"
+              class="divide-y divide-zinc-200 dark:divide-zinc-800"
+            >
               <div class="hidden only:block px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
                 No active runtime instances on this node.
               </div>
@@ -433,7 +466,9 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                   </div>
 
                   <div class="flex items-center gap-2">
-                    <span class={tracker_status_badge(runtime.status)}>{format_atom(runtime.status)}</span>
+                    <span class={tracker_status_badge(runtime.status)}>
+                      {format_atom(runtime.status)}
+                    </span>
                     <.link
                       :if={runtime.detail_href}
                       navigate={runtime.detail_href}
@@ -447,11 +482,15 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                 <div class="mt-3 grid grid-cols-3 gap-3 text-xs text-zinc-500 dark:text-zinc-400">
                   <div>
                     <p class="uppercase tracking-wide">Tokens</p>
-                    <p class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">{runtime.tokens}</p>
+                    <p class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">
+                      {runtime.tokens}
+                    </p>
                   </div>
                   <div>
                     <p class="uppercase tracking-wide">Tool Calls</p>
-                    <p class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">{runtime.tool_calls}</p>
+                    <p class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">
+                      {runtime.tool_calls}
+                    </p>
                   </div>
                   <div>
                     <p class="uppercase tracking-wide">Last Tool</p>
@@ -477,7 +516,9 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                 <div class="flex items-center justify-between gap-4">
                   <div>
                     <p class="font-medium text-zinc-900 dark:text-white">{template.name}</p>
-                    <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{template.description}</p>
+                    <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                      {template.description}
+                    </p>
                   </div>
 
                   <span class="badge badge-ghost badge-sm">{template.model}</span>
@@ -499,7 +540,8 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
           <div>
             <p class="font-medium text-zinc-900 dark:text-white">{@deployment_pending_delete.name}</p>
             <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Template {(@deployment_pending_delete.agent && @deployment_pending_delete.agent.name) || "-"}
+              Template {(@deployment_pending_delete.agent && @deployment_pending_delete.agent.name) ||
+                "-"}
             </p>
           </div>
 
@@ -532,7 +574,7 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
           </button>
         </:actions>
       </.modal>
-    </div>
+    </.page>
     """
   end
 
@@ -613,7 +655,9 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
 
   defp short_id(id), do: String.slice(id, 0, 8)
 
-  defp error_message(%Ash.Error.Invalid{} = error), do: Ash.Error.to_error_class(error) |> inspect()
+  defp error_message(%Ash.Error.Invalid{} = error),
+    do: Ash.Error.to_error_class(error) |> inspect()
+
   defp error_message(error) when is_exception(error), do: Exception.message(error)
   defp error_message(error) when is_binary(error), do: error
   defp error_message(error), do: inspect(error)

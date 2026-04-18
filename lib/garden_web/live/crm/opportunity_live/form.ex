@@ -39,20 +39,33 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <.header>
-      {@page_title}
-    </.header>
+    <.page max_width="max-w-5xl" class="pb-8">
+      <.page_header eyebrow="CRM">
+        {@page_title}
+        <:subtitle>
+          {if @opportunity,
+            do: "Adjust deal shape, timeline, and commercial expectations before advancing stages.",
+            else: "Create a pursuit record that can mature into proposals, agreements, and projects."}
+        </:subtitle>
+        <:actions>
+          <.button navigate={~p"/crm/opportunities"}>
+            <.icon name="hero-arrow-left" class="size-4" /> Back to opportunities
+          </.button>
+        </:actions>
+      </.page_header>
 
-    <.form for={@form} id="opportunity-form" phx-change="validate" phx-submit="save">
-      <div class="space-y-12">
-        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">
-            Opportunity Details
-          </h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            Name, company, workflow, and source information.
-          </p>
-          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+      <.form
+        for={@form}
+        id="opportunity-form"
+        phx-change="validate"
+        phx-submit="save"
+        class="space-y-6"
+      >
+        <.form_section
+          title="Opportunity Details"
+          description="Define the company, workflow, and commercial source driving this pursuit."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-4">
               <.input field={@form[:name]} label="Opportunity Name" required />
             </div>
@@ -95,23 +108,23 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
                 ]}
               />
             </div>
-            <div :if={@opportunity} class="col-span-full text-sm text-zinc-500">
+            <div
+              :if={@opportunity}
+              class="col-span-full rounded-2xl bg-zinc-50 px-4 py-3 text-sm text-zinc-600 dark:bg-white/[0.04] dark:text-zinc-300"
+            >
               Current stage: <span class="font-medium">{format_stage(@opportunity.stage)}</span>
-              <span class="text-zinc-400">
-                (use stage buttons on the opportunity page to advance)
+              <span class="text-zinc-400 dark:text-zinc-500">
+                (advance it from the opportunity detail page)
               </span>
             </div>
           </div>
-        </div>
+        </.form_section>
 
-        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">
-            Financials & Timeline
-          </h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            Deal value, probability, and key dates.
-          </p>
-          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+        <.form_section
+          title="Financials & Timeline"
+          description="Capture value, close probability, and the dates that matter to forecasting."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-3">
               <.input field={@form[:amount]} label="Deal Amount ($)" type="number" step="0.01" />
             </div>
@@ -148,14 +161,16 @@ defmodule GnomeGardenWeb.CRM.OpportunityLive.Form do
               <.input field={@form[:loss_reason]} type="textarea" label="Loss Reason" />
             </div>
           </div>
-        </div>
-      </div>
+        </.form_section>
 
-      <div class="mt-6 flex items-center justify-end gap-x-6">
-        <.button type="button" navigate={~p"/crm/opportunities"}>Cancel</.button>
-        <.button type="submit" variant="primary" phx-disable-with="Saving...">Save</.button>
-      </div>
-    </.form>
+        <.section body_class="px-6 py-5 sm:px-7">
+          <.form_actions
+            cancel_path={~p"/crm/opportunities"}
+            submit_label={if @opportunity, do: "Update Opportunity", else: "Create Opportunity"}
+          />
+        </.section>
+      </.form>
+    </.page>
     """
   end
 

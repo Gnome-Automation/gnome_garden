@@ -16,8 +16,8 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
         nil
       end
 
-    config_json = pretty_json(deployment && deployment.config || %{})
-    source_scope_json = pretty_json(deployment && deployment.source_scope || %{})
+    config_json = pretty_json((deployment && deployment.config) || %{})
+    source_scope_json = pretty_json((deployment && deployment.source_scope) || %{})
 
     {:ok,
      socket
@@ -63,7 +63,10 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
      socket
      |> assign(:form, to_form(form))
      |> assign(:config_json, Map.get(params, "config_json", socket.assigns.config_json))
-     |> assign(:source_scope_json, Map.get(params, "source_scope_json", socket.assigns.source_scope_json))}
+     |> assign(
+       :source_scope_json,
+       Map.get(params, "source_scope_json", socket.assigns.source_scope_json)
+     )}
   end
 
   @impl true
@@ -110,118 +113,125 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-5xl space-y-8">
-      <div class="space-y-2">
-        <.link navigate={~p"/console/agents"} class="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300">
-          Back to Agents Console
-        </.link>
+    <.page max_width="max-w-5xl" class="pb-8">
+      <.page_header eyebrow="Console">
+        {@page_title}
+        <:subtitle>
+          Configure a deployment without relying on Ash Admin. Templates are synced automatically from the in-memory registry.
+        </:subtitle>
+        <:actions>
+          <.button navigate={~p"/console/agents"}>
+            <.icon name="hero-arrow-left" class="size-4" /> Back to Agents Console
+          </.button>
+        </:actions>
+      </.page_header>
 
-        <.header>
-          {@page_title}
-          <:subtitle>
-            Configure a deployment without relying on Ash Admin. Templates are synced automatically from the in-memory registry.
-          </:subtitle>
-        </.header>
-      </div>
+      <.form
+        for={@form}
+        id="agent-deployment-form"
+        phx-change="validate"
+        phx-submit="save"
+        class="space-y-6"
+      >
+        <.form_section
+          title="Deployment"
+          description="Identity, template binding, and operator-facing metadata."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
+            <div class="sm:col-span-3">
+              <.input field={@form[:name]} label="Deployment Name" required />
+            </div>
 
-      <.form for={@form} id="agent-deployment-form" phx-change="validate" phx-submit="save">
-        <div class="space-y-12">
-          <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-            <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Deployment</h2>
-            <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-              Identity, template binding, and operator-facing metadata.
-            </p>
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:agent_id]}
+                type="select"
+                label="Template"
+                prompt="Select template..."
+                options={@template_options}
+              />
+            </div>
 
-            <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-              <div class="sm:col-span-3">
-                <.input field={@form[:name]} label="Deployment Name" required />
-              </div>
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:visibility]}
+                type="select"
+                label="Visibility"
+                options={[
+                  {"Private", :private},
+                  {"Shared", :shared},
+                  {"System", :system}
+                ]}
+              />
+            </div>
 
-              <div class="sm:col-span-3">
-                <.input
-                  field={@form[:agent_id]}
-                  type="select"
-                  label="Template"
-                  prompt="Select template..."
-                  options={@template_options}
-                />
-              </div>
+            <div class="sm:col-span-3 pt-8">
+              <.input field={@form[:enabled]} type="checkbox" label="Enabled" />
+            </div>
 
-              <div class="sm:col-span-3">
-                <.input
-                  field={@form[:visibility]}
-                  type="select"
-                  label="Visibility"
-                  options={[
-                    {"Private", :private},
-                    {"Shared", :shared},
-                    {"System", :system}
-                  ]}
-                />
-              </div>
+            <div class="sm:col-span-3">
+              <.input field={@form[:schedule]} label="Schedule" placeholder="0 */6 * * *" />
+            </div>
 
-              <div class="sm:col-span-3 pt-8">
-                <.input field={@form[:enabled]} type="checkbox" label="Enabled" />
-              </div>
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:memory_namespace]}
+                label="Memory Namespace"
+                placeholder="agents.bid_scanner.shared"
+              />
+            </div>
 
-              <div class="sm:col-span-3">
-                <.input field={@form[:schedule]} label="Schedule" placeholder="0 */6 * * *" />
-              </div>
-
-              <div class="sm:col-span-3">
-                <.input
-                  field={@form[:memory_namespace]}
-                  label="Memory Namespace"
-                  placeholder="agents.bid_scanner.shared"
-                />
-              </div>
-
-              <div class="col-span-full">
-                <.input field={@form[:description]} type="textarea" label="Description" />
-              </div>
+            <div class="col-span-full">
+              <.input field={@form[:description]} type="textarea" label="Description" />
             </div>
           </div>
+        </.form_section>
 
-          <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-            <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Execution Scope</h2>
-            <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-              Provide JSON payloads for runtime config and source scope. Empty or invalid JSON will block save.
-            </p>
+        <.form_section
+          title="Execution Scope"
+          description="Provide JSON payloads for runtime config and source scope. Invalid JSON blocks save."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <label
+                for="config_json"
+                class="block text-sm/6 font-medium text-gray-900 dark:text-white"
+              >
+                Config JSON
+              </label>
+              <textarea
+                id="config_json"
+                name="config_json"
+                rows="16"
+                class="mt-2 block w-full rounded-md bg-white px-3 py-2 font-mono text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500"
+              ><%= @config_json %></textarea>
+            </div>
 
-            <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">
-              <div>
-                <label for="config_json" class="block text-sm/6 font-medium text-gray-900 dark:text-white">
-                  Config JSON
-                </label>
-                <textarea
-                  id="config_json"
-                  name="config_json"
-                  rows="16"
-                  class="mt-2 block w-full rounded-md bg-white px-3 py-2 font-mono text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500"
-                ><%= @config_json %></textarea>
-              </div>
-
-              <div>
-                <label for="source_scope_json" class="block text-sm/6 font-medium text-gray-900 dark:text-white">
-                  Source Scope JSON
-                </label>
-                <textarea
-                  id="source_scope_json"
-                  name="source_scope_json"
-                  rows="16"
-                  class="mt-2 block w-full rounded-md bg-white px-3 py-2 font-mono text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500"
-                ><%= @source_scope_json %></textarea>
-              </div>
+            <div>
+              <label
+                for="source_scope_json"
+                class="block text-sm/6 font-medium text-gray-900 dark:text-white"
+              >
+                Source Scope JSON
+              </label>
+              <textarea
+                id="source_scope_json"
+                name="source_scope_json"
+                rows="16"
+                class="mt-2 block w-full rounded-md bg-white px-3 py-2 font-mono text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500"
+              ><%= @source_scope_json %></textarea>
             </div>
           </div>
-        </div>
+        </.form_section>
 
-        <div class="mt-6 flex items-center justify-end gap-x-6">
-          <.button type="button" navigate={~p"/console/agents"}>Cancel</.button>
-          <.button type="submit" variant="primary" phx-disable-with="Saving...">Save Deployment</.button>
-        </div>
+        <.section body_class="px-6 py-5 sm:px-7">
+          <.form_actions
+            cancel_path={~p"/console/agents"}
+            submit_label="Save Deployment"
+          />
+        </.section>
       </.form>
-    </div>
+    </.page>
     """
   end
 

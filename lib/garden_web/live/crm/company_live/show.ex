@@ -16,14 +16,12 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
         load: [:leads, :procurement_sources, :activities, :opportunities]
       )
 
-    # Load bids linked to this company
     bids =
       Procurement.Bid
       |> Ash.Query.filter(agency_company_id == ^id)
       |> Ash.Query.sort(inserted_at: :desc)
       |> Ash.read!()
 
-    # Load contacts via employment
     contacts =
       GnomeGarden.Sales.Contact
       |> Ash.Query.filter(exists(employments, company_id == ^id and is_current == true))
@@ -60,191 +58,278 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <.header>
-      {@company.name}
-      <:subtitle>
-        <span class={review_badge(@company.review_status)}>
-          {format_atom(@company.review_status)}
-        </span>
-        <span :if={@company.company_type} class="badge badge-sm badge-ghost ml-1">
-          {format_atom(@company.company_type)}
-        </span>
-        <span :if={@company.region} class="badge badge-sm badge-outline ml-1">
-          {format_region(@company.region)}
-        </span>
-      </:subtitle>
-      <:actions>
-        <.button navigate={~p"/crm/companies"}>
-          <.icon name="hero-arrow-left" class="size-4" /> Back
-        </.button>
-        <.button :if={@company.review_status == :new} phx-click="accept" variant="primary">
-          Accept
-        </.button>
-        <.button variant="primary" navigate={~p"/crm/companies/#{@company}/edit"}>
-          <.icon name="hero-pencil-square" class="size-4" /> Edit
-        </.button>
-      </:actions>
-    </.header>
+    <.page class="pb-8">
+      <.page_header eyebrow="CRM">
+        {@company.name}
+        <:subtitle>
+          <span class={review_badge(@company.review_status)}>
+            {format_atom(@company.review_status)}
+          </span>
+          <span :if={@company.company_type} class="badge badge-sm badge-ghost ml-1">
+            {format_atom(@company.company_type)}
+          </span>
+          <span :if={@company.region} class="badge badge-sm badge-outline ml-1">
+            {format_region(@company.region)}
+          </span>
+        </:subtitle>
+        <:actions>
+          <.button navigate={~p"/crm/companies"}>
+            <.icon name="hero-arrow-left" class="size-4" /> Back
+          </.button>
+          <.button :if={@company.review_status == :new} phx-click="accept" variant="primary">
+            Accept
+          </.button>
+          <.button variant="primary" navigate={~p"/crm/companies/#{@company}/edit"}>
+            <.icon name="hero-pencil-square" class="size-4" /> Edit
+          </.button>
+        </:actions>
+      </.page_header>
 
-    <%!-- Tabs --%>
-    <div class="mt-6 border-b border-base-200">
-      <div class="flex gap-4">
-        <.tab_button tab="overview" current={@tab}>Overview</.tab_button>
-        <.tab_button tab="leads" current={@tab}>Leads ({length(@company.leads)})</.tab_button>
-        <.tab_button tab="bids" current={@tab}>Bids ({length(@bids)})</.tab_button>
-        <.tab_button tab="contacts" current={@tab}>Contacts ({length(@contacts)})</.tab_button>
-        <.tab_button tab="sources" current={@tab}>
-          Sources ({length(@company.procurement_sources)})
-        </.tab_button>
-        <.tab_button tab="activity" current={@tab}>
-          Activity ({length(@company.activities)})
-        </.tab_button>
-      </div>
+      <.section
+        title="Company Workspace"
+        description="Switch between overview, CRM signals, sourcing, and the activity timeline."
+      >
+        <div class="flex flex-wrap gap-3">
+          <.tab_button tab="overview" current={@tab}>Overview</.tab_button>
+          <.tab_button tab="leads" current={@tab}>Leads ({length(@company.leads)})</.tab_button>
+          <.tab_button tab="bids" current={@tab}>Bids ({length(@bids)})</.tab_button>
+          <.tab_button tab="contacts" current={@tab}>Contacts ({length(@contacts)})</.tab_button>
+          <.tab_button tab="sources" current={@tab}>
+            Sources ({length(@company.procurement_sources)})
+          </.tab_button>
+          <.tab_button tab="activity" current={@tab}>
+            Activity ({length(@company.activities)})
+          </.tab_button>
+        </div>
+      </.section>
+
+      <.company_overview :if={@tab == "overview"} company={@company} />
+      <.company_leads :if={@tab == "leads"} leads={@company.leads} />
+      <.company_bids :if={@tab == "bids"} bids={@bids} />
+      <.company_contacts :if={@tab == "contacts"} contacts={@contacts} />
+      <.company_sources :if={@tab == "sources"} sources={@company.procurement_sources} />
+      <.company_activity :if={@tab == "activity"} activities={@company.activities} />
+    </.page>
+    """
+  end
+
+  attr :company, :map, required: true
+
+  defp company_overview(assigns) do
+    ~H"""
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <.section title="Company Details">
+        <.properties>
+          <.property name="Type">{format_atom(@company.company_type)}</.property>
+          <.property name="Status">
+            <.status_badge status={if @company.status == :active, do: :success, else: :warning}>
+              {format_atom(@company.status)}
+            </.status_badge>
+          </.property>
+          <.property name="Region">{format_region(@company.region)}</.property>
+          <.property name="Source">{format_atom(@company.source)}</.property>
+          <.property :if={@company.employee_count} name="Employees">
+            {@company.employee_count}
+          </.property>
+        </.properties>
+      </.section>
+
+      <.section title="Contact Info">
+        <.properties>
+          <.property name="Website">
+            <a
+              :if={@company.website}
+              href={@company.website}
+              target="_blank"
+              class="text-emerald-600 hover:text-emerald-500"
+            >
+              {@company.website}
+            </a>
+            <span :if={!@company.website} class="text-zinc-400">-</span>
+          </.property>
+          <.property name="Phone">{@company.phone || "-"}</.property>
+          <.property name="Address">
+            {[@company.address, @company.city, @company.state, @company.postal_code]
+            |> Enum.filter(& &1)
+            |> Enum.join(", ")}
+          </.property>
+        </.properties>
+      </.section>
     </div>
 
-    <%!-- Tab Content --%>
-    <div class="mt-6">
-      <div :if={@tab == "overview"}>
-        <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          <div>
-            <.heading level={3}>Company Details</.heading>
-            <.properties>
-              <.property name="Type">{format_atom(@company.company_type)}</.property>
-              <.property name="Status">
-                <.status_badge status={if @company.status == :active, do: :success, else: :warning}>
-                  {format_atom(@company.status)}
-                </.status_badge>
-              </.property>
-              <.property name="Region">{format_region(@company.region)}</.property>
-              <.property name="Source">{format_atom(@company.source)}</.property>
-              <.property :if={@company.employee_count} name="Employees">
-                {@company.employee_count}
-              </.property>
-            </.properties>
-          </div>
+    <.section :if={@company.description} title="Description">
+      <p class="whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-300">
+        {@company.description}
+      </p>
+    </.section>
+    """
+  end
 
-          <div>
-            <.heading level={3}>Contact Info</.heading>
-            <.properties>
-              <.property name="Website">
-                <a
-                  :if={@company.website}
-                  href={@company.website}
-                  target="_blank"
-                  class="text-emerald-600 hover:text-emerald-500"
-                >
-                  {@company.website}
-                </a>
-                <span :if={!@company.website} class="text-zinc-400">-</span>
-              </.property>
-              <.property name="Phone">{@company.phone || "-"}</.property>
-              <.property name="Address">
-                {[@company.address, @company.city, @company.state, @company.postal_code]
-                |> Enum.filter(& &1)
-                |> Enum.join(", ")}
-              </.property>
-            </.properties>
-          </div>
-        </div>
+  attr :leads, :list, required: true
 
-        <div :if={@company.description} class="mt-6">
-          <.heading level={3}>Description</.heading>
-          <p class="mt-2 text-sm whitespace-pre-wrap">{@company.description}</p>
-        </div>
+  defp company_leads(assigns) do
+    ~H"""
+    <.section
+      title="Leads"
+      description="Incoming people and signals already attached to this company."
+    >
+      <div :if={@leads == []}>
+        <.empty_state
+          title="No leads yet"
+          description="Qualifying leads tied to this company will show up here."
+          icon="hero-user-plus"
+        />
       </div>
-
-      <div :if={@tab == "leads"}>
-        <div :if={@company.leads == []} class="text-center py-8 text-zinc-400">No leads yet</div>
+      <div :if={@leads != []} class="space-y-3">
         <div
-          :for={lead <- @company.leads}
-          class="card bg-base-100 shadow-sm border border-base-200 mb-3"
+          :for={lead <- @leads}
+          class="rounded-3xl border border-zinc-200/80 bg-white px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]"
         >
-          <div class="card-body p-4">
-            <div class="flex justify-between items-center">
-              <div>
-                <.link navigate={~p"/crm/leads/#{lead}"} class="font-medium hover:text-emerald-600">
-                  {lead.first_name} {lead.last_name}
-                </.link>
-                <span class="badge badge-sm badge-primary ml-2">{lead.source}</span>
-                <span class="badge badge-sm badge-ghost ml-1">{lead.status}</span>
-                <div class="text-sm text-zinc-500 mt-1">
-                  {String.slice(lead.source_details || "", 0, 100)}
-                </div>
-              </div>
+          <div class="space-y-2">
+            <.link navigate={~p"/crm/leads/#{lead}"} class="font-medium hover:text-emerald-600">
+              {lead.first_name} {lead.last_name}
+            </.link>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge badge-sm badge-primary">{lead.source}</span>
+              <span class="badge badge-sm badge-ghost">{lead.status}</span>
             </div>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              {String.slice(lead.source_details || "", 0, 140)}
+            </p>
           </div>
         </div>
       </div>
+    </.section>
+    """
+  end
 
-      <div :if={@tab == "bids"}>
-        <div :if={@bids == []} class="text-center py-8 text-zinc-400">No bids yet</div>
-        <div :for={bid <- @bids} class="card bg-base-100 shadow-sm border border-base-200 mb-3">
-          <div class="card-body p-4">
-            <div class="flex justify-between items-center">
-              <div>
-                <.link
-                  navigate={~p"/procurement/bids/#{bid}"}
-                  class="font-medium hover:text-emerald-600"
-                >
-                  {bid.title}
-                </.link>
+  attr :bids, :list, required: true
+
+  defp company_bids(assigns) do
+    ~H"""
+    <.section title="Bids" description="Procurement opportunities connected to this company.">
+      <div :if={@bids == []}>
+        <.empty_state
+          title="No bids yet"
+          description="Bid intelligence linked to this company will appear here."
+          icon="hero-document-text"
+        />
+      </div>
+      <div :if={@bids != []} class="space-y-3">
+        <div
+          :for={bid <- @bids}
+          class="rounded-3xl border border-zinc-200/80 bg-white px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]"
+        >
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="space-y-2">
+              <.link
+                navigate={~p"/procurement/bids/#{bid}"}
+                class="font-medium hover:text-emerald-600"
+              >
+                {bid.title}
+              </.link>
+              <div class="flex flex-wrap items-center gap-2">
                 <span class={bid_tier_badge(bid.score_tier)}>{bid.score_tier}</span>
-                <span class="text-sm text-zinc-500 ml-2">Score: {bid.score_total}</span>
+                <span class="text-sm text-zinc-500">Score: {bid.score_total}</span>
               </div>
-              <span class="badge badge-sm badge-ghost">{bid.status}</span>
             </div>
+            <span class="badge badge-sm badge-ghost">{bid.status}</span>
           </div>
         </div>
       </div>
+    </.section>
+    """
+  end
 
-      <div :if={@tab == "contacts"}>
-        <div :if={@contacts == []} class="text-center py-8 text-zinc-400">No contacts yet</div>
+  attr :contacts, :list, required: true
+
+  defp company_contacts(assigns) do
+    ~H"""
+    <.section title="Contacts" description="People currently connected to this company.">
+      <div :if={@contacts == []}>
+        <.empty_state
+          title="No contacts yet"
+          description="Add employment history or contact records to build the relationship map."
+          icon="hero-users"
+        />
+      </div>
+      <div :if={@contacts != []} class="space-y-3">
         <div
           :for={contact <- @contacts}
-          class="card bg-base-100 shadow-sm border border-base-200 mb-3"
+          class="rounded-3xl border border-zinc-200/80 bg-white px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]"
         >
-          <div class="card-body p-4">
-            <.link navigate={~p"/crm/contacts/#{contact}"} class="font-medium hover:text-emerald-600">
-              {contact.first_name} {contact.last_name}
-            </.link>
-            <span :if={contact.email} class="text-sm text-zinc-500 ml-2">{contact.email}</span>
-          </div>
+          <.link navigate={~p"/crm/contacts/#{contact}"} class="font-medium hover:text-emerald-600">
+            {contact.first_name} {contact.last_name}
+          </.link>
+          <p :if={contact.email} class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            {contact.email}
+          </p>
         </div>
       </div>
+    </.section>
+    """
+  end
 
-      <div :if={@tab == "sources"}>
-        <div :if={@company.procurement_sources == []} class="text-center py-8 text-zinc-400">
-          No monitored sources
-        </div>
+  attr :sources, :list, required: true
+
+  defp company_sources(assigns) do
+    ~H"""
+    <.section
+      title="Procurement Sources"
+      description="Bid portals and monitored sources tied to this company."
+    >
+      <div :if={@sources == []}>
+        <.empty_state
+          title="No monitored sources"
+          description="Attach procurement sources to keep scans and bid discovery organized."
+          icon="hero-globe-alt"
+        />
+      </div>
+      <div :if={@sources != []} class="space-y-3">
         <div
-          :for={source <- @company.procurement_sources}
-          class="card bg-base-100 shadow-sm border border-base-200 mb-3"
+          :for={source <- @sources}
+          class="rounded-3xl border border-zinc-200/80 bg-white px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]"
         >
-          <div class="card-body p-4">
-            <div class="flex justify-between items-center">
-              <div>
-                <span class="font-medium">{source.name}</span>
-                <span class="badge badge-sm badge-ghost ml-2">{source.source_type}</span>
-                <div class="text-sm text-zinc-500 mt-1">{source.url}</div>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-medium text-zinc-900 dark:text-white">{source.name}</span>
+                <span class="badge badge-sm badge-ghost">{source.source_type}</span>
               </div>
-              <div class="text-right text-sm">
-                <div class={source_config_badge(source.config_status)}>
-                  {format_atom(source.config_status)}
-                </div>
-                <div :if={source.last_scanned_at} class="text-zinc-400 mt-1">
-                  Last scanned: {Calendar.strftime(source.last_scanned_at, "%b %d, %H:%M")}
-                </div>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">{source.url}</p>
+            </div>
+            <div class="text-sm sm:text-right">
+              <div class={source_config_badge(source.config_status)}>
+                {format_atom(source.config_status)}
+              </div>
+              <div :if={source.last_scanned_at} class="mt-1 text-zinc-400">
+                Last scanned: {Calendar.strftime(source.last_scanned_at, "%b %d, %H:%M")}
               </div>
             </div>
           </div>
         </div>
       </div>
+    </.section>
+    """
+  end
 
-      <div :if={@tab == "activity"}>
-        <div :if={@company.activities == []} class="text-center py-8 text-zinc-400">
-          No activities yet
-        </div>
-        <div :for={activity <- @company.activities} class="flex gap-3 mb-4">
+  attr :activities, :list, required: true
+
+  defp company_activity(assigns) do
+    ~H"""
+    <.section title="Activity" description="Recent CRM events and company-related touchpoints.">
+      <div :if={@activities == []}>
+        <.empty_state
+          title="No activity yet"
+          description="Calls, notes, and sourced events will build the company timeline here."
+          icon="hero-clock"
+        />
+      </div>
+      <div :if={@activities != []} class="space-y-4">
+        <div
+          :for={activity <- @activities}
+          class="flex gap-3 rounded-3xl border border-zinc-200/80 bg-white px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]"
+        >
           <div class="badge badge-sm badge-outline mt-1">{format_atom(activity.activity_type)}</div>
           <div>
             <div class="font-medium text-sm">{activity.subject}</div>
@@ -255,29 +340,7 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
           </div>
         </div>
       </div>
-    </div>
-    """
-  end
-
-  attr :tab, :string, required: true
-  attr :current, :string, required: true
-  slot :inner_block, required: true
-
-  defp tab_button(assigns) do
-    ~H"""
-    <button
-      phx-click="tab"
-      phx-value-tab={@tab}
-      class={[
-        "pb-2 px-1 text-sm font-medium border-b-2 transition",
-        if(@tab == @current,
-          do: "border-emerald-500 text-emerald-600",
-          else: "border-transparent text-zinc-500 hover:text-zinc-700"
-        )
-      ]}
-    >
-      {render_slot(@inner_block)}
-    </button>
+    </.section>
     """
   end
 

@@ -33,18 +33,27 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <.header>
-      {@page_title}
-    </.header>
+    <.page max_width="max-w-5xl" class="pb-8">
+      <.page_header eyebrow="CRM">
+        {@page_title}
+        <:subtitle>
+          {if @company,
+            do: "Update company details, market metadata, and location data.",
+            else: "Capture a company record that can anchor contacts, pursuits, and delivery work."}
+        </:subtitle>
+        <:actions>
+          <.button navigate={~p"/crm/companies"}>
+            <.icon name="hero-arrow-left" class="size-4" /> Back to companies
+          </.button>
+        </:actions>
+      </.page_header>
 
-    <.form for={@form} id="company-form" phx-change="validate" phx-submit="save">
-      <div class="space-y-12">
-        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Company Details</h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            Basic company information and contact details.
-          </p>
-          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+      <.form for={@form} id="company-form" phx-change="validate" phx-submit="save" class="space-y-6">
+        <.form_section
+          title="Company Details"
+          description="Basic identity, commercial classification, and primary contact info."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-3">
               <.input field={@form[:name]} label="Company Name" required />
             </div>
@@ -83,14 +92,13 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Form do
               <.input field={@form[:phone]} label="Phone" type="tel" />
             </div>
           </div>
-        </div>
+        </.form_section>
 
-        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Address</h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            Company physical address.
-          </p>
-          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+        <.form_section
+          title="Address"
+          description="Capture the company location so the record can support local targeting and field work."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="col-span-full">
               <.input field={@form[:address]} label="Street Address" />
             </div>
@@ -104,14 +112,13 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Form do
               <.input field={@form[:postal_code]} label="Postal Code" />
             </div>
           </div>
-        </div>
+        </.form_section>
 
-        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Additional</h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            Region, source, and other company metadata.
-          </p>
-          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+        <.form_section
+          title="Additional Context"
+          description="Operational metadata that helps with sourcing, prioritization, and segmentation."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-3">
               <.input
                 field={@form[:region]}
@@ -161,14 +168,16 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Form do
               <.input field={@form[:description]} type="textarea" label="Description" />
             </div>
           </div>
-        </div>
-      </div>
+        </.form_section>
 
-      <div class="mt-6 flex items-center justify-end gap-x-6">
-        <.button type="button" navigate={~p"/crm/companies"}>Cancel</.button>
-        <.button type="submit" variant="primary" phx-disable-with="Saving...">Save</.button>
-      </div>
-    </.form>
+        <.section body_class="px-6 py-5 sm:px-7">
+          <.form_actions
+            cancel_path={~p"/crm/companies"}
+            submit_label={if @company, do: "Update Company", else: "Create Company"}
+          />
+        </.section>
+      </.form>
+    </.page>
     """
   end
 

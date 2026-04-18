@@ -38,18 +38,27 @@ defmodule GnomeGardenWeb.CRM.TaskLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <.header>
-      {@page_title}
-    </.header>
+    <.page max_width="max-w-5xl" class="pb-8">
+      <.page_header eyebrow="CRM">
+        {@page_title}
+        <:subtitle>
+          {if @task,
+            do: "Update the task status, timing, and who or what it supports.",
+            else: "Create a follow-up action and connect it to the right company or contact."}
+        </:subtitle>
+        <:actions>
+          <.button navigate={~p"/crm/tasks"}>
+            <.icon name="hero-arrow-left" class="size-4" /> Back to tasks
+          </.button>
+        </:actions>
+      </.page_header>
 
-    <.form for={@form} id="task-form" phx-change="validate" phx-submit="save">
-      <div class="space-y-12">
-        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Task Details</h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            What needs to be done and when.
-          </p>
-          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+      <.form for={@form} id="task-form" phx-change="validate" phx-submit="save" class="space-y-6">
+        <.form_section
+          title="Task Details"
+          description="Set the work type, urgency, due date, and any narrative context."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-4">
               <.input field={@form[:title]} label="Title" required />
             </div>
@@ -102,14 +111,13 @@ defmodule GnomeGardenWeb.CRM.TaskLive.Form do
               <.input field={@form[:description]} type="textarea" label="Description" />
             </div>
           </div>
-        </div>
+        </.form_section>
 
-        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Associations</h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            Link this task to a company or contact.
-          </p>
-          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+        <.form_section
+          title="Associations"
+          description="Attach the task to the right customer context so follow-ups stay visible."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-3">
               <.input
                 field={@form[:company_id]}
@@ -129,14 +137,16 @@ defmodule GnomeGardenWeb.CRM.TaskLive.Form do
               />
             </div>
           </div>
-        </div>
-      </div>
+        </.form_section>
 
-      <div class="mt-6 flex items-center justify-end gap-x-6">
-        <.button type="button" navigate={~p"/crm/tasks"}>Cancel</.button>
-        <.button type="submit" variant="primary" phx-disable-with="Saving...">Save</.button>
-      </div>
-    </.form>
+        <.section body_class="px-6 py-5 sm:px-7">
+          <.form_actions
+            cancel_path={~p"/crm/tasks"}
+            submit_label={if @task, do: "Update Task", else: "Create Task"}
+          />
+        </.section>
+      </.form>
+    </.page>
     """
   end
 

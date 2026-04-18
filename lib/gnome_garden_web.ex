@@ -87,8 +87,9 @@ defmodule GnomeGardenWeb do
       # Core UI components
       import GnomeGardenWeb.CoreComponents
       import GnomeGardenWeb.Components.Responsive
+      import GnomeGardenWeb.Components.WorkspaceUI
       # Protocol components (exclude button to avoid conflict with CoreComponents.button)
-      import GnomeGardenWeb.Components.Protocol, except: [button: 1]
+      import GnomeGardenWeb.Components.Protocol, except: [button: 1, empty_state: 1]
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

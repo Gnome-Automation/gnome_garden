@@ -36,18 +36,27 @@ defmodule GnomeGardenWeb.CRM.LeadLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <.header>
-      {@page_title}
-    </.header>
+    <.page max_width="max-w-5xl" class="pb-8">
+      <.page_header eyebrow="CRM">
+        {@page_title}
+        <:subtitle>
+          {if @lead,
+            do: "Refine qualification details and keep the source signal current.",
+            else: "Capture a raw market signal and the person or company attached to it."}
+        </:subtitle>
+        <:actions>
+          <.button navigate={~p"/crm/leads"}>
+            <.icon name="hero-arrow-left" class="size-4" /> Back to leads
+          </.button>
+        </:actions>
+      </.page_header>
 
-    <.form for={@form} id="lead-form" phx-change="validate" phx-submit="save">
-      <div class="space-y-12">
-        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Lead Information</h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            Contact details and company information.
-          </p>
-          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+      <.form for={@form} id="lead-form" phx-change="validate" phx-submit="save" class="space-y-6">
+        <.form_section
+          title="Lead Information"
+          description="The person, role, and company details attached to this incoming opportunity."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-3">
               <.input field={@form[:first_name]} label="First Name" required />
             </div>
@@ -67,19 +76,15 @@ defmodule GnomeGardenWeb.CRM.LeadLive.Form do
               <.input field={@form[:company_name]} label="Company Name" />
             </div>
           </div>
-        </div>
+        </.form_section>
 
-        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-          <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">
-            Source & Details
-          </h2>
-          <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-            How we found this lead and additional context.
-          </p>
-          <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-            <div class="sm:col-span-3">
+        <.form_section
+          title="Source & Details"
+          description="Track where the lead came from and the context needed for qualification."
+        >
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
+            <div :if={@lead} class="sm:col-span-3">
               <.input
-                :if={@lead}
                 field={@form[:status]}
                 type="select"
                 label="Status"
@@ -118,14 +123,16 @@ defmodule GnomeGardenWeb.CRM.LeadLive.Form do
               <.input field={@form[:description]} type="textarea" label="Description" />
             </div>
           </div>
-        </div>
-      </div>
+        </.form_section>
 
-      <div class="mt-6 flex items-center justify-end gap-x-6">
-        <.button type="button" navigate={~p"/crm/leads"}>Cancel</.button>
-        <.button type="submit" variant="primary" phx-disable-with="Saving...">Save</.button>
-      </div>
-    </.form>
+        <.section body_class="px-6 py-5 sm:px-7">
+          <.form_actions
+            cancel_path={~p"/crm/leads"}
+            submit_label={if @lead, do: "Update Lead", else: "Create Lead"}
+          />
+        </.section>
+      </.form>
+    </.page>
     """
   end
 
