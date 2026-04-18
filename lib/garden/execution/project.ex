@@ -156,13 +156,21 @@ defmodule GnomeGarden.Execution.Project do
 
     read :active do
       filter expr(status in [:ready, :active, :on_hold])
-      prepare build(sort: [target_end_on: :asc, inserted_at: :desc], load: [:organization, :site, :agreement])
+
+      prepare build(
+                sort: [target_end_on: :asc, inserted_at: :desc],
+                load: [:organization, :site, :agreement, :change_orders]
+              )
     end
 
     read :for_organization do
       argument :organization_id, :uuid, allow_nil?: false
       filter expr(organization_id == ^arg(:organization_id))
-      prepare build(sort: [target_end_on: :asc, inserted_at: :desc], load: [:organization, :site, :agreement])
+
+      prepare build(
+                sort: [target_end_on: :asc, inserted_at: :desc],
+                load: [:organization, :site, :agreement, :change_orders]
+              )
     end
   end
 
@@ -287,6 +295,10 @@ defmodule GnomeGarden.Execution.Project do
     end
 
     has_many :work_orders, GnomeGarden.Execution.WorkOrder do
+      public? true
+    end
+
+    has_many :change_orders, GnomeGarden.Commercial.ChangeOrder do
       public? true
     end
   end

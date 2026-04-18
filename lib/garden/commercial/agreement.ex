@@ -167,6 +167,7 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :pursuit,
                   :proposal,
                   :projects,
+                  :change_orders,
                   :service_tickets,
                   :service_level_policies,
                   :service_entitlements,
@@ -193,6 +194,7 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :pursuit,
                   :proposal,
                   :projects,
+                  :change_orders,
                   :service_tickets,
                   :service_level_policies,
                   :service_entitlements,
@@ -330,6 +332,10 @@ defmodule GnomeGarden.Commercial.Agreement do
       public? true
     end
 
+    has_many :change_orders, GnomeGarden.Commercial.ChangeOrder do
+      public? true
+    end
+
     has_many :service_tickets, GnomeGarden.Execution.ServiceTicket do
       public? true
     end
@@ -406,6 +412,10 @@ defmodule GnomeGarden.Commercial.Agreement do
       public? true
     end
 
+    count :change_order_count, :change_orders do
+      public? true
+    end
+
     sum :invoiced_amount, :invoices, :total_amount do
       public? true
     end
@@ -422,6 +432,11 @@ defmodule GnomeGarden.Commercial.Agreement do
 
     sum :expense_amount, :expenses, :amount do
       public? true
+    end
+
+    sum :approved_change_order_amount, :change_orders, :total_amount do
+      public? true
+      filter expr(status in [:approved, :implemented])
     end
   end
 end

@@ -85,6 +85,29 @@ defmodule GnomeGarden.Commercial do
       define :list_expiring_agreements, action: :expiring_soon
     end
 
+    resource GnomeGarden.Commercial.ChangeOrder do
+      define :list_change_orders, action: :read
+      define :get_change_order, action: :read, get_by: [:id]
+      define :create_change_order, action: :create
+      define :update_change_order, action: :update
+      define :submit_change_order, action: :submit
+      define :approve_change_order, action: :approve
+      define :reject_change_order, action: :reject
+      define :implement_change_order, action: :implement
+      define :cancel_change_order, action: :cancel
+      define :reopen_change_order, action: :reopen
+      define :list_active_change_orders, action: :active
+      define :list_change_orders_for_agreement, action: :for_agreement
+    end
+
+    resource GnomeGarden.Commercial.ChangeOrderLine do
+      define :list_change_order_lines, action: :read
+      define :get_change_order_line, action: :read, get_by: [:id]
+      define :create_change_order_line, action: :create
+      define :update_change_order_line, action: :update
+      define :list_lines_for_change_order, action: :for_change_order
+    end
+
     resource GnomeGarden.Commercial.ServiceLevelPolicy do
       define :list_service_level_policies, action: :read
       define :get_service_level_policy, action: :read, get_by: [:id]
