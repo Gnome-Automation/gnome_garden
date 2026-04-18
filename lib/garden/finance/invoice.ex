@@ -1,0 +1,213 @@
+defmodule GnomeGarden.Finance.Invoice do
+  @moduledoc """
+  Operational invoice header for billed work.
+
+  This is intentionally lightweight and designed to sync outward to a
+  dedicated accounting system if needed.
+  """
+
+  use Ash.Resource,
+    otp_app: :gnome_garden,
+    domain: GnomeGarden.Finance,
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshAdmin.Resource, AshStateMachine]
+
+  admin do
+    table_columns [
+      :id,
+      :invoice_number,
+      :organization_id,
+      :status,
+      :issued_on,
+      :due_on,
+      :total_amount,
+      :balance_amount
+    ]
+  end
+
+  postgres do
+    table "finance_invoices"
+    repo GnomeGarden.Repo
+
+    references do
+      reference :organization, on_delete: :delete
+      reference :agreement, on_delete: :nilify
+      reference :project, on_delete: :nilify
+      reference :work_order, on_delete: :nilify
+    end
+  end
+
+  state_machine do
+    state_attribute :status
+    initial_states [:draft]
+    default_initial_state :draft
+
+    transitions do
+      transition :issue, from: :draft, to: :issued
+      transition :mark_paid, from: :issued, to: :paid
+      transition :void, from: [:draft, :issued], to: :void
+      transition :reopen, from: [:void, :paid], to: :draft
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+
+      accept [
+        :organization_id,
+        :agreement_id,
+        :project_id,
+        :work_order_id,
+        :invoice_number,
+        :currency_code,
+        :subtotal,
+        :tax_total,
+        :total_amount,
+        :balance_amount,
+        :due_on,
+        :notes
+      ]
+    end
+
+    update :update do
+      accept [
+        :organization_id,
+        :agreement_id,
+        :project_id,
+        :work_order_id,
+        :invoice_number,
+        :currency_code,
+        :subtotal,
+        :tax_total,
+        :total_amount,
+        :balance_amount,
+        :due_on,
+        :notes
+      ]
+    end
+
+    update :issue do
+      require_atomic? false
+      accept []
+      change transition_state(:issued)
+      change set_attribute(:issued_on, &Date.utc_today/0)
+
+      change fn changeset, _context ->
+        total_amount = Ash.Changeset.get_attribute(changeset, :total_amount)
+        Ash.Changeset.change_attribute(changeset, :balance_amount, total_amount)
+      end
+    end
+
+    update :mark_paid do
+      accept []
+      change transition_state(:paid)
+      change set_attribute(:paid_on, &Date.utc_today/0)
+      change set_attribute(:balance_amount, Decimal.new("0"))
+    end
+
+    update :void do
+      accept []
+      change transition_state(:void)
+    end
+
+    update :reopen do
+      accept []
+      change transition_state(:draft)
+      change set_attribute(:issued_on, nil)
+      change set_attribute(:paid_on, nil)
+    end
+
+    read :open do
+      filter expr(status == :issued)
+      prepare build(sort: [due_on: :asc, inserted_at: :desc], load: [:organization, :agreement, :project, :work_order])
+    end
+
+    read :overdue do
+      filter expr(status == :issued and not is_nil(due_on) and due_on < ^Date.utc_today())
+      prepare build(sort: [due_on: :asc], load: [:organization, :agreement, :project, :work_order])
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :invoice_number, :string do
+      public? true
+    end
+
+    attribute :status, :atom do
+      allow_nil? false
+      default :draft
+      public? true
+
+      constraints one_of: [
+                    :draft,
+                    :issued,
+                    :paid,
+                    :void
+                  ]
+    end
+
+    attribute :currency_code, :string do
+      allow_nil? false
+      default "USD"
+      public? true
+    end
+
+    attribute :subtotal, :decimal do
+      public? true
+    end
+
+    attribute :tax_total, :decimal do
+      public? true
+    end
+
+    attribute :total_amount, :decimal do
+      public? true
+    end
+
+    attribute :balance_amount, :decimal do
+      public? true
+    end
+
+    attribute :issued_on, :date do
+      public? true
+    end
+
+    attribute :due_on, :date do
+      public? true
+    end
+
+    attribute :paid_on, :date do
+      public? true
+    end
+
+    attribute :notes, :string do
+      public? true
+    end
+
+    timestamps()
+  end
+
+  relationships do
+    belongs_to :organization, GnomeGarden.Operations.Organization do
+      allow_nil? false
+      public? true
+    end
+
+    belongs_to :agreement, GnomeGarden.Commercial.Agreement do
+      public? true
+    end
+
+    belongs_to :project, GnomeGarden.Execution.Project do
+      public? true
+    end
+
+    belongs_to :work_order, GnomeGarden.Execution.WorkOrder do
+      public? true
+    end
+  end
+end

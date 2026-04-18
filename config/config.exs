@@ -171,6 +171,7 @@ config :gnome_garden,
     GnomeGarden.Agents,
     GnomeGarden.Commercial,
     GnomeGarden.Execution,
+    GnomeGarden.Finance,
     GnomeGarden.Operations,
     GnomeGarden.Sales,
     GnomeGarden.Procurement
