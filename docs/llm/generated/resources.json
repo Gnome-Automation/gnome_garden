@@ -6752,6 +6752,24 @@
               "destination_domain": "GnomeGarden.Commercial"
             },
             {
+              "name": "service_level_policies",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "agreement_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": false,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
               "name": "service_tickets",
               "type": "has_many",
               "description": null,
@@ -8506,6 +8524,789 @@
           "attributes": [
             {
               "default": null,
+              "name": "agreement_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "agreement_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "business_hours_timezone",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "business_hours_timezone",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "business_hours",
+                "computed?": false
+              },
+              "name": "coverage_mode",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "source": "coverage_mode",
+              "constraints": [
+                {
+                  "value": [
+                    "business_hours",
+                    "twenty_four_seven",
+                    "best_effort"
+                  ],
+                  "key": "one_of"
+                },
+                {
+                  "value": false,
+                  "key": "unsafe_to_atom?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "description",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "description",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "&Ash.UUID.generate/0",
+                "computed?": true
+              },
+              "name": "id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": false,
+              "generated?": false,
+              "primary_key?": true,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "&DateTime.utc_now/0",
+                "computed?": true
+              },
+              "name": "inserted_at",
+              "type": "Ash.Type.UtcDatetimeUsec",
+              "description": null,
+              "source": "inserted_at",
+              "constraints": [
+                {
+                  "value": "microsecond",
+                  "key": "precision"
+                },
+                {
+                  "value": "start_of_day",
+                  "key": "cast_dates_as"
+                },
+                {
+                  "value": "utc",
+                  "key": "timezone"
+                }
+              ],
+              "public?": false,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": false,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "name",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "name",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "notes",
+              "type": "Ash.Type.String",
+              "description": null,
+              "source": "notes",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "organization_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "organization_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "resolution_target_minutes",
+              "type": "Ash.Type.Integer",
+              "description": null,
+              "source": "resolution_target_minutes",
+              "constraints": [
+                {
+                  "value": 1,
+                  "key": "min"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "response_target_minutes",
+              "type": "Ash.Type.Integer",
+              "description": null,
+              "source": "response_target_minutes",
+              "constraints": [
+                {
+                  "value": 1,
+                  "key": "min"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "normal",
+                "computed?": false
+              },
+              "name": "severity",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "source": "severity",
+              "constraints": [
+                {
+                  "value": [
+                    "low",
+                    "normal",
+                    "high",
+                    "critical"
+                  ],
+                  "key": "one_of"
+                },
+                {
+                  "value": false,
+                  "key": "unsafe_to_atom?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "draft",
+                "computed?": false
+              },
+              "name": "status",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "source": "status",
+              "constraints": [
+                {
+                  "value": [
+                    "draft",
+                    "active",
+                    "retired"
+                  ],
+                  "key": "one_of"
+                },
+                {
+                  "value": false,
+                  "key": "unsafe_to_atom?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": "&DateTime.utc_now/0",
+                "computed?": true
+              },
+              "name": "updated_at",
+              "type": "Ash.Type.UtcDatetimeUsec",
+              "description": null,
+              "source": "updated_at",
+              "constraints": [
+                {
+                  "value": "microsecond",
+                  "key": "precision"
+                },
+                {
+                  "value": "start_of_day",
+                  "key": "cast_dates_as"
+                },
+                {
+                  "value": "utc",
+                  "key": "timezone"
+                }
+              ],
+              "public?": false,
+              "allow_nil?": false,
+              "sensitive?": false,
+              "writable?": false,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": {
+                "value": "&DateTime.utc_now/0",
+                "computed?": true
+              }
+            }
+          ],
+          "module": "GnomeGarden.Commercial.ServiceLevelPolicy",
+          "name": "ServiceLevelPolicy",
+          "table": "commercial_service_level_policies",
+          "domain": "GnomeGarden.Commercial",
+          "description": "Service response and resolution commitments attached to an agreement.\n\nPolicies can be applied to tickets manually or by future automation based on\nseverity, service type, or customer coverage terms.\n\n\n\n",
+          "extensions": [
+            "Ash.Resource.Dsl",
+            "AshAdmin.Resource",
+            "AshPostgres.DataLayer",
+            "AshStateMachine"
+          ],
+          "source_path": "lib/garden/commercial/service_level_policy.ex",
+          "state_machine": {
+            "all_states": [
+              "draft",
+              "active",
+              "retired"
+            ],
+            "default_initial_state": "draft",
+            "initial_states": [
+              "draft"
+            ],
+            "state_attribute": "status",
+            "transitions": [
+              {
+                "action": "activate",
+                "to": [
+                  "active"
+                ],
+                "from": [
+                  "draft"
+                ]
+              },
+              {
+                "action": "retire",
+                "to": [
+                  "retired"
+                ],
+                "from": [
+                  "draft",
+                  "active"
+                ]
+              },
+              {
+                "action": "reopen",
+                "to": [
+                  "draft"
+                ],
+                "from": [
+                  "retired"
+                ]
+              }
+            ]
+          },
+          "actions": [
+            {
+              "name": "activate",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "active",
+              "type": "read",
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": null
+            },
+            {
+              "name": "create",
+              "type": "create",
+              "accept": [
+                "agreement_id",
+                "organization_id",
+                "name",
+                "description",
+                "severity",
+                "coverage_mode",
+                "response_target_minutes",
+                "resolution_target_minutes",
+                "business_hours_timezone",
+                "notes"
+              ],
+              "description": null,
+              "arguments": [],
+              "primary?": true,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "upsert?": false,
+              "upsert_identity": null
+            },
+            {
+              "name": "destroy",
+              "type": "destroy",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": true,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false,
+              "soft?": false
+            },
+            {
+              "name": "for_agreement",
+              "type": "read",
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "agreement_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": null
+            },
+            {
+              "name": "read",
+              "type": "read",
+              "description": null,
+              "arguments": [],
+              "primary?": true,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": {
+                "required?": false,
+                "keyset?": true,
+                "offset?": true,
+                "default_limit": null,
+                "max_page_size": 250,
+                "countable": true
+              }
+            },
+            {
+              "name": "reopen",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "retire",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "update",
+              "type": "update",
+              "accept": [
+                "agreement_id",
+                "organization_id",
+                "name",
+                "description",
+                "severity",
+                "coverage_mode",
+                "response_target_minutes",
+                "resolution_target_minutes",
+                "business_hours_timezone",
+                "notes"
+              ],
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            }
+          ],
+          "relationships": [
+            {
+              "name": "agreement",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Agreement",
+              "public?": true,
+              "allow_nil?": false,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "agreement_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": false,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
+              "name": "organization",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Operations.Organization",
+              "public?": true,
+              "allow_nil?": false,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "organization_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Operations"
+            },
+            {
+              "name": "tickets",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Execution.ServiceTicket",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "service_level_policy_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Execution"
+            }
+          ],
+          "calculations": [],
+          "aggregates": [],
+          "identities": [
+            {
+              "name": "unique_severity_per_agreement",
+              "keys": [
+                "agreement_id",
+                "severity"
+              ],
+              "description": null,
+              "where": null,
+              "nils_distinct?": true,
+              "all_tenants?": false
+            }
+          ],
+          "schema": null,
+          "primary_key": [
+            "id"
+          ],
+          "code_interfaces": [
+            {
+              "args": [],
+              "name": "list_service_level_policies",
+              "kind": "action",
+              "action": "read",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "get_service_level_policy",
+              "kind": "action",
+              "action": "read",
+              "get?": true,
+              "get_by": [
+                "id"
+              ],
+              "get_by_identity": null,
+              "require_reference?": false
+            },
+            {
+              "args": [],
+              "name": "create_service_level_policy",
+              "kind": "action",
+              "action": "create",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "update_service_level_policy",
+              "kind": "action",
+              "action": "update",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "activate_service_level_policy",
+              "kind": "action",
+              "action": "activate",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "retire_service_level_policy",
+              "kind": "action",
+              "action": "retire",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "reopen_service_level_policy",
+              "kind": "action",
+              "action": "reopen",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "list_active_service_level_policies",
+              "kind": "action",
+              "action": "active",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "list_policies_for_agreement",
+              "kind": "action",
+              "action": "for_agreement",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            }
+          ],
+          "cross_domain_relationships": [
+            {
+              "name": "organization",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Operations.Organization",
+              "public?": true,
+              "allow_nil?": false,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "organization_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Operations"
+            },
+            {
+              "name": "tickets",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Execution.ServiceTicket",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "service_level_policy_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Execution"
+            }
+          ]
+        },
+        {
+          "attributes": [
+            {
+              "default": null,
               "name": "description",
               "type": "Ash.Type.String",
               "description": null,
@@ -9534,7 +10335,7 @@
           ]
         }
       ],
-      "resource_count": 3
+      "resource_count": 4
     },
     {
       "module": "GnomeGarden.Execution",
@@ -12218,6 +13019,21 @@
               "update_default": null
             },
             {
+              "default": null,
+              "name": "service_level_policy_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "service_level_policy_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
               "default": {
                 "value": "normal",
                 "computed?": false
@@ -12592,6 +13408,7 @@
                 "managed_system_id",
                 "asset_id",
                 "agreement_id",
+                "service_level_policy_id",
                 "requester_user_id",
                 "owner_user_id",
                 "ticket_number",
@@ -12779,6 +13596,7 @@
                 "managed_system_id",
                 "asset_id",
                 "agreement_id",
+                "service_level_policy_id",
                 "requester_user_id",
                 "owner_user_id",
                 "ticket_number",
@@ -12913,6 +13731,24 @@
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
               "destination_domain": "GnomeGarden.Accounts"
+            },
+            {
+              "name": "service_level_policy",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "service_level_policy_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
             },
             {
               "name": "site",
@@ -13211,6 +14047,24 @@
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
               "destination_domain": "GnomeGarden.Accounts"
+            },
+            {
+              "name": "service_level_policy",
+              "type": "belongs_to",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "service_level_policy_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
             },
             {
               "name": "site",
@@ -22724,6 +23578,24 @@
               "destination_domain": "GnomeGarden.Operations"
             },
             {
+              "name": "service_level_policies",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "organization_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
               "name": "sites",
               "type": "has_many",
               "description": null,
@@ -22804,7 +23676,26 @@
               "require_reference?": true
             }
           ],
-          "cross_domain_relationships": []
+          "cross_domain_relationships": [
+            {
+              "name": "service_level_policies",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "organization_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
+            }
+          ]
         },
         {
           "attributes": [
@@ -36769,8 +37660,8 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-18T14:58:30Z",
-  "resource_count": 43,
+  "generated_at": "2026-04-18T15:03:43Z",
+  "resource_count": 44,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
       "attributes": [
@@ -46068,6 +46959,21 @@
           "update_default": null
         },
         {
+          "default": null,
+          "name": "service_level_policy_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "service_level_policy_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
           "default": {
             "value": "normal",
             "computed?": false
@@ -46442,6 +47348,7 @@
             "managed_system_id",
             "asset_id",
             "agreement_id",
+            "service_level_policy_id",
             "requester_user_id",
             "owner_user_id",
             "ticket_number",
@@ -46629,6 +47536,7 @@
             "managed_system_id",
             "asset_id",
             "agreement_id",
+            "service_level_policy_id",
             "requester_user_id",
             "owner_user_id",
             "ticket_number",
@@ -46763,6 +47671,24 @@
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
           "destination_domain": "GnomeGarden.Accounts"
+        },
+        {
+          "name": "service_level_policy",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "service_level_policy_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
         },
         {
           "name": "site",
@@ -47061,6 +47987,24 @@
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
           "destination_domain": "GnomeGarden.Accounts"
+        },
+        {
+          "name": "service_level_policy",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "service_level_policy_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
         },
         {
           "name": "site",
@@ -48711,6 +49655,789 @@
       ],
       "code_interfaces": [],
       "cross_domain_relationships": []
+    },
+    "GnomeGarden.Commercial.ServiceLevelPolicy": {
+      "attributes": [
+        {
+          "default": null,
+          "name": "agreement_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "agreement_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "business_hours_timezone",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "business_hours_timezone",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "business_hours",
+            "computed?": false
+          },
+          "name": "coverage_mode",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "source": "coverage_mode",
+          "constraints": [
+            {
+              "value": [
+                "business_hours",
+                "twenty_four_seven",
+                "best_effort"
+              ],
+              "key": "one_of"
+            },
+            {
+              "value": false,
+              "key": "unsafe_to_atom?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "description",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "description",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "&Ash.UUID.generate/0",
+            "computed?": true
+          },
+          "name": "id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": false,
+          "generated?": false,
+          "primary_key?": true,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "&DateTime.utc_now/0",
+            "computed?": true
+          },
+          "name": "inserted_at",
+          "type": "Ash.Type.UtcDatetimeUsec",
+          "description": null,
+          "source": "inserted_at",
+          "constraints": [
+            {
+              "value": "microsecond",
+              "key": "precision"
+            },
+            {
+              "value": "start_of_day",
+              "key": "cast_dates_as"
+            },
+            {
+              "value": "utc",
+              "key": "timezone"
+            }
+          ],
+          "public?": false,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": false,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "name",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "name",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "type": "Ash.Type.String",
+          "description": null,
+          "source": "notes",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "organization_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "organization_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "resolution_target_minutes",
+          "type": "Ash.Type.Integer",
+          "description": null,
+          "source": "resolution_target_minutes",
+          "constraints": [
+            {
+              "value": 1,
+              "key": "min"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "response_target_minutes",
+          "type": "Ash.Type.Integer",
+          "description": null,
+          "source": "response_target_minutes",
+          "constraints": [
+            {
+              "value": 1,
+              "key": "min"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "normal",
+            "computed?": false
+          },
+          "name": "severity",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "source": "severity",
+          "constraints": [
+            {
+              "value": [
+                "low",
+                "normal",
+                "high",
+                "critical"
+              ],
+              "key": "one_of"
+            },
+            {
+              "value": false,
+              "key": "unsafe_to_atom?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "draft",
+            "computed?": false
+          },
+          "name": "status",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "source": "status",
+          "constraints": [
+            {
+              "value": [
+                "draft",
+                "active",
+                "retired"
+              ],
+              "key": "one_of"
+            },
+            {
+              "value": false,
+              "key": "unsafe_to_atom?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": "&DateTime.utc_now/0",
+            "computed?": true
+          },
+          "name": "updated_at",
+          "type": "Ash.Type.UtcDatetimeUsec",
+          "description": null,
+          "source": "updated_at",
+          "constraints": [
+            {
+              "value": "microsecond",
+              "key": "precision"
+            },
+            {
+              "value": "start_of_day",
+              "key": "cast_dates_as"
+            },
+            {
+              "value": "utc",
+              "key": "timezone"
+            }
+          ],
+          "public?": false,
+          "allow_nil?": false,
+          "sensitive?": false,
+          "writable?": false,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": {
+            "value": "&DateTime.utc_now/0",
+            "computed?": true
+          }
+        }
+      ],
+      "module": "GnomeGarden.Commercial.ServiceLevelPolicy",
+      "name": "ServiceLevelPolicy",
+      "table": "commercial_service_level_policies",
+      "domain": "GnomeGarden.Commercial",
+      "description": "Service response and resolution commitments attached to an agreement.\n\nPolicies can be applied to tickets manually or by future automation based on\nseverity, service type, or customer coverage terms.\n\n\n\n",
+      "extensions": [
+        "Ash.Resource.Dsl",
+        "AshAdmin.Resource",
+        "AshPostgres.DataLayer",
+        "AshStateMachine"
+      ],
+      "source_path": "lib/garden/commercial/service_level_policy.ex",
+      "state_machine": {
+        "all_states": [
+          "draft",
+          "active",
+          "retired"
+        ],
+        "default_initial_state": "draft",
+        "initial_states": [
+          "draft"
+        ],
+        "state_attribute": "status",
+        "transitions": [
+          {
+            "action": "activate",
+            "to": [
+              "active"
+            ],
+            "from": [
+              "draft"
+            ]
+          },
+          {
+            "action": "retire",
+            "to": [
+              "retired"
+            ],
+            "from": [
+              "draft",
+              "active"
+            ]
+          },
+          {
+            "action": "reopen",
+            "to": [
+              "draft"
+            ],
+            "from": [
+              "retired"
+            ]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "name": "activate",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "active",
+          "type": "read",
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": null
+        },
+        {
+          "name": "create",
+          "type": "create",
+          "accept": [
+            "agreement_id",
+            "organization_id",
+            "name",
+            "description",
+            "severity",
+            "coverage_mode",
+            "response_target_minutes",
+            "resolution_target_minutes",
+            "business_hours_timezone",
+            "notes"
+          ],
+          "description": null,
+          "arguments": [],
+          "primary?": true,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "upsert?": false,
+          "upsert_identity": null
+        },
+        {
+          "name": "destroy",
+          "type": "destroy",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": true,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false,
+          "soft?": false
+        },
+        {
+          "name": "for_agreement",
+          "type": "read",
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "agreement_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": null
+        },
+        {
+          "name": "read",
+          "type": "read",
+          "description": null,
+          "arguments": [],
+          "primary?": true,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": {
+            "required?": false,
+            "keyset?": true,
+            "offset?": true,
+            "default_limit": null,
+            "max_page_size": 250,
+            "countable": true
+          }
+        },
+        {
+          "name": "reopen",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "retire",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "update",
+          "type": "update",
+          "accept": [
+            "agreement_id",
+            "organization_id",
+            "name",
+            "description",
+            "severity",
+            "coverage_mode",
+            "response_target_minutes",
+            "resolution_target_minutes",
+            "business_hours_timezone",
+            "notes"
+          ],
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        }
+      ],
+      "relationships": [
+        {
+          "name": "agreement",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Agreement",
+          "public?": true,
+          "allow_nil?": false,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "agreement_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": false,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
+          "name": "organization",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Operations.Organization",
+          "public?": true,
+          "allow_nil?": false,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "organization_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Operations"
+        },
+        {
+          "name": "tickets",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Execution.ServiceTicket",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "service_level_policy_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Execution"
+        }
+      ],
+      "calculations": [],
+      "aggregates": [],
+      "identities": [
+        {
+          "name": "unique_severity_per_agreement",
+          "keys": [
+            "agreement_id",
+            "severity"
+          ],
+          "description": null,
+          "where": null,
+          "nils_distinct?": true,
+          "all_tenants?": false
+        }
+      ],
+      "schema": null,
+      "primary_key": [
+        "id"
+      ],
+      "code_interfaces": [
+        {
+          "args": [],
+          "name": "list_service_level_policies",
+          "kind": "action",
+          "action": "read",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "get_service_level_policy",
+          "kind": "action",
+          "action": "read",
+          "get?": true,
+          "get_by": [
+            "id"
+          ],
+          "get_by_identity": null,
+          "require_reference?": false
+        },
+        {
+          "args": [],
+          "name": "create_service_level_policy",
+          "kind": "action",
+          "action": "create",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "update_service_level_policy",
+          "kind": "action",
+          "action": "update",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "activate_service_level_policy",
+          "kind": "action",
+          "action": "activate",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "retire_service_level_policy",
+          "kind": "action",
+          "action": "retire",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "reopen_service_level_policy",
+          "kind": "action",
+          "action": "reopen",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "list_active_service_level_policies",
+          "kind": "action",
+          "action": "active",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "list_policies_for_agreement",
+          "kind": "action",
+          "action": "for_agreement",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        }
+      ],
+      "cross_domain_relationships": [
+        {
+          "name": "organization",
+          "type": "belongs_to",
+          "description": null,
+          "destination": "GnomeGarden.Operations.Organization",
+          "public?": true,
+          "allow_nil?": false,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "organization_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Operations"
+        },
+        {
+          "name": "tickets",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Execution.ServiceTicket",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "service_level_policy_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Execution"
+        }
+      ]
     },
     "GnomeGarden.Execution.Project": {
       "attributes": [
@@ -64343,6 +66070,24 @@
           "destination_domain": "GnomeGarden.Commercial"
         },
         {
+          "name": "service_level_policies",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "agreement_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": false,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
           "name": "service_tickets",
           "type": "has_many",
           "description": null,
@@ -67663,6 +69408,24 @@
           "destination_domain": "GnomeGarden.Operations"
         },
         {
+          "name": "service_level_policies",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "organization_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
           "name": "sites",
           "type": "has_many",
           "description": null,
@@ -67743,7 +69506,26 @@
           "require_reference?": true
         }
       ],
-      "cross_domain_relationships": []
+      "cross_domain_relationships": [
+        {
+          "name": "service_level_policies",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "organization_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
+        }
+      ]
     },
     "GnomeGarden.Sales.Industry": {
       "attributes": [
@@ -73487,6 +75269,7 @@
     "employments": "GnomeGarden.Sales.Employment",
     "finance_payments": "GnomeGarden.Finance.Payment",
     "agents": "GnomeGarden.Agents.Agent",
+    "commercial_service_level_policies": "GnomeGarden.Commercial.ServiceLevelPolicy",
     "finance_expenses": "GnomeGarden.Finance.Expense",
     "contacts": "GnomeGarden.Sales.Contact",
     "finance_time_entries": "GnomeGarden.Finance.TimeEntry",

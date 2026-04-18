@@ -137,7 +137,15 @@ defmodule GnomeGarden.Commercial.Agreement do
       filter expr(status == :active)
       prepare build(
                 sort: [end_on: :asc, inserted_at: :desc],
-                load: [:organization, :site, :pursuit, :service_tickets, :invoices, :payments]
+                load: [
+                  :organization,
+                  :site,
+                  :pursuit,
+                  :service_tickets,
+                  :service_level_policies,
+                  :invoices,
+                  :payments
+                ]
               )
     end
 
@@ -152,7 +160,15 @@ defmodule GnomeGarden.Commercial.Agreement do
 
       prepare build(
                 sort: [end_on: :asc],
-                load: [:organization, :site, :pursuit, :service_tickets, :invoices, :payments]
+                load: [
+                  :organization,
+                  :site,
+                  :pursuit,
+                  :service_tickets,
+                  :service_level_policies,
+                  :invoices,
+                  :payments
+                ]
               )
     end
   end
@@ -281,6 +297,10 @@ defmodule GnomeGarden.Commercial.Agreement do
     end
 
     has_many :service_tickets, GnomeGarden.Execution.ServiceTicket do
+      public? true
+    end
+
+    has_many :service_level_policies, GnomeGarden.Commercial.ServiceLevelPolicy do
       public? true
     end
 

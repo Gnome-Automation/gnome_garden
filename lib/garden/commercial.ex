@@ -60,5 +60,17 @@ defmodule GnomeGarden.Commercial do
       define :list_active_agreements, action: :active
       define :list_expiring_agreements, action: :expiring_soon
     end
+
+    resource GnomeGarden.Commercial.ServiceLevelPolicy do
+      define :list_service_level_policies, action: :read
+      define :get_service_level_policy, action: :read, get_by: [:id]
+      define :create_service_level_policy, action: :create
+      define :update_service_level_policy, action: :update
+      define :activate_service_level_policy, action: :activate
+      define :retire_service_level_policy, action: :retire
+      define :reopen_service_level_policy, action: :reopen
+      define :list_active_service_level_policies, action: :active
+      define :list_policies_for_agreement, action: :for_agreement
+    end
   end
 end

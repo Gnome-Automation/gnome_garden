@@ -18,6 +18,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
       :ticket_number,
       :title,
       :organization_id,
+      :service_level_policy_id,
       :ticket_type,
       :status,
       :severity,
@@ -35,6 +36,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
       reference :managed_system, on_delete: :nilify
       reference :asset, on_delete: :nilify
       reference :agreement, on_delete: :nilify
+      reference :service_level_policy, on_delete: :nilify
       reference :requester_user, on_delete: :nilify
       reference :owner_user, on_delete: :nilify
     end
@@ -68,6 +70,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
         :managed_system_id,
         :asset_id,
         :agreement_id,
+        :service_level_policy_id,
         :requester_user_id,
         :owner_user_id,
         :ticket_number,
@@ -91,6 +94,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
         :managed_system_id,
         :asset_id,
         :agreement_id,
+        :service_level_policy_id,
         :requester_user_id,
         :owner_user_id,
         :ticket_number,
@@ -151,7 +155,15 @@ defmodule GnomeGarden.Execution.ServiceTicket do
 
       prepare build(
                 sort: [severity: :desc, reported_at: :desc, inserted_at: :desc],
-                load: [:organization, :site, :managed_system, :asset, :work_orders]
+                load: [
+                  :organization,
+                  :site,
+                  :managed_system,
+                  :asset,
+                  :agreement,
+                  :service_level_policy,
+                  :work_orders
+                ]
               )
     end
 
@@ -161,7 +173,15 @@ defmodule GnomeGarden.Execution.ServiceTicket do
 
       prepare build(
                 sort: [reported_at: :desc, inserted_at: :desc],
-                load: [:organization, :site, :managed_system, :asset, :work_orders]
+                load: [
+                  :organization,
+                  :site,
+                  :managed_system,
+                  :asset,
+                  :agreement,
+                  :service_level_policy,
+                  :work_orders
+                ]
               )
     end
   end
@@ -283,6 +303,10 @@ defmodule GnomeGarden.Execution.ServiceTicket do
     end
 
     belongs_to :agreement, GnomeGarden.Commercial.Agreement do
+      public? true
+    end
+
+    belongs_to :service_level_policy, GnomeGarden.Commercial.ServiceLevelPolicy do
       public? true
     end
 
