@@ -183,7 +183,11 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
     read :for_asset do
       argument :asset_id, :uuid, allow_nil?: false
       filter expr(asset_id == ^arg(:asset_id))
-      prepare build(sort: [next_due_on: :asc, inserted_at: :asc], load: [:asset, :managed_system, :work_orders])
+
+      prepare build(
+                sort: [next_due_on: :asc, inserted_at: :asc],
+                load: [:asset, :managed_system, :work_orders]
+              )
     end
   end
 

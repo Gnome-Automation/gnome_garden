@@ -30,7 +30,8 @@ defmodule GnomeGarden.Repo.Migrations.AddServiceEntitlements do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :service_entitlement_id, :uuid, null: false
       add :time_entry_id, :uuid
@@ -109,7 +110,8 @@ defmodule GnomeGarden.Repo.Migrations.AddServiceEntitlements do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :service_level_policy_id,
           references(:commercial_service_level_policies,

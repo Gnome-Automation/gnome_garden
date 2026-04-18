@@ -91,6 +91,7 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
         Logger.info(
           "[SaveBid] Created bid: #{bid.title} (score: #{bid.score_total}, tier: #{bid.score_tier})"
         )
+
         log_output(context, :created, bid)
 
         {:ok,

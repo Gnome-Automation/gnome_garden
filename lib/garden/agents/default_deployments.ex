@@ -31,7 +31,8 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
     %{
       name: "SoCal Bid Scanner",
       template: "bid_scanner",
-      description: "Scan approved procurement sources for controls, SCADA, and automation opportunities.",
+      description:
+        "Scan approved procurement sources for controls, SCADA, and automation opportunities.",
       visibility: :shared,
       enabled: true,
       schedule: "0 */6 * * *",

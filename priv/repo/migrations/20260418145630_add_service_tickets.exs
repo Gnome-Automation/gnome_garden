@@ -58,7 +58,8 @@ defmodule GnomeGarden.Repo.Migrations.AddServiceTickets do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :site_id,
           references(:sites,

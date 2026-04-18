@@ -99,7 +99,8 @@ defmodule GnomeGarden.Repo.Migrations.CrmSchemaUpdate do
             name: "opportunities_company_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
 
       add :primary_contact_id,
           references(:contacts,

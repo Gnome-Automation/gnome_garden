@@ -107,7 +107,17 @@ defmodule GnomeGarden.Sales.Employment do
 
     attribute :role, :atom do
       public? true
-      constraints one_of: [:decision_maker, :influencer, :champion, :technical, :user, :executive, :other]
+
+      constraints one_of: [
+                    :decision_maker,
+                    :influencer,
+                    :champion,
+                    :technical,
+                    :user,
+                    :executive,
+                    :other
+                  ]
+
       description "Decision-making role"
     end
 

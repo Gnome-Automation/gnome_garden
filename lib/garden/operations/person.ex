@@ -87,10 +87,8 @@ defmodule GnomeGarden.Operations.Person do
       argument :organization_id, :uuid, allow_nil?: false
 
       filter expr(
-               exists(
-                 organization_affiliations,
-                 organization_id == ^arg(:organization_id) and status == :active
-               )
+               exists organization_affiliations,
+                      organization_id == ^arg(:organization_id) and status == :active
              )
 
       prepare build(

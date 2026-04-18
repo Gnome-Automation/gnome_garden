@@ -90,7 +90,11 @@ defmodule GnomeGarden.Finance.Payment do
 
     read :open do
       filter expr(status in [:received, :deposited])
-      prepare build(sort: [received_on: :desc, inserted_at: :desc], load: [:organization, :applications])
+
+      prepare build(
+                sort: [received_on: :desc, inserted_at: :desc],
+                load: [:organization, :applications]
+              )
     end
   end
 

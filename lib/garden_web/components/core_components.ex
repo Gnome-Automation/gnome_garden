@@ -404,7 +404,10 @@ defmodule GnomeGardenWeb.CoreComponents do
             {render_slot(@inner_block)}
           </div>
 
-          <div :if={@actions != []} class="flex items-center justify-end gap-3 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+          <div
+            :if={@actions != []}
+            class="flex items-center justify-end gap-3 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800"
+          >
             {render_slot(@actions)}
           </div>
         </div>

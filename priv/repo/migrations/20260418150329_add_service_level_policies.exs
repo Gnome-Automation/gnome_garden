@@ -35,7 +35,8 @@ defmodule GnomeGarden.Repo.Migrations.AddServiceLevelPolicies do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :organization_id,
           references(:organizations,
@@ -44,7 +45,8 @@ defmodule GnomeGarden.Repo.Migrations.AddServiceLevelPolicies do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create unique_index(:commercial_service_level_policies, [:agreement_id, :severity],

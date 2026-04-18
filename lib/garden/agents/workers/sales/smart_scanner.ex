@@ -232,7 +232,9 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   """
   def scan_all_enabled(pid, opts \\ []) do
     sources =
-      Ash.read!(GnomeGarden.Procurement.ProcurementSource, filter: [enabled: true, requires_login: false])
+      Ash.read!(GnomeGarden.Procurement.ProcurementSource,
+        filter: [enabled: true, requires_login: false]
+      )
 
     query = """
     Scan these #{length(sources)} procurement sources for bids:

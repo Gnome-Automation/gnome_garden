@@ -14,7 +14,11 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
     The saved config will be used for future deterministic (fast, cheap) scans.
     """,
     schema: [
-      lead_source_id: [type: :string, required: true, doc: "ID of the ProcurementSource to update"],
+      lead_source_id: [
+        type: :string,
+        required: true,
+        doc: "ID of the ProcurementSource to update"
+      ],
       listing_url: [
         type: :string,
         required: true,

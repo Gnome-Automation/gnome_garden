@@ -204,7 +204,9 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
   end
 
   defp load_lead_sources do
-    case Ash.read(GnomeGarden.Procurement.ProcurementSource, filter: [enabled: true, status: :approved]) do
+    case Ash.read(GnomeGarden.Procurement.ProcurementSource,
+           filter: [enabled: true, status: :approved]
+         ) do
       {:ok, sources} ->
         Enum.map(sources, fn s ->
           %{

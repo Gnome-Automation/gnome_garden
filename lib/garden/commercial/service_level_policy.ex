@@ -101,6 +101,7 @@ defmodule GnomeGarden.Commercial.ServiceLevelPolicy do
 
     read :active do
       filter expr(status == :active)
+
       prepare build(
                 sort: [severity: :desc, inserted_at: :asc],
                 load: [:organization, :agreement, :tickets]

@@ -26,7 +26,8 @@ defmodule GnomeGarden.Repo.Migrations.AddResearchLinks do
             name: "research_links_research_request_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
 
       add :bid_id,
           references(:bids,

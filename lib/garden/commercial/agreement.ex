@@ -52,7 +52,11 @@ defmodule GnomeGarden.Commercial.Agreement do
       transition :activate, from: [:draft, :pending_signature], to: :active
       transition :suspend, from: :active, to: :suspended
       transition :complete, from: [:active, :suspended], to: :completed
-      transition :terminate, from: [:draft, :pending_signature, :active, :suspended], to: :terminated
+
+      transition :terminate,
+        from: [:draft, :pending_signature, :active, :suspended],
+        to: :terminated
+
       transition :reopen, from: [:suspended, :terminated], to: :active
     end
   end
@@ -159,6 +163,7 @@ defmodule GnomeGarden.Commercial.Agreement do
 
     read :active do
       filter expr(status == :active)
+
       prepare build(
                 sort: [end_on: :asc, inserted_at: :desc],
                 load: [

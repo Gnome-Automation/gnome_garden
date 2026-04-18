@@ -202,7 +202,8 @@ defmodule Mix.Tasks.Llm.GenerateResourceMap do
       writable?: Map.get(relationship, :writable?),
       allow_nil?: Map.get(relationship, :allow_nil?),
       description: relationship.description,
-      source_attribute: relationship.source_attribute && format_atom(relationship.source_attribute),
+      source_attribute:
+        relationship.source_attribute && format_atom(relationship.source_attribute),
       destination: inspect(relationship.destination),
       destination_domain:
         relationship.destination

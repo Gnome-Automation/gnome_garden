@@ -37,7 +37,8 @@ defmodule GnomeGarden.Repo.Migrations.AddExecutionAssignments do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :project_id,
           references(:execution_projects,
@@ -73,7 +74,8 @@ defmodule GnomeGarden.Repo.Migrations.AddExecutionAssignments do
             type: :uuid,
             prefix: "public",
             on_delete: :nilify_all
-          ), null: false
+          ),
+          null: false
 
       add :assigned_by_user_id,
           references(:users,

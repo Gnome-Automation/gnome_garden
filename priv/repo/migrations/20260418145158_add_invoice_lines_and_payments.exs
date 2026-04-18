@@ -33,7 +33,8 @@ defmodule GnomeGarden.Repo.Migrations.AddInvoiceLinesAndPayments do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :organization_id,
           references(:organizations,
@@ -42,7 +43,8 @@ defmodule GnomeGarden.Repo.Migrations.AddInvoiceLinesAndPayments do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :agreement_id,
           references(:commercial_agreements,
@@ -167,7 +169,8 @@ defmodule GnomeGarden.Repo.Migrations.AddInvoiceLinesAndPayments do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :agreement_id,
           references(:commercial_agreements,

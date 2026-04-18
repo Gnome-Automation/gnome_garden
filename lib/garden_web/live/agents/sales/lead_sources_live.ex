@@ -95,7 +95,8 @@ defmodule GnomeGardenWeb.Agents.Sales.LeadSourcesLive do
 
   def handle_event("reconsider_source", %{"id" => id}, socket) do
     with {:ok, source} <- fetch_source(id, socket),
-         {:ok, _source} <- Procurement.reconsider_procurement_source(source, %{}, actor_opts(socket)) do
+         {:ok, _source} <-
+           Procurement.reconsider_procurement_source(source, %{}, actor_opts(socket)) do
       {:noreply,
        socket
        |> load_sources()

@@ -45,6 +45,7 @@ defmodule GnomeGarden.Agents.Tools.SaveProcurementSource do
         Logger.info(
           "[SaveProcurementSource] Created new procurement source: #{source.name} (#{source.url})"
         )
+
         log_output(context, :created, source)
 
         {:ok,
@@ -67,12 +68,12 @@ defmodule GnomeGarden.Agents.Tools.SaveProcurementSource do
 
           {:ok,
            %{
-              name: params.name,
-              url: params.url,
-              id: existing && existing.id,
-              already_exists: true,
-              message: "Lead source already exists: #{params.url}"
-            }}
+             name: params.name,
+             url: params.url,
+             id: existing && existing.id,
+             already_exists: true,
+             message: "Lead source already exists: #{params.url}"
+           }}
         else
           {:error, "Failed to save procurement source: #{inspect(error)}"}
         end

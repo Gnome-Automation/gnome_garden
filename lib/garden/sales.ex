@@ -79,5 +79,4 @@ defmodule GnomeGarden.Sales do
     resource GnomeGarden.Sales.ResearchLink
     resource GnomeGarden.Sales.Employment
   end
-
 end

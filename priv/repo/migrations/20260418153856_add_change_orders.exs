@@ -77,7 +77,8 @@ defmodule GnomeGarden.Repo.Migrations.AddChangeOrders do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :project_id,
           references(:execution_projects,
@@ -95,7 +96,8 @@ defmodule GnomeGarden.Repo.Migrations.AddChangeOrders do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :site_id,
           references(:sites,

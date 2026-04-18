@@ -89,7 +89,8 @@ defmodule GnomeGarden.Repo.Migrations.AddAgentDeploymentsConsole do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :owner_user_id,
           references(:users,

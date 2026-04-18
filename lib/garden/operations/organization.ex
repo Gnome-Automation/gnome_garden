@@ -64,6 +64,7 @@ defmodule GnomeGarden.Operations.Organization do
 
     read :active do
       filter expr(status == :active)
+
       prepare build(
                 sort: [name: :asc],
                 load: [

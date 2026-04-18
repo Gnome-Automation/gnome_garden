@@ -15,7 +15,9 @@ defmodule GnomeGardenWeb.CinderTheme do
   set :table_class, "w-full text-left whitespace-nowrap"
 
   # Header styling - border-b separator, semibold text
-  set :thead_class, "border-b border-zinc-200 text-sm/6 text-zinc-900 dark:border-white/15 dark:text-white"
+  set :thead_class,
+      "border-b border-zinc-200 text-sm/6 text-zinc-900 dark:border-white/15 dark:text-white"
+
   set :th_class, "py-2 pr-8 pl-4 font-semibold sm:pl-6 lg:pl-8"
   set :header_row_class, ""
 
@@ -28,13 +30,19 @@ defmodule GnomeGardenWeb.CinderTheme do
   set :selected_row_class, "bg-emerald-50/50 dark:bg-emerald-500/5"
 
   # Pagination - clean style
-  set :pagination_container_class, "flex items-center justify-between px-4 py-4 border-t border-zinc-200 sm:px-6 lg:px-8 dark:border-white/15"
-  set :pagination_button_class, "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white"
+  set :pagination_container_class,
+      "flex items-center justify-between px-4 py-4 border-t border-zinc-200 sm:px-6 lg:px-8 dark:border-white/15"
+
+  set :pagination_button_class,
+      "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white"
+
   set :pagination_info_class, "text-sm text-zinc-500 dark:text-zinc-400"
 
   # Page size dropdown
   set :page_size_container_class, "flex items-center gap-2 text-sm text-zinc-500"
-  set :page_size_dropdown_class, "rounded-md border-0 bg-transparent py-1 pl-2 pr-8 text-sm text-zinc-600 ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-emerald-500 dark:text-zinc-400 dark:ring-white/15"
+
+  set :page_size_dropdown_class,
+      "rounded-md border-0 bg-transparent py-1 pl-2 pr-8 text-sm text-zinc-600 ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-emerald-500 dark:text-zinc-400 dark:ring-white/15"
 
   # Controls/filters section - minimal, just search
   set :controls_class, "px-4 pb-4 sm:px-6 lg:px-8"
@@ -47,7 +55,9 @@ defmodule GnomeGardenWeb.CinderTheme do
 
   # Search - clean rounded input
   set :search_container_class, ""
-  set :search_input_class, "w-full max-w-md rounded-md border-0 bg-zinc-100 px-4 py-2 text-sm text-zinc-900 ring-1 ring-inset ring-zinc-300 placeholder:text-zinc-400 focus:bg-white focus:ring-2 focus:ring-emerald-500 dark:bg-white/5 dark:text-white dark:ring-white/15 dark:placeholder:text-zinc-500 dark:focus:bg-white/10"
+
+  set :search_input_class,
+      "w-full max-w-md rounded-md border-0 bg-zinc-100 px-4 py-2 text-sm text-zinc-900 ring-1 ring-inset ring-zinc-300 placeholder:text-zinc-400 focus:bg-white focus:ring-2 focus:ring-emerald-500 dark:bg-white/5 dark:text-white dark:ring-white/15 dark:placeholder:text-zinc-500 dark:focus:bg-white/10"
 
   # Sort controls
   set :sort_indicator_class, "inline-block ml-1"
@@ -57,7 +67,10 @@ defmodule GnomeGardenWeb.CinderTheme do
 
   # Loading - small inline spinner in top right
   set :loading_overlay_class, "absolute top-4 right-4"
-  set :loading_container_class, "flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400"
+
+  set :loading_container_class,
+      "flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400"
+
   set :loading_spinner_class, "size-4 animate-spin"
   set :loading_spinner_circle_class, "opacity-25"
   set :loading_spinner_path_class, "opacity-75"

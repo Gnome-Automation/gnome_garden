@@ -64,18 +64,18 @@ defmodule GnomeGarden.Sales.Contact do
     read :by_company do
       description "Find contacts currently employed at a company"
       argument :company_id, :uuid, allow_nil?: false
-      filter expr(exists(employments, company_id == ^arg(:company_id) and is_current == true))
+      filter expr(exists employments, company_id == ^arg(:company_id) and is_current == true)
     end
 
     read :former_at_company do
       description "Find contacts who previously worked at a company"
       argument :company_id, :uuid, allow_nil?: false
-      filter expr(exists(employments, company_id == ^arg(:company_id) and is_current == false))
+      filter expr(exists employments, company_id == ^arg(:company_id) and is_current == false)
     end
 
     read :decision_makers do
       description "Find contacts with decision-maker role at current job"
-      filter expr(exists(employments, role == :decision_maker and is_current == true))
+      filter expr(exists employments, role == :decision_maker and is_current == true)
     end
 
     read :unemployed do
@@ -177,6 +177,10 @@ defmodule GnomeGarden.Sales.Contact do
     end
   end
 
+  calculations do
+    calculate :full_name, :string, expr(first_name <> " " <> last_name)
+  end
+
   aggregates do
     first :current_company_id, :current_employment, :company_id do
       public? true
@@ -192,9 +196,5 @@ defmodule GnomeGarden.Sales.Contact do
       public? true
       description "Current decision-making role"
     end
-  end
-
-  calculations do
-    calculate :full_name, :string, expr(first_name <> " " <> last_name)
   end
 end

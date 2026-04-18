@@ -34,7 +34,8 @@ defmodule GnomeGarden.Repo.Migrations.RemoveCompanyFromContact do
             name: "contacts_company_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
     end
 
     alter table(:employments) do

@@ -37,7 +37,8 @@ defmodule GnomeGarden.Repo.Migrations.AddOperationalFinance do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :agreement_id,
           references(:commercial_agreements,
@@ -95,7 +96,8 @@ defmodule GnomeGarden.Repo.Migrations.AddOperationalFinance do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :agreement_id,
           references(:commercial_agreements,
@@ -140,7 +142,8 @@ defmodule GnomeGarden.Repo.Migrations.AddOperationalFinance do
             type: :uuid,
             prefix: "public",
             on_delete: :nilify_all
-          ), null: false
+          ),
+          null: false
 
       add :approved_by_user_id,
           references(:users,
@@ -181,7 +184,8 @@ defmodule GnomeGarden.Repo.Migrations.AddOperationalFinance do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :agreement_id,
           references(:commercial_agreements,
@@ -217,7 +221,8 @@ defmodule GnomeGarden.Repo.Migrations.AddOperationalFinance do
             type: :uuid,
             prefix: "public",
             on_delete: :nilify_all
-          ), null: false
+          ),
+          null: false
 
       add :approved_by_user_id,
           references(:users,

@@ -121,7 +121,12 @@ defmodule GnomeGarden.CRM.Review do
     cond do
       bid_id ->
         bid = Ash.get!(Bid, bid_id, actor: actor)
-        Ash.update!(bid, %{opportunity_id: opportunity.id}, action: :convert_to_opportunity, actor: actor)
+
+        Ash.update!(bid, %{opportunity_id: opportunity.id},
+          action: :convert_to_opportunity,
+          actor: actor
+        )
+
         :ok
 
       lead_id ->
@@ -131,7 +136,12 @@ defmodule GnomeGarden.CRM.Review do
 
       prospect_id ->
         prospect = Ash.get!(Prospect, prospect_id, actor: actor)
-        Ash.update!(prospect, %{company_id: company.id}, action: :convert_to_company, actor: actor)
+
+        Ash.update!(prospect, %{company_id: company.id},
+          action: :convert_to_company,
+          actor: actor
+        )
+
         :ok
 
       true ->

@@ -32,7 +32,8 @@ defmodule GnomeGarden.Repo.Migrations.AddEmploymentHistory do
             name: "employments_contact_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
 
       add :company_id,
           references(:companies,
@@ -40,7 +41,8 @@ defmodule GnomeGarden.Repo.Migrations.AddEmploymentHistory do
             name: "employments_company_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
     end
 
     create unique_index(:employments, [:contact_id, :company_id, :is_current],

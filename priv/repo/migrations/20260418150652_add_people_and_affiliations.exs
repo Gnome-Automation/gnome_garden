@@ -87,7 +87,8 @@ defmodule GnomeGarden.Repo.Migrations.AddPeopleAndAffiliations do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :person_id,
           references(:people,
@@ -96,7 +97,8 @@ defmodule GnomeGarden.Repo.Migrations.AddPeopleAndAffiliations do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create unique_index(:organization_affiliations, [:organization_id, :person_id, :status],

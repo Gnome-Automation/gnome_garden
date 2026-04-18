@@ -52,7 +52,8 @@ defmodule GnomeGarden.Agents.AgentTracker do
   end
 
   @doc "Mark an agent as completed with optional result."
-  def mark_complete(id, status \\ :done, result \\ nil) when status in [:done, :error, :cancelled] do
+  def mark_complete(id, status \\ :done, result \\ nil)
+      when status in [:done, :error, :cancelled] do
     GenServer.cast(__MODULE__, {:mark_complete, id, status, result})
   end
 

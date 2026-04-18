@@ -47,7 +47,9 @@ defmodule GnomeGarden.Agents.Tools.MemoryRemember do
              content: content,
              type: type,
              namespace: namespace
-           }, action: :remember) do
+           },
+           action: :remember
+         ) do
       {:ok, memory} ->
         {:ok,
          %{
