@@ -169,6 +169,7 @@ config :gnome_garden,
   ash_domains: [
     GnomeGarden.Accounts,
     GnomeGarden.Agents,
+    GnomeGarden.Commercial,
     GnomeGarden.Operations,
     GnomeGarden.Sales,
     GnomeGarden.Procurement

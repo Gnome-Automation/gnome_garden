@@ -1,0 +1,64 @@
+defmodule GnomeGarden.Commercial do
+  @moduledoc """
+  Commercial operating model domain.
+
+  Owns the business-development and agreement layer between market signals and
+  downstream delivery or service execution.
+  """
+
+  use Ash.Domain,
+    otp_app: :gnome_garden,
+    extensions: [AshAdmin.Domain]
+
+  admin do
+    show? true
+  end
+
+  resources do
+    resource GnomeGarden.Commercial.Signal do
+      define :list_signals, action: :read
+      define :get_signal, action: :read, get_by: [:id]
+      define :create_signal, action: :create
+      define :update_signal, action: :update
+      define :review_signal, action: :start_review
+      define :accept_signal, action: :accept
+      define :reject_signal, action: :reject
+      define :convert_signal, action: :convert
+      define :archive_signal, action: :archive
+      define :reopen_signal, action: :reopen
+      define :list_open_signals, action: :open
+    end
+
+    resource GnomeGarden.Commercial.Pursuit do
+      define :list_pursuits, action: :read
+      define :get_pursuit, action: :read, get_by: [:id]
+      define :create_pursuit, action: :create
+      define :update_pursuit, action: :update
+      define :qualify_pursuit, action: :qualify
+      define :estimate_pursuit, action: :estimate
+      define :propose_pursuit, action: :propose
+      define :negotiate_pursuit, action: :negotiate
+      define :win_pursuit, action: :mark_won
+      define :lose_pursuit, action: :mark_lost
+      define :archive_pursuit, action: :archive
+      define :reopen_pursuit, action: :reopen
+      define :list_active_pursuits, action: :active
+      define :list_pursuits_for_organization, action: :for_organization
+    end
+
+    resource GnomeGarden.Commercial.Agreement do
+      define :list_agreements, action: :read
+      define :get_agreement, action: :read, get_by: [:id]
+      define :create_agreement, action: :create
+      define :update_agreement, action: :update
+      define :submit_agreement, action: :submit_for_signature
+      define :activate_agreement, action: :activate
+      define :suspend_agreement, action: :suspend
+      define :complete_agreement, action: :complete
+      define :terminate_agreement, action: :terminate
+      define :reopen_agreement, action: :reopen
+      define :list_active_agreements, action: :active
+      define :list_expiring_agreements, action: :expiring_soon
+    end
+  end
+end
