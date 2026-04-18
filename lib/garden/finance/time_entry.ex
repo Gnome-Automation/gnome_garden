@@ -101,14 +101,18 @@ defmodule GnomeGarden.Finance.TimeEntry do
     end
 
     update :approve do
+      require_atomic? false
       accept [:approved_by_user_id]
       change transition_state(:approved)
       change set_attribute(:approved_at, &DateTime.utc_now/0)
+      change {GnomeGarden.Commercial.Changes.SyncTimeEntryEntitlementUsage, mode: :sync}
     end
 
     update :reject do
+      require_atomic? false
       accept [:notes]
       change transition_state(:rejected)
+      change {GnomeGarden.Commercial.Changes.SyncTimeEntryEntitlementUsage, mode: :clear}
     end
 
     update :mark_billed do
@@ -118,11 +122,13 @@ defmodule GnomeGarden.Finance.TimeEntry do
     end
 
     update :reopen do
+      require_atomic? false
       accept []
       change transition_state(:draft)
       change set_attribute(:approved_at, nil)
       change set_attribute(:approved_by_user_id, nil)
       change set_attribute(:billed_at, nil)
+      change {GnomeGarden.Commercial.Changes.SyncTimeEntryEntitlementUsage, mode: :clear}
     end
 
     read :open do

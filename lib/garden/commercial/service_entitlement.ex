@@ -124,6 +124,25 @@ defmodule GnomeGarden.Commercial.ServiceEntitlement do
                 load: [:agreement, :service_level_policy, :usage_events]
               )
     end
+
+    read :available_for_usage do
+      argument :agreement_id, :uuid, allow_nil?: false
+      argument :entitlement_type, :atom, allow_nil?: false
+      argument :usage_on, :date, allow_nil?: false
+
+      filter expr(
+               agreement_id == ^arg(:agreement_id) and
+                 status == :active and
+                 entitlement_type == ^arg(:entitlement_type) and
+                 (is_nil(start_on) or start_on <= ^arg(:usage_on)) and
+                 (is_nil(end_on) or end_on >= ^arg(:usage_on))
+             )
+
+      prepare build(
+                sort: [inserted_at: :asc],
+                load: [:agreement, :service_level_policy]
+              )
+    end
   end
 
   attributes do

@@ -89,6 +89,36 @@ defmodule GnomeGarden.Commercial.ServiceEntitlementUsage do
                 load: [:service_entitlement, :time_entry, :expense, :work_order]
               )
     end
+
+    read :for_time_entry do
+      argument :time_entry_id, :uuid, allow_nil?: false
+      filter expr(time_entry_id == ^arg(:time_entry_id))
+
+      prepare build(
+                sort: [inserted_at: :asc],
+                load: [:service_entitlement]
+              )
+    end
+
+    read :for_expense do
+      argument :expense_id, :uuid, allow_nil?: false
+      filter expr(expense_id == ^arg(:expense_id))
+
+      prepare build(
+                sort: [inserted_at: :asc],
+                load: [:service_entitlement]
+              )
+    end
+
+    read :for_work_order do
+      argument :work_order_id, :uuid, allow_nil?: false
+      filter expr(work_order_id == ^arg(:work_order_id))
+
+      prepare build(
+                sort: [inserted_at: :asc],
+                load: [:service_entitlement]
+              )
+    end
   end
 
   attributes do

@@ -130,6 +130,7 @@ defmodule GnomeGarden.Commercial do
       define :reopen_service_entitlement, action: :reopen
       define :list_active_service_entitlements, action: :active
       define :list_entitlements_for_agreement, action: :for_agreement
+      define :list_available_service_entitlements_for_usage, action: :available_for_usage
     end
 
     resource GnomeGarden.Commercial.ServiceEntitlementUsage do
@@ -137,8 +138,12 @@ defmodule GnomeGarden.Commercial do
       define :get_service_entitlement_usage, action: :read, get_by: [:id]
       define :create_service_entitlement_usage, action: :create
       define :update_service_entitlement_usage, action: :update
+      define :delete_service_entitlement_usage, action: :destroy
       define :list_usage_for_entitlement, action: :for_entitlement
       define :list_usage_for_agreement, action: :for_agreement
+      define :list_usage_for_time_entry, action: :for_time_entry
+      define :list_usage_for_expense, action: :for_expense
+      define :list_usage_for_work_order, action: :for_work_order
     end
   end
 end

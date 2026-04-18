@@ -132,24 +132,31 @@ defmodule GnomeGarden.Execution.WorkOrder do
     end
 
     update :complete do
+      require_atomic? false
       accept [:resolution_notes]
       change transition_state(:completed)
       change set_attribute(:completed_at, &DateTime.utc_now/0)
+      change {GnomeGarden.Commercial.Changes.SyncWorkOrderEntitlementUsage, mode: :sync}
     end
 
     update :cancel do
+      require_atomic? false
       accept []
       change transition_state(:cancelled)
+      change {GnomeGarden.Commercial.Changes.SyncWorkOrderEntitlementUsage, mode: :clear}
     end
 
     update :reopen do
+      require_atomic? false
       accept []
       change transition_state(:scheduled)
       change set_attribute(:completed_at, nil)
+      change {GnomeGarden.Commercial.Changes.SyncWorkOrderEntitlementUsage, mode: :clear}
     end
 
     read :open do
       filter expr(status in [:new, :scheduled, :dispatched, :in_progress])
+
       prepare build(
                 sort: [due_on: :asc, inserted_at: :desc],
                 load: [
@@ -166,6 +173,7 @@ defmodule GnomeGarden.Execution.WorkOrder do
     read :for_organization do
       argument :organization_id, :uuid, allow_nil?: false
       filter expr(organization_id == ^arg(:organization_id))
+
       prepare build(
                 sort: [due_on: :asc, inserted_at: :desc],
                 load: [
