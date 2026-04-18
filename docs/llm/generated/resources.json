@@ -6840,6 +6840,30 @@
             },
             {
               "default": null,
+              "name": "expense_amount",
+              "type": "nil",
+              "description": null,
+              "field": "amount",
+              "kind": "sum",
+              "public?": true,
+              "relationship_path": [
+                "expenses"
+              ]
+            },
+            {
+              "default": null,
+              "name": "invoice_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "invoices"
+              ]
+            },
+            {
+              "default": null,
               "name": "invoiced_amount",
               "type": "nil",
               "description": null,
@@ -6848,6 +6872,18 @@
               "public?": true,
               "relationship_path": [
                 "invoices"
+              ]
+            },
+            {
+              "default": null,
+              "name": "maintenance_plan_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "maintenance_plans"
               ]
             },
             {
@@ -6876,6 +6912,18 @@
             },
             {
               "default": null,
+              "name": "payment_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "payments"
+              ]
+            },
+            {
+              "default": null,
               "name": "project_count",
               "type": "nil",
               "description": null,
@@ -6896,6 +6944,18 @@
               "public?": true,
               "relationship_path": [
                 "payments"
+              ]
+            },
+            {
+              "default": null,
+              "name": "service_ticket_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "service_tickets"
               ]
             }
           ],
@@ -17321,7 +17381,56 @@
             }
           ],
           "calculations": [],
-          "aggregates": [],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "applied_amount",
+              "type": "nil",
+              "description": null,
+              "field": "amount",
+              "kind": "sum",
+              "public?": true,
+              "relationship_path": [
+                "payment_applications"
+              ]
+            },
+            {
+              "default": null,
+              "name": "line_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "invoice_lines"
+              ]
+            },
+            {
+              "default": null,
+              "name": "line_total_amount",
+              "type": "nil",
+              "description": null,
+              "field": "line_total",
+              "kind": "sum",
+              "public?": true,
+              "relationship_path": [
+                "invoice_lines"
+              ]
+            },
+            {
+              "default": null,
+              "name": "payment_application_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "payment_applications"
+              ]
+            }
+          ],
           "identities": [],
           "schema": null,
           "primary_key": [
@@ -18866,7 +18975,32 @@
             }
           ],
           "calculations": [],
-          "aggregates": [],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "application_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "applications"
+              ]
+            },
+            {
+              "default": null,
+              "name": "applied_amount",
+              "type": "nil",
+              "description": null,
+              "field": "amount",
+              "kind": "sum",
+              "public?": true,
+              "relationship_path": [
+                "applications"
+              ]
+            }
+          ],
           "identities": [],
           "schema": null,
           "primary_key": [
@@ -36635,7 +36769,7 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-18T14:56:51Z",
+  "generated_at": "2026-04-18T14:58:30Z",
   "resource_count": 43,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -47701,7 +47835,56 @@
         }
       ],
       "calculations": [],
-      "aggregates": [],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "applied_amount",
+          "type": "nil",
+          "description": null,
+          "field": "amount",
+          "kind": "sum",
+          "public?": true,
+          "relationship_path": [
+            "payment_applications"
+          ]
+        },
+        {
+          "default": null,
+          "name": "line_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "invoice_lines"
+          ]
+        },
+        {
+          "default": null,
+          "name": "line_total_amount",
+          "type": "nil",
+          "description": null,
+          "field": "line_total",
+          "kind": "sum",
+          "public?": true,
+          "relationship_path": [
+            "invoice_lines"
+          ]
+        },
+        {
+          "default": null,
+          "name": "payment_application_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "payment_applications"
+          ]
+        }
+      ],
       "identities": [],
       "schema": null,
       "primary_key": [
@@ -64248,6 +64431,30 @@
         },
         {
           "default": null,
+          "name": "expense_amount",
+          "type": "nil",
+          "description": null,
+          "field": "amount",
+          "kind": "sum",
+          "public?": true,
+          "relationship_path": [
+            "expenses"
+          ]
+        },
+        {
+          "default": null,
+          "name": "invoice_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "invoices"
+          ]
+        },
+        {
+          "default": null,
           "name": "invoiced_amount",
           "type": "nil",
           "description": null,
@@ -64256,6 +64463,18 @@
           "public?": true,
           "relationship_path": [
             "invoices"
+          ]
+        },
+        {
+          "default": null,
+          "name": "maintenance_plan_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "maintenance_plans"
           ]
         },
         {
@@ -64284,6 +64503,18 @@
         },
         {
           "default": null,
+          "name": "payment_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "payments"
+          ]
+        },
+        {
+          "default": null,
           "name": "project_count",
           "type": "nil",
           "description": null,
@@ -64304,6 +64535,18 @@
           "public?": true,
           "relationship_path": [
             "payments"
+          ]
+        },
+        {
+          "default": null,
+          "name": "service_ticket_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "service_tickets"
           ]
         }
       ],
@@ -68363,7 +68606,32 @@
         }
       ],
       "calculations": [],
-      "aggregates": [],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "application_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "applications"
+          ]
+        },
+        {
+          "default": null,
+          "name": "applied_amount",
+          "type": "nil",
+          "description": null,
+          "field": "amount",
+          "kind": "sum",
+          "public?": true,
+          "relationship_path": [
+            "applications"
+          ]
+        }
+      ],
       "identities": [],
       "schema": null,
       "primary_key": [

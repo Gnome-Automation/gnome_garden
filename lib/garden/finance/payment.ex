@@ -17,7 +17,8 @@ defmodule GnomeGarden.Finance.Payment do
       :status,
       :received_on,
       :payment_method,
-      :amount
+      :amount,
+      :applied_amount
     ]
   end
 
@@ -162,6 +163,16 @@ defmodule GnomeGarden.Finance.Payment do
     end
 
     has_many :applications, GnomeGarden.Finance.PaymentApplication do
+      public? true
+    end
+  end
+
+  aggregates do
+    count :application_count, :applications do
+      public? true
+    end
+
+    sum :applied_amount, :applications, :amount do
       public? true
     end
   end

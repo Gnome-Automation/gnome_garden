@@ -21,7 +21,9 @@ defmodule GnomeGarden.Finance.Invoice do
       :issued_on,
       :due_on,
       :total_amount,
-      :balance_amount
+      :balance_amount,
+      :line_total_amount,
+      :applied_amount
     ]
   end
 
@@ -221,6 +223,24 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     has_many :payment_applications, GnomeGarden.Finance.PaymentApplication do
+      public? true
+    end
+  end
+
+  aggregates do
+    count :line_count, :invoice_lines do
+      public? true
+    end
+
+    count :payment_application_count, :payment_applications do
+      public? true
+    end
+
+    sum :line_total_amount, :invoice_lines, :line_total do
+      public? true
+    end
+
+    sum :applied_amount, :payment_applications, :amount do
       public? true
     end
   end

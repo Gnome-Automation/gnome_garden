@@ -22,7 +22,9 @@ defmodule GnomeGarden.Commercial.Agreement do
       :billing_model,
       :contract_value,
       :start_on,
-      :end_on
+      :end_on,
+      :invoiced_amount,
+      :received_amount
     ]
   end
 
@@ -312,6 +314,10 @@ defmodule GnomeGarden.Commercial.Agreement do
       public? true
     end
 
+    count :service_ticket_count, :service_tickets do
+      public? true
+    end
+
     count :open_service_ticket_count, :service_tickets do
       public? true
       filter expr(status in [:new, :triaged, :in_progress, :waiting_on_customer, :resolved])
@@ -320,6 +326,18 @@ defmodule GnomeGarden.Commercial.Agreement do
     count :open_work_order_count, :work_orders do
       public? true
       filter expr(status in [:new, :scheduled, :dispatched, :in_progress])
+    end
+
+    count :invoice_count, :invoices do
+      public? true
+    end
+
+    count :payment_count, :payments do
+      public? true
+    end
+
+    count :maintenance_plan_count, :maintenance_plans do
+      public? true
     end
 
     sum :invoiced_amount, :invoices, :total_amount do
@@ -334,6 +352,10 @@ defmodule GnomeGarden.Commercial.Agreement do
     sum :billable_minutes, :time_entries, :minutes do
       public? true
       filter expr(billable == true)
+    end
+
+    sum :expense_amount, :expenses, :amount do
+      public? true
     end
   end
 end
