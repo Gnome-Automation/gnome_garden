@@ -73,6 +73,7 @@ defmodule GnomeGarden.Commercial do
       define :list_agreements, action: :read
       define :get_agreement, action: :read, get_by: [:id]
       define :create_agreement, action: :create
+      define :create_agreement_from_proposal, action: :create_from_proposal
       define :update_agreement, action: :update
       define :submit_agreement, action: :submit_for_signature
       define :activate_agreement, action: :activate

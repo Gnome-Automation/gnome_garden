@@ -80,6 +80,27 @@ defmodule GnomeGarden.Execution.Project do
       ]
     end
 
+    create :create_from_agreement do
+      argument :agreement_id, :uuid, allow_nil?: false
+
+      accept [
+        :code,
+        :name,
+        :description,
+        :project_type,
+        :delivery_mode,
+        :priority,
+        :start_on,
+        :target_end_on,
+        :budget_hours,
+        :budget_amount,
+        :notes,
+        :manager_user_id
+      ]
+
+      change GnomeGarden.Execution.Changes.CreateProjectFromAgreement
+    end
+
     update :update do
       accept [
         :organization_id,

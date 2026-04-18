@@ -19,6 +19,7 @@ defmodule GnomeGarden.Execution do
       define :list_projects, action: :read
       define :get_project, action: :read, get_by: [:id]
       define :create_project, action: :create
+      define :create_project_from_agreement, action: :create_from_agreement
       define :update_project, action: :update
       define :approve_project, action: :approve
       define :start_project, action: :start

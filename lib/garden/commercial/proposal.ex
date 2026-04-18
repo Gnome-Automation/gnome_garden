@@ -134,7 +134,7 @@ defmodule GnomeGarden.Commercial.Proposal do
 
       prepare build(
                 sort: [valid_until_on: :asc, inserted_at: :desc],
-                load: [:pursuit, :organization, :proposal_lines]
+                load: [:pursuit, :organization, :proposal_lines, :agreements]
               )
     end
 
@@ -144,7 +144,7 @@ defmodule GnomeGarden.Commercial.Proposal do
 
       prepare build(
                 sort: [revision_number: :desc, inserted_at: :desc],
-                load: [:pursuit, :organization, :proposal_lines]
+                load: [:pursuit, :organization, :proposal_lines, :agreements]
               )
     end
   end

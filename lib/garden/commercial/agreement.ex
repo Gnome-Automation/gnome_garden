@@ -84,6 +84,27 @@ defmodule GnomeGarden.Commercial.Agreement do
       ]
     end
 
+    create :create_from_proposal do
+      argument :proposal_id, :uuid, allow_nil?: false
+
+      accept [
+        :reference_number,
+        :name,
+        :agreement_type,
+        :billing_model,
+        :currency_code,
+        :contract_value,
+        :start_on,
+        :end_on,
+        :auto_renew,
+        :renewal_notice_days,
+        :notes,
+        :owner_user_id
+      ]
+
+      change GnomeGarden.Commercial.Changes.CreateAgreementFromProposal
+    end
+
     update :update do
       accept [
         :pursuit_id,
@@ -145,6 +166,7 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :site,
                   :pursuit,
                   :proposal,
+                  :projects,
                   :service_tickets,
                   :service_level_policies,
                   :service_entitlements,
@@ -170,6 +192,7 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :site,
                   :pursuit,
                   :proposal,
+                  :projects,
                   :service_tickets,
                   :service_level_policies,
                   :service_entitlements,

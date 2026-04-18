@@ -6447,6 +6447,45 @@
               "upsert_identity": null
             },
             {
+              "name": "create_from_proposal",
+              "type": "create",
+              "accept": [
+                "reference_number",
+                "name",
+                "agreement_type",
+                "billing_model",
+                "currency_code",
+                "contract_value",
+                "start_on",
+                "end_on",
+                "auto_renew",
+                "renewal_notice_days",
+                "notes",
+                "owner_user_id"
+              ],
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "proposal_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "upsert?": false,
+              "upsert_identity": null
+            },
+            {
               "name": "destroy",
               "type": "destroy",
               "accept": [],
@@ -7093,6 +7132,16 @@
               "name": "create_agreement",
               "kind": "action",
               "action": "create",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "create_agreement_from_proposal",
+              "kind": "action",
+              "action": "create_from_proposal",
               "get?": false,
               "get_by": null,
               "get_by_identity": null,
@@ -15503,6 +15552,45 @@
               "upsert_identity": null
             },
             {
+              "name": "create_from_agreement",
+              "type": "create",
+              "accept": [
+                "code",
+                "name",
+                "description",
+                "project_type",
+                "delivery_mode",
+                "priority",
+                "start_on",
+                "target_end_on",
+                "budget_hours",
+                "budget_amount",
+                "notes",
+                "manager_user_id"
+              ],
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "agreement_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "upsert?": false,
+              "upsert_identity": null
+            },
+            {
               "name": "destroy",
               "type": "destroy",
               "accept": [],
@@ -15806,6 +15894,16 @@
               "name": "create_project",
               "kind": "action",
               "action": "create",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "create_project_from_agreement",
+              "kind": "action",
+              "action": "create_from_agreement",
               "get?": false,
               "get_by": null,
               "get_by_identity": null,
@@ -42600,7 +42698,7 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-18T15:19:08Z",
+  "generated_at": "2026-04-18T15:29:53Z",
   "resource_count": 50,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -56633,6 +56731,45 @@
           "upsert_identity": null
         },
         {
+          "name": "create_from_agreement",
+          "type": "create",
+          "accept": [
+            "code",
+            "name",
+            "description",
+            "project_type",
+            "delivery_mode",
+            "priority",
+            "start_on",
+            "target_end_on",
+            "budget_hours",
+            "budget_amount",
+            "notes",
+            "manager_user_id"
+          ],
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "agreement_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "upsert?": false,
+          "upsert_identity": null
+        },
+        {
           "name": "destroy",
           "type": "destroy",
           "accept": [],
@@ -56936,6 +57073,16 @@
           "name": "create_project",
           "kind": "action",
           "action": "create",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "create_project_from_agreement",
+          "kind": "action",
+          "action": "create_from_agreement",
           "get?": false,
           "get_by": null,
           "get_by_identity": null,
@@ -73305,6 +73452,45 @@
           "upsert_identity": null
         },
         {
+          "name": "create_from_proposal",
+          "type": "create",
+          "accept": [
+            "reference_number",
+            "name",
+            "agreement_type",
+            "billing_model",
+            "currency_code",
+            "contract_value",
+            "start_on",
+            "end_on",
+            "auto_renew",
+            "renewal_notice_days",
+            "notes",
+            "owner_user_id"
+          ],
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "proposal_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "upsert?": false,
+          "upsert_identity": null
+        },
+        {
           "name": "destroy",
           "type": "destroy",
           "accept": [],
@@ -73951,6 +74137,16 @@
           "name": "create_agreement",
           "kind": "action",
           "action": "create",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "create_agreement_from_proposal",
+          "kind": "action",
+          "action": "create_from_proposal",
           "get?": false,
           "get_by": null,
           "get_by_identity": null,
