@@ -18,6 +18,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
       :ticket_number,
       :title,
       :organization_id,
+      :requester_person_id,
       :service_level_policy_id,
       :ticket_type,
       :status,
@@ -36,6 +37,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
       reference :managed_system, on_delete: :nilify
       reference :asset, on_delete: :nilify
       reference :agreement, on_delete: :nilify
+      reference :requester_person, on_delete: :nilify
       reference :service_level_policy, on_delete: :nilify
       reference :requester_user, on_delete: :nilify
       reference :owner_user, on_delete: :nilify
@@ -70,6 +72,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
         :managed_system_id,
         :asset_id,
         :agreement_id,
+        :requester_person_id,
         :service_level_policy_id,
         :requester_user_id,
         :owner_user_id,
@@ -94,6 +97,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
         :managed_system_id,
         :asset_id,
         :agreement_id,
+        :requester_person_id,
         :service_level_policy_id,
         :requester_user_id,
         :owner_user_id,
@@ -161,6 +165,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
                   :managed_system,
                   :asset,
                   :agreement,
+                  :requester_person,
                   :service_level_policy,
                   :work_orders
                 ]
@@ -179,6 +184,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
                   :managed_system,
                   :asset,
                   :agreement,
+                  :requester_person,
                   :service_level_policy,
                   :work_orders
                 ]
@@ -303,6 +309,10 @@ defmodule GnomeGarden.Execution.ServiceTicket do
     end
 
     belongs_to :agreement, GnomeGarden.Commercial.Agreement do
+      public? true
+    end
+
+    belongs_to :requester_person, GnomeGarden.Operations.Person do
       public? true
     end
 

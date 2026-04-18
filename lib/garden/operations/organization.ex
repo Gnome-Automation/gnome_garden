@@ -66,7 +66,14 @@ defmodule GnomeGarden.Operations.Organization do
       filter expr(status == :active)
       prepare build(
                 sort: [name: :asc],
-                load: [:sites, :managed_systems, :assets, :service_level_policies]
+                load: [
+                  :sites,
+                  :managed_systems,
+                  :assets,
+                  :service_level_policies,
+                  :organization_affiliations,
+                  :people
+                ]
               )
     end
 
@@ -75,7 +82,14 @@ defmodule GnomeGarden.Operations.Organization do
 
       prepare build(
                 sort: [name: :asc],
-                load: [:sites, :managed_systems, :assets, :service_level_policies]
+                load: [
+                  :sites,
+                  :managed_systems,
+                  :assets,
+                  :service_level_policies,
+                  :organization_affiliations,
+                  :people
+                ]
               )
     end
   end
@@ -159,6 +173,17 @@ defmodule GnomeGarden.Operations.Organization do
     end
 
     has_many :service_level_policies, GnomeGarden.Commercial.ServiceLevelPolicy do
+      public? true
+    end
+
+    has_many :organization_affiliations, GnomeGarden.Operations.OrganizationAffiliation do
+      public? true
+    end
+
+    many_to_many :people, GnomeGarden.Operations.Person do
+      through GnomeGarden.Operations.OrganizationAffiliation
+      source_attribute_on_join_resource :organization_id
+      destination_attribute_on_join_resource :person_id
       public? true
     end
   end

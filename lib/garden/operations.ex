@@ -3,7 +3,7 @@ defmodule GnomeGarden.Operations do
   Foundational operating model domain.
 
   Owns the durable business entities that CRM, delivery, service, and finance
-  hang off: organizations, sites, and managed systems.
+  hang off: organizations, people, sites, and managed systems.
   """
 
   use Ash.Domain,
@@ -20,6 +20,26 @@ defmodule GnomeGarden.Operations do
       define :get_organization, action: :read, get_by: [:id]
       define :create_organization, action: :create
       define :update_organization, action: :update
+    end
+
+    resource GnomeGarden.Operations.Person do
+      define :list_people, action: :read
+      define :get_person, action: :read, get_by: [:id]
+      define :create_person, action: :create
+      define :update_person, action: :update
+      define :list_active_people, action: :active
+      define :list_people_for_organization, action: :for_organization
+    end
+
+    resource GnomeGarden.Operations.OrganizationAffiliation do
+      define :list_organization_affiliations, action: :read
+      define :get_organization_affiliation, action: :read, get_by: [:id]
+      define :create_organization_affiliation, action: :create
+      define :update_organization_affiliation, action: :update
+      define :end_organization_affiliation, action: :end_affiliation
+      define :list_active_organization_affiliations, action: :active
+      define :list_affiliations_for_organization, action: :for_organization
+      define :list_affiliations_for_person, action: :for_person
     end
 
     resource GnomeGarden.Operations.Site do
