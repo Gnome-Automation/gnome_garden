@@ -78,12 +78,12 @@ defmodule GnomeGarden.Operations.Site do
     read :for_organization do
       argument :organization_id, :uuid, allow_nil?: false
       filter expr(organization_id == ^arg(:organization_id))
-      prepare build(sort: [name: :asc], load: [:organization, :managed_systems])
+      prepare build(sort: [name: :asc], load: [:organization, :managed_systems, :assets])
     end
 
     read :active do
       filter expr(status == :active)
-      prepare build(sort: [name: :asc], load: [:organization, :managed_systems])
+      prepare build(sort: [name: :asc], load: [:organization, :managed_systems, :assets])
     end
   end
 
@@ -170,6 +170,10 @@ defmodule GnomeGarden.Operations.Site do
     end
 
     has_many :managed_systems, GnomeGarden.Operations.ManagedSystem do
+      public? true
+    end
+
+    has_many :assets, GnomeGarden.Operations.Asset do
       public? true
     end
   end

@@ -17,6 +17,7 @@ defmodule GnomeGarden.Execution.WorkOrder do
       :id,
       :reference_number,
       :title,
+      :asset_id,
       :work_type,
       :status,
       :priority,
@@ -33,6 +34,8 @@ defmodule GnomeGarden.Execution.WorkOrder do
       reference :organization, on_delete: :delete
       reference :site, on_delete: :nilify
       reference :managed_system, on_delete: :nilify
+      reference :asset, on_delete: :nilify
+      reference :maintenance_plan, on_delete: :nilify
       reference :agreement, on_delete: :nilify
       reference :project, on_delete: :nilify
       reference :requested_by_user, on_delete: :nilify
@@ -65,6 +68,8 @@ defmodule GnomeGarden.Execution.WorkOrder do
         :organization_id,
         :site_id,
         :managed_system_id,
+        :asset_id,
+        :maintenance_plan_id,
         :agreement_id,
         :project_id,
         :requested_by_user_id,
@@ -87,6 +92,8 @@ defmodule GnomeGarden.Execution.WorkOrder do
         :organization_id,
         :site_id,
         :managed_system_id,
+        :asset_id,
+        :maintenance_plan_id,
         :agreement_id,
         :project_id,
         :requested_by_user_id,
@@ -139,13 +146,19 @@ defmodule GnomeGarden.Execution.WorkOrder do
 
     read :open do
       filter expr(status in [:new, :scheduled, :dispatched, :in_progress])
-      prepare build(sort: [due_on: :asc, inserted_at: :desc], load: [:organization, :site, :managed_system])
+      prepare build(
+                sort: [due_on: :asc, inserted_at: :desc],
+                load: [:organization, :site, :managed_system, :asset, :maintenance_plan]
+              )
     end
 
     read :for_organization do
       argument :organization_id, :uuid, allow_nil?: false
       filter expr(organization_id == ^arg(:organization_id))
-      prepare build(sort: [due_on: :asc, inserted_at: :desc], load: [:organization, :site, :managed_system])
+      prepare build(
+                sort: [due_on: :asc, inserted_at: :desc],
+                load: [:organization, :site, :managed_system, :asset, :maintenance_plan]
+              )
     end
   end
 
@@ -248,6 +261,14 @@ defmodule GnomeGarden.Execution.WorkOrder do
     end
 
     belongs_to :managed_system, GnomeGarden.Operations.ManagedSystem do
+      public? true
+    end
+
+    belongs_to :asset, GnomeGarden.Operations.Asset do
+      public? true
+    end
+
+    belongs_to :maintenance_plan, GnomeGarden.Execution.MaintenancePlan do
       public? true
     end
 

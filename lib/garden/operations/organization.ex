@@ -64,12 +64,12 @@ defmodule GnomeGarden.Operations.Organization do
 
     read :active do
       filter expr(status == :active)
-      prepare build(sort: [name: :asc], load: [:sites, :managed_systems])
+      prepare build(sort: [name: :asc], load: [:sites, :managed_systems, :assets])
     end
 
     read :prospects do
       filter expr(status == :prospect)
-      prepare build(sort: [name: :asc], load: [:sites, :managed_systems])
+      prepare build(sort: [name: :asc], load: [:sites, :managed_systems, :assets])
     end
   end
 
@@ -144,6 +144,10 @@ defmodule GnomeGarden.Operations.Organization do
     end
 
     has_many :managed_systems, GnomeGarden.Operations.ManagedSystem do
+      public? true
+    end
+
+    has_many :assets, GnomeGarden.Operations.Asset do
       public? true
     end
   end

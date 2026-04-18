@@ -77,18 +77,18 @@ defmodule GnomeGarden.Operations.ManagedSystem do
     read :for_organization do
       argument :organization_id, :uuid, allow_nil?: false
       filter expr(organization_id == ^arg(:organization_id))
-      prepare build(sort: [name: :asc], load: [:organization, :site])
+      prepare build(sort: [name: :asc], load: [:organization, :site, :assets])
     end
 
     read :for_site do
       argument :site_id, :uuid, allow_nil?: false
       filter expr(site_id == ^arg(:site_id))
-      prepare build(sort: [name: :asc], load: [:organization, :site])
+      prepare build(sort: [name: :asc], load: [:organization, :site, :assets])
     end
 
     read :active do
       filter expr(lifecycle_status in [:prospective, :active, :on_hold])
-      prepare build(sort: [name: :asc], load: [:organization, :site])
+      prepare build(sort: [name: :asc], load: [:organization, :site, :assets])
     end
   end
 
@@ -185,6 +185,10 @@ defmodule GnomeGarden.Operations.ManagedSystem do
     end
 
     belongs_to :site, GnomeGarden.Operations.Site do
+      public? true
+    end
+
+    has_many :assets, GnomeGarden.Operations.Asset do
       public? true
     end
   end

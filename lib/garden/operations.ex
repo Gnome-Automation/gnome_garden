@@ -38,5 +38,14 @@ defmodule GnomeGarden.Operations do
       define :list_managed_systems_for_organization, action: :for_organization
       define :list_managed_systems_for_site, action: :for_site
     end
+
+    resource GnomeGarden.Operations.Asset do
+      define :list_assets, action: :read
+      define :get_asset, action: :read, get_by: [:id]
+      define :create_asset, action: :create
+      define :update_asset, action: :update
+      define :list_assets_for_managed_system, action: :for_managed_system
+      define :list_root_assets, action: :root_assets
+    end
   end
 end

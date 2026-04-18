@@ -60,5 +60,20 @@ defmodule GnomeGarden.Execution do
       define :list_open_work_orders, action: :open
       define :list_work_orders_for_organization, action: :for_organization
     end
+
+    resource GnomeGarden.Execution.MaintenancePlan do
+      define :list_maintenance_plans, action: :read
+      define :get_maintenance_plan, action: :read, get_by: [:id]
+      define :create_maintenance_plan, action: :create
+      define :update_maintenance_plan, action: :update
+      define :suspend_maintenance_plan, action: :suspend
+      define :activate_maintenance_plan, action: :activate
+      define :retire_maintenance_plan, action: :retire
+      define :reopen_maintenance_plan, action: :reopen
+      define :record_maintenance_completion, action: :record_completion
+      define :list_active_maintenance_plans, action: :active
+      define :list_due_soon_maintenance_plans, action: :due_soon
+      define :list_maintenance_plans_for_asset, action: :for_asset
+    end
   end
 end
