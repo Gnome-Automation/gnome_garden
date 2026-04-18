@@ -16,6 +16,22 @@ mix usage_rules.search_docs "code interface"
 mix usage_rules.search_docs "belongs_to" -p ash
 ```
 
+## Critical: Codex Architecture Map
+
+For implemented architecture and data-model lookup, treat these as authoritative:
+
+- `docs/llm/index.md`
+- `docs/llm/generated/resources.json`
+- `config/config.exs` under `config :gnome_garden, :ash_domains`
+
+Refresh the machine map after changing any Ash domain or resource:
+
+```bash
+mix llm.generate_resource_map
+```
+
+The files under `documentation/architecture/` and `documentation/domains/` may include planned or aspirational model details. Do not treat them as implemented unless the same domain or resource also appears in `docs/llm/generated/resources.json`.
+
 ## Ash Framework Guidelines
 
 ### Resource Structure
