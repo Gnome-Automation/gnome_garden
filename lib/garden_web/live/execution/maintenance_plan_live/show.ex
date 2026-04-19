@@ -90,6 +90,7 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
             <.property_item label="Priority" value={format_atom(@maintenance_plan.priority)} />
             <.property_item label="Interval" value={interval_label(@maintenance_plan)} />
             <.property_item label="Next Due" value={format_date(@maintenance_plan.next_due_on)} />
+            <.property_item label="Due Status" value={@maintenance_plan.due_status_label} />
             <.property_item
               label="Last Completed"
               value={format_date(@maintenance_plan.last_completed_on)}
@@ -216,6 +217,10 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
            load: [
              :status_variant,
              :priority_variant,
+             :is_due_soon,
+             :is_overdue,
+             :due_status_variant,
+             :due_status_label,
              :work_order_count,
              organization: [],
              site: [],
@@ -239,6 +244,12 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
 
   defp maintenance_plan_actions(%{status: :active}) do
     [
+      %{
+        action: "record_completion",
+        label: "Record Completion",
+        icon: "hero-check",
+        variant: "primary"
+      },
       %{action: "suspend", label: "Suspend", icon: "hero-pause", variant: nil},
       %{action: "retire", label: "Retire", icon: "hero-archive-box", variant: nil}
     ]
@@ -246,6 +257,12 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
 
   defp maintenance_plan_actions(%{status: :suspended}) do
     [
+      %{
+        action: "record_completion",
+        label: "Record Completion",
+        icon: "hero-check",
+        variant: nil
+      },
       %{action: "activate", label: "Activate", icon: "hero-play", variant: "primary"},
       %{action: "retire", label: "Retire", icon: "hero-archive-box", variant: nil}
     ]
@@ -270,6 +287,14 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
 
   defp transition_maintenance_plan(maintenance_plan, :reopen, actor),
     do: Execution.reopen_maintenance_plan(maintenance_plan, actor: actor)
+
+  defp transition_maintenance_plan(maintenance_plan, :record_completion, actor),
+    do:
+      Execution.record_maintenance_completion(
+        maintenance_plan,
+        %{completed_on: Date.utc_today()},
+        actor: actor
+      )
 
   defp transition_maintenance_plan(maintenance_plan, :generate_work_order, actor),
     do: Execution.generate_maintenance_plan_work_order(maintenance_plan, actor: actor)

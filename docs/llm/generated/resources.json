@@ -18010,6 +18010,42 @@
           ],
           "calculations": [
             {
+              "name": "due_status_label",
+              "type": "Ash.Type.String",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "due_status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "is_due_soon",
+              "type": "Ash.Type.Boolean",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "is_overdue",
+              "type": "Ash.Type.Boolean",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
               "name": "priority_variant",
               "type": "Ash.Type.Atom",
               "description": null,
@@ -18161,7 +18197,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "days"
+              ],
               "name": "list_due_soon_maintenance_plans",
               "kind": "action",
               "action": "due_soon",
@@ -49131,7 +49169,7 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-19T03:54:24Z",
+  "generated_at": "2026-04-19T04:00:40Z",
   "resource_count": 55,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -86798,6 +86836,42 @@
       ],
       "calculations": [
         {
+          "name": "due_status_label",
+          "type": "Ash.Type.String",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "due_status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "is_due_soon",
+          "type": "Ash.Type.Boolean",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "is_overdue",
+          "type": "Ash.Type.Boolean",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
           "name": "priority_variant",
           "type": "Ash.Type.Atom",
           "description": null,
@@ -86949,7 +87023,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "days"
+          ],
           "name": "list_due_soon_maintenance_plans",
           "kind": "action",
           "action": "due_soon",

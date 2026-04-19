@@ -15,7 +15,7 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Index do
      |> assign(:plan_count, length(maintenance_plans))
      |> assign(:active_count, Enum.count(maintenance_plans, &(&1.status == :active)))
      |> assign(:auto_count, Enum.count(maintenance_plans, & &1.auto_create_work_orders))
-     |> assign(:due_soon_count, Enum.count(maintenance_plans, &due_soon?(&1.next_due_on)))
+     |> assign(:due_soon_count, Enum.count(maintenance_plans, & &1.is_due_soon))
      |> stream(:maintenance_plans, maintenance_plans)}
   end
 
@@ -158,6 +158,9 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Index do
                 <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
                   <div class="space-y-1">
                     <p>{format_date(maintenance_plan.next_due_on)}</p>
+                    <.status_badge status={maintenance_plan.due_status_variant}>
+                      {maintenance_plan.due_status_label}
+                    </.status_badge>
                     <p class="text-xs text-zinc-400 dark:text-zinc-500">
                       {if maintenance_plan.auto_create_work_orders,
                         do: "Auto work order",
@@ -181,6 +184,9 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Index do
            load: [
              :status_variant,
              :priority_variant,
+             :is_due_soon,
+             :due_status_variant,
+             :due_status_label,
              :work_order_count,
              asset: [],
              managed_system: []
@@ -194,7 +200,4 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Index do
   defp interval_label(maintenance_plan) do
     "#{maintenance_plan.interval_value} #{maintenance_plan.interval_unit}"
   end
-
-  defp due_soon?(nil), do: false
-  defp due_soon?(%Date{} = date), do: Date.diff(date, Date.utc_today()) <= 30
 end

@@ -49,6 +49,49 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
     assert has_element?(form_view, "#maintenance-plan-form")
   end
 
+  test "maintenance plan show records completion", %{conn: conn} do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Atlas Preventive",
+        organization_kind: :business,
+        status: :active
+      })
+
+    {:ok, asset} =
+      Operations.create_asset(%{
+        organization_id: organization.id,
+        asset_tag: "AST-301",
+        name: "Backup Gateway",
+        asset_type: :server
+      })
+
+    {:ok, maintenance_plan} =
+      Execution.create_maintenance_plan(%{
+        organization_id: organization.id,
+        asset_id: asset.id,
+        name: "Monthly backup validation",
+        interval_unit: :month,
+        interval_value: 1,
+        next_due_on: Date.add(Date.utc_today(), 3)
+      })
+
+    {:ok, show_view, _show_html} =
+      live(conn, ~p"/execution/maintenance-plans/#{maintenance_plan}")
+
+    assert has_element?(show_view, "button[phx-value-action='record_completion']")
+
+    render_click(element(show_view, "button[phx-value-action='record_completion']"))
+
+    expected_next_due_on =
+      Date.utc_today()
+      |> Date.shift(month: 1)
+      |> Calendar.strftime("%b %d, %Y")
+
+    updated_html = render(show_view)
+    assert updated_html =~ expected_next_due_on
+    assert updated_html =~ "Maintenance plan updated"
+  end
+
   test "payment routes render", %{conn: conn} do
     {:ok, organization} =
       Operations.create_organization(%{

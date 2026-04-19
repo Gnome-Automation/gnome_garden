@@ -6,7 +6,7 @@
     </:subtitle>
   </.page_header>
 
-  <div class="grid gap-4 md:grid-cols-3">
+  <div class="grid gap-4 md:grid-cols-4">
     <.stat_card
       title="Operations Backbone"
       value="Live"
@@ -28,7 +28,59 @@
       icon="hero-arrow-trending-up"
       accent="sky"
     />
+    <.stat_card
+      title="Due Soon Maintenance"
+      value={Integer.to_string(@due_soon_maintenance_count)}
+      description="Preventive schedules that need action before they slip into reactive service work."
+      icon="hero-clock"
+      accent="amber"
+    />
   </div>
+
+  <.section
+    title="Due Soon Maintenance"
+    description="Recurring work that needs attention now so it stays preventive instead of becoming a surprise dispatch."
+  >
+    <div :if={Enum.empty?(@due_soon_maintenance_plans)} class="space-y-4">
+      <.empty_state
+        icon="hero-clock"
+        title="No due-soon maintenance plans"
+        description="The preventive schedule is currently clear for the next 30 days."
+      >
+        <:action>
+          <.button navigate={~p"/execution/maintenance-plans"}>
+            View Maintenance Plans
+          </.button>
+        </:action>
+      </.empty_state>
+    </div>
+
+    <div :if={!Enum.empty?(@due_soon_maintenance_plans)} class="space-y-3">
+      <.link
+        :for={maintenance_plan <- @due_soon_maintenance_plans}
+        navigate={~p"/execution/maintenance-plans/#{maintenance_plan}"}
+        class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
+      >
+        <div class="space-y-1">
+          <p class="font-medium text-zinc-900 dark:text-white">{maintenance_plan.name}</p>
+          <p class="text-sm text-zinc-500 dark:text-zinc-400">
+            {(maintenance_plan.asset && maintenance_plan.asset.name) || "No asset linked"} · due {format_date(
+              maintenance_plan.next_due_on
+            )}
+          </p>
+        </div>
+        <div class="space-y-2 text-right">
+          <.status_badge status={maintenance_plan.due_status_variant}>
+            {maintenance_plan.due_status_label}
+          </.status_badge>
+          <p class="text-xs text-zinc-400 dark:text-zinc-500">
+            {(maintenance_plan.organization && maintenance_plan.organization.name) ||
+              "No organization linked"}
+          </p>
+        </div>
+      </.link>
+    </div>
+  </.section>
 
   <.section
     title="Quick Actions"

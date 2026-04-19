@@ -161,7 +161,7 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
 
       prepare build(
                 sort: [next_due_on: :asc, inserted_at: :asc],
-                load: [:asset, :managed_system, :assigned_user, :work_orders]
+                load: [:asset, :managed_system, :work_orders]
               )
     end
 
@@ -176,7 +176,7 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
 
       prepare build(
                 sort: [next_due_on: :asc, inserted_at: :asc],
-                load: [:asset, :managed_system, :assigned_user, :work_orders]
+                load: [:asset, :managed_system, :work_orders]
               )
     end
 
@@ -347,6 +347,42 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
                  critical: :error
                ],
                default: :default}
+
+    calculate :is_due_soon,
+              :boolean,
+              expr(
+                status == :active and not is_nil(next_due_on) and next_due_on < from_now(30, :day)
+              )
+
+    calculate :is_overdue,
+              :boolean,
+              expr(
+                status == :active and not is_nil(next_due_on) and next_due_on < ^Date.utc_today()
+              )
+
+    calculate :due_status_variant,
+              :atom,
+              expr(
+                cond do
+                  status != :active -> :default
+                  is_nil(next_due_on) -> :default
+                  next_due_on < ^Date.utc_today() -> :error
+                  next_due_on < from_now(30, :day) -> :warning
+                  true -> :success
+                end
+              )
+
+    calculate :due_status_label,
+              :string,
+              expr(
+                cond do
+                  status != :active -> "Inactive"
+                  is_nil(next_due_on) -> "No due date"
+                  next_due_on < ^Date.utc_today() -> "Overdue"
+                  next_due_on < from_now(30, :day) -> "Due soon"
+                  true -> "On track"
+                end
+              )
   end
 
   aggregates do
