@@ -58,6 +58,7 @@ defmodule GnomeGarden.Procurement do
       define :get_bid_by_url, action: :by_url, args: [:url]
       define :create_bid, action: :create
       define :update_bid, action: :update
+      define :review_bid, action: :start_review
       define :link_bid_signal, action: :link_signal
       define :link_bid_organization, action: :link_organization
       define :reject_bid, action: :reject

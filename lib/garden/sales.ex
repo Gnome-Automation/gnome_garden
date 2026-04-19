@@ -75,8 +75,16 @@ defmodule GnomeGarden.Sales do
       define :quick_add_lead, action: :quick_add
     end
 
-    resource GnomeGarden.Sales.ResearchRequest
-    resource GnomeGarden.Sales.ResearchLink
+    resource GnomeGarden.Sales.ResearchRequest do
+      define :list_research_requests, action: :read
+      define :create_research_request, action: :create
+    end
+
+    resource GnomeGarden.Sales.ResearchLink do
+      define :list_research_links, action: :read
+      define :create_research_link, action: :create
+    end
+
     resource GnomeGarden.Sales.Employment
   end
 end

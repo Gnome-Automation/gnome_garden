@@ -1,13 +1,17 @@
 defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.CRM.PipelineEvents
-  alias GnomeGarden.Commercial
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.BidReview
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     bid = load_bid!(id, socket.assigns.current_user)
+
+    if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("bid:updated")
+      GnomeGardenWeb.Endpoint.subscribe("bid:scored")
+    end
 
     {:ok,
      socket
@@ -16,12 +20,18 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
      |> assign(:action_dialog, nil)}
   end
 
+  @impl true
+  def handle_info(%{topic: "bid:" <> _}, socket) do
+    {:noreply,
+     assign(socket, :bid, load_bid!(socket.assigns.bid.id, socket.assigns.current_user))}
+  end
+
   # -- Action events --
 
   @impl true
   def handle_event("open_pursue", _, socket) do
-    case ensure_signal_for_bid(socket.assigns.bid, socket.assigns.current_user) do
-      {:ok, bid, signal} ->
+    case BidReview.open_signal(socket.assigns.bid, socket.assigns.current_user) do
+      {:ok, %{bid: bid, signal: signal}} ->
         {:noreply,
          socket
          |> assign(:bid, bid)
@@ -46,31 +56,12 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   end
 
   def handle_event("submit_pass", %{"reason" => reason}, socket) do
-    bid = socket.assigns.bid
-    actor = socket.assigns.current_user
-
-    case Procurement.reject_bid(bid, %{notes: reason}, actor: actor) do
+    case BidReview.pass_bid(socket.assigns.bid, reason, socket.assigns.current_user) do
       {:ok, rejected_bid} ->
-        maybe_reject_signal(bid.signal, reason, actor)
-
-        PipelineEvents.log(
-          %{
-            event_type: :passed,
-            subject_type: "bid",
-            subject_id: bid.id,
-            summary: "Passed on #{bid.title}",
-            reason: reason,
-            from_state: to_string(bid.status),
-            to_state: "rejected",
-            actor_id: actor && actor.id
-          },
-          actor: actor
-        )
-
         {:noreply,
          socket
-         |> assign(:bid, load_bid!(rejected_bid.id, actor))
-         |> put_flash(:info, "Passed — #{bid.title}")
+         |> assign(:bid, rejected_bid)
+         |> put_flash(:info, "Passed — #{socket.assigns.bid.title}")
          |> push_navigate(to: ~p"/procurement/bids")}
 
       {:error, error} ->
@@ -79,52 +70,20 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   end
 
   def handle_event("submit_park", params, socket) do
-    bid = socket.assigns.bid
     reason = params["reason"]
     research_note = params["research"]
-    actor = socket.assigns.current_user
 
-    case Procurement.park_bid(bid, %{notes: reason}, actor: actor) do
+    case BidReview.park_bid(
+           socket.assigns.bid,
+           reason,
+           research_note,
+           socket.assigns.current_user
+         ) do
       {:ok, parked_bid} ->
-        maybe_archive_signal(bid.signal, actor)
-
-        {:ok, event} =
-          PipelineEvents.log(
-            %{
-              event_type: :parked,
-              subject_type: "bid",
-              subject_id: bid.id,
-              summary: "Parked — #{bid.title}",
-              reason: reason,
-              from_state: to_string(bid.status),
-              to_state: "parked",
-              actor_id: actor && actor.id
-            },
-            actor: actor
-          )
-
-        if research_note && research_note != "" do
-          {:ok, research} =
-            Ash.create(GnomeGarden.Sales.ResearchRequest, %{
-              research_type: :qualification,
-              priority: :normal,
-              notes: research_note,
-              researchable_type: "bid",
-              researchable_id: bid.id
-            })
-
-          Ash.create!(GnomeGarden.Sales.ResearchLink, %{
-            research_request_id: research.id,
-            bid_id: bid.id,
-            event_id: event.id,
-            context: reason
-          })
-        end
-
         {:noreply,
          socket
-         |> assign(:bid, load_bid!(parked_bid.id, actor))
-         |> put_flash(:info, "Parked — #{bid.title}")
+         |> assign(:bid, parked_bid)
+         |> put_flash(:info, "Parked — #{socket.assigns.bid.title}")
          |> push_navigate(to: ~p"/procurement/bids")}
 
       {:error, error} ->
@@ -142,15 +101,11 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   end
 
   def handle_event("unpark", _, socket) do
-    actor = socket.assigns.current_user
-
-    case Procurement.unpark_bid(socket.assigns.bid, actor: actor) do
+    case BidReview.unpark_bid(socket.assigns.bid, socket.assigns.current_user) do
       {:ok, bid} ->
-        maybe_reopen_signal(socket.assigns.bid.signal, actor)
-
         {:noreply,
          socket
-         |> assign(:bid, load_bid!(bid.id, actor))
+         |> assign(:bid, bid)
          |> put_flash(:info, "Unparked — back in review")}
 
       {:error, error} ->
@@ -600,48 +555,4 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
       ]
     )
   end
-
-  defp ensure_signal_for_bid(%{signal: signal} = bid, _actor) when not is_nil(signal),
-    do: {:ok, bid, signal}
-
-  defp ensure_signal_for_bid(bid, actor) do
-    with {:ok, signal} <- Commercial.create_signal_from_bid(bid.id, actor: actor),
-         refreshed_bid <- load_bid!(bid.id, actor) do
-      {:ok, refreshed_bid, signal}
-    end
-  end
-
-  defp maybe_reject_signal(nil, _reason, _actor), do: :ok
-
-  defp maybe_reject_signal(signal, reason, actor) when signal.status in [:new, :reviewing] do
-    case Commercial.reject_signal(signal, %{notes: reason}, actor: actor) do
-      {:ok, _signal} -> :ok
-      {:error, _error} -> :ok
-    end
-  end
-
-  defp maybe_reject_signal(_signal, _reason, _actor), do: :ok
-
-  defp maybe_archive_signal(nil, _actor), do: :ok
-
-  defp maybe_archive_signal(signal, actor)
-       when signal.status in [:new, :reviewing, :accepted] do
-    case Commercial.archive_signal(signal, actor: actor) do
-      {:ok, _signal} -> :ok
-      {:error, _error} -> :ok
-    end
-  end
-
-  defp maybe_archive_signal(_signal, _actor), do: :ok
-
-  defp maybe_reopen_signal(nil, _actor), do: :ok
-
-  defp maybe_reopen_signal(signal, actor) when signal.status in [:archived, :rejected] do
-    case Commercial.reopen_signal(signal, actor: actor) do
-      {:ok, _signal} -> :ok
-      {:error, _error} -> :ok
-    end
-  end
-
-  defp maybe_reopen_signal(_signal, _actor), do: :ok
 end
