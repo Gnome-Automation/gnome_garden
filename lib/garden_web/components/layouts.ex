@@ -44,7 +44,7 @@ defmodule GnomeGardenWeb.Layouts do
 
       <div
         id="mobile-sidebar"
-        class="fixed inset-y-0 left-0 z-50 w-72 -translate-x-full transition-transform duration-300 ease-in-out lg:hidden"
+        class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden -translate-x-full transition-transform duration-300 ease-in-out lg:hidden"
       >
         <%!-- Close button --%>
         <div class="absolute top-0 right-0 -mr-12 pt-2">
@@ -68,7 +68,7 @@ defmodule GnomeGardenWeb.Layouts do
       <%!-- Desktop sidebar (expanded) --%>
       <div
         id="sidebar-expanded"
-        class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col transition-all duration-200"
+        class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col lg:overflow-hidden transition-all duration-200"
       >
         <.sidebar_nav
           id="desktop-nav"
@@ -81,7 +81,7 @@ defmodule GnomeGardenWeb.Layouts do
       <%!-- Desktop sidebar (collapsed) --%>
       <div
         id="sidebar-collapsed"
-        class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:w-20 lg:flex-col transition-all duration-200"
+        class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:w-20 lg:flex-col lg:overflow-hidden transition-all duration-200"
       >
         <.sidebar_nav
           id="collapsed-nav"

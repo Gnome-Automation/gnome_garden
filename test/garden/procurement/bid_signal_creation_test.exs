@@ -19,7 +19,14 @@ defmodule GnomeGarden.Procurement.BidSignalCreationTest do
         due_at: ~U[2026-05-01 23:59:00Z],
         estimated_value: Decimal.new("245000.00"),
         score_total: 72,
-        score_tier: :warm
+        score_tier: :warm,
+        score_recommendation:
+          "WARM (72/100) - controller-facing integration, core geography; no major risk flags.",
+        score_icp_matches: ["controller-facing integration", "core geography"],
+        score_risk_flags: [],
+        score_company_profile_key: "primary",
+        score_company_profile_mode: "industrial_plus_software",
+        score_source_confidence: :aggregated
       })
 
     assert bid.signal_id
@@ -47,6 +54,15 @@ defmodule GnomeGarden.Procurement.BidSignalCreationTest do
     assert metadata_value(signal.metadata, :procurement_bid_id) == bid.id
     assert metadata_value(signal.metadata, :agency) == "City of Anaheim"
     assert metadata_value(signal.metadata, :score_tier) == "warm"
+    assert metadata_value(signal.metadata, :score_recommendation) =~ "WARM (72/100)"
+
+    assert metadata_value(signal.metadata, :score_icp_matches) == [
+             "controller-facing integration",
+             "core geography"
+           ]
+
+    assert metadata_value(signal.metadata, :score_company_profile_mode) ==
+             "industrial_plus_software"
   end
 
   defp metadata_value(metadata, key) do

@@ -39722,6 +39722,54 @@
               "update_default": null
             },
             {
+              "default": null,
+              "name": "score_company_profile_key",
+              "type": "Ash.Type.String",
+              "description": "Company profile key used when the bid was scored",
+              "source": "score_company_profile_key",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "score_company_profile_mode",
+              "type": "Ash.Type.String",
+              "description": "Company profile mode used when the bid was scored",
+              "source": "score_company_profile_mode",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
               "default": {
                 "value": 0,
                 "computed?": false
@@ -39731,6 +39779,38 @@
               "description": "0-20: SoCal = 20, NorCal = 12, Other CA = 8, Out of state = 0",
               "source": "score_geography",
               "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": [],
+                "computed?": false
+              },
+              "name": "score_icp_matches",
+              "type": "{:array, Ash.Type.String}",
+              "description": "Matched ICP lanes that explain why the bid fits",
+              "source": "score_icp_matches",
+              "constraints": [
+                {
+                  "value": [
+                    {
+                      "value": true,
+                      "key": "trim?"
+                    },
+                    {
+                      "value": false,
+                      "key": "allow_empty?"
+                    }
+                  ],
+                  "key": "items"
+                }
+              ],
               "public?": true,
               "allow_nil?": true,
               "sensitive?": false,
@@ -39776,6 +39856,62 @@
               "update_default": null
             },
             {
+              "default": null,
+              "name": "score_recommendation",
+              "type": "Ash.Type.String",
+              "description": "Human-readable recommendation from the shared scoring model",
+              "source": "score_recommendation",
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": {
+                "value": [],
+                "computed?": false
+              },
+              "name": "score_risk_flags",
+              "type": "{:array, Ash.Type.String}",
+              "description": "Risk flags that explain why the bid may be weak or should be rejected",
+              "source": "score_risk_flags",
+              "constraints": [
+                {
+                  "value": [
+                    {
+                      "value": true,
+                      "key": "trim?"
+                    },
+                    {
+                      "value": false,
+                      "key": "allow_empty?"
+                    }
+                  ],
+                  "key": "items"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
               "default": {
                 "value": 0,
                 "computed?": false
@@ -39785,6 +39921,34 @@
               "description": "0-30: SCADA/PLC/controls = 30, adjacent = 15, unrelated = 0",
               "source": "score_service_match",
               "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "score_source_confidence",
+              "type": "Ash.Type.Atom",
+              "description": "Confidence level for the source family that produced the bid",
+              "source": "score_source_confidence",
+              "constraints": [
+                {
+                  "value": [
+                    "direct",
+                    "aggregated",
+                    "unknown"
+                  ],
+                  "key": "one_of"
+                },
+                {
+                  "value": false,
+                  "key": "unsafe_to_atom?"
+                }
+              ],
               "public?": true,
               "allow_nil?": true,
               "sensitive?": false,
@@ -40276,6 +40440,12 @@
                 "score_opportunity_type",
                 "score_total",
                 "score_tier",
+                "score_recommendation",
+                "score_icp_matches",
+                "score_risk_flags",
+                "score_company_profile_key",
+                "score_company_profile_mode",
+                "score_source_confidence",
                 "keywords_matched",
                 "keywords_rejected",
                 "metadata",
@@ -40581,7 +40751,13 @@
                 "score_value",
                 "score_tech_fit",
                 "score_industry",
-                "score_opportunity_type"
+                "score_opportunity_type",
+                "score_recommendation",
+                "score_icp_matches",
+                "score_risk_flags",
+                "score_company_profile_key",
+                "score_company_profile_mode",
+                "score_source_confidence"
               ],
               "description": null,
               "arguments": [],
@@ -52813,7 +52989,7 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-19T18:06:35Z",
+  "generated_at": "2026-04-19T19:56:17Z",
   "resource_count": 58,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -77653,6 +77829,54 @@
           "update_default": null
         },
         {
+          "default": null,
+          "name": "score_company_profile_key",
+          "type": "Ash.Type.String",
+          "description": "Company profile key used when the bid was scored",
+          "source": "score_company_profile_key",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "score_company_profile_mode",
+          "type": "Ash.Type.String",
+          "description": "Company profile mode used when the bid was scored",
+          "source": "score_company_profile_mode",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
           "default": {
             "value": 0,
             "computed?": false
@@ -77662,6 +77886,38 @@
           "description": "0-20: SoCal = 20, NorCal = 12, Other CA = 8, Out of state = 0",
           "source": "score_geography",
           "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": [],
+            "computed?": false
+          },
+          "name": "score_icp_matches",
+          "type": "{:array, Ash.Type.String}",
+          "description": "Matched ICP lanes that explain why the bid fits",
+          "source": "score_icp_matches",
+          "constraints": [
+            {
+              "value": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "key": "items"
+            }
+          ],
           "public?": true,
           "allow_nil?": true,
           "sensitive?": false,
@@ -77707,6 +77963,62 @@
           "update_default": null
         },
         {
+          "default": null,
+          "name": "score_recommendation",
+          "type": "Ash.Type.String",
+          "description": "Human-readable recommendation from the shared scoring model",
+          "source": "score_recommendation",
+          "constraints": [
+            {
+              "value": true,
+              "key": "trim?"
+            },
+            {
+              "value": false,
+              "key": "allow_empty?"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": {
+            "value": [],
+            "computed?": false
+          },
+          "name": "score_risk_flags",
+          "type": "{:array, Ash.Type.String}",
+          "description": "Risk flags that explain why the bid may be weak or should be rejected",
+          "source": "score_risk_flags",
+          "constraints": [
+            {
+              "value": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "key": "items"
+            }
+          ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
           "default": {
             "value": 0,
             "computed?": false
@@ -77716,6 +78028,34 @@
           "description": "0-30: SCADA/PLC/controls = 30, adjacent = 15, unrelated = 0",
           "source": "score_service_match",
           "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "score_source_confidence",
+          "type": "Ash.Type.Atom",
+          "description": "Confidence level for the source family that produced the bid",
+          "source": "score_source_confidence",
+          "constraints": [
+            {
+              "value": [
+                "direct",
+                "aggregated",
+                "unknown"
+              ],
+              "key": "one_of"
+            },
+            {
+              "value": false,
+              "key": "unsafe_to_atom?"
+            }
+          ],
           "public?": true,
           "allow_nil?": true,
           "sensitive?": false,
@@ -78207,6 +78547,12 @@
             "score_opportunity_type",
             "score_total",
             "score_tier",
+            "score_recommendation",
+            "score_icp_matches",
+            "score_risk_flags",
+            "score_company_profile_key",
+            "score_company_profile_mode",
+            "score_source_confidence",
             "keywords_matched",
             "keywords_rejected",
             "metadata",
@@ -78512,7 +78858,13 @@
             "score_value",
             "score_tech_fit",
             "score_industry",
-            "score_opportunity_type"
+            "score_opportunity_type",
+            "score_recommendation",
+            "score_icp_matches",
+            "score_risk_flags",
+            "score_company_profile_key",
+            "score_company_profile_mode",
+            "score_source_confidence"
           ],
           "description": null,
           "arguments": [],

@@ -76,6 +76,12 @@ defmodule GnomeGarden.Procurement.Bid do
         :score_opportunity_type,
         :score_total,
         :score_tier,
+        :score_recommendation,
+        :score_icp_matches,
+        :score_risk_flags,
+        :score_company_profile_key,
+        :score_company_profile_mode,
+        :score_source_confidence,
         :keywords_matched,
         :keywords_rejected,
         :metadata,
@@ -158,7 +164,13 @@ defmodule GnomeGarden.Procurement.Bid do
         :score_value,
         :score_tech_fit,
         :score_industry,
-        :score_opportunity_type
+        :score_opportunity_type,
+        :score_recommendation,
+        :score_icp_matches,
+        :score_risk_flags,
+        :score_company_profile_key,
+        :score_company_profile_mode,
+        :score_source_confidence
       ]
 
       change fn changeset, _ctx ->
@@ -331,6 +343,33 @@ defmodule GnomeGarden.Procurement.Bid do
       public?: true,
       constraints: [one_of: [:hot, :warm, :prospect]],
       description: "HOT (75+), WARM (50-74), PROSPECT (<50)"
+
+    attribute :score_recommendation, :string,
+      public?: true,
+      description: "Human-readable recommendation from the shared scoring model"
+
+    attribute :score_icp_matches, {:array, :string},
+      default: [],
+      public?: true,
+      description: "Matched ICP lanes that explain why the bid fits"
+
+    attribute :score_risk_flags, {:array, :string},
+      default: [],
+      public?: true,
+      description: "Risk flags that explain why the bid may be weak or should be rejected"
+
+    attribute :score_company_profile_key, :string,
+      public?: true,
+      description: "Company profile key used when the bid was scored"
+
+    attribute :score_company_profile_mode, :string,
+      public?: true,
+      description: "Company profile mode used when the bid was scored"
+
+    attribute :score_source_confidence, :atom,
+      public?: true,
+      constraints: [one_of: [:direct, :aggregated, :unknown]],
+      description: "Confidence level for the source family that produced the bid"
 
     # Keywords matched
     attribute :keywords_matched, {:array, :string}, default: [], public?: true

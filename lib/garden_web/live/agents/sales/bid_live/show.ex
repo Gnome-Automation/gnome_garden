@@ -180,11 +180,40 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
         <.button :if={@bid.signal} navigate={~p"/commercial/signals/#{@bid.signal}"}>
           <.icon name="hero-inbox-stack" class="size-4" /> Signal
         </.button>
-        <a :if={@bid.url} href={@bid.url} target="_blank" class="btn btn-sm btn-primary gap-1">
-          <.icon name="hero-arrow-top-right-on-square" class="size-4" /> View Original
-        </a>
       </:actions>
     </.header>
+
+    <div
+      id="bid-summary-card"
+      class="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]"
+    >
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div class="space-y-2">
+          <div :if={@bid.description} class="space-y-1">
+            <div class="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Description
+            </div>
+            <p class="text-sm whitespace-pre-wrap text-zinc-700 dark:text-zinc-200">
+              {@bid.description}
+            </p>
+          </div>
+          <div :if={!@bid.description} class="text-sm text-zinc-500">
+            No description captured for this bid yet.
+          </div>
+        </div>
+
+        <div class="shrink-0">
+          <a
+            :if={@bid.url}
+            href={@bid.url}
+            target="_blank"
+            class="btn btn-sm btn-primary gap-1"
+          >
+            <.icon name="hero-arrow-top-right-on-square" class="size-4" /> Open Original Listing
+          </a>
+        </div>
+      </div>
+    </div>
 
     <%!-- Action bar --%>
     <div class="mt-4 flex items-center gap-2">
@@ -265,23 +294,8 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
               </.link>
               <span :if={!@bid.signal}>-</span>
             </.property>
-            <.property name="URL">
-              <a
-                :if={@bid.url}
-                href={@bid.url}
-                target="_blank"
-                class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 break-all"
-              >
-                {@bid.url}
-              </a>
-            </.property>
             <.property name="Pursuits">{Integer.to_string(length(@bid.pursuits || []))}</.property>
           </.properties>
-        </div>
-
-        <div :if={@bid.description}>
-          <.heading level={3}>Description</.heading>
-          <p class="text-sm whitespace-pre-wrap">{@bid.description}</p>
         </div>
 
         <div :if={@bid.notes}>
@@ -297,6 +311,16 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
             <span class={score_color(@bid.score_total)}>{@bid.score_total}</span>
             <span class="text-sm font-normal opacity-50">/ 100</span>
           </div>
+          <div
+            :if={@bid.score_recommendation}
+            id="bid-score-recommendation"
+            class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-3 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100"
+          >
+            <div class="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+              Recommendation
+            </div>
+            <p>{@bid.score_recommendation}</p>
+          </div>
           <div class="space-y-2 text-sm">
             <.score_bar label="Service Match" value={@bid.score_service_match} max={30} />
             <.score_bar label="Geography" value={@bid.score_geography} max={20} />
@@ -305,6 +329,44 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
             <.score_bar label="Industry" value={@bid.score_industry} max={10} />
             <.score_bar label="Opp Type" value={@bid.score_opportunity_type} max={5} />
           </div>
+        </div>
+
+        <div
+          :if={@bid.score_icp_matches != [] or @bid.score_risk_flags != []}
+          class="grid gap-4 sm:grid-cols-2"
+        >
+          <div :if={@bid.score_icp_matches != []} id="bid-score-icp">
+            <.heading level={3}>Why It Fits</.heading>
+            <div class="flex flex-wrap gap-1">
+              <span :for={match <- @bid.score_icp_matches} class="badge badge-success badge-sm">
+                {match}
+              </span>
+            </div>
+          </div>
+
+          <div :if={@bid.score_risk_flags != []} id="bid-score-risks">
+            <.heading level={3}>Risk Flags</.heading>
+            <div class="flex flex-wrap gap-1">
+              <span :for={flag <- @bid.score_risk_flags} class="badge badge-error badge-sm">
+                {flag}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div :if={score_context_present?(@bid)}>
+          <.heading level={3}>Scoring Context</.heading>
+          <.properties>
+            <.property :if={@bid.score_company_profile_mode} name="Profile Mode">
+              {format_profile_mode(@bid.score_company_profile_mode)}
+            </.property>
+            <.property :if={@bid.score_company_profile_key} name="Profile Key">
+              {@bid.score_company_profile_key}
+            </.property>
+            <.property :if={@bid.score_source_confidence} name="Source Confidence">
+              {format_source_confidence(@bid.score_source_confidence)}
+            </.property>
+          </.properties>
         </div>
 
         <div :if={@bid.keywords_matched != []}>
@@ -497,11 +559,33 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   defp format_region(nil), do: "-"
   defp format_region(region), do: region |> to_string() |> String.upcase()
 
+  defp format_profile_mode(nil), do: "-"
+
+  defp format_profile_mode(mode) do
+    mode
+    |> to_string()
+    |> String.replace("_", " ")
+  end
+
+  defp format_source_confidence(nil), do: "-"
+
+  defp format_source_confidence(confidence) do
+    confidence
+    |> to_string()
+    |> String.replace("_", " ")
+  end
+
   defp format_datetime(nil), do: "-"
   defp format_datetime(dt), do: Calendar.strftime(dt, "%b %d, %Y %H:%M")
 
   defp format_value(nil), do: "-"
   defp format_value(val), do: "$#{Decimal.round(val, 0) |> Decimal.to_string()}"
+
+  defp score_context_present?(bid) do
+    not is_nil(bid.score_company_profile_mode) or
+      not is_nil(bid.score_company_profile_key) or
+      not is_nil(bid.score_source_confidence)
+  end
 
   defp load_bid!(id, actor) do
     Procurement.get_bid!(

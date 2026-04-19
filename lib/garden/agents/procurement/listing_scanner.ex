@@ -286,6 +286,12 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
           score_tech_fit: score.score_tech_fit,
           score_industry: score.score_industry,
           score_opportunity_type: score.score_opportunity_type,
+          score_recommendation: Map.get(score, :recommendation),
+          score_icp_matches: Map.get(score, :icp_matches, []),
+          score_risk_flags: Map.get(score, :risk_flags, []),
+          score_company_profile_key: Map.get(score, :company_profile_key),
+          score_company_profile_mode: Map.get(score, :company_profile_mode),
+          score_source_confidence: Map.get(score, :source_confidence),
           keywords_matched: score.keywords_matched,
           keywords_rejected: score.keywords_rejected,
           metadata: %{

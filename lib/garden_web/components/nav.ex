@@ -18,7 +18,7 @@ defmodule GnomeGardenWeb.Nav do
   def sidebar_nav(assigns) do
     ~H"""
     <div class={[
-      "flex grow flex-col bg-emerald-800 dark:bg-emerald-950",
+      "flex h-full min-h-0 grow flex-col bg-emerald-800 dark:bg-emerald-950",
       if(@collapsed, do: "px-3", else: "px-6")
     ]}>
       <%!-- Logo --%>
@@ -30,7 +30,7 @@ defmodule GnomeGardenWeb.Nav do
       </div>
 
       <%!-- Scrollable nav --%>
-      <nav class="flex flex-1 flex-col overflow-y-auto">
+      <nav class="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <ul role="list" class="-mx-2 flex flex-1 flex-col gap-y-1">
           <%!-- Signal inbox (always visible, top-level) --%>
           <.nav_item
@@ -285,22 +285,14 @@ defmodule GnomeGardenWeb.Nav do
             </.nav_item>
           </.nav_group>
 
-          <%!-- Agents section --%>
+          <%!-- Procurement section --%>
           <.nav_group
-            id={"#{@id}-agents"}
-            label="Agents"
-            icon="hero-cpu-chip"
+            id={"#{@id}-procurement"}
+            label="Procurement"
+            icon="hero-briefcase"
             collapsed={@collapsed}
             current_path={@current_path}
           >
-            <.nav_item
-              path={~p"/console/agents"}
-              current_path={@current_path}
-              icon="hero-cpu-chip"
-              collapsed={@collapsed}
-            >
-              Console
-            </.nav_item>
             <.nav_item
               path={~p"/procurement/bids"}
               current_path={@current_path}
@@ -316,7 +308,25 @@ defmodule GnomeGardenWeb.Nav do
               icon="hero-globe-alt"
               collapsed={@collapsed}
             >
-              Procurement Sources
+              Sources
+            </.nav_item>
+          </.nav_group>
+
+          <%!-- Agents section --%>
+          <.nav_group
+            id={"#{@id}-agents"}
+            label="Agents"
+            icon="hero-cpu-chip"
+            collapsed={@collapsed}
+            current_path={@current_path}
+          >
+            <.nav_item
+              path={~p"/console/agents"}
+              current_path={@current_path}
+              icon="hero-cpu-chip"
+              collapsed={@collapsed}
+            >
+              Console
             </.nav_item>
             <.nav_item
               path={~p"/agent"}

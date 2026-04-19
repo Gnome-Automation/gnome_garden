@@ -73,6 +73,10 @@ defmodule GnomeGarden.Commercial.Changes.CreateSignalFromBid do
       estimated_value: bid.estimated_value,
       score_total: bid.score_total,
       score_tier: bid.score_tier,
+      score_recommendation: bid.score_recommendation,
+      score_icp_matches: bid.score_icp_matches,
+      score_risk_flags: bid.score_risk_flags,
+      score_company_profile_mode: bid.score_company_profile_mode,
       source_url: bid.source_url
     })
   end

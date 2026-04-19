@@ -35,13 +35,26 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
         search={[placeholder: "Search bids..."]}
       >
         <:col :let={bid} field="title" label="Title" sort search>
-          <.link
-            navigate={~p"/procurement/bids/#{bid}"}
-            class="font-medium text-sm leading-tight max-w-[250px] break-words whitespace-normal hover:text-emerald-600"
-            title={bid.title}
-          >
-            {bid.title}
-          </.link>
+          <div class="space-y-1 py-1">
+            <.link
+              navigate={~p"/procurement/bids/#{bid}"}
+              class="font-medium text-sm leading-tight max-w-[250px] break-words whitespace-normal hover:text-emerald-600"
+              title={bid.title}
+            >
+              {bid.title}
+            </.link>
+            <div :if={bid.score_icp_matches != []} class="flex max-w-[320px] flex-wrap gap-1">
+              <span
+                :for={match <- Enum.take(bid.score_icp_matches || [], 2)}
+                class="badge badge-success badge-xs"
+              >
+                {match}
+              </span>
+            </div>
+            <p :if={bid.score_recommendation} class="max-w-[320px] text-xs text-zinc-500">
+              {short_recommendation(bid.score_recommendation)}
+            </p>
+          </div>
         </:col>
         <:col :let={bid} field="score_total" label="Score" sort>
           <span class={score_color(bid.score_total)}>{bid.score_total || "-"}</span>
@@ -97,4 +110,17 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
 
   defp format_date(nil), do: "-"
   defp format_date(datetime), do: Calendar.strftime(datetime, "%b %d, %Y")
+
+  defp short_recommendation(nil), do: nil
+
+  defp short_recommendation(recommendation) when is_binary(recommendation) do
+    recommendation
+    |> String.split(".")
+    |> List.first()
+    |> case do
+      nil -> nil
+      "" -> recommendation
+      headline -> headline <> "."
+    end
+  end
 end

@@ -21,6 +21,12 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
       posted_at: [type: :string, doc: "Posted date (ISO8601)"],
       due_at: [type: :string, doc: "Due date (ISO8601)"],
       estimated_value: [type: :float, doc: "Estimated value"],
+      score_recommendation: [type: :string, doc: "Human-readable scoring recommendation"],
+      score_icp_matches: [type: {:array, :string}, doc: "Matched ICP lanes from scoring"],
+      score_risk_flags: [type: {:array, :string}, doc: "Risk flags from scoring"],
+      score_company_profile_key: [type: :string, doc: "Company profile key used to score"],
+      score_company_profile_mode: [type: :string, doc: "Company profile mode used to score"],
+      score_source_confidence: [type: :atom, doc: "Confidence level for the source family"],
       scores: [type: :map, doc: "Pre-calculated scores"],
       metadata: [type: :map, doc: "Additional source and scoring metadata"]
     ]
@@ -82,6 +88,12 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
         score_opportunity_type: Map.get(params, :score_opportunity_type),
         score_total: Map.get(params, :score_total),
         score_tier: Map.get(params, :score_tier),
+        score_recommendation: Map.get(params, :score_recommendation),
+        score_icp_matches: Map.get(params, :score_icp_matches, []),
+        score_risk_flags: Map.get(params, :score_risk_flags, []),
+        score_company_profile_key: Map.get(params, :score_company_profile_key),
+        score_company_profile_mode: Map.get(params, :score_company_profile_mode),
+        score_source_confidence: Map.get(params, :score_source_confidence),
         keywords_matched: Map.get(params, :keywords_matched, []),
         keywords_rejected: Map.get(params, :keywords_rejected, []),
         metadata: Map.get(params, :metadata, %{})
