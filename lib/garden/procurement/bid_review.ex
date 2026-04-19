@@ -9,8 +9,10 @@ defmodule GnomeGarden.Procurement.BidReview do
 
   alias GnomeGarden.CRM.PipelineEvents
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Commercial.CompanyProfileLearning
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.Bid
+  alias GnomeGarden.Procurement.TargetingFeedback
   alias GnomeGarden.Sales
 
   def start_review(bid_or_id, actor \\ nil) do
@@ -27,12 +29,17 @@ defmodule GnomeGarden.Procurement.BidReview do
     end
   end
 
-  def pass_bid(bid_or_id, reason, actor \\ nil) do
+  def pass_bid(bid_or_id, reason_or_feedback, actor \\ nil) do
+    feedback = TargetingFeedback.normalize_pass_feedback(reason_or_feedback)
+
     with {:ok, bid} <- load_bid(bid_or_id, actor, [:signal]),
-         {:ok, rejected_bid} <- Procurement.reject_bid(bid, %{notes: reason}, actor: actor),
-         :ok <- maybe_reject_signal(bid.signal, reason, actor),
-         :ok <- log_event(:passed, bid, reason, "rejected", actor),
-         {:ok, refreshed_bid} <- load_bid(rejected_bid.id, actor, [:signal]) do
+         {:ok, rejected_bid} <-
+           Procurement.reject_bid(bid, %{notes: feedback.reason}, actor: actor),
+         persisted_bid <- maybe_capture_feedback(rejected_bid, feedback, actor),
+         :ok <- maybe_reject_signal(bid.signal, feedback.reason, actor),
+         :ok <- log_event(:passed, bid, feedback.reason, "rejected", actor),
+         :ok <- maybe_apply_targeting_feedback(persisted_bid, feedback),
+         {:ok, refreshed_bid} <- load_bid(persisted_bid.id, actor, [:signal]) do
       {:ok, refreshed_bid}
     end
   end
@@ -165,6 +172,46 @@ defmodule GnomeGarden.Procurement.BidReview do
       :ok
     else
       {:error, error} -> {:error, error}
+    end
+  end
+
+  defp maybe_capture_feedback(bid, %{feedback_scope: nil, exclude_terms: []}, _actor), do: bid
+
+  defp maybe_capture_feedback(bid, feedback, actor) do
+    feedback = %{feedback | exclude_terms: learned_terms_for_bid(bid, feedback)}
+
+    metadata =
+      (bid.metadata || %{})
+      |> Map.put("targeting_feedback", TargetingFeedback.metadata(bid, feedback))
+
+    case Procurement.update_bid(bid, %{metadata: metadata}, actor: actor) do
+      {:ok, updated_bid} -> updated_bid
+      {:error, _error} -> bid
+    end
+  end
+
+  defp maybe_apply_targeting_feedback(_bid, %{feedback_scope: nil}), do: :ok
+
+  defp maybe_apply_targeting_feedback(bid, feedback) do
+    case CompanyProfileLearning.record_targeting_feedback(
+           company_profile_key: bid.score_company_profile_key,
+           company_profile_mode: bid.score_company_profile_mode,
+           feedback_scope: feedback.feedback_scope,
+           exclude_terms: learned_terms_for_bid(bid, feedback),
+           reason: feedback.reason,
+           source_type: "bid",
+           source_id: bid.id
+         ) do
+      {:ok, _result} -> :ok
+      {:error, _error} -> :ok
+    end
+  end
+
+  defp learned_terms_for_bid(bid, feedback) do
+    if feedback.exclude_terms == [] do
+      TargetingFeedback.suggested_exclude_terms(bid)
+    else
+      feedback.exclude_terms
     end
   end
 

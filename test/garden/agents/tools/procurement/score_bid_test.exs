@@ -1,5 +1,5 @@
 defmodule GnomeGarden.Agents.Tools.Procurement.ScoreBidTest do
-  use ExUnit.Case, async: true
+  use GnomeGarden.DataCase, async: true
 
   alias GnomeGarden.Agents.Tools.Procurement.ScoreBid
 
@@ -143,5 +143,52 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScoreBidTest do
     assert score.score_tier == :prospect
     refute score.save_candidate?
     assert score.company_profile_mode == "industrial_core"
+  end
+
+  test "learned exclude keywords reject CCTV-style bids" do
+    {:ok, _profile} =
+      GnomeGarden.Commercial.create_company_profile(%{
+        key: "primary",
+        name: "Gnome",
+        positioning_summary: "Industrial apps and software delivery for operations teams.",
+        specialty_summary: "Modern web environments tied to production systems.",
+        voice_summary: "Direct and technical.",
+        core_capabilities: ["Phoenix applications", "industrial integrations"],
+        adjacent_capabilities: ["analytics"],
+        target_industries: ["manufacturing"],
+        preferred_engagements: ["operations software"],
+        disqualifiers: ["staff augmentation"],
+        voice_principles: ["be specific"],
+        preferred_phrases: ["operator-facing web environments"],
+        avoid_phrases: ["growth hacking"],
+        default_profile_mode: :industrial_plus_software,
+        keyword_profiles: %{
+          "modes" => %{
+            "industrial_plus_software" => %{
+              "include" => ["workflow software"],
+              "exclude" => [],
+              "learned_exclude" => ["cctv", "video surveillance"]
+            }
+          }
+        }
+      })
+
+    assert {:ok, score} =
+             ScoreBid.run(
+               %{
+                 title: "Citywide CCTV Camera and Video Surveillance Upgrade",
+                 description:
+                   "Replace security camera infrastructure, recording servers, and video surveillance systems.",
+                 agency: "City of Santa Ana",
+                 location: "Santa Ana, CA",
+                 source_type: :bidnet
+               },
+               %{}
+             )
+
+    assert score.score_tier == :rejected
+    refute score.save_candidate?
+    assert "profile-mode excluded keywords" in score.risk_flags
+    assert "cctv" in score.keywords_rejected
   end
 end

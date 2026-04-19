@@ -68,4 +68,40 @@ defmodule GnomeGarden.Commercial.CompanyProfileContextTest do
     assert scope.bidnet_query_keywords == ["workflow software"]
     assert scope.sam_gov_naics_codes == ["541511"]
   end
+
+  test "merges learned exclude keywords into resolved profile mode" do
+    {:ok, _profile} =
+      Commercial.create_company_profile(%{
+        key: "primary",
+        name: "Gnome",
+        positioning_summary: "Industrial apps",
+        specialty_summary: "Plant-floor systems",
+        voice_summary: "Direct",
+        core_capabilities: ["industrial integrations"],
+        adjacent_capabilities: ["custom software"],
+        target_industries: ["manufacturing"],
+        preferred_engagements: ["operations software"],
+        disqualifiers: ["staff augmentation"],
+        voice_principles: ["be specific"],
+        preferred_phrases: ["industrial integrations"],
+        avoid_phrases: ["growth hacking"],
+        default_profile_mode: :industrial_plus_software,
+        keyword_profiles: %{
+          "modes" => %{
+            "industrial_plus_software" => %{
+              "include" => ["workflow software"],
+              "exclude" => ["staff augmentation"],
+              "learned_exclude" => ["cctv", "video surveillance"]
+            }
+          }
+        }
+      })
+
+    resolved = CompanyProfileContext.resolve()
+
+    assert "staff augmentation" in resolved.exclude_keywords
+    assert "cctv" in resolved.exclude_keywords
+    assert "video surveillance" in resolved.exclude_keywords
+    assert CompanyProfileContext.prompt_block() =~ "cctv"
+  end
 end

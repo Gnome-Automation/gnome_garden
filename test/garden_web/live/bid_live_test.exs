@@ -42,6 +42,20 @@ defmodule GnomeGardenWeb.BidLiveTest do
     assert render(view) =~ "aggregated"
   end
 
+  test "pass dialogs expose profile-learning controls", %{conn: conn} do
+    bid = bid_fixture()
+
+    {:ok, index_view, _html} = live(conn, ~p"/procurement/bids")
+    render_click(element(index_view, "#bid-action-pass-#{bid.id}"))
+    assert has_element?(index_view, "#bid-index-pass-form select[name='feedback_scope']")
+    assert has_element?(index_view, "#bid-index-pass-form input[name='exclude_terms']")
+
+    {:ok, show_view, _html} = live(conn, ~p"/procurement/bids/#{bid}")
+    render_click(element(show_view, "button[phx-click='open_pass']"))
+    assert has_element?(show_view, "#pass-form select[name='feedback_scope']")
+    assert has_element?(show_view, "#pass-form input[name='exclude_terms']")
+  end
+
   defp bid_fixture do
     {:ok, bid} =
       Procurement.create_bid(%{

@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
 
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.BidReview
+  alias GnomeGarden.Procurement.TargetingFeedback
 
   @queues [:review, :active, :parked, :rejected, :closed]
 
@@ -76,7 +77,8 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
          assign(socket, :action_dialog, %{
            type: String.to_existing_atom(action),
            bid_id: bid.id,
-           title: bid.title
+           title: bid.title,
+           suggested_terms: TargetingFeedback.suggested_exclude_terms_csv(bid)
          })}
 
       {:error, error} ->
@@ -88,10 +90,10 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
     {:noreply, assign(socket, :action_dialog, nil)}
   end
 
-  def handle_event("submit_pass", %{"reason" => reason}, socket) do
+  def handle_event("submit_pass", params, socket) do
     case BidReview.pass_bid(
            socket.assigns.action_dialog.bid_id,
-           reason,
+           params,
            socket.assigns.current_user
          ) do
       {:ok, _bid} ->
@@ -304,24 +306,47 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
           <h3 class="font-bold text-lg mb-2">Pass on this bid?</h3>
           <p class="text-sm text-zinc-500 mb-4">{@action_dialog.title}</p>
           <form id="bid-index-pass-form" phx-submit="submit_pass">
-            <.input
-              name="reason"
-              value=""
-              label="Why are we passing?"
-              type="select"
-              prompt="Select a reason..."
-              options={[
-                {"Not in our service area", "Not in our service area"},
-                {"Too large / out of scope", "Too large / out of scope"},
-                {"Too small / not worth it", "Too small / not worth it"},
-                {"Wrong industry", "Wrong industry"},
-                {"No capacity right now", "No capacity right now"},
-                {"Already pursuing similar", "Already pursuing similar"},
-                {"Not a fit", "Not a fit"},
-                {"Other", "Other"}
-              ]}
-              required
-            />
+            <div class="space-y-3">
+              <.input
+                name="reason"
+                value=""
+                label="Why are we passing?"
+                type="select"
+                prompt="Select a reason..."
+                options={[
+                  {"Not in our service area", "Not in our service area"},
+                  {"Too large / out of scope", "Too large / out of scope"},
+                  {"Too small / not worth it", "Too small / not worth it"},
+                  {"Wrong industry", "Wrong industry"},
+                  {"No capacity right now", "No capacity right now"},
+                  {"Already pursuing similar", "Already pursuing similar"},
+                  {"Not a fit", "Not a fit"},
+                  {"Other", "Other"}
+                ]}
+                required
+              />
+              <.input
+                name="feedback_scope"
+                value=""
+                label="Teach the search/profile (optional)"
+                type="select"
+                prompt="Just pass this bid"
+                options={[
+                  {"Out of scope for us", "out_of_scope"},
+                  {"Not targeting this type right now", "not_targeting_right_now"}
+                ]}
+              />
+              <.input
+                name="exclude_terms"
+                value={@action_dialog.suggested_terms}
+                label="Keywords to suppress next time"
+                type="text"
+                placeholder="e.g. cctv, video surveillance, security camera"
+              />
+              <p class="text-xs text-zinc-500">
+                When set, these terms are added to the active company profile mode so similar bids stop surfacing in the live queue.
+              </p>
+            </div>
             <div class="modal-action">
               <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>
               <.button

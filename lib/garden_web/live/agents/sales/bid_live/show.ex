@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
 
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.BidReview
+  alias GnomeGarden.Procurement.TargetingFeedback
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -44,7 +45,11 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   end
 
   def handle_event("open_pass", _, socket) do
-    {:noreply, assign(socket, :action_dialog, %{type: :pass})}
+    {:noreply,
+     assign(socket, :action_dialog, %{
+       type: :pass,
+       suggested_terms: TargetingFeedback.suggested_exclude_terms_csv(socket.assigns.bid)
+     })}
   end
 
   def handle_event("open_park", _, socket) do
@@ -55,8 +60,8 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     {:noreply, assign(socket, :action_dialog, nil)}
   end
 
-  def handle_event("submit_pass", %{"reason" => reason}, socket) do
-    case BidReview.pass_bid(socket.assigns.bid, reason, socket.assigns.current_user) do
+  def handle_event("submit_pass", params, socket) do
+    case BidReview.pass_bid(socket.assigns.bid, params, socket.assigns.current_user) do
       {:ok, rejected_bid} ->
         {:noreply,
          socket
@@ -342,6 +347,19 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
           </div>
         </div>
 
+        <div :if={targeting_feedback(@bid)}>
+          <.heading level={3}>Targeting Feedback</.heading>
+          <.properties>
+            <.property name="Scope">
+              {format_feedback_scope(targeting_feedback(@bid)["feedback_scope"])}
+            </.property>
+            <.property name="Reason">{targeting_feedback(@bid)["reason"] || "-"}</.property>
+            <.property name="Learned Terms">
+              {render_feedback_terms(targeting_feedback(@bid)["exclude_terms"])}
+            </.property>
+          </.properties>
+        </div>
+
         <div>
           <.heading level={3}>Dates</.heading>
           <.properties>
@@ -382,24 +400,47 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
         <h3 class="font-bold text-lg mb-2">Pass on this bid?</h3>
         <p class="text-sm text-zinc-500 mb-4">{@bid.title}</p>
         <form id="pass-form" phx-submit="submit_pass">
-          <.input
-            name="reason"
-            value=""
-            label="Why are we passing?"
-            type="select"
-            prompt="Select a reason..."
-            options={[
-              {"Not in our service area", "Not in our service area"},
-              {"Too large / out of scope", "Too large / out of scope"},
-              {"Too small / not worth it", "Too small / not worth it"},
-              {"Wrong industry", "Wrong industry"},
-              {"No capacity right now", "No capacity right now"},
-              {"Already pursuing similar", "Already pursuing similar"},
-              {"Not a fit", "Not a fit"},
-              {"Other", "Other"}
-            ]}
-            required
-          />
+          <div class="space-y-3">
+            <.input
+              name="reason"
+              value=""
+              label="Why are we passing?"
+              type="select"
+              prompt="Select a reason..."
+              options={[
+                {"Not in our service area", "Not in our service area"},
+                {"Too large / out of scope", "Too large / out of scope"},
+                {"Too small / not worth it", "Too small / not worth it"},
+                {"Wrong industry", "Wrong industry"},
+                {"No capacity right now", "No capacity right now"},
+                {"Already pursuing similar", "Already pursuing similar"},
+                {"Not a fit", "Not a fit"},
+                {"Other", "Other"}
+              ]}
+              required
+            />
+            <.input
+              name="feedback_scope"
+              value=""
+              label="Teach the search/profile (optional)"
+              type="select"
+              prompt="Just pass this bid"
+              options={[
+                {"Out of scope for us", "out_of_scope"},
+                {"Not targeting this type right now", "not_targeting_right_now"}
+              ]}
+            />
+            <.input
+              name="exclude_terms"
+              value={@action_dialog[:suggested_terms]}
+              label="Keywords to suppress next time"
+              type="text"
+              placeholder="e.g. cctv, video surveillance, security camera"
+            />
+            <p class="text-xs text-zinc-500">
+              This feeds the active company profile mode so similar bids can be filtered out automatically later.
+            </p>
+          </div>
           <div class="modal-action">
             <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>
             <.button
@@ -529,6 +570,23 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     |> to_string()
     |> String.replace("_", " ")
   end
+
+  defp targeting_feedback(bid) do
+    metadata = Map.get(bid, :metadata) || %{}
+    metadata["targeting_feedback"]
+  end
+
+  defp format_feedback_scope(nil), do: "-"
+
+  defp format_feedback_scope(scope) do
+    scope
+    |> to_string()
+    |> String.replace("_", " ")
+  end
+
+  defp render_feedback_terms(nil), do: "-"
+  defp render_feedback_terms([]), do: "-"
+  defp render_feedback_terms(terms), do: Enum.join(List.wrap(terms), ", ")
 
   defp format_datetime(nil), do: "-"
   defp format_datetime(dt), do: Calendar.strftime(dt, "%b %d, %Y %H:%M")

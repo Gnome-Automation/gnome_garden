@@ -74,7 +74,6 @@ defmodule GnomeGarden.Commercial.CompanyProfileContext do
   def prompt_block(opts \\ []) do
     resolved = resolve(opts)
     profile = resolved.profile
-    keyword_mode = resolved.keyword_mode
 
     """
     COMPANY PROFILE
@@ -89,8 +88,8 @@ defmodule GnomeGarden.Commercial.CompanyProfileContext do
     - Voice: #{Map.get(profile, :voice_summary)}
     - Voice principles: #{render_list(Map.get(profile, :voice_principles, []), "None")}
     - Active profile mode: #{resolved.company_profile_mode}
-    - Mode include keywords: #{render_list(Map.get(keyword_mode, "include", []), "None")}
-    - Mode exclude keywords: #{render_list(Map.get(keyword_mode, "exclude", []), "None")}
+    - Mode include keywords: #{render_list(resolved.include_keywords, "None")}
+    - Mode exclude keywords: #{render_list(resolved.exclude_keywords, "None")}
     """
     |> String.trim()
   end
@@ -171,7 +170,10 @@ defmodule GnomeGarden.Commercial.CompanyProfileContext do
       company_profile_mode: mode,
       keyword_mode: keyword_mode,
       include_keywords: normalize_terms(Map.get(keyword_mode, "include", [])),
-      exclude_keywords: normalize_terms(Map.get(keyword_mode, "exclude", [])),
+      exclude_keywords:
+        normalize_terms(
+          Map.get(keyword_mode, "exclude", []) ++ Map.get(keyword_mode, "learned_exclude", [])
+        ),
       bidnet_query_keywords:
         normalize_terms(Map.get(keyword_mode, "bidnet_queries", default_bidnet_queries(mode))),
       sam_gov_naics_codes:

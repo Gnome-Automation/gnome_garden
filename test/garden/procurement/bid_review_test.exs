@@ -23,6 +23,34 @@ defmodule GnomeGarden.Procurement.BidReviewTest do
     assert signal.status == :rejected
   end
 
+  test "pass_bid can teach the profile to suppress similar bids" do
+    bid = cctv_bid_fixture()
+
+    assert {:ok, rejected_bid} =
+             BidReview.pass_bid(bid, %{
+               "reason" => "Out of scope for us",
+               "feedback_scope" => "out_of_scope",
+               "exclude_terms" => "cctv, video surveillance"
+             })
+
+    assert rejected_bid.status == :rejected
+
+    assert get_in(rejected_bid.metadata, ["targeting_feedback", "feedback_scope"]) ==
+             "out_of_scope"
+
+    assert get_in(rejected_bid.metadata, ["targeting_feedback", "exclude_terms"]) == [
+             "cctv",
+             "video surveillance"
+           ]
+
+    {:ok, profile} = Commercial.get_primary_company_profile()
+
+    assert get_in(
+             profile.keyword_profiles,
+             ["modes", "industrial_plus_software", "learned_exclude"]
+           ) == ["cctv", "video surveillance"]
+  end
+
   test "park_bid archives the linked signal and creates research when requested" do
     bid = bid_fixture()
 
@@ -72,6 +100,27 @@ defmodule GnomeGarden.Procurement.BidReviewTest do
         region: :oc,
         posted_at: ~U[2026-04-18 16:00:00Z],
         due_at: ~U[2026-05-10 23:59:00Z]
+      })
+
+    bid
+  end
+
+  defp cctv_bid_fixture do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Citywide CCTV and Video Surveillance Upgrade",
+        url:
+          "https://example.com/bids/cctv-video-surveillance-upgrade-#{System.unique_integer([:positive])}",
+        external_id: "CCTV-#{System.unique_integer([:positive])}",
+        description:
+          "Replace CCTV cameras, security camera network, and video surveillance systems.",
+        agency: "City of Anaheim",
+        location: "Anaheim, CA",
+        region: :oc,
+        posted_at: ~U[2026-04-18 16:00:00Z],
+        due_at: ~U[2026-05-10 23:59:00Z],
+        score_company_profile_key: "primary",
+        score_company_profile_mode: "industrial_plus_software"
       })
 
     bid
