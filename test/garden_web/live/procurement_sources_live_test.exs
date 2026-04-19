@@ -78,4 +78,44 @@ defmodule GnomeGardenWeb.ProcurementSourcesLiveTest do
     assert source.config_status == :found
     assert source.source_type == :utility
   end
+
+  test "sources page shows last scan exclusion summary when present", %{conn: conn} do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "California BidNet Direct - SCADA",
+        url: "https://example.com/bidnet/scada",
+        source_type: :bidnet,
+        portal_id: "ca-scada",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        metadata: %{
+          "last_scan_summary" => %{
+            "extracted" => 12,
+            "excluded" => 3,
+            "scored" => 9,
+            "saved" => 4,
+            "excluded_examples" => [
+              "Citywide CCTV Camera Upgrade",
+              "Video Surveillance Replacement"
+            ]
+          }
+        }
+      })
+
+    {:ok, _source} =
+      Procurement.configure_procurement_source(
+        source,
+        %{scrape_config: %{"provider" => "bidnet_direct"}},
+        actor: nil
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/procurement/sources")
+
+    assert render(view) =~ "Extracted 12"
+    assert render(view) =~ "Excluded 3"
+    assert render(view) =~ "Saved 4"
+    assert render(view) =~ "Recently excluded"
+    assert render(view) =~ "Citywide CCTV Camera Upgrade"
+  end
 end

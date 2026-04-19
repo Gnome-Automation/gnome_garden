@@ -317,6 +317,38 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
                 <div :if={source.notes} class="text-sm text-zinc-600 dark:text-zinc-300">
                   {source.notes}
                 </div>
+
+                <div
+                  :if={scan_summary(source)}
+                  class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]"
+                >
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="badge badge-ghost badge-sm">
+                      Extracted {summary_value(source, "extracted")}
+                    </span>
+                    <span class="badge badge-ghost badge-sm">
+                      Excluded {summary_value(source, "excluded")}
+                    </span>
+                    <span class="badge badge-ghost badge-sm">
+                      Scored {summary_value(source, "scored")}
+                    </span>
+                    <span class="badge badge-success badge-sm">
+                      Saved {summary_value(source, "saved")}
+                    </span>
+                  </div>
+
+                  <div
+                    :if={summary_examples(source) != []}
+                    class="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-300"
+                  >
+                    <p class="font-medium text-zinc-700 dark:text-zinc-200">
+                      Recently excluded
+                    </p>
+                    <ul class="list-disc space-y-1 pl-5">
+                      <li :for={example <- summary_examples(source)}>{example}</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
 
               <div class="flex flex-wrap items-center gap-2 xl:justify-end">
@@ -537,6 +569,25 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
 
   defp format_date(nil), do: "-"
   defp format_date(datetime), do: Calendar.strftime(datetime, "%b %d, %H:%M")
+
+  defp scan_summary(source) do
+    metadata = source.metadata || %{}
+    metadata["last_scan_summary"]
+  end
+
+  defp summary_value(source, key) do
+    case scan_summary(source) do
+      %{} = summary -> Map.get(summary, key, 0)
+      _ -> 0
+    end
+  end
+
+  defp summary_examples(source) do
+    case scan_summary(source) do
+      %{} = summary -> List.wrap(summary["excluded_examples"])
+      _ -> []
+    end
+  end
 
   defp error_message(%Ash.Error.Invalid{} = error),
     do: Ash.Error.to_error_class(error) |> inspect()

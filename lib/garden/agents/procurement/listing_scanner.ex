@@ -170,7 +170,10 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   end
 
   defp complete_scan(source, bids, excluded, scored, saved, enriched) do
-    Procurement.mark_procurement_source_scanned!(source, %{})
+    Procurement.mark_procurement_source_scanned!(
+      source,
+      %{metadata: scan_metadata(source, bids, excluded, scored, saved, enriched)}
+    )
 
     {:ok,
      %{
@@ -182,6 +185,25 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
        enriched: enriched,
        bids: saved
      }}
+  end
+
+  defp scan_metadata(source, bids, excluded, scored, saved, enriched) do
+    summary = %{
+      "extracted" => length(bids),
+      "excluded" => length(excluded),
+      "scored" => length(scored),
+      "saved" => length(saved),
+      "enriched" => enriched,
+      "excluded_examples" =>
+        excluded
+        |> Enum.take(3)
+        |> Enum.map(&(bid_value(&1, :title) || bid_value(&1, "title")))
+        |> Enum.reject(&is_nil/1),
+      "recorded_at" => DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+    }
+
+    (source.metadata || %{})
+    |> Map.put("last_scan_summary", summary)
   end
 
   defp extract_bids(config) do

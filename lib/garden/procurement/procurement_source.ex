@@ -240,7 +240,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
     end
 
     update :mark_scanned do
-      accept []
+      accept [:metadata]
       change set_attribute(:last_scanned_at, &DateTime.utc_now/0)
     end
 
