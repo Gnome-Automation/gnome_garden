@@ -19,6 +19,8 @@ defmodule GnomeGarden.Procurement do
       define :list_procurement_sources, action: :read
       define :list_console_procurement_sources, action: :console
       define :get_procurement_source, action: :read, get_by: [:id]
+      define :create_procurement_source, action: :create
+      define :create_procurement_source_for_organization, action: :create_for_organization
       define :update_procurement_source, action: :update
       define :approve_procurement_source, action: :approve
       define :ignore_procurement_source, action: :ignore
@@ -29,11 +31,21 @@ defmodule GnomeGarden.Procurement do
       define :scan_procurement_source, action: :scan
       define :retry_procurement_source_config, action: :retry_config
       define :retry_procurement_source_scan, action: :retry_scan
+
+      define :list_procurement_sources_by_organization,
+        action: :by_organization,
+        args: [:organization_id]
     end
 
     resource GnomeGarden.Procurement.Bid do
       define :list_bids, action: :read
+      define :list_bids_for_organization, action: :for_organization, args: [:organization_id]
       define :get_bid, action: :read, get_by: [:id]
+      define :get_bid_by_url, action: :by_url, args: [:url]
+      define :create_bid, action: :create
+      define :update_bid, action: :update
+      define :link_bid_signal, action: :link_signal
+      define :link_bid_organization, action: :link_organization
       define :reject_bid, action: :reject
       define :park_bid, action: :park
       define :unpark_bid, action: :unpark

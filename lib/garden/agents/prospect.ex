@@ -57,22 +57,22 @@ defmodule GnomeGarden.Agents.Prospect do
         :next_action,
         :next_action_date,
         :metadata,
-        :converted_company_id,
-        :converted_lead_id
+        :converted_organization_id,
+        :converted_signal_id
       ]
     end
 
-    update :convert_to_company do
-      description "Link prospect to a company when it converts"
-      argument :company_id, :uuid, allow_nil?: false
-      change set_attribute(:converted_company_id, arg(:company_id))
-      change set_attribute(:status, :won)
+    update :convert_to_organization do
+      description "Link prospect to an organization when it converts into durable operating data"
+      argument :organization_id, :uuid, allow_nil?: false
+      change set_attribute(:converted_organization_id, arg(:organization_id))
+      change set_attribute(:status, :contacted)
     end
 
-    update :convert_to_lead do
-      description "Link prospect to a lead for qualification"
-      argument :lead_id, :uuid, allow_nil?: false
-      change set_attribute(:converted_lead_id, arg(:lead_id))
+    update :convert_to_signal do
+      description "Link prospect to a commercial signal for human review"
+      argument :signal_id, :uuid, allow_nil?: false
+      change set_attribute(:converted_signal_id, arg(:signal_id))
       change set_attribute(:status, :contacted)
     end
 
@@ -230,14 +230,14 @@ defmodule GnomeGarden.Agents.Prospect do
   end
 
   relationships do
-    belongs_to :converted_company, GnomeGarden.Sales.Company do
+    belongs_to :converted_organization, GnomeGarden.Operations.Organization do
       public? true
-      description "Company created when prospect converts"
+      description "Organization created or linked when prospect converts"
     end
 
-    belongs_to :converted_lead, GnomeGarden.Sales.Lead do
+    belongs_to :converted_signal, GnomeGarden.Commercial.Signal do
       public? true
-      description "Lead created when prospect needs qualification"
+      description "Commercial signal created when prospect needs human review"
     end
   end
 

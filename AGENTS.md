@@ -213,6 +213,14 @@ aggregates do
 end
 ```
 
+When a resource needs presentation-facing derived values, prefer Ash calculations over
+LiveView/helper mapping functions. For example, if a record has a lifecycle field like
+`status`, `stage`, or `priority`, and the UI needs a stable badge variant such as
+`:default`, `:info`, `:warning`, `:success`, or `:error`, model that as a calculation on
+the resource (for example `calculate :status_variant, :atom, expr(...)`) and load it from
+the domain. Do not scatter one-off helper functions across the web layer for status-to-badge
+or stage-to-color mappings when that mapping is part of the resource's meaning.
+
 ### Leverage Ash - Don't Write Custom Functions
 
 **Use Ash's declarative DSL instead of writing Elixir functions.** Ash provides:
@@ -695,6 +703,8 @@ agent = GnomeGarden.Agents.TaskAgent.new()
 2. **Actions return state changes** - Not the side effects themselves
 3. **Directives describe effects** - Emit, Spawn, Schedule, Stop
 4. **Test without processes** - Agent logic is deterministic
+5. **Check the wider Jido ecosystem before inventing custom orchestration** - Prefer existing Jido patterns, packages, and runtime primitives when the problem is agent/runtime orchestration
+6. **Keep durable business rules in Ash unless the problem is truly agent orchestration** - Use Jido for coordination and runtime behavior, not as a replacement for core data/domain modeling
 
 ## Phoenix & LiveView Guidelines
 

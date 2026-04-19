@@ -14,7 +14,7 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
     The saved config will be used for future deterministic (fast, cheap) scans.
     """,
     schema: [
-      lead_source_id: [
+      procurement_source_id: [
         type: :string,
         required: true,
         doc: "ID of the ProcurementSource to update"
@@ -67,14 +67,14 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
       notes: params[:notes]
     }
 
-    case Ash.get(GnomeGarden.Procurement.ProcurementSource, params.lead_source_id) do
+    case Ash.get(GnomeGarden.Procurement.ProcurementSource, params.procurement_source_id) do
       {:ok, source} ->
         case Ash.update(source, %{scrape_config: scrape_config}, action: :configure) do
           {:ok, updated} ->
             {:ok,
              %{
                saved: true,
-               lead_source_id: updated.id,
+               procurement_source_id: updated.id,
                name: updated.name,
                config_status: :configured,
                message:
@@ -86,7 +86,7 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
         end
 
       {:error, _} ->
-        {:error, "Lead source not found: #{params.lead_source_id}"}
+        {:error, "Procurement source not found: #{params.procurement_source_id}"}
     end
   end
 end

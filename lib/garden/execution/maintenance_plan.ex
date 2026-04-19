@@ -323,4 +323,35 @@ defmodule GnomeGarden.Execution.MaintenancePlan do
       public? true
     end
   end
+
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 active: :success,
+                 suspended: :warning,
+                 retired: :default
+               ],
+               default: :default}
+
+    calculate :priority_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :priority,
+               mapping: [
+                 low: :default,
+                 normal: :info,
+                 high: :warning,
+                 critical: :error
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :work_order_count, :work_orders do
+      public? true
+    end
+  end
 end

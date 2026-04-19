@@ -81,6 +81,29 @@ defmodule GnomeGarden.Commercial.Pursuit do
       ]
     end
 
+    create :create_from_signal do
+      argument :source_signal_id, :uuid, allow_nil?: false
+
+      accept [
+        :organization_id,
+        :site_id,
+        :managed_system_id,
+        :owner_user_id,
+        :name,
+        :description,
+        :pursuit_type,
+        :priority,
+        :probability,
+        :target_value,
+        :expected_close_on,
+        :delivery_model,
+        :billing_model,
+        :notes
+      ]
+
+      change {GnomeGarden.Commercial.Changes.CreatePursuitFromSignal, []}
+    end
+
     update :update do
       accept [
         :signal_id,
@@ -301,6 +324,35 @@ defmodule GnomeGarden.Commercial.Pursuit do
 
   calculations do
     calculate :weighted_value, :decimal, expr(target_value * probability / 100)
+
+    calculate :stage_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :stage,
+               mapping: [
+                 new: :default,
+                 qualified: :info,
+                 estimating: :warning,
+                 proposed: :warning,
+                 negotiating: :info,
+                 won: :success,
+                 lost: :error,
+                 archived: :warning,
+                 reopened: :info
+               ],
+               default: :default}
+
+    calculate :priority_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :priority,
+               mapping: [
+                 strategic: :success,
+                 high: :warning,
+                 normal: :info,
+                 low: :default
+               ],
+               default: :default}
   end
 
   aggregates do

@@ -2,12 +2,12 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   use GnomeGardenWeb, :live_view
 
   alias GnomeGarden.CRM.PipelineEvents
-  alias GnomeGarden.CRM.Review
+  alias GnomeGarden.Commercial
   alias GnomeGarden.Procurement
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    bid = Procurement.get_bid!(id, actor: socket.assigns.current_user)
+    bid = load_bid!(id, socket.assigns.current_user)
 
     {:ok,
      socket
@@ -20,31 +20,17 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
 
   @impl true
   def handle_event("open_pursue", _, socket) do
-    bid = socket.assigns.bid
+    case ensure_signal_for_bid(socket.assigns.bid, socket.assigns.current_user) do
+      {:ok, bid, signal} ->
+        {:noreply,
+         socket
+         |> assign(:bid, bid)
+         |> put_flash(:info, "Opened the commercial signal for this bid.")
+         |> push_navigate(to: ~p"/commercial/signals/#{signal}")}
 
-    company_name =
-      if bid.agency_company_id do
-        case Ash.get(GnomeGarden.Sales.Company, bid.agency_company_id) do
-          {:ok, company} -> company.name
-          _ -> bid.agency || bid.title
-        end
-      else
-        bid.agency || bid.title
-      end
-
-    {:noreply,
-     assign(socket, :action_dialog, %{
-       type: :pursue,
-       prefill: %{
-         "company_name" => company_name,
-         "company_linked" => bid.agency_company_id != nil,
-         "name" => bid.title,
-         "workflow" => "bid_response",
-         "source" => "bid",
-         "amount" => bid.estimated_value && Decimal.to_string(bid.estimated_value),
-         "description" => bid.description
-       }
-     })}
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not open signal: #{inspect(error)}")}
+    end
   end
 
   def handle_event("open_pass", _, socket) do
@@ -59,102 +45,91 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
     {:noreply, assign(socket, :action_dialog, nil)}
   end
 
-  def handle_event("submit_pursue", params, socket) do
-    bid = socket.assigns.bid
-
-    pursue_params = %{
-      company_name: params["company_name"],
-      opportunity_name: params["name"],
-      workflow: String.to_existing_atom(params["workflow"]),
-      source: String.to_existing_atom(params["source"]),
-      reason: params["reason"],
-      description: params["description"],
-      amount: parse_amount(params["amount"]),
-      expected_close_date: parse_date(params["expected_close_date"]),
-      region: bid.region,
-      bid_id: bid.id
-    }
-
-    case Review.accept_review_item(pursue_params, actor: socket.assigns.current_user) do
-      {:ok, %{opportunity: opp}} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Now pursuing — #{opp.name}")
-         |> push_navigate(to: ~p"/crm/opportunities/#{opp}")}
-
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Failed: #{inspect(reason)}")}
-    end
-  end
-
   def handle_event("submit_pass", %{"reason" => reason}, socket) do
     bid = socket.assigns.bid
-    Ash.update!(bid, %{notes: reason}, action: :reject)
+    actor = socket.assigns.current_user
 
-    PipelineEvents.log(
-      %{
-        event_type: :passed,
-        subject_type: "bid",
-        subject_id: bid.id,
-        summary: "Passed on #{bid.title}",
-        reason: reason,
-        from_state: to_string(bid.status),
-        to_state: "rejected",
-        actor_id: socket.assigns.current_user && socket.assigns.current_user.id
-      },
-      actor: socket.assigns.current_user
-    )
+    case Procurement.reject_bid(bid, %{notes: reason}, actor: actor) do
+      {:ok, rejected_bid} ->
+        maybe_reject_signal(bid.signal, reason, actor)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "Passed — #{bid.title}")
-     |> push_navigate(to: ~p"/procurement/bids")}
+        PipelineEvents.log(
+          %{
+            event_type: :passed,
+            subject_type: "bid",
+            subject_id: bid.id,
+            summary: "Passed on #{bid.title}",
+            reason: reason,
+            from_state: to_string(bid.status),
+            to_state: "rejected",
+            actor_id: actor && actor.id
+          },
+          actor: actor
+        )
+
+        {:noreply,
+         socket
+         |> assign(:bid, load_bid!(rejected_bid.id, actor))
+         |> put_flash(:info, "Passed — #{bid.title}")
+         |> push_navigate(to: ~p"/procurement/bids")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not pass bid: #{inspect(error)}")}
+    end
   end
 
   def handle_event("submit_park", params, socket) do
     bid = socket.assigns.bid
     reason = params["reason"]
     research_note = params["research"]
+    actor = socket.assigns.current_user
 
-    Ash.update!(bid, %{notes: reason}, action: :park)
+    case Procurement.park_bid(bid, %{notes: reason}, actor: actor) do
+      {:ok, parked_bid} ->
+        maybe_archive_signal(bid.signal, actor)
 
-    {:ok, event} =
-      PipelineEvents.log(
-        %{
-          event_type: :parked,
-          subject_type: "bid",
-          subject_id: bid.id,
-          summary: "Parked — #{bid.title}",
-          reason: reason,
-          from_state: to_string(bid.status),
-          to_state: "parked",
-          actor_id: socket.assigns.current_user && socket.assigns.current_user.id
-        },
-        actor: socket.assigns.current_user
-      )
+        {:ok, event} =
+          PipelineEvents.log(
+            %{
+              event_type: :parked,
+              subject_type: "bid",
+              subject_id: bid.id,
+              summary: "Parked — #{bid.title}",
+              reason: reason,
+              from_state: to_string(bid.status),
+              to_state: "parked",
+              actor_id: actor && actor.id
+            },
+            actor: actor
+          )
 
-    if research_note && research_note != "" do
-      {:ok, research} =
-        Ash.create(GnomeGarden.Sales.ResearchRequest, %{
-          research_type: :qualification,
-          priority: :normal,
-          notes: research_note,
-          researchable_type: "bid",
-          researchable_id: bid.id
-        })
+        if research_note && research_note != "" do
+          {:ok, research} =
+            Ash.create(GnomeGarden.Sales.ResearchRequest, %{
+              research_type: :qualification,
+              priority: :normal,
+              notes: research_note,
+              researchable_type: "bid",
+              researchable_id: bid.id
+            })
 
-      Ash.create!(GnomeGarden.Sales.ResearchLink, %{
-        research_request_id: research.id,
-        bid_id: bid.id,
-        event_id: event.id,
-        context: reason
-      })
+          Ash.create!(GnomeGarden.Sales.ResearchLink, %{
+            research_request_id: research.id,
+            bid_id: bid.id,
+            event_id: event.id,
+            context: reason
+          })
+        end
+
+        {:noreply,
+         socket
+         |> assign(:bid, load_bid!(parked_bid.id, actor))
+         |> put_flash(:info, "Parked — #{bid.title}")
+         |> push_navigate(to: ~p"/procurement/bids")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not park bid: #{inspect(error)}")}
     end
-
-    {:noreply,
-     socket
-     |> put_flash(:info, "Parked — #{bid.title}")
-     |> push_navigate(to: ~p"/procurement/bids")}
   end
 
   def handle_event("delete_bid", _, socket) do
@@ -167,12 +142,20 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   end
 
   def handle_event("unpark", _, socket) do
-    {:ok, bid} = Ash.update(socket.assigns.bid, %{}, action: :unpark)
+    actor = socket.assigns.current_user
 
-    {:noreply,
-     socket
-     |> assign(:bid, bid)
-     |> put_flash(:info, "Unparked — back in review")}
+    case Procurement.unpark_bid(socket.assigns.bid, actor: actor) do
+      {:ok, bid} ->
+        maybe_reopen_signal(socket.assigns.bid.signal, actor)
+
+        {:noreply,
+         socket
+         |> assign(:bid, load_bid!(bid.id, actor))
+         |> put_flash(:info, "Unparked — back in review")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not unpark bid: #{inspect(error)}")}
+    end
   end
 
   # -- Render --
@@ -181,12 +164,21 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   def render(assigns) do
     ~H"""
     <.header>
-      <span class={tier_badge(@bid.score_tier)}>{format_tier(@bid.score_tier)}</span>
+      <.status_badge status={@bid.score_tier_variant}>{format_tier(@bid.score_tier)}</.status_badge>
       {@bid.title}
       <:subtitle :if={@bid.agency}>{@bid.agency}</:subtitle>
       <:actions>
         <.button navigate={~p"/procurement/bids"}>
           <.icon name="hero-arrow-left" class="size-4" /> Back
+        </.button>
+        <.button
+          :if={List.first(@bid.pursuits)}
+          navigate={~p"/commercial/pursuits/#{List.first(@bid.pursuits)}"}
+        >
+          <.icon name="hero-arrow-trending-up" class="size-4" /> Pursuit
+        </.button>
+        <.button :if={@bid.signal} navigate={~p"/commercial/signals/#{@bid.signal}"}>
+          <.icon name="hero-inbox-stack" class="size-4" /> Signal
         </.button>
         <a :if={@bid.url} href={@bid.url} target="_blank" class="btn btn-sm btn-primary gap-1">
           <.icon name="hero-arrow-top-right-on-square" class="size-4" /> View Original
@@ -196,9 +188,9 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
 
     <%!-- Action bar --%>
     <div class="mt-4 flex items-center gap-2">
-      <span class={["badge", bid_status_class(@bid.status)]}>
+      <.status_badge status={@bid.status_variant}>
         {format_atom(@bid.status)}
-      </span>
+      </.status_badge>
       <span :if={@bid.notes && @bid.status not in [:new, :reviewing]} class="text-sm text-zinc-500">
         {@bid.notes}
       </span>
@@ -214,7 +206,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
           >
             <li>
               <button phx-click="open_pursue" class="text-success font-semibold">
-                <.icon name="hero-rocket-launch" class="size-4" /> Pursue
+                <.icon name="hero-inbox-stack" class="size-4" /> Open Signal
               </button>
             </li>
             <li>
@@ -254,11 +246,25 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
           <.heading level={3}>Bid Details</.heading>
           <.properties>
             <.property name="Agency">{@bid.agency || "-"}</.property>
+            <.property name="Organization">
+              <span :if={@bid.organization}>{@bid.organization.name}</span>
+              <span :if={!@bid.organization}>-</span>
+            </.property>
             <.property name="Location">{@bid.location || "-"}</.property>
             <.property name="Region">{format_region(@bid.region)}</.property>
             <.property name="Posted">{format_datetime(@bid.posted_at)}</.property>
             <.property name="Due">{format_datetime(@bid.due_at)}</.property>
             <.property name="Estimated Value">{format_value(@bid.estimated_value)}</.property>
+            <.property name="Signal">
+              <.link
+                :if={@bid.signal}
+                navigate={~p"/commercial/signals/#{@bid.signal}"}
+                class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400"
+              >
+                Open signal
+              </.link>
+              <span :if={!@bid.signal}>-</span>
+            </.property>
             <.property name="URL">
               <a
                 :if={@bid.url}
@@ -269,6 +275,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
                 {@bid.url}
               </a>
             </.property>
+            <.property name="Pursuits">{Integer.to_string(length(@bid.pursuits || []))}</.property>
           </.properties>
         </div>
 
@@ -325,118 +332,27 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
             <.property name="Created">{format_datetime(@bid.inserted_at)}</.property>
           </.properties>
         </div>
+
+        <div>
+          <.heading level={3}>Commercial Follow-Up</.heading>
+          <div :if={Enum.empty?(@bid.pursuits || [])} class="text-sm text-zinc-500">
+            No pursuits yet. Review the linked signal when someone is ready to own this bid.
+          </div>
+          <div :if={!Enum.empty?(@bid.pursuits || [])} class="space-y-2">
+            <.link
+              :for={pursuit <- @bid.pursuits}
+              navigate={~p"/commercial/pursuits/#{pursuit}"}
+              class="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
+            >
+              <span class="font-medium text-zinc-900 dark:text-white">{pursuit.name}</span>
+              <.status_badge status={pursuit.stage_variant}>
+                {format_atom(pursuit.stage)}
+              </.status_badge>
+            </.link>
+          </div>
+        </div>
       </div>
     </div>
-
-    <%!-- Pursue dialog --%>
-    <dialog
-      :if={@action_dialog && @action_dialog.type == :pursue}
-      id="bid-pursue-dialog"
-      class="modal"
-      phx-hook="ShowModal"
-    >
-      <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">Pursue this opportunity</h3>
-        <p class="text-sm text-zinc-500 mb-4">
-          Creates an opportunity in your pipeline linked to the company.
-        </p>
-        <form id="pursue-form" phx-submit="submit_pursue">
-          <div class="space-y-3">
-            <div>
-              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white mb-1">
-                Company
-              </label>
-              <div class="flex items-center gap-2">
-                <span
-                  :if={@action_dialog.prefill["company_linked"]}
-                  class="badge badge-success badge-sm"
-                >
-                  linked
-                </span>
-                <span class="font-medium">{@action_dialog.prefill["company_name"]}</span>
-              </div>
-              <input type="hidden" name="company_name" value={@action_dialog.prefill["company_name"]} />
-            </div>
-            <.input
-              name="name"
-              value={@action_dialog.prefill["name"]}
-              label="Opportunity Name"
-              required
-            />
-            <div class="grid grid-cols-2 gap-3">
-              <.input
-                name="workflow"
-                type="select"
-                value={@action_dialog.prefill["workflow"]}
-                label="Workflow"
-                options={[
-                  {"Bid Response", "bid_response"},
-                  {"Outreach", "outreach"},
-                  {"Inbound", "inbound"}
-                ]}
-              />
-              <.input
-                name="source"
-                type="select"
-                value={@action_dialog.prefill["source"]}
-                label="Source"
-                options={[
-                  {"Bid/RFP", "bid"},
-                  {"Prospect", "prospect"},
-                  {"Referral", "referral"},
-                  {"Inbound", "inbound"},
-                  {"Outbound", "outbound"},
-                  {"Other", "other"}
-                ]}
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <.input
-                name="amount"
-                value={@action_dialog.prefill["amount"]}
-                label="Amount"
-                type="number"
-                step="0.01"
-              />
-              <.input name="expected_close_date" value="" label="Expected Close" type="date" />
-            </div>
-            <.input
-              name="reason"
-              value=""
-              label="Why are we pursuing this?"
-              type="select"
-              prompt="Select a reason..."
-              options={[
-                {"Strong service match — core controls/SCADA",
-                 "Strong service match — core controls/SCADA"},
-                {"Strong service match — software/IT", "Strong service match — software/IT"},
-                {"Good geographic fit", "Good geographic fit"},
-                {"Existing relationship with agency", "Existing relationship with agency"},
-                {"High value opportunity", "High value opportunity"},
-                {"Strategic — new market/capability", "Strategic — new market/capability"},
-                {"Low competition expected", "Low competition expected"},
-                {"Referral / warm intro", "Referral / warm intro"},
-                {"Other", "Other"}
-              ]}
-              required
-            />
-            <.input
-              name="description"
-              value={@action_dialog.prefill["description"]}
-              label="Notes (optional)"
-              type="textarea"
-            />
-          </div>
-          <div class="modal-action">
-            <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>
-            <.button type="submit" variant="primary" phx-disable-with="Pursuing...">Pursue</.button>
-          </div>
-        </form>
-      </div>
-      <form method="dialog" class="modal-backdrop">
-        <button phx-click="close_dialog">close</button>
-      </form>
-    </dialog>
 
     <%!-- Pass dialog --%>
     <dialog
@@ -567,23 +483,8 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   defp bar_color(pct) when pct >= 50, do: "bg-warning"
   defp bar_color(_), do: "bg-error"
 
-  defp tier_badge(:hot), do: "badge badge-error badge-lg"
-  defp tier_badge(:warm), do: "badge badge-warning badge-lg"
-  defp tier_badge(:prospect), do: "badge badge-info badge-lg"
-  defp tier_badge(_), do: "badge badge-ghost badge-lg"
-
   defp format_tier(nil), do: "-"
   defp format_tier(tier), do: tier |> to_string() |> String.upcase()
-
-  defp bid_status_class(:new), do: "badge-primary"
-  defp bid_status_class(:reviewing), do: "badge-info"
-  defp bid_status_class(:pursuing), do: "badge-warning"
-  defp bid_status_class(:submitted), do: "badge-success"
-  defp bid_status_class(:won), do: "badge-success"
-  defp bid_status_class(:lost), do: "badge-error"
-  defp bid_status_class(:parked), do: "badge-warning"
-  defp bid_status_class(:rejected), do: "badge-ghost"
-  defp bid_status_class(_), do: "badge-ghost"
 
   defp score_color(nil), do: "opacity-50"
   defp score_color(score) when score >= 75, do: "text-success"
@@ -602,13 +503,61 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Show do
   defp format_value(nil), do: "-"
   defp format_value(val), do: "$#{Decimal.round(val, 0) |> Decimal.to_string()}"
 
-  defp parse_amount(nil), do: nil
-  defp parse_amount(""), do: nil
-  defp parse_amount(s) when is_binary(s), do: Decimal.new(s)
-  defp parse_amount(d), do: d
+  defp load_bid!(id, actor) do
+    Procurement.get_bid!(
+      id,
+      actor: actor,
+      load: [
+        :organization,
+        :signal,
+        :status_variant,
+        :score_tier_variant,
+        pursuits: [:stage_variant]
+      ]
+    )
+  end
 
-  defp parse_date(nil), do: nil
-  defp parse_date(""), do: nil
-  defp parse_date(s) when is_binary(s), do: Date.from_iso8601!(s)
-  defp parse_date(d), do: d
+  defp ensure_signal_for_bid(%{signal: signal} = bid, _actor) when not is_nil(signal),
+    do: {:ok, bid, signal}
+
+  defp ensure_signal_for_bid(bid, actor) do
+    with {:ok, signal} <- Commercial.create_signal_from_bid(bid.id, actor: actor),
+         refreshed_bid <- load_bid!(bid.id, actor) do
+      {:ok, refreshed_bid, signal}
+    end
+  end
+
+  defp maybe_reject_signal(nil, _reason, _actor), do: :ok
+
+  defp maybe_reject_signal(signal, reason, actor) when signal.status in [:new, :reviewing] do
+    case Commercial.reject_signal(signal, %{notes: reason}, actor: actor) do
+      {:ok, _signal} -> :ok
+      {:error, _error} -> :ok
+    end
+  end
+
+  defp maybe_reject_signal(_signal, _reason, _actor), do: :ok
+
+  defp maybe_archive_signal(nil, _actor), do: :ok
+
+  defp maybe_archive_signal(signal, actor)
+       when signal.status in [:new, :reviewing, :accepted] do
+    case Commercial.archive_signal(signal, actor: actor) do
+      {:ok, _signal} -> :ok
+      {:error, _error} -> :ok
+    end
+  end
+
+  defp maybe_archive_signal(_signal, _actor), do: :ok
+
+  defp maybe_reopen_signal(nil, _actor), do: :ok
+
+  defp maybe_reopen_signal(signal, actor) when signal.status in [:archived, :rejected] do
+    case Commercial.reopen_signal(signal, actor: actor) do
+      {:ok, _signal} -> :ok
+      {:error, _error} -> :ok
+    end
+  end
+
+  defp maybe_reopen_signal(_signal, _actor), do: :ok
 end

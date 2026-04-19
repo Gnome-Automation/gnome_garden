@@ -8,83 +8,241 @@
 
   <div class="grid gap-4 md:grid-cols-3">
     <.stat_card
-      title="Active Bids"
-      value="5"
-      description="Two hot opportunities and one warm pursuit are active right now."
-      icon="hero-document-text"
+      title="Operations Backbone"
+      value="Live"
+      description="Organizations and people are now first-class operating records instead of CRM-only duplicates."
+      icon="hero-building-office-2"
+      accent="rose"
+    />
+    <.stat_card
+      title="Signal Inbox"
+      value="0"
+      description="Agent-found market signals should land here first for explicit human review."
+      icon="hero-inbox-stack"
       accent="emerald"
     />
     <.stat_card
-      title="Companies"
+      title="Active Pursuits"
       value="0"
-      description="Tracked company records will surface here as the CRM grows."
-      icon="hero-building-office-2"
+      description="Accepted signals become owned pursuits only when someone is ready to work them."
+      icon="hero-arrow-trending-up"
       accent="sky"
-    />
-    <.stat_card
-      title="Procurement Sources"
-      value="41"
-      description="Discovered bid portals and monitored sources connected to the pipeline."
-      icon="hero-globe-alt"
-      accent="amber"
     />
   </div>
 
   <.section
     title="Quick Actions"
-    description="Jump straight into the workflows that move pipeline and agent operations forward."
+    description="Start with durable operations records, then move only the right market signals into active pursuits."
   >
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <.action_card
-        navigate={~p"/agent"}
-        title="Agent Chat"
-        description="Talk directly with AI agents and inspect execution live."
-        icon="hero-chat-bubble-left-right"
+        navigate={~p"/operations/organizations"}
+        title="Organizations"
+        description="Manage the durable account backbone that commercial, service, and delivery work should attach to."
+        icon="hero-building-office-2"
       />
       <.action_card
-        href="/admin/agents/bid"
-        title="View Bids"
-        description="Review discovered opportunities and score incoming procurement work."
+        navigate={~p"/operations/people"}
+        title="People"
+        description="Track shared external contacts once, then relate them to the right organizations over time."
+        icon="hero-users"
+      />
+      <.action_card
+        navigate={~p"/operations/sites"}
+        title="Sites"
+        description="Track the physical and digital operating locations where systems, assets, and service work live."
+        icon="hero-map-pin"
+      />
+      <.action_card
+        navigate={~p"/operations/managed-systems"}
+        title="Managed Systems"
+        description="Capture the named automation, software, and hybrid stacks that sit between sites and assets."
+        icon="hero-circle-stack"
+      />
+      <.action_card
+        navigate={~p"/operations/assets"}
+        title="Assets"
+        description="Track the installed base that service, maintenance, and support work should attach to."
+        icon="hero-cpu-chip"
+      />
+      <.action_card
+        navigate={~p"/commercial/signals"}
+        title="Signal Inbox"
+        description="Review raw bids, referrals, outbound targets, and inbound requests before they become pipeline."
+        icon="hero-inbox-stack"
+      />
+      <.action_card
+        navigate={~p"/commercial/pursuits"}
+        title="Pursuits"
+        description="Work the qualified pipeline with explicit stage transitions and commercial ownership."
+        icon="hero-arrow-trending-up"
+      />
+      <.action_card
+        navigate={~p"/commercial/proposals"}
+        title="Proposals"
+        description="Turn qualified pursuits into priced offers that can be issued, accepted, and converted into agreements."
         icon="hero-document-text"
       />
       <.action_card
-        href="/admin/agents/lead_source"
-        title="Procurement Sources"
-        description="Manage the sources feeding bid discovery and market monitoring."
-        icon="hero-globe-alt"
+        navigate={~p"/commercial/agreements"}
+        title="Agreements"
+        description="Manage the commercial commitments that seed execution, service, and finance work."
+        icon="hero-document-check"
+      />
+      <.action_card
+        navigate={~p"/commercial/change-orders"}
+        title="Change Orders"
+        description="Track post-award scope, pricing, and schedule deltas without mutating the original agreement."
+        icon="hero-arrow-path"
+      />
+      <.action_card
+        navigate={~p"/execution/projects"}
+        title="Projects"
+        description="Run delivery against active agreements with explicit project state and execution counts."
+        icon="hero-wrench-screwdriver"
+      />
+      <.action_card
+        navigate={~p"/execution/service-tickets"}
+        title="Service Tickets"
+        description="Capture support and maintenance intake with the customer context needed for triage and dispatch."
+        icon="hero-lifebuoy"
+      />
+      <.action_card
+        navigate={~p"/execution/work-orders"}
+        title="Work Orders"
+        description="Track the actual execution units that service, maintenance, and field work run through."
+        icon="hero-wrench-screwdriver"
+      />
+      <.action_card
+        navigate={~p"/execution/maintenance-plans"}
+        title="Maintenance Plans"
+        description="Define recurring schedules that turn the installed base into preventive work instead of tribal memory."
+        icon="hero-arrow-path"
+      />
+      <.action_card
+        navigate={~p"/finance/invoices"}
+        title="Invoices"
+        description="Review operational invoices tied back to agreements, projects, work orders, and source records."
+        icon="hero-receipt-percent"
+      />
+      <.action_card
+        navigate={~p"/finance/payments"}
+        title="Payments"
+        description="Record receipt events explicitly, then allocate them against invoices through payment applications."
+        icon="hero-banknotes"
+      />
+      <.action_card
+        navigate={~p"/console/agents"}
+        title="Agent Console"
+        description="Inspect deployments, runs, and the discovery infrastructure feeding the commercial inbox."
+        icon="hero-cpu-chip"
       />
     </div>
   </.section>
 
   <.section
-    title="Recent Bids"
-    description="This placeholder will be replaced by a first-class bid feed once the frontend catches up."
+    title="Operations Model"
+    description="The long-term operating system starts with durable organizations and people, then layers commercial workflow on top."
   >
     <div class="overflow-hidden rounded-[1.5rem] border border-dashed border-zinc-300/80 dark:border-white/10">
       <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
         <thead class="bg-zinc-50 dark:bg-white/[0.03]">
           <tr>
             <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-              Title
+              Record
             </th>
             <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-              Score
-            </th>
-            <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">Tier</th>
-            <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-              Source
+              Purpose
             </th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td colspan="4" class="px-5 py-8 text-center text-zinc-500 dark:text-zinc-400">
-              <a
-                href="/admin/agents/bid"
-                class="font-medium text-emerald-600 hover:text-emerald-500"
-              >
-                View all bids in Ash Admin
-              </a>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Organization</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Durable business account that can be a prospect, customer, partner, vendor, or agency over time.
+            </td>
+          </tr>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Person</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Durable external contact record that can belong to multiple organizations through affiliations.
+            </td>
+          </tr>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Signal</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Raw intake from agents or humans that still needs an explicit pursuit decision.
+            </td>
+          </tr>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Pursuit</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Owned commercial pipeline only after a signal is accepted and someone decides it deserves energy.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </.section>
+
+  <.section
+    title="Commercial Model"
+    description="The long-term flow is intentionally explicit: signals first, pursuits second, proposals and agreements after that."
+  >
+    <div class="overflow-hidden rounded-[1.5rem] border border-dashed border-zinc-300/80 dark:border-white/10">
+      <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
+        <thead class="bg-zinc-50 dark:bg-white/[0.03]">
+          <tr>
+            <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+              Stage
+            </th>
+            <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+              Purpose
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Signal</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Raw intake from agents or humans that still needs a pursuit decision.
+            </td>
+          </tr>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Pursuit</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Owned commercial pipeline with probability, target value, and stage transitions.
+            </td>
+          </tr>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Proposal</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Priced commercial offer issued only after a pursuit is real.
+            </td>
+          </tr>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Agreement</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Signed commercial commitment that can seed projects, work orders, and finance.
+            </td>
+          </tr>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Change Order</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Explicit post-award amendment that preserves original agreement history while tracking deltas.
+            </td>
+          </tr>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Project</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Delivery container created from an active agreement instead of directly from raw pipeline.
+            </td>
+          </tr>
+          <tr>
+            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Invoice</td>
+            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
+              Operational billing record that stays traceable to agreement-backed time, expense, and service work.
             </td>
           </tr>
         </tbody>

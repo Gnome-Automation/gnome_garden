@@ -17,7 +17,7 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
       location: [type: :string, doc: "Location"],
       region: [type: :atom, doc: "Region code"],
       source_url: [type: :string, doc: "URL of the source that found this"],
-      lead_source_id: [type: :string, doc: "ID of the ProcurementSource"],
+      procurement_source_id: [type: :string, doc: "ID of the ProcurementSource"],
       posted_at: [type: :string, doc: "Posted date (ISO8601)"],
       due_at: [type: :string, doc: "Due date (ISO8601)"],
       estimated_value: [type: :float, doc: "Estimated value"],
@@ -27,6 +27,7 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
   require Logger
 
   alias GnomeGarden.Agents.RunOutputLogger
+  alias GnomeGarden.Procurement
 
   @impl true
   def run(params, context) do
@@ -49,10 +50,10 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
   end
 
   defp find_existing(%{url: url}) do
-    case Ash.read(GnomeGarden.Procurement.Bid, filter: [url: url]) do
-      {:ok, [existing | _]} -> {:ok, existing}
-      {:ok, []} -> :not_found
-      _ -> :not_found
+    case Procurement.get_bid_by_url(url) do
+      {:ok, existing} -> {:ok, existing}
+      {:error, %Ash.Error.Query.NotFound{}} -> :not_found
+      {:error, _error} -> :not_found
     end
   end
 
@@ -67,7 +68,7 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
         location: Map.get(params, :location),
         region: Map.get(params, :region),
         source_url: Map.get(params, :source_url),
-        lead_source_id: Map.get(params, :lead_source_id),
+        procurement_source_id: Map.get(params, :procurement_source_id),
         posted_at: parse_datetime(Map.get(params, :posted_at)),
         due_at: parse_datetime(Map.get(params, :due_at)),
         estimated_value: Map.get(params, :estimated_value),
@@ -86,7 +87,7 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()
 
-    case Ash.create(GnomeGarden.Procurement.Bid, attrs) do
+    case Procurement.create_bid(attrs) do
       {:ok, bid} ->
         Logger.info(
           "[SaveBid] Created bid: #{bid.title} (score: #{bid.score_total}, tier: #{bid.score_tier})"
@@ -132,7 +133,8 @@ defmodule GnomeGarden.Agents.Tools.SaveBid do
         agency: bid.agency,
         score_total: bid.score_total,
         score_tier: bid.score_tier,
-        lead_source_id: bid.lead_source_id
+        procurement_source_id: bid.procurement_source_id,
+        signal_id: bid.signal_id
       }
     })
   end

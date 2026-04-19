@@ -69,10 +69,10 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
   @doc """
   Discover a single PlanetBids site by ID.
   """
-  def discover_one(lead_source_id) when is_binary(lead_source_id) do
-    case Ash.get(ProcurementSource, lead_source_id) do
+  def discover_one(procurement_source_id) when is_binary(procurement_source_id) do
+    case Ash.get(ProcurementSource, procurement_source_id) do
       {:ok, source} -> discover_one(source)
-      {:error, _} -> {:error, "Lead source not found"}
+      {:error, _} -> {:error, "Procurement source not found"}
     end
   end
 
@@ -85,7 +85,7 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
         # Save standard PlanetBids selectors
         SaveDiscovery.run(
           %{
-            lead_source_id: source.id,
+            procurement_source_id: source.id,
             listing_url: source.url,
             listing_selector: "table tbody tr",
             title_selector: "td:nth-child(2)",

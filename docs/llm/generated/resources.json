@@ -4736,10 +4736,10 @@
             },
             {
               "default": null,
-              "name": "converted_company_id",
+              "name": "converted_organization_id",
               "type": "Ash.Type.UUID",
               "description": null,
-              "source": "converted_company_id",
+              "source": "converted_organization_id",
               "constraints": [],
               "public?": true,
               "allow_nil?": true,
@@ -4751,10 +4751,10 @@
             },
             {
               "default": null,
-              "name": "converted_lead_id",
+              "name": "converted_signal_id",
               "type": "Ash.Type.UUID",
               "description": null,
-              "source": "converted_lead_id",
+              "source": "converted_signal_id",
               "constraints": [],
               "public?": true,
               "allow_nil?": true,
@@ -5466,14 +5466,14 @@
               "pagination": null
             },
             {
-              "name": "convert_to_company",
+              "name": "convert_to_organization",
               "type": "update",
               "accept": [],
-              "description": "Link prospect to a company when it converts",
+              "description": "Link prospect to an organization when it converts into durable operating data",
               "arguments": [
                 {
                   "default": null,
-                  "name": "company_id",
+                  "name": "organization_id",
                   "type": "Ash.Type.UUID",
                   "description": null,
                   "constraints": [],
@@ -5492,14 +5492,14 @@
               "manual?": false
             },
             {
-              "name": "convert_to_lead",
+              "name": "convert_to_signal",
               "type": "update",
               "accept": [],
-              "description": "Link prospect to a lead for qualification",
+              "description": "Link prospect to a commercial signal for human review",
               "arguments": [
                 {
                   "default": null,
-                  "name": "lead_id",
+                  "name": "signal_id",
                   "type": "Ash.Type.UUID",
                   "description": null,
                   "constraints": [],
@@ -5655,8 +5655,8 @@
                 "next_action",
                 "next_action_date",
                 "metadata",
-                "converted_company_id",
-                "converted_lead_id"
+                "converted_organization_id",
+                "converted_signal_id"
               ],
               "description": null,
               "arguments": [],
@@ -5672,40 +5672,40 @@
           ],
           "relationships": [
             {
-              "name": "converted_company",
+              "name": "converted_organization",
               "type": "belongs_to",
-              "description": "Company created when prospect converts",
-              "destination": "GnomeGarden.Sales.Company",
+              "description": "Organization created or linked when prospect converts",
+              "destination": "GnomeGarden.Operations.Organization",
               "public?": true,
               "allow_nil?": true,
               "writable?": true,
               "cardinality": "one",
-              "source_attribute": "converted_company_id",
+              "source_attribute": "converted_organization_id",
               "destination_attribute": "id",
               "through": null,
               "join_relationship": null,
               "source_attribute_on_join_resource": null,
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
+              "destination_domain": "GnomeGarden.Operations"
             },
             {
-              "name": "converted_lead",
+              "name": "converted_signal",
               "type": "belongs_to",
-              "description": "Lead created when prospect needs qualification",
-              "destination": "GnomeGarden.Sales.Lead",
+              "description": "Commercial signal created when prospect needs human review",
+              "destination": "GnomeGarden.Commercial.Signal",
               "public?": true,
               "allow_nil?": true,
               "writable?": true,
               "cardinality": "one",
-              "source_attribute": "converted_lead_id",
+              "source_attribute": "converted_signal_id",
               "destination_attribute": "id",
               "through": null,
               "join_relationship": null,
               "source_attribute_on_join_resource": null,
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
+              "destination_domain": "GnomeGarden.Commercial"
             }
           ],
           "calculations": [],
@@ -5752,6 +5752,46 @@
             },
             {
               "args": [],
+              "name": "create_prospect",
+              "kind": "action",
+              "action": "create",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "update_prospect",
+              "kind": "action",
+              "action": "update",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "convert_prospect_to_organization",
+              "kind": "action",
+              "action": "convert_to_organization",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "convert_prospect_to_signal",
+              "kind": "action",
+              "action": "convert_to_signal",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
               "name": "reject_prospect",
               "kind": "action",
               "action": "reject",
@@ -5763,40 +5803,40 @@
           ],
           "cross_domain_relationships": [
             {
-              "name": "converted_company",
+              "name": "converted_organization",
               "type": "belongs_to",
-              "description": "Company created when prospect converts",
-              "destination": "GnomeGarden.Sales.Company",
+              "description": "Organization created or linked when prospect converts",
+              "destination": "GnomeGarden.Operations.Organization",
               "public?": true,
               "allow_nil?": true,
               "writable?": true,
               "cardinality": "one",
-              "source_attribute": "converted_company_id",
+              "source_attribute": "converted_organization_id",
               "destination_attribute": "id",
               "through": null,
               "join_relationship": null,
               "source_attribute_on_join_resource": null,
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
+              "destination_domain": "GnomeGarden.Operations"
             },
             {
-              "name": "converted_lead",
+              "name": "converted_signal",
               "type": "belongs_to",
-              "description": "Lead created when prospect needs qualification",
-              "destination": "GnomeGarden.Sales.Lead",
+              "description": "Commercial signal created when prospect needs human review",
+              "destination": "GnomeGarden.Commercial.Signal",
               "public?": true,
               "allow_nil?": true,
               "writable?": true,
               "cardinality": "one",
-              "source_attribute": "converted_lead_id",
+              "source_attribute": "converted_signal_id",
               "destination_attribute": "id",
               "through": null,
               "join_relationship": null,
               "source_attribute_on_join_resource": null,
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
+              "destination_domain": "GnomeGarden.Commercial"
             }
           ]
         }
@@ -6970,7 +7010,17 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [
             {
               "default": null,
@@ -8396,7 +8446,17 @@
               "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [
             {
               "default": null,
@@ -10057,8 +10117,30 @@
               "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [
+            {
+              "default": null,
+              "name": "agreement_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "agreements"
+              ]
+            },
             {
               "default": null,
               "name": "line_count",
@@ -11450,6 +11532,47 @@
               "upsert_identity": null
             },
             {
+              "name": "create_from_signal",
+              "type": "create",
+              "accept": [
+                "organization_id",
+                "site_id",
+                "managed_system_id",
+                "owner_user_id",
+                "name",
+                "description",
+                "pursuit_type",
+                "priority",
+                "probability",
+                "target_value",
+                "expected_close_on",
+                "delivery_model",
+                "billing_model",
+                "notes"
+              ],
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "source_signal_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "upsert?": false,
+              "upsert_identity": null
+            },
+            {
               "name": "destroy",
               "type": "destroy",
               "accept": [],
@@ -11778,6 +11901,24 @@
           ],
           "calculations": [
             {
+              "name": "priority_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "stage_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
               "name": "weighted_value",
               "type": "Ash.Type.Decimal",
               "description": null,
@@ -11834,6 +11975,18 @@
               "name": "create_pursuit",
               "kind": "action",
               "action": "create",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [
+                "source_signal_id"
+              ],
+              "name": "create_pursuit_from_signal",
+              "kind": "action",
+              "action": "create_from_signal",
               "get?": false,
               "get_by": null,
               "get_by_identity": null,
@@ -15028,6 +15181,42 @@
               "manual?": false
             },
             {
+              "name": "by_external_ref",
+              "type": "read",
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "external_ref",
+                  "type": "Ash.Type.String",
+                  "description": null,
+                  "constraints": [
+                    {
+                      "value": true,
+                      "key": "trim?"
+                    },
+                    {
+                      "value": false,
+                      "key": "allow_empty?"
+                    }
+                  ],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": true,
+              "get_by": [
+                "external_ref"
+              ],
+              "pagination": null
+            },
+            {
               "name": "convert",
               "type": "update",
               "accept": [],
@@ -15063,6 +15252,41 @@
               "description": null,
               "arguments": [],
               "primary?": true,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "upsert?": false,
+              "upsert_identity": null
+            },
+            {
+              "name": "create_from_bid",
+              "type": "create",
+              "accept": [
+                "title",
+                "description",
+                "organization_id",
+                "site_id",
+                "managed_system_id",
+                "owner_user_id",
+                "notes",
+                "metadata"
+              ],
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "source_bid_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
               "public?": true,
               "transaction?": true,
               "touches_resources": [],
@@ -15280,6 +15504,24 @@
               "destination_domain": "GnomeGarden.Accounts"
             },
             {
+              "name": "procurement_bid",
+              "type": "has_one",
+              "description": null,
+              "destination": "GnomeGarden.Procurement.Bid",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "id",
+              "destination_attribute": "signal_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Procurement"
+            },
+            {
               "name": "pursuits",
               "type": "has_many",
               "description": null,
@@ -15316,7 +15558,17 @@
               "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [],
           "identities": [],
           "schema": null,
@@ -15347,6 +15599,18 @@
               "require_reference?": false
             },
             {
+              "args": [
+                "external_ref"
+              ],
+              "name": "get_signal_by_external_ref",
+              "kind": "action",
+              "action": "by_external_ref",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
               "args": [],
               "name": "create_signal",
               "kind": "action",
@@ -15361,6 +15625,18 @@
               "name": "update_signal",
               "kind": "action",
               "action": "update",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [
+                "source_bid_id"
+              ],
+              "name": "create_signal_from_bid",
+              "kind": "action",
+              "action": "create_from_bid",
               "get?": false,
               "get_by": null,
               "get_by_identity": null,
@@ -15491,6 +15767,24 @@
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
               "destination_domain": "GnomeGarden.Accounts"
+            },
+            {
+              "name": "procurement_bid",
+              "type": "has_one",
+              "description": null,
+              "destination": "GnomeGarden.Procurement.Bid",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "id",
+              "destination_attribute": "signal_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Procurement"
             },
             {
               "name": "site",
@@ -17626,8 +17920,40 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "priority_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "work_order_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "work_orders"
+              ]
+            }
+          ],
           "identities": [],
           "schema": null,
           "primary_key": [
@@ -19965,8 +20291,76 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "priority_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "assignment_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "assignments"
+              ]
+            },
+            {
+              "default": null,
+              "name": "material_usage_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "material_usages"
+              ]
+            },
+            {
+              "default": null,
+              "name": "work_item_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "work_items"
+              ]
+            },
+            {
+              "default": null,
+              "name": "work_order_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "work_orders"
+              ]
+            }
+          ],
           "identities": [],
           "schema": null,
           "primary_key": [
@@ -21365,8 +21759,40 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "severity_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "work_order_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "work_orders"
+              ]
+            }
+          ],
           "identities": [
             {
               "name": "unique_ticket_number",
@@ -23850,8 +24276,64 @@
               "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "priority_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "assignment_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "assignments"
+              ]
+            },
+            {
+              "default": null,
+              "name": "entitlement_usage_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "service_entitlement_usages"
+              ]
+            },
+            {
+              "default": null,
+              "name": "material_usage_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "material_usages"
+              ]
+            }
+          ],
           "identities": [],
           "schema": null,
           "primary_key": [
@@ -26039,7 +26521,17 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [
             {
               "default": null,
@@ -27643,7 +28135,17 @@
               "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [
             {
               "default": null,
@@ -30162,8 +30664,64 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "criticality_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "lifecycle_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "child_asset_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "child_assets"
+              ]
+            },
+            {
+              "default": null,
+              "name": "maintenance_plan_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "maintenance_plans"
+              ]
+            },
+            {
+              "default": null,
+              "name": "work_order_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "work_orders"
+              ]
+            }
+          ],
           "identities": [
             {
               "name": "unique_asset_tag_per_organization",
@@ -30225,7 +30783,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "managed_system_id"
+              ],
               "name": "list_assets_for_managed_system",
               "kind": "action",
               "action": "for_managed_system",
@@ -31624,8 +32184,40 @@
               "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "criticality_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "lifecycle_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "asset_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "assets"
+              ]
+            }
+          ],
           "identities": [
             {
               "name": "unique_name_per_organization",
@@ -31687,7 +32279,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "organization_id"
+              ],
               "name": "list_managed_systems_for_organization",
               "kind": "action",
               "action": "for_organization",
@@ -31697,7 +32291,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "site_id"
+              ],
               "name": "list_managed_systems_for_site",
               "kind": "action",
               "action": "for_site",
@@ -32258,10 +32854,64 @@
               "destination_domain": "GnomeGarden.Operations"
             },
             {
+              "name": "procurement_sources",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Procurement.ProcurementSource",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "organization_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Procurement"
+            },
+            {
+              "name": "pursuits",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Pursuit",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "organization_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
               "name": "service_level_policies",
               "type": "has_many",
               "description": null,
               "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "organization_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
+              "name": "signals",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Signal",
               "public?": true,
               "allow_nil?": null,
               "writable?": true,
@@ -32294,8 +32944,103 @@
               "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "asset_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "assets"
+              ]
+            },
+            {
+              "default": null,
+              "name": "managed_system_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "managed_systems"
+              ]
+            },
+            {
+              "default": null,
+              "name": "people_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "people"
+              ]
+            },
+            {
+              "default": null,
+              "name": "procurement_source_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "procurement_sources"
+              ]
+            },
+            {
+              "default": null,
+              "name": "pursuit_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "pursuits"
+              ]
+            },
+            {
+              "default": null,
+              "name": "signal_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "signals"
+              ]
+            },
+            {
+              "default": null,
+              "name": "site_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "sites"
+              ]
+            }
+          ],
           "identities": [
             {
               "name": "unique_name",
@@ -32325,12 +33070,44 @@
             },
             {
               "args": [],
+              "name": "list_active_organizations",
+              "kind": "action",
+              "action": "active",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "list_prospect_organizations",
+              "kind": "action",
+              "action": "prospects",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
               "name": "get_organization",
               "kind": "action",
               "action": "read",
               "get?": true,
               "get_by": [
                 "id"
+              ],
+              "get_by_identity": null,
+              "require_reference?": false
+            },
+            {
+              "args": [],
+              "name": "get_organization_by_name",
+              "kind": "action",
+              "action": "read",
+              "get?": true,
+              "get_by": [
+                "name"
               ],
               "get_by_identity": null,
               "require_reference?": false
@@ -32358,10 +33135,64 @@
           ],
           "cross_domain_relationships": [
             {
+              "name": "procurement_sources",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Procurement.ProcurementSource",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "organization_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Procurement"
+            },
+            {
+              "name": "pursuits",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Pursuit",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "organization_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
               "name": "service_level_policies",
               "type": "has_many",
               "description": null,
               "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "id",
+              "destination_attribute": "organization_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
+              "name": "signals",
+              "type": "has_many",
+              "description": null,
+              "destination": "GnomeGarden.Commercial.Signal",
               "public?": true,
               "allow_nil?": null,
               "writable?": true,
@@ -32910,7 +33741,17 @@
               "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [],
           "identities": [
             {
@@ -32994,7 +33835,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "organization_id"
+              ],
               "name": "list_affiliations_for_organization",
               "kind": "action",
               "action": "for_organization",
@@ -33004,7 +33847,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "person_id"
+              ],
               "name": "list_affiliations_for_person",
               "kind": "action",
               "action": "for_person",
@@ -33659,9 +34504,31 @@
               "public?": false,
               "allow_nil?": true,
               "async?": false
+            },
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
             }
           ],
-          "aggregates": [],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "organization_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "organizations"
+              ]
+            }
+          ],
           "identities": [
             {
               "name": "unique_email",
@@ -33703,6 +34570,18 @@
             },
             {
               "args": [],
+              "name": "get_person_by_email",
+              "kind": "action",
+              "action": "read",
+              "get?": true,
+              "get_by": [
+                "email"
+              ],
+              "get_by_identity": null,
+              "require_reference?": false
+            },
+            {
+              "args": [],
               "name": "create_person",
               "kind": "action",
               "action": "create",
@@ -33732,7 +34611,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "organization_id"
+              ],
               "name": "list_people_for_organization",
               "kind": "action",
               "action": "for_organization",
@@ -34393,8 +35274,43 @@
               "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "asset_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "assets"
+              ]
+            },
+            {
+              "default": null,
+              "name": "managed_system_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "managed_systems"
+              ]
+            }
+          ],
           "identities": [
             {
               "name": "unique_name_per_organization",
@@ -34456,7 +35372,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "organization_id"
+              ],
               "name": "list_sites_for_organization",
               "kind": "action",
               "action": "for_organization",
@@ -34495,21 +35413,6 @@
                   "key": "allow_empty?"
                 }
               ],
-              "public?": true,
-              "allow_nil?": true,
-              "sensitive?": false,
-              "writable?": true,
-              "generated?": false,
-              "primary_key?": false,
-              "update_default": null
-            },
-            {
-              "default": null,
-              "name": "agency_company_id",
-              "type": "Ash.Type.UUID",
-              "description": null,
-              "source": "agency_company_id",
-              "constraints": [],
               "public?": true,
               "allow_nil?": true,
               "sensitive?": false,
@@ -34792,21 +35695,6 @@
             },
             {
               "default": null,
-              "name": "lead_source_id",
-              "type": "Ash.Type.UUID",
-              "description": null,
-              "source": "lead_source_id",
-              "constraints": [],
-              "public?": true,
-              "allow_nil?": true,
-              "sensitive?": false,
-              "writable?": true,
-              "generated?": false,
-              "primary_key?": false,
-              "update_default": null
-            },
-            {
-              "default": null,
               "name": "location",
               "type": "Ash.Type.String",
               "description": null,
@@ -34878,10 +35766,10 @@
             },
             {
               "default": null,
-              "name": "opportunity_id",
+              "name": "organization_id",
               "type": "Ash.Type.UUID",
               "description": null,
-              "source": "opportunity_id",
+              "source": "organization_id",
               "constraints": [],
               "public?": true,
               "allow_nil?": true,
@@ -34926,6 +35814,21 @@
                   "key": "timezone"
                 }
               ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "procurement_source_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "procurement_source_id",
+              "constraints": [],
               "public?": true,
               "allow_nil?": true,
               "sensitive?": false,
@@ -35124,9 +36027,24 @@
             },
             {
               "default": null,
+              "name": "signal_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "signal_id",
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
               "name": "source_url",
               "type": "Ash.Type.String",
-              "description": "URL of the lead source that found this",
+              "description": "URL of the procurement source that found this",
               "source": "source_url",
               "constraints": [
                 {
@@ -35302,7 +36220,7 @@
             "AshPostgres.DataLayer",
             "AshStateMachine"
           ],
-          "source_path": "lib/garden/agents/bid.ex",
+          "source_path": "lib/garden/procurement/bid.ex",
           "state_machine": {
             "all_states": [
               "new",
@@ -35413,17 +36331,6 @@
                   "parked",
                   "expired"
                 ]
-              },
-              {
-                "action": "convert_to_opportunity",
-                "to": [
-                  "pursuing"
-                ],
-                "from": [
-                  "new",
-                  "reviewing",
-                  "pursuing"
-                ]
               }
             ]
           },
@@ -35459,17 +36366,25 @@
               "pagination": null
             },
             {
-              "name": "convert_to_opportunity",
-              "type": "update",
-              "accept": [],
-              "description": "Link bid to an opportunity when pursuing as a deal",
+              "name": "by_url",
+              "type": "read",
+              "description": null,
               "arguments": [
                 {
                   "default": null,
-                  "name": "opportunity_id",
-                  "type": "Ash.Type.UUID",
+                  "name": "url",
+                  "type": "Ash.Type.String",
                   "description": null,
-                  "constraints": [],
+                  "constraints": [
+                    {
+                      "value": true,
+                      "key": "trim?"
+                    },
+                    {
+                      "value": false,
+                      "key": "allow_empty?"
+                    }
+                  ],
                   "public?": true,
                   "allow_nil?": false,
                   "sensitive?": false
@@ -35477,12 +36392,14 @@
               ],
               "primary?": false,
               "public?": true,
-              "transaction?": true,
+              "transaction?": false,
               "touches_resources": [],
-              "require_attributes": [],
-              "allow_nil_input": [],
-              "require_atomic?": false,
-              "manual?": false
+              "manual?": false,
+              "get?": true,
+              "get_by": [
+                "url"
+              ],
+              "pagination": null
             },
             {
               "name": "create",
@@ -35512,7 +36429,7 @@
                 "keywords_matched",
                 "keywords_rejected",
                 "metadata",
-                "lead_source_id"
+                "procurement_source_id"
               ],
               "description": null,
               "arguments": [],
@@ -35585,6 +36502,31 @@
               "manual?": false
             },
             {
+              "name": "for_organization",
+              "type": "read",
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "organization_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": null
+            },
+            {
               "name": "hot",
               "type": "read",
               "description": null,
@@ -35597,6 +36539,58 @@
               "get?": false,
               "get_by": [],
               "pagination": null
+            },
+            {
+              "name": "link_organization",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "organization_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
+            },
+            {
+              "name": "link_signal",
+              "type": "update",
+              "accept": [],
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "signal_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": true,
+              "touches_resources": [],
+              "require_attributes": [],
+              "allow_nil_input": [],
+              "require_atomic?": true,
+              "manual?": false
             },
             {
               "name": "mark_lost",
@@ -35805,7 +36799,7 @@
                 "notes",
                 "metadata",
                 "owner_id",
-                "agency_company_id"
+                "organization_id"
               ],
               "description": null,
               "arguments": [],
@@ -35853,40 +36847,22 @@
               "destination_domain": "GnomeGarden.Sales"
             },
             {
-              "name": "agency_company",
+              "name": "organization",
               "type": "belongs_to",
-              "description": "Company record for the agency posting the bid",
-              "destination": "GnomeGarden.Sales.Company",
+              "description": "Durable organization record for the issuing agency or customer",
+              "destination": "GnomeGarden.Operations.Organization",
               "public?": true,
               "allow_nil?": true,
               "writable?": true,
               "cardinality": "one",
-              "source_attribute": "agency_company_id",
+              "source_attribute": "organization_id",
               "destination_attribute": "id",
               "through": null,
               "join_relationship": null,
               "source_attribute_on_join_resource": null,
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
-            },
-            {
-              "name": "opportunity",
-              "type": "belongs_to",
-              "description": "Opportunity created from this bid",
-              "destination": "GnomeGarden.Sales.Opportunity",
-              "public?": true,
-              "allow_nil?": true,
-              "writable?": true,
-              "cardinality": "one",
-              "source_attribute": "opportunity_id",
-              "destination_attribute": "id",
-              "through": null,
-              "join_relationship": null,
-              "source_attribute_on_join_resource": null,
-              "destination_attribute_on_join_resource": null,
-              "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
+              "destination_domain": "GnomeGarden.Operations"
             },
             {
               "name": "owner",
@@ -35915,7 +36891,7 @@
               "allow_nil?": true,
               "writable?": true,
               "cardinality": "one",
-              "source_attribute": "lead_source_id",
+              "source_attribute": "procurement_source_id",
               "destination_attribute": "id",
               "through": null,
               "join_relationship": null,
@@ -35923,9 +36899,64 @@
               "destination_attribute_on_join_resource": null,
               "cross_domain?": false,
               "destination_domain": "GnomeGarden.Procurement"
+            },
+            {
+              "name": "pursuits",
+              "type": "has_many",
+              "description": "Commercial pursuits created from this bid's signal",
+              "destination": "GnomeGarden.Commercial.Pursuit",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "signal_id",
+              "destination_attribute": "signal_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
+              "name": "signal",
+              "type": "belongs_to",
+              "description": "Commercial signal created from this bid",
+              "destination": "GnomeGarden.Commercial.Signal",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "signal_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "score_tier_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [],
           "identities": [
             {
@@ -35955,6 +36986,18 @@
               "require_reference?": true
             },
             {
+              "args": [
+                "organization_id"
+              ],
+              "name": "list_bids_for_organization",
+              "kind": "action",
+              "action": "for_organization",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
               "args": [],
               "name": "get_bid",
               "kind": "action",
@@ -35965,6 +37008,58 @@
               ],
               "get_by_identity": null,
               "require_reference?": false
+            },
+            {
+              "args": [
+                "url"
+              ],
+              "name": "get_bid_by_url",
+              "kind": "action",
+              "action": "by_url",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "create_bid",
+              "kind": "action",
+              "action": "create",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "update_bid",
+              "kind": "action",
+              "action": "update",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "link_bid_signal",
+              "kind": "action",
+              "action": "link_signal",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "link_bid_organization",
+              "kind": "action",
+              "action": "link_organization",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
             },
             {
               "args": [],
@@ -36017,40 +37112,22 @@
               "destination_domain": "GnomeGarden.Sales"
             },
             {
-              "name": "agency_company",
+              "name": "organization",
               "type": "belongs_to",
-              "description": "Company record for the agency posting the bid",
-              "destination": "GnomeGarden.Sales.Company",
+              "description": "Durable organization record for the issuing agency or customer",
+              "destination": "GnomeGarden.Operations.Organization",
               "public?": true,
               "allow_nil?": true,
               "writable?": true,
               "cardinality": "one",
-              "source_attribute": "agency_company_id",
+              "source_attribute": "organization_id",
               "destination_attribute": "id",
               "through": null,
               "join_relationship": null,
               "source_attribute_on_join_resource": null,
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
-            },
-            {
-              "name": "opportunity",
-              "type": "belongs_to",
-              "description": "Opportunity created from this bid",
-              "destination": "GnomeGarden.Sales.Opportunity",
-              "public?": true,
-              "allow_nil?": true,
-              "writable?": true,
-              "cardinality": "one",
-              "source_attribute": "opportunity_id",
-              "destination_attribute": "id",
-              "through": null,
-              "join_relationship": null,
-              "source_attribute_on_join_resource": null,
-              "destination_attribute_on_join_resource": null,
-              "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
+              "destination_domain": "GnomeGarden.Operations"
             },
             {
               "name": "owner",
@@ -36069,6 +37146,42 @@
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
               "destination_domain": "GnomeGarden.Accounts"
+            },
+            {
+              "name": "pursuits",
+              "type": "has_many",
+              "description": "Commercial pursuits created from this bid's signal",
+              "destination": "GnomeGarden.Commercial.Pursuit",
+              "public?": true,
+              "allow_nil?": null,
+              "writable?": true,
+              "cardinality": "many",
+              "source_attribute": "signal_id",
+              "destination_attribute": "signal_id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
+            },
+            {
+              "name": "signal",
+              "type": "belongs_to",
+              "description": "Commercial signal created from this bid",
+              "destination": "GnomeGarden.Commercial.Signal",
+              "public?": true,
+              "allow_nil?": true,
+              "writable?": true,
+              "cardinality": "one",
+              "source_attribute": "signal_id",
+              "destination_attribute": "id",
+              "through": null,
+              "join_relationship": null,
+              "source_attribute_on_join_resource": null,
+              "destination_attribute_on_join_resource": null,
+              "cross_domain?": true,
+              "destination_domain": "GnomeGarden.Commercial"
             }
           ]
         },
@@ -36111,21 +37224,6 @@
               "type": "Ash.Type.Boolean",
               "description": null,
               "source": "api_available",
-              "constraints": [],
-              "public?": true,
-              "allow_nil?": true,
-              "sensitive?": false,
-              "writable?": true,
-              "generated?": false,
-              "primary_key?": false,
-              "update_default": null
-            },
-            {
-              "default": null,
-              "name": "company_id",
-              "type": "Ash.Type.UUID",
-              "description": null,
-              "source": "company_id",
               "constraints": [],
               "public?": true,
               "allow_nil?": true,
@@ -36355,6 +37453,21 @@
                   "key": "allow_empty?"
                 }
               ],
+              "public?": true,
+              "allow_nil?": true,
+              "sensitive?": false,
+              "writable?": true,
+              "generated?": false,
+              "primary_key?": false,
+              "update_default": null
+            },
+            {
+              "default": null,
+              "name": "organization_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "source": "organization_id",
+              "constraints": [],
               "public?": true,
               "allow_nil?": true,
               "sensitive?": false,
@@ -36710,7 +37823,7 @@
             "AshPostgres.DataLayer",
             "AshStateMachine"
           ],
-          "source_path": "lib/garden/agents/lead_source.ex",
+          "source_path": "lib/garden/procurement/procurement_source.ex",
           "state_machine": {
             "all_states": [
               "found",
@@ -36840,13 +37953,13 @@
               "manual?": false
             },
             {
-              "name": "by_company",
+              "name": "by_organization",
               "type": "read",
               "description": null,
               "arguments": [
                 {
                   "default": null,
-                  "name": "company_id",
+                  "name": "organization_id",
                   "type": "Ash.Type.UUID",
                   "description": null,
                   "constraints": [],
@@ -36988,7 +38101,7 @@
                 "metadata",
                 "added_by",
                 "notes",
-                "company_id",
+                "organization_id",
                 "status"
               ],
               "description": null,
@@ -37003,7 +38116,7 @@
               "upsert_identity": null
             },
             {
-              "name": "create_for_company",
+              "name": "create_for_organization",
               "type": "create",
               "accept": [
                 "name",
@@ -37014,9 +38127,9 @@
                 "scan_frequency_hours",
                 "enabled",
                 "notes",
-                "company_id"
+                "organization_id"
               ],
-              "description": "Create a pre-configured source for a company website",
+              "description": "Create a pre-configured source for an organization website",
               "arguments": [],
               "primary?": false,
               "public?": true,
@@ -37286,25 +38399,53 @@
           ],
           "relationships": [
             {
-              "name": "company",
+              "name": "organization",
               "type": "belongs_to",
-              "description": "Company this source belongs to (for company_site type)",
-              "destination": "GnomeGarden.Sales.Company",
+              "description": "Organization this source belongs to (for company_site type)",
+              "destination": "GnomeGarden.Operations.Organization",
               "public?": true,
               "allow_nil?": true,
               "writable?": true,
               "cardinality": "one",
-              "source_attribute": "company_id",
+              "source_attribute": "organization_id",
               "destination_attribute": "id",
               "through": null,
               "join_relationship": null,
               "source_attribute_on_join_resource": null,
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
+              "destination_domain": "GnomeGarden.Operations"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "config_status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "enabled_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [],
           "identities": [
             {
@@ -37354,6 +38495,26 @@
               ],
               "get_by_identity": null,
               "require_reference?": false
+            },
+            {
+              "args": [],
+              "name": "create_procurement_source",
+              "kind": "action",
+              "action": "create",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "create_procurement_source_for_organization",
+              "kind": "action",
+              "action": "create_for_organization",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
             },
             {
               "args": [],
@@ -37454,26 +38615,38 @@
               "get_by": null,
               "get_by_identity": null,
               "require_reference?": true
+            },
+            {
+              "args": [
+                "organization_id"
+              ],
+              "name": "list_procurement_sources_by_organization",
+              "kind": "action",
+              "action": "by_organization",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
             }
           ],
           "cross_domain_relationships": [
             {
-              "name": "company",
+              "name": "organization",
               "type": "belongs_to",
-              "description": "Company this source belongs to (for company_site type)",
-              "destination": "GnomeGarden.Sales.Company",
+              "description": "Organization this source belongs to (for company_site type)",
+              "destination": "GnomeGarden.Operations.Organization",
               "public?": true,
               "allow_nil?": true,
               "writable?": true,
               "cardinality": "one",
-              "source_attribute": "company_id",
+              "source_attribute": "organization_id",
               "destination_attribute": "id",
               "through": null,
               "join_relationship": null,
               "source_attribute_on_join_resource": null,
               "destination_attribute_on_join_resource": null,
               "cross_domain?": true,
-              "destination_domain": "GnomeGarden.Sales"
+              "destination_domain": "GnomeGarden.Operations"
             }
           ]
         }
@@ -47744,7 +48917,7 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-18T15:54:00Z",
+  "generated_at": "2026-04-18T22:42:15Z",
   "resource_count": 55,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -50484,21 +51657,6 @@
           "update_default": null
         },
         {
-          "default": null,
-          "name": "company_id",
-          "type": "Ash.Type.UUID",
-          "description": null,
-          "source": "company_id",
-          "constraints": [],
-          "public?": true,
-          "allow_nil?": true,
-          "sensitive?": false,
-          "writable?": true,
-          "generated?": false,
-          "primary_key?": false,
-          "update_default": null
-        },
-        {
           "default": {
             "value": "found",
             "computed?": false
@@ -50718,6 +51876,21 @@
               "key": "allow_empty?"
             }
           ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "organization_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "organization_id",
+          "constraints": [],
           "public?": true,
           "allow_nil?": true,
           "sensitive?": false,
@@ -51073,7 +52246,7 @@
         "AshPostgres.DataLayer",
         "AshStateMachine"
       ],
-      "source_path": "lib/garden/agents/lead_source.ex",
+      "source_path": "lib/garden/procurement/procurement_source.ex",
       "state_machine": {
         "all_states": [
           "found",
@@ -51203,13 +52376,13 @@
           "manual?": false
         },
         {
-          "name": "by_company",
+          "name": "by_organization",
           "type": "read",
           "description": null,
           "arguments": [
             {
               "default": null,
-              "name": "company_id",
+              "name": "organization_id",
               "type": "Ash.Type.UUID",
               "description": null,
               "constraints": [],
@@ -51351,7 +52524,7 @@
             "metadata",
             "added_by",
             "notes",
-            "company_id",
+            "organization_id",
             "status"
           ],
           "description": null,
@@ -51366,7 +52539,7 @@
           "upsert_identity": null
         },
         {
-          "name": "create_for_company",
+          "name": "create_for_organization",
           "type": "create",
           "accept": [
             "name",
@@ -51377,9 +52550,9 @@
             "scan_frequency_hours",
             "enabled",
             "notes",
-            "company_id"
+            "organization_id"
           ],
-          "description": "Create a pre-configured source for a company website",
+          "description": "Create a pre-configured source for an organization website",
           "arguments": [],
           "primary?": false,
           "public?": true,
@@ -51649,25 +52822,53 @@
       ],
       "relationships": [
         {
-          "name": "company",
+          "name": "organization",
           "type": "belongs_to",
-          "description": "Company this source belongs to (for company_site type)",
-          "destination": "GnomeGarden.Sales.Company",
+          "description": "Organization this source belongs to (for company_site type)",
+          "destination": "GnomeGarden.Operations.Organization",
           "public?": true,
           "allow_nil?": true,
           "writable?": true,
           "cardinality": "one",
-          "source_attribute": "company_id",
+          "source_attribute": "organization_id",
           "destination_attribute": "id",
           "through": null,
           "join_relationship": null,
           "source_attribute_on_join_resource": null,
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
+          "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "config_status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "enabled_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [],
       "identities": [
         {
@@ -51717,6 +52918,26 @@
           ],
           "get_by_identity": null,
           "require_reference?": false
+        },
+        {
+          "args": [],
+          "name": "create_procurement_source",
+          "kind": "action",
+          "action": "create",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "create_procurement_source_for_organization",
+          "kind": "action",
+          "action": "create_for_organization",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
         },
         {
           "args": [],
@@ -51817,26 +53038,38 @@
           "get_by": null,
           "get_by_identity": null,
           "require_reference?": true
+        },
+        {
+          "args": [
+            "organization_id"
+          ],
+          "name": "list_procurement_sources_by_organization",
+          "kind": "action",
+          "action": "by_organization",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
         }
       ],
       "cross_domain_relationships": [
         {
-          "name": "company",
+          "name": "organization",
           "type": "belongs_to",
-          "description": "Company this source belongs to (for company_site type)",
-          "destination": "GnomeGarden.Sales.Company",
+          "description": "Organization this source belongs to (for company_site type)",
+          "destination": "GnomeGarden.Operations.Organization",
           "public?": true,
           "allow_nil?": true,
           "writable?": true,
           "cardinality": "one",
-          "source_attribute": "company_id",
+          "source_attribute": "organization_id",
           "destination_attribute": "id",
           "through": null,
           "join_relationship": null,
           "source_attribute_on_join_resource": null,
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
+          "destination_domain": "GnomeGarden.Operations"
         }
       ]
     },
@@ -59034,8 +60267,40 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "severity_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "work_order_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "work_orders"
+          ]
+        }
+      ],
       "identities": [
         {
           "name": "unique_ticket_number",
@@ -60133,7 +61398,17 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [
         {
           "default": null,
@@ -61775,7 +63050,17 @@
           "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [
         {
           "default": null,
@@ -64487,8 +65772,76 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "priority_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "assignment_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "assignments"
+          ]
+        },
+        {
+          "default": null,
+          "name": "material_usage_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "material_usages"
+          ]
+        },
+        {
+          "default": null,
+          "name": "work_item_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "work_items"
+          ]
+        },
+        {
+          "default": null,
+          "name": "work_order_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "work_orders"
+          ]
+        }
+      ],
       "identities": [],
       "schema": null,
       "primary_key": [
@@ -65382,9 +66735,31 @@
           "public?": false,
           "allow_nil?": true,
           "async?": false
+        },
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
         }
       ],
-      "aggregates": [],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "organization_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "organizations"
+          ]
+        }
+      ],
       "identities": [
         {
           "name": "unique_email",
@@ -65426,6 +66801,18 @@
         },
         {
           "args": [],
+          "name": "get_person_by_email",
+          "kind": "action",
+          "action": "read",
+          "get?": true,
+          "get_by": [
+            "email"
+          ],
+          "get_by_identity": null,
+          "require_reference?": false
+        },
+        {
+          "args": [],
           "name": "create_person",
           "kind": "action",
           "action": "create",
@@ -65455,7 +66842,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "organization_id"
+          ],
           "name": "list_people_for_organization",
           "kind": "action",
           "action": "for_organization",
@@ -66122,8 +67511,40 @@
           "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "criticality_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "lifecycle_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "asset_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "assets"
+          ]
+        }
+      ],
       "identities": [
         {
           "name": "unique_name_per_organization",
@@ -66185,7 +67606,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "organization_id"
+          ],
           "name": "list_managed_systems_for_organization",
           "kind": "action",
           "action": "for_organization",
@@ -66195,7 +67618,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "site_id"
+          ],
           "name": "list_managed_systems_for_site",
           "kind": "action",
           "action": "for_site",
@@ -67289,8 +68714,43 @@
           "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "asset_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "assets"
+          ]
+        },
+        {
+          "default": null,
+          "name": "managed_system_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "managed_systems"
+          ]
+        }
+      ],
       "identities": [
         {
           "name": "unique_name_per_organization",
@@ -67352,7 +68812,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "organization_id"
+          ],
           "name": "list_sites_for_organization",
           "kind": "action",
           "action": "for_organization",
@@ -70426,21 +71888,6 @@
         },
         {
           "default": null,
-          "name": "agency_company_id",
-          "type": "Ash.Type.UUID",
-          "description": null,
-          "source": "agency_company_id",
-          "constraints": [],
-          "public?": true,
-          "allow_nil?": true,
-          "sensitive?": false,
-          "writable?": true,
-          "generated?": false,
-          "primary_key?": false,
-          "update_default": null
-        },
-        {
-          "default": null,
           "name": "bid_type",
           "type": "Ash.Type.Atom",
           "description": "RFI, RFP, RFQ, IFB, SOQ",
@@ -70713,21 +72160,6 @@
         },
         {
           "default": null,
-          "name": "lead_source_id",
-          "type": "Ash.Type.UUID",
-          "description": null,
-          "source": "lead_source_id",
-          "constraints": [],
-          "public?": true,
-          "allow_nil?": true,
-          "sensitive?": false,
-          "writable?": true,
-          "generated?": false,
-          "primary_key?": false,
-          "update_default": null
-        },
-        {
-          "default": null,
           "name": "location",
           "type": "Ash.Type.String",
           "description": null,
@@ -70799,10 +72231,10 @@
         },
         {
           "default": null,
-          "name": "opportunity_id",
+          "name": "organization_id",
           "type": "Ash.Type.UUID",
           "description": null,
-          "source": "opportunity_id",
+          "source": "organization_id",
           "constraints": [],
           "public?": true,
           "allow_nil?": true,
@@ -70847,6 +72279,21 @@
               "key": "timezone"
             }
           ],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
+          "name": "procurement_source_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "procurement_source_id",
+          "constraints": [],
           "public?": true,
           "allow_nil?": true,
           "sensitive?": false,
@@ -71045,9 +72492,24 @@
         },
         {
           "default": null,
+          "name": "signal_id",
+          "type": "Ash.Type.UUID",
+          "description": null,
+          "source": "signal_id",
+          "constraints": [],
+          "public?": true,
+          "allow_nil?": true,
+          "sensitive?": false,
+          "writable?": true,
+          "generated?": false,
+          "primary_key?": false,
+          "update_default": null
+        },
+        {
+          "default": null,
           "name": "source_url",
           "type": "Ash.Type.String",
-          "description": "URL of the lead source that found this",
+          "description": "URL of the procurement source that found this",
           "source": "source_url",
           "constraints": [
             {
@@ -71223,7 +72685,7 @@
         "AshPostgres.DataLayer",
         "AshStateMachine"
       ],
-      "source_path": "lib/garden/agents/bid.ex",
+      "source_path": "lib/garden/procurement/bid.ex",
       "state_machine": {
         "all_states": [
           "new",
@@ -71334,17 +72796,6 @@
               "parked",
               "expired"
             ]
-          },
-          {
-            "action": "convert_to_opportunity",
-            "to": [
-              "pursuing"
-            ],
-            "from": [
-              "new",
-              "reviewing",
-              "pursuing"
-            ]
           }
         ]
       },
@@ -71380,17 +72831,25 @@
           "pagination": null
         },
         {
-          "name": "convert_to_opportunity",
-          "type": "update",
-          "accept": [],
-          "description": "Link bid to an opportunity when pursuing as a deal",
+          "name": "by_url",
+          "type": "read",
+          "description": null,
           "arguments": [
             {
               "default": null,
-              "name": "opportunity_id",
-              "type": "Ash.Type.UUID",
+              "name": "url",
+              "type": "Ash.Type.String",
               "description": null,
-              "constraints": [],
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
               "public?": true,
               "allow_nil?": false,
               "sensitive?": false
@@ -71398,12 +72857,14 @@
           ],
           "primary?": false,
           "public?": true,
-          "transaction?": true,
+          "transaction?": false,
           "touches_resources": [],
-          "require_attributes": [],
-          "allow_nil_input": [],
-          "require_atomic?": false,
-          "manual?": false
+          "manual?": false,
+          "get?": true,
+          "get_by": [
+            "url"
+          ],
+          "pagination": null
         },
         {
           "name": "create",
@@ -71433,7 +72894,7 @@
             "keywords_matched",
             "keywords_rejected",
             "metadata",
-            "lead_source_id"
+            "procurement_source_id"
           ],
           "description": null,
           "arguments": [],
@@ -71506,6 +72967,31 @@
           "manual?": false
         },
         {
+          "name": "for_organization",
+          "type": "read",
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "organization_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": null
+        },
+        {
           "name": "hot",
           "type": "read",
           "description": null,
@@ -71518,6 +73004,58 @@
           "get?": false,
           "get_by": [],
           "pagination": null
+        },
+        {
+          "name": "link_organization",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "organization_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
+        },
+        {
+          "name": "link_signal",
+          "type": "update",
+          "accept": [],
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "signal_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "require_atomic?": true,
+          "manual?": false
         },
         {
           "name": "mark_lost",
@@ -71726,7 +73264,7 @@
             "notes",
             "metadata",
             "owner_id",
-            "agency_company_id"
+            "organization_id"
           ],
           "description": null,
           "arguments": [],
@@ -71774,40 +73312,22 @@
           "destination_domain": "GnomeGarden.Sales"
         },
         {
-          "name": "agency_company",
+          "name": "organization",
           "type": "belongs_to",
-          "description": "Company record for the agency posting the bid",
-          "destination": "GnomeGarden.Sales.Company",
+          "description": "Durable organization record for the issuing agency or customer",
+          "destination": "GnomeGarden.Operations.Organization",
           "public?": true,
           "allow_nil?": true,
           "writable?": true,
           "cardinality": "one",
-          "source_attribute": "agency_company_id",
+          "source_attribute": "organization_id",
           "destination_attribute": "id",
           "through": null,
           "join_relationship": null,
           "source_attribute_on_join_resource": null,
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
-        },
-        {
-          "name": "opportunity",
-          "type": "belongs_to",
-          "description": "Opportunity created from this bid",
-          "destination": "GnomeGarden.Sales.Opportunity",
-          "public?": true,
-          "allow_nil?": true,
-          "writable?": true,
-          "cardinality": "one",
-          "source_attribute": "opportunity_id",
-          "destination_attribute": "id",
-          "through": null,
-          "join_relationship": null,
-          "source_attribute_on_join_resource": null,
-          "destination_attribute_on_join_resource": null,
-          "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
+          "destination_domain": "GnomeGarden.Operations"
         },
         {
           "name": "owner",
@@ -71836,7 +73356,7 @@
           "allow_nil?": true,
           "writable?": true,
           "cardinality": "one",
-          "source_attribute": "lead_source_id",
+          "source_attribute": "procurement_source_id",
           "destination_attribute": "id",
           "through": null,
           "join_relationship": null,
@@ -71844,9 +73364,64 @@
           "destination_attribute_on_join_resource": null,
           "cross_domain?": false,
           "destination_domain": "GnomeGarden.Procurement"
+        },
+        {
+          "name": "pursuits",
+          "type": "has_many",
+          "description": "Commercial pursuits created from this bid's signal",
+          "destination": "GnomeGarden.Commercial.Pursuit",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "signal_id",
+          "destination_attribute": "signal_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
+          "name": "signal",
+          "type": "belongs_to",
+          "description": "Commercial signal created from this bid",
+          "destination": "GnomeGarden.Commercial.Signal",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "signal_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "score_tier_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [],
       "identities": [
         {
@@ -71876,6 +73451,18 @@
           "require_reference?": true
         },
         {
+          "args": [
+            "organization_id"
+          ],
+          "name": "list_bids_for_organization",
+          "kind": "action",
+          "action": "for_organization",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
           "args": [],
           "name": "get_bid",
           "kind": "action",
@@ -71886,6 +73473,58 @@
           ],
           "get_by_identity": null,
           "require_reference?": false
+        },
+        {
+          "args": [
+            "url"
+          ],
+          "name": "get_bid_by_url",
+          "kind": "action",
+          "action": "by_url",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "create_bid",
+          "kind": "action",
+          "action": "create",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "update_bid",
+          "kind": "action",
+          "action": "update",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "link_bid_signal",
+          "kind": "action",
+          "action": "link_signal",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "link_bid_organization",
+          "kind": "action",
+          "action": "link_organization",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
         },
         {
           "args": [],
@@ -71938,40 +73577,22 @@
           "destination_domain": "GnomeGarden.Sales"
         },
         {
-          "name": "agency_company",
+          "name": "organization",
           "type": "belongs_to",
-          "description": "Company record for the agency posting the bid",
-          "destination": "GnomeGarden.Sales.Company",
+          "description": "Durable organization record for the issuing agency or customer",
+          "destination": "GnomeGarden.Operations.Organization",
           "public?": true,
           "allow_nil?": true,
           "writable?": true,
           "cardinality": "one",
-          "source_attribute": "agency_company_id",
+          "source_attribute": "organization_id",
           "destination_attribute": "id",
           "through": null,
           "join_relationship": null,
           "source_attribute_on_join_resource": null,
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
-        },
-        {
-          "name": "opportunity",
-          "type": "belongs_to",
-          "description": "Opportunity created from this bid",
-          "destination": "GnomeGarden.Sales.Opportunity",
-          "public?": true,
-          "allow_nil?": true,
-          "writable?": true,
-          "cardinality": "one",
-          "source_attribute": "opportunity_id",
-          "destination_attribute": "id",
-          "through": null,
-          "join_relationship": null,
-          "source_attribute_on_join_resource": null,
-          "destination_attribute_on_join_resource": null,
-          "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
+          "destination_domain": "GnomeGarden.Operations"
         },
         {
           "name": "owner",
@@ -71990,6 +73611,42 @@
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
           "destination_domain": "GnomeGarden.Accounts"
+        },
+        {
+          "name": "pursuits",
+          "type": "has_many",
+          "description": "Commercial pursuits created from this bid's signal",
+          "destination": "GnomeGarden.Commercial.Pursuit",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "signal_id",
+          "destination_attribute": "signal_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
+          "name": "signal",
+          "type": "belongs_to",
+          "description": "Commercial signal created from this bid",
+          "destination": "GnomeGarden.Commercial.Signal",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "signal_id",
+          "destination_attribute": "id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
         }
       ]
     },
@@ -72644,6 +74301,47 @@
           "upsert_identity": null
         },
         {
+          "name": "create_from_signal",
+          "type": "create",
+          "accept": [
+            "organization_id",
+            "site_id",
+            "managed_system_id",
+            "owner_user_id",
+            "name",
+            "description",
+            "pursuit_type",
+            "priority",
+            "probability",
+            "target_value",
+            "expected_close_on",
+            "delivery_model",
+            "billing_model",
+            "notes"
+          ],
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "source_signal_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "upsert?": false,
+          "upsert_identity": null
+        },
+        {
           "name": "destroy",
           "type": "destroy",
           "accept": [],
@@ -72972,6 +74670,24 @@
       ],
       "calculations": [
         {
+          "name": "priority_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "stage_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
           "name": "weighted_value",
           "type": "Ash.Type.Decimal",
           "description": null,
@@ -73028,6 +74744,18 @@
           "name": "create_pursuit",
           "kind": "action",
           "action": "create",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [
+            "source_signal_id"
+          ],
+          "name": "create_pursuit_from_signal",
+          "kind": "action",
+          "action": "create_from_signal",
           "get?": false,
           "get_by": null,
           "get_by_identity": null,
@@ -75061,6 +76789,42 @@
           "manual?": false
         },
         {
+          "name": "by_external_ref",
+          "type": "read",
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "external_ref",
+              "type": "Ash.Type.String",
+              "description": null,
+              "constraints": [
+                {
+                  "value": true,
+                  "key": "trim?"
+                },
+                {
+                  "value": false,
+                  "key": "allow_empty?"
+                }
+              ],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": true,
+          "get_by": [
+            "external_ref"
+          ],
+          "pagination": null
+        },
+        {
           "name": "convert",
           "type": "update",
           "accept": [],
@@ -75096,6 +76860,41 @@
           "description": null,
           "arguments": [],
           "primary?": true,
+          "public?": true,
+          "transaction?": true,
+          "touches_resources": [],
+          "require_attributes": [],
+          "allow_nil_input": [],
+          "upsert?": false,
+          "upsert_identity": null
+        },
+        {
+          "name": "create_from_bid",
+          "type": "create",
+          "accept": [
+            "title",
+            "description",
+            "organization_id",
+            "site_id",
+            "managed_system_id",
+            "owner_user_id",
+            "notes",
+            "metadata"
+          ],
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "source_bid_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
           "public?": true,
           "transaction?": true,
           "touches_resources": [],
@@ -75313,6 +77112,24 @@
           "destination_domain": "GnomeGarden.Accounts"
         },
         {
+          "name": "procurement_bid",
+          "type": "has_one",
+          "description": null,
+          "destination": "GnomeGarden.Procurement.Bid",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "id",
+          "destination_attribute": "signal_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Procurement"
+        },
+        {
           "name": "pursuits",
           "type": "has_many",
           "description": null,
@@ -75349,7 +77166,17 @@
           "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [],
       "identities": [],
       "schema": null,
@@ -75380,6 +77207,18 @@
           "require_reference?": false
         },
         {
+          "args": [
+            "external_ref"
+          ],
+          "name": "get_signal_by_external_ref",
+          "kind": "action",
+          "action": "by_external_ref",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
           "args": [],
           "name": "create_signal",
           "kind": "action",
@@ -75394,6 +77233,18 @@
           "name": "update_signal",
           "kind": "action",
           "action": "update",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [
+            "source_bid_id"
+          ],
+          "name": "create_signal_from_bid",
+          "kind": "action",
+          "action": "create_from_bid",
           "get?": false,
           "get_by": null,
           "get_by_identity": null,
@@ -75524,6 +77375,24 @@
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
           "destination_domain": "GnomeGarden.Accounts"
+        },
+        {
+          "name": "procurement_bid",
+          "type": "has_one",
+          "description": null,
+          "destination": "GnomeGarden.Procurement.Bid",
+          "public?": true,
+          "allow_nil?": true,
+          "writable?": true,
+          "cardinality": "one",
+          "source_attribute": "id",
+          "destination_attribute": "signal_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Procurement"
         },
         {
           "name": "site",
@@ -78274,8 +80143,64 @@
           "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "priority_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "assignment_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "assignments"
+          ]
+        },
+        {
+          "default": null,
+          "name": "entitlement_usage_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "service_entitlement_usages"
+          ]
+        },
+        {
+          "default": null,
+          "name": "material_usage_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "material_usages"
+          ]
+        }
+      ],
       "identities": [],
       "schema": null,
       "primary_key": [
@@ -79345,8 +81270,64 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "criticality_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "lifecycle_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "child_asset_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "child_assets"
+          ]
+        },
+        {
+          "default": null,
+          "name": "maintenance_plan_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "maintenance_plans"
+          ]
+        },
+        {
+          "default": null,
+          "name": "work_order_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "work_orders"
+          ]
+        }
+      ],
       "identities": [
         {
           "name": "unique_asset_tag_per_organization",
@@ -79408,7 +81389,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "managed_system_id"
+          ],
           "name": "list_assets_for_managed_system",
           "kind": "action",
           "action": "for_managed_system",
@@ -80850,8 +82833,30 @@
           "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [
+        {
+          "default": null,
+          "name": "agreement_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "agreements"
+          ]
+        },
         {
           "default": null,
           "name": "line_count",
@@ -82253,7 +84258,17 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [
         {
           "default": null,
@@ -83315,7 +85330,17 @@
           "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [],
       "identities": [
         {
@@ -83399,7 +85424,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "organization_id"
+          ],
           "name": "list_affiliations_for_organization",
           "kind": "action",
           "action": "for_organization",
@@ -83409,7 +85436,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "person_id"
+          ],
           "name": "list_affiliations_for_person",
           "kind": "action",
           "action": "for_person",
@@ -84409,8 +86438,40 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "priority_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "work_order_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "work_orders"
+          ]
+        }
+      ],
       "identities": [],
       "schema": null,
       "primary_key": [
@@ -84693,10 +86754,10 @@
         },
         {
           "default": null,
-          "name": "converted_company_id",
+          "name": "converted_organization_id",
           "type": "Ash.Type.UUID",
           "description": null,
-          "source": "converted_company_id",
+          "source": "converted_organization_id",
           "constraints": [],
           "public?": true,
           "allow_nil?": true,
@@ -84708,10 +86769,10 @@
         },
         {
           "default": null,
-          "name": "converted_lead_id",
+          "name": "converted_signal_id",
           "type": "Ash.Type.UUID",
           "description": null,
-          "source": "converted_lead_id",
+          "source": "converted_signal_id",
           "constraints": [],
           "public?": true,
           "allow_nil?": true,
@@ -85423,14 +87484,14 @@
           "pagination": null
         },
         {
-          "name": "convert_to_company",
+          "name": "convert_to_organization",
           "type": "update",
           "accept": [],
-          "description": "Link prospect to a company when it converts",
+          "description": "Link prospect to an organization when it converts into durable operating data",
           "arguments": [
             {
               "default": null,
-              "name": "company_id",
+              "name": "organization_id",
               "type": "Ash.Type.UUID",
               "description": null,
               "constraints": [],
@@ -85449,14 +87510,14 @@
           "manual?": false
         },
         {
-          "name": "convert_to_lead",
+          "name": "convert_to_signal",
           "type": "update",
           "accept": [],
-          "description": "Link prospect to a lead for qualification",
+          "description": "Link prospect to a commercial signal for human review",
           "arguments": [
             {
               "default": null,
-              "name": "lead_id",
+              "name": "signal_id",
               "type": "Ash.Type.UUID",
               "description": null,
               "constraints": [],
@@ -85612,8 +87673,8 @@
             "next_action",
             "next_action_date",
             "metadata",
-            "converted_company_id",
-            "converted_lead_id"
+            "converted_organization_id",
+            "converted_signal_id"
           ],
           "description": null,
           "arguments": [],
@@ -85629,40 +87690,40 @@
       ],
       "relationships": [
         {
-          "name": "converted_company",
+          "name": "converted_organization",
           "type": "belongs_to",
-          "description": "Company created when prospect converts",
-          "destination": "GnomeGarden.Sales.Company",
+          "description": "Organization created or linked when prospect converts",
+          "destination": "GnomeGarden.Operations.Organization",
           "public?": true,
           "allow_nil?": true,
           "writable?": true,
           "cardinality": "one",
-          "source_attribute": "converted_company_id",
+          "source_attribute": "converted_organization_id",
           "destination_attribute": "id",
           "through": null,
           "join_relationship": null,
           "source_attribute_on_join_resource": null,
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
+          "destination_domain": "GnomeGarden.Operations"
         },
         {
-          "name": "converted_lead",
+          "name": "converted_signal",
           "type": "belongs_to",
-          "description": "Lead created when prospect needs qualification",
-          "destination": "GnomeGarden.Sales.Lead",
+          "description": "Commercial signal created when prospect needs human review",
+          "destination": "GnomeGarden.Commercial.Signal",
           "public?": true,
           "allow_nil?": true,
           "writable?": true,
           "cardinality": "one",
-          "source_attribute": "converted_lead_id",
+          "source_attribute": "converted_signal_id",
           "destination_attribute": "id",
           "through": null,
           "join_relationship": null,
           "source_attribute_on_join_resource": null,
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
+          "destination_domain": "GnomeGarden.Commercial"
         }
       ],
       "calculations": [],
@@ -85709,6 +87770,46 @@
         },
         {
           "args": [],
+          "name": "create_prospect",
+          "kind": "action",
+          "action": "create",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "update_prospect",
+          "kind": "action",
+          "action": "update",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "convert_prospect_to_organization",
+          "kind": "action",
+          "action": "convert_to_organization",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "convert_prospect_to_signal",
+          "kind": "action",
+          "action": "convert_to_signal",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
           "name": "reject_prospect",
           "kind": "action",
           "action": "reject",
@@ -85720,40 +87821,40 @@
       ],
       "cross_domain_relationships": [
         {
-          "name": "converted_company",
+          "name": "converted_organization",
           "type": "belongs_to",
-          "description": "Company created when prospect converts",
-          "destination": "GnomeGarden.Sales.Company",
+          "description": "Organization created or linked when prospect converts",
+          "destination": "GnomeGarden.Operations.Organization",
           "public?": true,
           "allow_nil?": true,
           "writable?": true,
           "cardinality": "one",
-          "source_attribute": "converted_company_id",
+          "source_attribute": "converted_organization_id",
           "destination_attribute": "id",
           "through": null,
           "join_relationship": null,
           "source_attribute_on_join_resource": null,
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
+          "destination_domain": "GnomeGarden.Operations"
         },
         {
-          "name": "converted_lead",
+          "name": "converted_signal",
           "type": "belongs_to",
-          "description": "Lead created when prospect needs qualification",
-          "destination": "GnomeGarden.Sales.Lead",
+          "description": "Commercial signal created when prospect needs human review",
+          "destination": "GnomeGarden.Commercial.Signal",
           "public?": true,
           "allow_nil?": true,
           "writable?": true,
           "cardinality": "one",
-          "source_attribute": "converted_lead_id",
+          "source_attribute": "converted_signal_id",
           "destination_attribute": "id",
           "through": null,
           "join_relationship": null,
           "source_attribute_on_join_resource": null,
           "destination_attribute_on_join_resource": null,
           "cross_domain?": true,
-          "destination_domain": "GnomeGarden.Sales"
+          "destination_domain": "GnomeGarden.Commercial"
         }
       ]
     },
@@ -89040,10 +91141,64 @@
           "destination_domain": "GnomeGarden.Operations"
         },
         {
+          "name": "procurement_sources",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Procurement.ProcurementSource",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "organization_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Procurement"
+        },
+        {
+          "name": "pursuits",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Pursuit",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "organization_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
           "name": "service_level_policies",
           "type": "has_many",
           "description": null,
           "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "organization_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
+          "name": "signals",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Signal",
           "public?": true,
           "allow_nil?": null,
           "writable?": true,
@@ -89076,8 +91231,103 @@
           "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "asset_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "assets"
+          ]
+        },
+        {
+          "default": null,
+          "name": "managed_system_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "managed_systems"
+          ]
+        },
+        {
+          "default": null,
+          "name": "people_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "people"
+          ]
+        },
+        {
+          "default": null,
+          "name": "procurement_source_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "procurement_sources"
+          ]
+        },
+        {
+          "default": null,
+          "name": "pursuit_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "pursuits"
+          ]
+        },
+        {
+          "default": null,
+          "name": "signal_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "signals"
+          ]
+        },
+        {
+          "default": null,
+          "name": "site_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "sites"
+          ]
+        }
+      ],
       "identities": [
         {
           "name": "unique_name",
@@ -89107,12 +91357,44 @@
         },
         {
           "args": [],
+          "name": "list_active_organizations",
+          "kind": "action",
+          "action": "active",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "list_prospect_organizations",
+          "kind": "action",
+          "action": "prospects",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
           "name": "get_organization",
           "kind": "action",
           "action": "read",
           "get?": true,
           "get_by": [
             "id"
+          ],
+          "get_by_identity": null,
+          "require_reference?": false
+        },
+        {
+          "args": [],
+          "name": "get_organization_by_name",
+          "kind": "action",
+          "action": "read",
+          "get?": true,
+          "get_by": [
+            "name"
           ],
           "get_by_identity": null,
           "require_reference?": false
@@ -89140,10 +91422,64 @@
       ],
       "cross_domain_relationships": [
         {
+          "name": "procurement_sources",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Procurement.ProcurementSource",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "organization_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Procurement"
+        },
+        {
+          "name": "pursuits",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Pursuit",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "organization_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
           "name": "service_level_policies",
           "type": "has_many",
           "description": null,
           "destination": "GnomeGarden.Commercial.ServiceLevelPolicy",
+          "public?": true,
+          "allow_nil?": null,
+          "writable?": true,
+          "cardinality": "many",
+          "source_attribute": "id",
+          "destination_attribute": "organization_id",
+          "through": null,
+          "join_relationship": null,
+          "source_attribute_on_join_resource": null,
+          "destination_attribute_on_join_resource": null,
+          "cross_domain?": true,
+          "destination_domain": "GnomeGarden.Commercial"
+        },
+        {
+          "name": "signals",
+          "type": "has_many",
+          "description": null,
+          "destination": "GnomeGarden.Commercial.Signal",
           "public?": true,
           "allow_nil?": null,
           "writable?": true,
@@ -90019,7 +92355,17 @@
           "destination_domain": "GnomeGarden.Operations"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [
         {
           "default": null,

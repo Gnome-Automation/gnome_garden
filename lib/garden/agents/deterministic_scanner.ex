@@ -17,7 +17,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
   ## Usage
 
       # Scan a single source
-      {:ok, results} = DeterministicScanner.scan(lead_source_id)
+      {:ok, results} = DeterministicScanner.scan(procurement_source_id)
 
       # Scan all ready sources
       {:ok, results} = DeterministicScanner.scan_all_ready()
@@ -32,8 +32,8 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
   @doc """
   Scan a single procurement source using its saved scrape_config.
   """
-  def scan(lead_source_id) when is_binary(lead_source_id) do
-    case Ash.get(ProcurementSource, lead_source_id) do
+  def scan(procurement_source_id) when is_binary(procurement_source_id) do
+    case Ash.get(ProcurementSource, procurement_source_id) do
       {:ok, %{config_status: :configured, scrape_config: config} = source}
       when config != %{} ->
         do_scan(source)
@@ -42,7 +42,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
         {:error, "Source not ready for scanning. Status: #{status}. Run discovery first."}
 
       {:error, _} ->
-        {:error, "Lead source not found"}
+        {:error, "Procurement source not found"}
     end
   end
 
@@ -209,7 +209,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
           score_industry: score.score_industry,
           score_opportunity_type: score.score_opportunity_type,
           keywords_matched: score.keywords_matched,
-          lead_source_id: source.id
+          procurement_source_id: source.id
         }
 
         case SaveBid.run(params, %{}) do

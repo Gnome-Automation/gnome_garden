@@ -5,22 +5,21 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
 
   require Ash.Query
 
+  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
   alias GnomeGarden.Sales
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
+    actor = socket.assigns.current_user
+
     company =
       Sales.get_company!(id,
-        actor: socket.assigns.current_user,
+        actor: actor,
         load: [:leads, :procurement_sources, :activities, :opportunities]
       )
 
-    bids =
-      Procurement.Bid
-      |> Ash.Query.filter(agency_company_id == ^id)
-      |> Ash.Query.sort(inserted_at: :desc)
-      |> Ash.read!()
+    bids = load_company_bids(company, actor)
 
     contacts =
       GnomeGarden.Sales.Contact
@@ -163,6 +162,20 @@ defmodule GnomeGardenWeb.CRM.CompanyLive.Show do
       </p>
     </.section>
     """
+  end
+
+  defp load_company_bids(company, actor) do
+    case Operations.get_organization_by_name(company.name, actor: actor) do
+      {:ok, organization} ->
+        Procurement.list_bids_for_organization(organization.id, actor: actor)
+        |> case do
+          {:ok, bids} -> bids
+          {:error, _error} -> []
+        end
+
+      {:error, _error} ->
+        []
+    end
   end
 
   attr :leads, :list, required: true

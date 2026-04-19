@@ -70,6 +70,10 @@ defmodule GnomeGarden.Agents do
     resource GnomeGarden.Agents.Prospect do
       define :list_prospects, action: :read
       define :get_prospect, action: :read, get_by: [:id]
+      define :create_prospect, action: :create
+      define :update_prospect, action: :update
+      define :convert_prospect_to_organization, action: :convert_to_organization
+      define :convert_prospect_to_signal, action: :convert_to_signal
       define :reject_prospect, action: :reject
     end
   end

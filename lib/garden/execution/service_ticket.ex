@@ -333,6 +333,41 @@ defmodule GnomeGarden.Execution.ServiceTicket do
     end
   end
 
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 new: :default,
+                 triaged: :info,
+                 in_progress: :warning,
+                 waiting_on_customer: :warning,
+                 resolved: :success,
+                 closed: :default,
+                 cancelled: :error
+               ],
+               default: :default}
+
+    calculate :severity_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :severity,
+               mapping: [
+                 low: :default,
+                 normal: :info,
+                 high: :warning,
+                 critical: :error
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :work_order_count, :work_orders do
+      public? true
+    end
+  end
+
   identities do
     identity :unique_ticket_number, [:ticket_number]
   end

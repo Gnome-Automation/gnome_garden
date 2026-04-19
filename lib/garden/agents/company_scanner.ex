@@ -11,10 +11,12 @@ defmodule GnomeGarden.Agents.CompanyScanner do
   - Hiring signals from /careers, /jobs pages
   - Expansion news from /news, /press pages
 
-  Creates Sales.Contact + Sales.Employment for new contacts found,
-  and Sales.Lead for hiring/expansion signals.
+  Persists contacts into Operations people/affiliations and records
+  hiring/expansion discoveries as Commercial signals for human review.
   """
 
+  alias GnomeGarden.Commercial
+  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement.ProcurementSource
   alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
 
@@ -24,18 +26,18 @@ defmodule GnomeGarden.Agents.CompanyScanner do
   @career_paths ["/careers", "/jobs", "/career", "/join-us", "/employment", "/work-with-us"]
   @news_paths ["/news", "/press", "/blog", "/press-releases", "/announcements"]
 
-  def scan(%ProcurementSource{source_type: :company_site, company_id: company_id} = source)
-      when not is_nil(company_id) do
+  def scan(%ProcurementSource{source_type: :company_site} = source) do
     Logger.info("[CompanyScanner] Scanning #{source.name} at #{source.url}")
 
     base_url = extract_base_url(source.url)
+    organization = ensure_organization!(source)
     results = %{contacts: [], signals: [], errors: []}
 
     results =
       results
-      |> scan_for_contacts(base_url, source)
-      |> scan_for_careers(base_url, source)
-      |> scan_for_news(base_url, source)
+      |> scan_for_contacts(base_url, source, organization)
+      |> scan_for_careers(base_url, source, organization)
+      |> scan_for_news(base_url, source, organization)
 
     Ash.update!(source, %{}, action: :mark_scanned)
 
@@ -54,18 +56,18 @@ defmodule GnomeGarden.Agents.CompanyScanner do
   end
 
   def scan(%ProcurementSource{} = source) do
-    Logger.warning("[CompanyScanner] #{source.name} has no company_id, skipping")
-    {:ok, %{skipped: true, reason: "no company_id"}}
+    Logger.warning("[CompanyScanner] #{source.name} is not a company_site source, skipping")
+    {:ok, %{skipped: true, reason: "not_company_site"}}
   end
 
-  defp scan_for_contacts(results, base_url, source) do
+  defp scan_for_contacts(results, base_url, source, organization) do
     Enum.reduce(@contact_paths, results, fn path, acc ->
       url = base_url <> path
 
       case try_extract_page(url) do
         {:ok, content} ->
           contacts = extract_contacts_from_content(content)
-          save_contacts(contacts, source.company_id)
+          save_contacts(contacts, organization, source, url)
           %{acc | contacts: acc.contacts ++ contacts}
 
         :not_found ->
@@ -77,14 +79,14 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     end)
   end
 
-  defp scan_for_careers(results, base_url, source) do
+  defp scan_for_careers(results, base_url, source, organization) do
     Enum.reduce(@career_paths, results, fn path, acc ->
       url = base_url <> path
 
       case try_extract_page(url) do
         {:ok, content} ->
           signals = extract_hiring_signals(content, url)
-          save_hiring_signals(signals, source)
+          save_hiring_signals(signals, source, organization)
           %{acc | signals: acc.signals ++ signals}
 
         :not_found ->
@@ -96,14 +98,14 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     end)
   end
 
-  defp scan_for_news(results, base_url, source) do
+  defp scan_for_news(results, base_url, source, organization) do
     Enum.reduce(@news_paths, results, fn path, acc ->
       url = base_url <> path
 
       case try_extract_page(url) do
         {:ok, content} ->
           signals = extract_expansion_signals(content, url)
-          save_expansion_signals(signals, source)
+          save_expansion_signals(signals, source, organization)
           %{acc | signals: acc.signals ++ signals}
 
         :not_found ->
@@ -194,65 +196,124 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     end
   end
 
-  defp save_contacts(contacts, company_id) do
-    Enum.each(contacts, fn %{email: email} ->
-      # Only save if contact doesn't already exist with this email
-      require Ash.Query
+  defp save_contacts(contacts, organization, source, discovered_url) do
+    Enum.each(contacts, fn %{email: email, has_engineering_context: has_engineering_context} ->
+      {first_name, last_name} = contact_name_from_email(email)
 
-      existing =
-        GnomeGarden.Sales.Contact
-        |> Ash.Query.filter(email == ^email)
-        |> Ash.Query.limit(1)
-        |> Ash.read!()
+      case Operations.create_person(
+             %{
+               first_name: first_name,
+               last_name: last_name,
+               email: email,
+               notes: "Discovered by CompanyScanner from #{discovered_url}"
+             },
+             upsert?: true,
+             upsert_identity: :unique_email,
+             upsert_fields: [:first_name, :last_name, :notes]
+           ) do
+        {:ok, person} ->
+          Operations.create_organization_affiliation(
+            %{
+              organization_id: organization.id,
+              person_id: person.id,
+              title:
+                if(has_engineering_context, do: "Engineering contact", else: "Website contact"),
+              contact_roles:
+                if(has_engineering_context, do: ["technical_contact"], else: ["general_contact"]),
+              is_primary: false,
+              notes: "Discovered from company website source #{source.name}"
+            },
+            upsert?: true,
+            upsert_identity: :unique_active_affiliation,
+            upsert_fields: [:title, :contact_roles, :notes]
+          )
 
-      if existing == [] do
-        case GnomeGarden.Sales.create_contact(%{
-               first_name: "Unknown",
-               last_name: email_to_name(email),
-               email: email
-             }) do
-          {:ok, contact} ->
-            Ash.create(GnomeGarden.Sales.Employment, %{
-              contact_id: contact.id,
-              company_id: company_id,
-              is_current: true
-            })
-
-          _ ->
-            :ok
-        end
+        {:error, error} ->
+          Logger.warning(
+            "[CompanyScanner] Failed to upsert person #{email} for #{source.name}: #{inspect(error)}"
+          )
       end
     end)
   end
 
-  defp save_hiring_signals([], _source), do: :ok
+  defp save_hiring_signals([], _source, _organization), do: :ok
 
-  defp save_hiring_signals(signals, source) do
+  defp save_hiring_signals(signals, source, organization) do
     Enum.each(signals, fn signal ->
-      GnomeGarden.Sales.create_lead(%{
-        first_name: "Hiring",
-        last_name: source.name,
-        company_name: source.name,
-        company_id: source.company_id,
-        source: :other,
-        source_details: "hiring signal: #{Enum.join(signal.keywords, ", ")} — #{signal.url}"
-      })
+      create_signal_if_missing(
+        source,
+        organization,
+        signal,
+        "hiring",
+        "Hiring signal found on company site"
+      )
     end)
   end
 
-  defp save_expansion_signals([], _source), do: :ok
+  defp save_expansion_signals([], _source, _organization), do: :ok
 
-  defp save_expansion_signals(signals, source) do
+  defp save_expansion_signals(signals, source, organization) do
     Enum.each(signals, fn signal ->
-      GnomeGarden.Sales.create_lead(%{
-        first_name: "Expansion",
-        last_name: source.name,
-        company_name: source.name,
-        company_id: source.company_id,
-        source: :other,
-        source_details: "expansion signal: #{Enum.join(signal.keywords, ", ")} — #{signal.url}"
-      })
+      create_signal_if_missing(
+        source,
+        organization,
+        signal,
+        "expansion",
+        "Expansion signal found on company site"
+      )
     end)
+  end
+
+  defp create_signal_if_missing(source, organization, signal, signal_kind, description_prefix) do
+    external_ref = "#{source.id}:#{signal_kind}:#{signal.url}"
+
+    case Commercial.get_signal_by_external_ref(external_ref) do
+      {:ok, _signal} ->
+        :ok
+
+      {:error, %Ash.Error.Query.NotFound{}} ->
+        Commercial.create_signal(%{
+          title: "#{source.name} — #{String.capitalize(signal_kind)} signal",
+          description: "#{description_prefix}: #{Enum.join(signal.keywords, ", ")}",
+          signal_type: :outbound_target,
+          source_channel: :agent_discovery,
+          external_ref: external_ref,
+          source_url: signal.url,
+          observed_at: DateTime.utc_now(),
+          organization_id: organization.id,
+          notes: "#{signal_kind} signal: #{Enum.join(signal.keywords, ", ")} — #{signal.url}",
+          metadata: %{
+            source: "company_scanner",
+            scan_type: signal_kind,
+            keywords: signal.keywords,
+            procurement_source_id: source.id
+          }
+        })
+
+      {:error, error} ->
+        Logger.warning(
+          "[CompanyScanner] Failed to check existing signal #{external_ref}: #{inspect(error)}"
+        )
+    end
+  end
+
+  defp ensure_organization!(source) do
+    {:ok, organization} =
+      Operations.create_organization(
+        %{
+          name: source.name,
+          status: :prospect,
+          relationship_roles: ["prospect"],
+          website: source.url,
+          primary_region: source.region |> to_string(),
+          notes: source.notes || "Discovered from company website monitoring source"
+        },
+        upsert?: true,
+        upsert_identity: :unique_name,
+        upsert_fields: [:website, :primary_region, :notes]
+      )
+
+    organization
   end
 
   defp extract_base_url(url) do
@@ -260,12 +321,15 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     "#{uri.scheme}://#{uri.host}"
   end
 
-  defp email_to_name(email) do
+  defp contact_name_from_email(email) do
     email
     |> String.split("@")
     |> hd()
     |> String.split(~r/[._-]/)
-    |> Enum.map(&String.capitalize/1)
-    |> Enum.join(" ")
+    |> case do
+      [first, last | _rest] -> {String.capitalize(first), String.capitalize(last)}
+      [single] -> {String.capitalize(single), "Unknown"}
+      _ -> {"Unknown", "Unknown"}
+    end
   end
 end

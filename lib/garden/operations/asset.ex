@@ -232,6 +232,47 @@ defmodule GnomeGarden.Operations.Asset do
     end
   end
 
+  calculations do
+    calculate :lifecycle_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :lifecycle_status,
+               mapping: [
+                 planned: :default,
+                 active: :success,
+                 on_hold: :warning,
+                 retired: :default,
+                 unsupported: :error
+               ],
+               default: :default}
+
+    calculate :criticality_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :criticality,
+               mapping: [
+                 low: :default,
+                 normal: :info,
+                 high: :warning,
+                 critical: :error
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :child_asset_count, :child_assets do
+      public? true
+    end
+
+    count :maintenance_plan_count, :maintenance_plans do
+      public? true
+    end
+
+    count :work_order_count, :work_orders do
+      public? true
+    end
+  end
+
   identities do
     identity :unique_asset_tag_per_organization, [:organization_id, :asset_tag]
   end

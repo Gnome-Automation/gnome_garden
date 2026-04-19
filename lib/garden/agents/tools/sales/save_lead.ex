@@ -1,17 +1,19 @@
 defmodule GnomeGarden.Agents.Tools.SaveLead do
   @moduledoc """
-  Save a discovered lead to the CRM.
+  Save a discovered company signal into the long-term operating model.
 
-  Creates or finds the Company first, then creates the Lead linked to it.
-  If contact info is provided, creates a Contact at the Company too.
+  Agent intake creates or updates the durable organization record first,
+  optionally records a contact person, and always creates a commercial signal
+  for human review before anything becomes owned pipeline.
   """
 
   use Jido.Action,
     name: "save_lead",
     description: """
-    Save a discovered company as a lead in the CRM. Creates the Company record
-    if it doesn't exist, then creates a Lead linked to it. Call this for every
-    company you find that may need automation/controls/IT services.
+    Save a discovered company into Operations + Commercial. Creates or updates
+    the Organization first, optionally records a Person and affiliation, then
+    creates a Commercial Signal for human review. Call this for every company
+    you find that may need automation, controls, service, or software work.
     """,
     schema: [
       company_name: [type: :string, required: true, doc: "Company name"],
@@ -42,21 +44,23 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
       source_url: [type: :string, doc: "URL where you found this information"]
     ]
 
-  require Ash.Query
+  alias GnomeGarden.Commercial
+  alias GnomeGarden.Operations
 
   @impl true
   def run(params, _context) do
-    with {:ok, company} <- find_or_create_company(params),
-         {:ok, lead} <- create_lead(params, company),
-         {:ok, _contact} <- maybe_create_contact(params, company),
-         {:ok, _source} <- maybe_create_lead_source(params, company) do
+    with {:ok, organization} <- upsert_organization(params),
+         {:ok, person} <- maybe_upsert_person(params),
+         {:ok, _affiliation} <- maybe_upsert_affiliation(person, organization, params),
+         {:ok, signal} <- create_signal(params, organization, person) do
       {:ok,
        %{
          saved: true,
-         company_id: company.id,
-         lead_id: lead.id,
+         organization_id: organization.id,
+         person_id: person && person.id,
+         signal_id: signal.id,
          company: params.company_name,
-         message: "Company + Lead + Source saved! Pipeline will auto-enrich and qualify."
+         message: "Organization + Signal saved for commercial review."
        }}
     else
       {:error, reason} ->
@@ -64,95 +68,113 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
     end
   end
 
-  defp find_or_create_company(params) do
-    name = params.company_name
+  defp upsert_organization(params) do
+    {city, state} = parse_location(params[:location])
 
-    query =
-      GnomeGarden.Sales.Company
-      |> Ash.Query.filter(name == ^name)
-      |> Ash.Query.limit(1)
+    attrs =
+      %{
+        name: params.company_name,
+        status: :prospect,
+        relationship_roles: ["prospect"],
+        website: normalize_website(params[:website]),
+        primary_region: infer_region(city, state) |> to_string(),
+        notes: build_organization_notes(params, city, state)
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+      |> Map.new()
 
-    case Ash.read(query) do
-      {:ok, [company | _]} ->
-        {:ok, company}
-
-      {:ok, []} ->
-        {city, state} = parse_location(params[:location])
-
-        attrs = %{
-          name: name,
-          company_type: :prospect,
-          status: :active,
-          website: params[:website],
-          description: params[:company_description],
-          employee_count: params[:employee_count],
-          city: city,
-          state: state,
-          region: infer_region(city, state)
-        }
-
-        Ash.create(GnomeGarden.Sales.Company, attrs)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    Operations.create_organization(
+      attrs,
+      upsert?: true,
+      upsert_identity: :unique_name,
+      upsert_fields: [:website, :primary_region, :notes]
+    )
   end
 
-  defp create_lead(params, company) do
+  defp maybe_upsert_person(params) do
     {first, last} = split_name(params[:contact_first_name], params[:contact_last_name])
+    email = blank_to_nil(params[:contact_email])
+    phone = blank_to_nil(params[:contact_phone])
 
-    attrs = %{
-      first_name: first || "Unknown",
-      last_name: last || params.company_name,
-      company_name: params.company_name,
-      company_id: company.id,
-      title: params[:contact_title],
-      email: params[:contact_email],
-      phone: params[:contact_phone],
-      source: :other,
-      source_details: params.signal,
-      source_url: params[:source_url],
-      description: params[:company_description]
-    }
+    cond do
+      is_nil(email) and is_nil(first) and is_nil(last) ->
+        {:ok, nil}
 
-    GnomeGarden.Sales.create_lead(attrs)
-  end
+      true ->
+        attrs =
+          %{
+            first_name: first || "Unknown",
+            last_name: last || params.company_name,
+            email: email,
+            phone: phone,
+            notes: params[:contact_title]
+          }
+          |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+          |> Map.new()
 
-  defp maybe_create_contact(
-         %{contact_first_name: first, contact_last_name: last} = params,
-         company
-       )
-       when is_binary(first) and first != "" and is_binary(last) and last != "" do
-    attrs = %{
-      first_name: first,
-      last_name: last,
-      email: params[:contact_email],
-      phone: params[:contact_phone]
-    }
-
-    # Create employment to link contact to company
-    case GnomeGarden.Sales.create_contact(attrs) do
-      {:ok, contact} ->
-        Ash.create(GnomeGarden.Sales.Employment, %{
-          contact_id: contact.id,
-          company_id: company.id,
-          title: params[:contact_title],
-          is_current: true
-        })
-
-        {:ok, contact}
-
-      {:error, reason} ->
-        {:error, reason}
+        if email do
+          Operations.create_person(
+            attrs,
+            upsert?: true,
+            upsert_identity: :unique_email,
+            upsert_fields: [:first_name, :last_name, :phone, :notes]
+          )
+        else
+          Operations.create_person(attrs)
+        end
     end
   end
 
-  defp maybe_create_contact(_, _), do: {:ok, nil}
+  defp maybe_upsert_affiliation(nil, _organization, _params), do: {:ok, nil}
+
+  defp maybe_upsert_affiliation(person, organization, params) do
+    attrs =
+      %{
+        organization_id: organization.id,
+        person_id: person.id,
+        title: blank_to_nil(params[:contact_title]),
+        contact_roles: infer_contact_roles(params[:contact_title]),
+        is_primary: true
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+      |> Map.new()
+
+    Operations.create_organization_affiliation(
+      attrs,
+      upsert?: true,
+      upsert_identity: :unique_active_affiliation,
+      upsert_fields: [:title, :contact_roles, :is_primary]
+    )
+  end
+
+  defp create_signal(params, organization, person) do
+    signal_attrs = %{
+      title: signal_title(params),
+      description: params.company_description,
+      signal_type: infer_signal_type(params.signal),
+      source_channel: :agent_discovery,
+      source_url: blank_to_nil(params[:source_url]),
+      observed_at: DateTime.utc_now(),
+      organization_id: organization.id,
+      notes: params.signal,
+      metadata: %{
+        contact_person_id: person && person.id,
+        company_name: params.company_name,
+        industry: blank_to_nil(params[:industry]),
+        location: blank_to_nil(params[:location]),
+        website: normalize_website(params[:website]),
+        employee_count: params[:employee_count],
+        source: :save_lead
+      }
+    }
+
+    Commercial.create_signal(signal_attrs)
+  end
 
   defp split_name(nil, nil), do: {nil, nil}
   defp split_name(first, last) when is_binary(first) and is_binary(last), do: {first, last}
-  defp split_name(first, nil) when is_binary(first), do: {first, "Unknown"}
-  defp split_name(nil, last) when is_binary(last), do: {"Unknown", last}
+  defp split_name(first, nil) when is_binary(first) and first != "", do: {first, "Unknown"}
+  defp split_name(nil, last) when is_binary(last) and last != "", do: {"Unknown", last}
   defp split_name(_, _), do: {nil, nil}
 
   defp parse_location(nil), do: {nil, nil}
@@ -190,39 +212,76 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
 
   defp infer_region(_, _), do: :socal
 
-  defp maybe_create_lead_source(%{website: website}, company)
-       when is_binary(website) and website != "" do
-    # Normalize URL
-    url = if String.starts_with?(website, "http"), do: website, else: "https://#{website}"
+  defp infer_signal_type(signal) when is_binary(signal) do
+    signal
+    |> String.downcase()
+    |> then(fn text ->
+      cond do
+        String.contains?(text, ["renewal", "rebid"]) ->
+          :renewal
 
-    # Check if source already exists
-    existing =
-      GnomeGarden.Procurement.ProcurementSource
-      |> Ash.Query.filter(url == ^url)
-      |> Ash.Query.limit(1)
-      |> Ash.read!()
+        String.contains?(text, ["referral", "intro", "warm intro"]) ->
+          :referral
 
-    case existing do
-      [_source | _] ->
-        {:ok, :already_exists}
+        String.contains?(text, ["inbound", "contacted us", "reached out", "requested"]) ->
+          :inbound_request
 
-      [] ->
-        Ash.create(
-          GnomeGarden.Procurement.ProcurementSource,
-          %{
-            name: company.name,
-            url: url,
-            source_type: :company_site,
-            company_id: company.id,
-            region: company.region || :socal,
-            priority: :medium,
-            scan_frequency_hours: 48,
-            enabled: true
-          },
-          action: :create_for_company
-        )
+        true ->
+          :outbound_target
+      end
+    end)
+  end
+
+  defp infer_signal_type(_), do: :outbound_target
+
+  defp infer_contact_roles(title) when is_binary(title) do
+    normalized = String.downcase(title)
+
+    cond do
+      String.contains?(normalized, [
+        "engineer",
+        "controls",
+        "automation",
+        "operations",
+        "maintenance"
+      ]) ->
+        ["technical_contact"]
+
+      String.contains?(normalized, ["buyer", "purchasing", "procurement", "sourcing"]) ->
+        ["buyer"]
+
+      true ->
+        []
     end
   end
 
-  defp maybe_create_lead_source(_, _), do: {:ok, :no_website}
+  defp infer_contact_roles(_), do: []
+
+  defp signal_title(params) do
+    "#{params.company_name} — #{String.trim(params.signal)}"
+    |> String.slice(0, 120)
+  end
+
+  defp normalize_website(nil), do: nil
+  defp normalize_website(""), do: nil
+
+  defp normalize_website(website) when is_binary(website) do
+    if String.starts_with?(website, "http"), do: website, else: "https://#{website}"
+  end
+
+  defp blank_to_nil(nil), do: nil
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(value), do: value
+
+  defp build_organization_notes(params, city, state) do
+    [
+      params[:company_description],
+      city && state && "Location: #{city}, #{state}",
+      params[:industry] && "Industry: #{params[:industry]}",
+      params[:employee_count] && "Employee count: #{params[:employee_count]}"
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join("\n")
+    |> blank_to_nil()
+  end
 end

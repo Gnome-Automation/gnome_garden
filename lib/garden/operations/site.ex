@@ -178,6 +178,30 @@ defmodule GnomeGarden.Operations.Site do
     end
   end
 
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 active: :success,
+                 inactive: :default,
+                 commissioning: :warning,
+                 retired: :default
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :managed_system_count, :managed_systems do
+      public? true
+    end
+
+    count :asset_count, :assets do
+      public? true
+    end
+  end
+
   identities do
     identity :unique_name_per_organization, [:organization_id, :name]
   end

@@ -264,6 +264,22 @@ defmodule GnomeGarden.Commercial.ChangeOrder do
     end
   end
 
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 draft: :default,
+                 submitted: :warning,
+                 approved: :success,
+                 rejected: :error,
+                 implemented: :info,
+                 cancelled: :default
+               ],
+               default: :default}
+  end
+
   aggregates do
     count :line_count, :change_order_lines do
       public? true

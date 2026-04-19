@@ -255,6 +255,20 @@ defmodule GnomeGarden.Finance.Invoice do
     end
   end
 
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 draft: :default,
+                 issued: :warning,
+                 paid: :success,
+                 void: :error
+               ],
+               default: :default}
+  end
+
   aggregates do
     count :line_count, :invoice_lines do
       public? true

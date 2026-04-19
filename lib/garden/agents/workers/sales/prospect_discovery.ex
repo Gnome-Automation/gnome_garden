@@ -8,8 +8,9 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
   - Legacy equipment mentions (old PLCs, outdated HMIs)
   - Industry directory listings in target verticals
 
-  Creates Sales.Lead records directly, which trigger the existing
-  pipeline (enrich → qualify) via the Signal Bus.
+  Persists discovered targets into the long-term operating model via
+  `SaveLead`, creating Operations + Commercial intake records for human
+  review instead of writing directly into the legacy sales lead table.
 
   ## Usage
 
@@ -335,18 +336,19 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
     {first, last} = split_name(parsed.contact_name)
 
     attrs = %{
-      first_name: first || "Unknown",
-      last_name: last || parsed.company_name,
       company_name: parsed.company_name,
-      title: non_empty(parsed.contact_title),
-      source: :other,
-      source_details:
-        "#{parsed.industry} — #{parsed.signal}" <>
-          if(parsed.source_url != "", do: " — #{parsed.source_url}", else: "")
+      company_description: fallback_company_description(parsed),
+      industry: non_empty(parsed.industry),
+      location: non_empty(parsed.location),
+      signal: parsed.signal,
+      contact_first_name: first,
+      contact_last_name: last,
+      contact_title: non_empty(parsed.contact_title),
+      source_url: non_empty(parsed.source_url)
     }
 
-    case GnomeGarden.Sales.create_lead(attrs) do
-      {:ok, lead} -> {:ok, lead}
+    case GnomeGarden.Agents.Tools.SaveLead.run(attrs, %{}) do
+      {:ok, result} -> {:ok, result}
       {:error, reason} -> {:error, parsed.company_name, reason}
     end
   end
@@ -365,4 +367,12 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
   defp non_empty(""), do: nil
   defp non_empty("[]"), do: nil
   defp non_empty(str), do: str
+
+  defp fallback_company_description(parsed) do
+    industry = non_empty(parsed.industry) || "industrial"
+    location = non_empty(parsed.location) || "Southern California"
+
+    "#{parsed.company_name} is a #{industry} company operating in #{location}. " <>
+      "This record came from the ProspectDiscovery result parser and should be enriched during review."
+  end
 end

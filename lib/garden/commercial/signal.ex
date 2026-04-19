@@ -76,6 +76,23 @@ defmodule GnomeGarden.Commercial.Signal do
       ]
     end
 
+    create :create_from_bid do
+      argument :source_bid_id, :uuid, allow_nil?: false
+
+      accept [
+        :title,
+        :description,
+        :organization_id,
+        :site_id,
+        :managed_system_id,
+        :owner_user_id,
+        :notes,
+        :metadata
+      ]
+
+      change {GnomeGarden.Commercial.Changes.CreateSignalFromBid, []}
+    end
+
     update :update do
       accept [
         :title,
@@ -127,6 +144,11 @@ defmodule GnomeGarden.Commercial.Signal do
     read :open do
       filter expr(status in [:new, :reviewing, :accepted])
       prepare build(sort: [observed_at: :desc, inserted_at: :desc], load: [:organization, :site])
+    end
+
+    read :by_external_ref do
+      argument :external_ref, :string, allow_nil?: false
+      get_by [:external_ref]
     end
 
     read :for_organization do
@@ -243,5 +265,26 @@ defmodule GnomeGarden.Commercial.Signal do
     has_many :pursuits, GnomeGarden.Commercial.Pursuit do
       public? true
     end
+
+    has_one :procurement_bid, GnomeGarden.Procurement.Bid do
+      destination_attribute :signal_id
+      public? true
+    end
+  end
+
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 new: :default,
+                 reviewing: :info,
+                 accepted: :success,
+                 rejected: :error,
+                 converted: :success,
+                 archived: :warning
+               ],
+               default: :default}
   end
 end

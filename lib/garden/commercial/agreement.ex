@@ -382,6 +382,22 @@ defmodule GnomeGarden.Commercial.Agreement do
     end
   end
 
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 draft: :default,
+                 pending_signature: :warning,
+                 active: :success,
+                 suspended: :warning,
+                 completed: :info,
+                 terminated: :error
+               ],
+               default: :default}
+  end
+
   aggregates do
     count :project_count, :projects do
       public? true

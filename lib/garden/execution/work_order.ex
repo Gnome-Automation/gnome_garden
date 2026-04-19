@@ -330,4 +330,46 @@ defmodule GnomeGarden.Execution.WorkOrder do
       public? true
     end
   end
+
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 new: :default,
+                 scheduled: :info,
+                 dispatched: :warning,
+                 in_progress: :warning,
+                 completed: :success,
+                 cancelled: :error
+               ],
+               default: :default}
+
+    calculate :priority_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :priority,
+               mapping: [
+                 low: :default,
+                 normal: :info,
+                 high: :warning,
+                 critical: :error
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :assignment_count, :assignments do
+      public? true
+    end
+
+    count :material_usage_count, :material_usages do
+      public? true
+    end
+
+    count :entitlement_usage_count, :service_entitlement_usages do
+      public? true
+    end
+  end
 end

@@ -54,6 +54,11 @@ defmodule GnomeGardenWeb.LiveUserAuth do
   end
 
   defp load_nav_counts do
+    open_signals =
+      GnomeGarden.Commercial.Signal
+      |> Ash.Query.for_read(:open)
+      |> Ash.count!()
+
     review_bids =
       GnomeGarden.Procurement.Bid
       |> Ash.Query.filter(status == :new)
@@ -70,7 +75,8 @@ defmodule GnomeGardenWeb.LiveUserAuth do
       |> Ash.count!()
 
     %{
-      review: review_bids + review_leads + review_prospects,
+      review: open_signals,
+      signals: open_signals,
       bids: review_bids,
       leads: review_leads,
       prospects: review_prospects

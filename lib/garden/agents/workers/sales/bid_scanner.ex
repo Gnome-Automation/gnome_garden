@@ -181,12 +181,12 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
     sam_key = System.get_env("SAM_GOV_API_KEY")
 
     # Load procurement sources from database
-    sources = load_lead_sources()
+    sources = load_procurement_sources()
 
     context =
       Map.get(params, :tool_context, %{})
       |> Map.put(:sam_gov_api_key, sam_key)
-      |> Map.put(:lead_sources, sources)
+      |> Map.put(:procurement_sources, sources)
       |> Map.put(:scan_started_at, DateTime.utc_now())
 
     updated_params = Map.put(params, :tool_context, context)
@@ -203,7 +203,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
     {:ok, agent, directives}
   end
 
-  defp load_lead_sources do
+  defp load_procurement_sources do
     case Ash.read(GnomeGarden.Procurement.ProcurementSource,
            filter: [enabled: true, status: :approved]
          ) do

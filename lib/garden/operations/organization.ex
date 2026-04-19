@@ -173,6 +173,18 @@ defmodule GnomeGarden.Operations.Organization do
       public? true
     end
 
+    has_many :procurement_sources, GnomeGarden.Procurement.ProcurementSource do
+      public? true
+    end
+
+    has_many :signals, GnomeGarden.Commercial.Signal do
+      public? true
+    end
+
+    has_many :pursuits, GnomeGarden.Commercial.Pursuit do
+      public? true
+    end
+
     has_many :service_level_policies, GnomeGarden.Commercial.ServiceLevelPolicy do
       public? true
     end
@@ -185,6 +197,50 @@ defmodule GnomeGarden.Operations.Organization do
       through GnomeGarden.Operations.OrganizationAffiliation
       source_attribute_on_join_resource :organization_id
       destination_attribute_on_join_resource :person_id
+      public? true
+    end
+  end
+
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 prospect: :warning,
+                 active: :success,
+                 inactive: :default,
+                 archived: :error
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :people_count, :people do
+      public? true
+    end
+
+    count :site_count, :sites do
+      public? true
+    end
+
+    count :managed_system_count, :managed_systems do
+      public? true
+    end
+
+    count :asset_count, :assets do
+      public? true
+    end
+
+    count :signal_count, :signals do
+      public? true
+    end
+
+    count :pursuit_count, :pursuits do
+      public? true
+    end
+
+    count :procurement_source_count, :procurement_sources do
       public? true
     end
   end

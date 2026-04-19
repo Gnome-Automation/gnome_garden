@@ -188,6 +188,23 @@ defmodule GnomeGarden.Operations.Person do
 
   calculations do
     calculate :full_name, :string, expr(first_name <> " " <> last_name)
+
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 active: :success,
+                 inactive: :default,
+                 archived: :error
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :organization_count, :organizations do
+      public? true
+    end
   end
 
   identities do

@@ -72,7 +72,7 @@ defmodule GnomeGarden.Agents.Tools.SaveProcurementSource do
              url: params.url,
              id: existing && existing.id,
              already_exists: true,
-             message: "Lead source already exists: #{params.url}"
+             message: "Procurement source already exists: #{params.url}"
            }}
         else
           {:error, "Failed to save procurement source: #{inspect(error)}"}

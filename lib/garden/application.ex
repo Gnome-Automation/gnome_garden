@@ -26,9 +26,6 @@ defmodule GnomeGarden.Application do
       {Jido.Signal.Bus, name: GnomeGarden.SignalBus},
       GnomeGarden.Jido,
 
-      # Lead pipeline — reacts to bid/lead signals
-      GnomeGarden.Agents.Pipeline.PipelineSupervisor,
-
       # Start to serve requests, typically the last entry
       GnomeGardenWeb.Endpoint,
       {AshAuthentication.Supervisor, [otp_app: :gnome_garden]}

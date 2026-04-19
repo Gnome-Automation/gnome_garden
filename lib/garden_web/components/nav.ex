@@ -32,16 +32,201 @@ defmodule GnomeGardenWeb.Nav do
       <%!-- Scrollable nav --%>
       <nav class="flex flex-1 flex-col overflow-y-auto">
         <ul role="list" class="-mx-2 flex flex-1 flex-col gap-y-1">
-          <%!-- Review Queue (always visible, top-level) --%>
+          <%!-- Signal inbox (always visible, top-level) --%>
           <.nav_item
-            path={~p"/crm/review"}
+            path={~p"/commercial/signals"}
             current_path={@current_path}
-            icon="hero-inbox-arrow-down"
+            icon="hero-inbox-stack"
             collapsed={@collapsed}
-            badge={@nav_counts[:review]}
+            badge={@nav_counts[:signals]}
           >
-            Review Queue
+            Signal Inbox
           </.nav_item>
+
+          <%!-- Operations section --%>
+          <.nav_group
+            id={"#{@id}-operations"}
+            label="Operations"
+            icon="hero-building-office-2"
+            collapsed={@collapsed}
+            current_path={@current_path}
+          >
+            <.nav_item
+              path={~p"/operations/organizations"}
+              current_path={@current_path}
+              icon="hero-building-office-2"
+              collapsed={@collapsed}
+            >
+              Organizations
+            </.nav_item>
+            <.nav_item
+              path={~p"/operations/people"}
+              current_path={@current_path}
+              icon="hero-users"
+              collapsed={@collapsed}
+            >
+              People
+            </.nav_item>
+            <.nav_item
+              path={~p"/operations/sites"}
+              current_path={@current_path}
+              icon="hero-map-pin"
+              collapsed={@collapsed}
+            >
+              Sites
+            </.nav_item>
+            <.nav_item
+              path={~p"/operations/managed-systems"}
+              current_path={@current_path}
+              icon="hero-circle-stack"
+              collapsed={@collapsed}
+            >
+              Managed Systems
+            </.nav_item>
+            <.nav_item
+              path={~p"/operations/affiliations"}
+              current_path={@current_path}
+              icon="hero-link"
+              collapsed={@collapsed}
+            >
+              Affiliations
+            </.nav_item>
+            <.nav_item
+              path={~p"/operations/assets"}
+              current_path={@current_path}
+              icon="hero-cpu-chip"
+              collapsed={@collapsed}
+            >
+              Assets
+            </.nav_item>
+          </.nav_group>
+
+          <%!-- Commercial section --%>
+          <.nav_group
+            id={"#{@id}-commercial"}
+            label="Commercial"
+            icon="hero-arrow-trending-up"
+            collapsed={@collapsed}
+            current_path={@current_path}
+          >
+            <.nav_item
+              path={~p"/commercial/signals"}
+              current_path={@current_path}
+              icon="hero-inbox-stack"
+              collapsed={@collapsed}
+              badge={@nav_counts[:signals]}
+            >
+              Signals
+            </.nav_item>
+            <.nav_item
+              path={~p"/commercial/pursuits"}
+              current_path={@current_path}
+              icon="hero-rocket-launch"
+              collapsed={@collapsed}
+            >
+              Pursuits
+            </.nav_item>
+            <.nav_item
+              path={~p"/commercial/proposals"}
+              current_path={@current_path}
+              icon="hero-document-text"
+              collapsed={@collapsed}
+            >
+              Proposals
+            </.nav_item>
+            <.nav_item
+              path={~p"/commercial/agreements"}
+              current_path={@current_path}
+              icon="hero-document-check"
+              collapsed={@collapsed}
+            >
+              Agreements
+            </.nav_item>
+            <.nav_item
+              path={~p"/commercial/change-orders"}
+              current_path={@current_path}
+              icon="hero-arrow-path"
+              collapsed={@collapsed}
+            >
+              Change Orders
+            </.nav_item>
+          </.nav_group>
+
+          <%!-- Execution section --%>
+          <.nav_group
+            id={"#{@id}-execution"}
+            label="Execution"
+            icon="hero-wrench-screwdriver"
+            collapsed={@collapsed}
+            current_path={@current_path}
+          >
+            <.nav_item
+              path={~p"/execution/projects"}
+              current_path={@current_path}
+              icon="hero-wrench-screwdriver"
+              collapsed={@collapsed}
+            >
+              Projects
+            </.nav_item>
+            <.nav_item
+              path={~p"/execution/service-tickets"}
+              current_path={@current_path}
+              icon="hero-lifebuoy"
+              collapsed={@collapsed}
+            >
+              Service Tickets
+            </.nav_item>
+            <.nav_item
+              path={~p"/execution/work-orders"}
+              current_path={@current_path}
+              icon="hero-wrench-screwdriver"
+              collapsed={@collapsed}
+            >
+              Work Orders
+            </.nav_item>
+            <.nav_item
+              path={~p"/execution/maintenance-plans"}
+              current_path={@current_path}
+              icon="hero-arrow-path"
+              collapsed={@collapsed}
+            >
+              Maintenance Plans
+            </.nav_item>
+          </.nav_group>
+
+          <%!-- Finance section --%>
+          <.nav_group
+            id={"#{@id}-finance"}
+            label="Finance"
+            icon="hero-receipt-percent"
+            collapsed={@collapsed}
+            current_path={@current_path}
+          >
+            <.nav_item
+              path={~p"/finance/invoices"}
+              current_path={@current_path}
+              icon="hero-receipt-percent"
+              collapsed={@collapsed}
+            >
+              Invoices
+            </.nav_item>
+            <.nav_item
+              path={~p"/finance/payments"}
+              current_path={@current_path}
+              icon="hero-banknotes"
+              collapsed={@collapsed}
+            >
+              Payments
+            </.nav_item>
+            <.nav_item
+              path={~p"/finance/payment-applications"}
+              current_path={@current_path}
+              icon="hero-link"
+              collapsed={@collapsed}
+            >
+              Applications
+            </.nav_item>
+          </.nav_group>
 
           <%!-- CRM section --%>
           <.nav_group

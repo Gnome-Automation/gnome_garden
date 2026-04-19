@@ -18,8 +18,10 @@ defmodule GnomeGarden.Commercial do
     resource GnomeGarden.Commercial.Signal do
       define :list_signals, action: :read
       define :get_signal, action: :read, get_by: [:id]
+      define :get_signal_by_external_ref, action: :by_external_ref, args: [:external_ref]
       define :create_signal, action: :create
       define :update_signal, action: :update
+      define :create_signal_from_bid, action: :create_from_bid, args: [:source_bid_id]
       define :review_signal, action: :start_review
       define :accept_signal, action: :accept
       define :reject_signal, action: :reject
@@ -33,6 +35,7 @@ defmodule GnomeGarden.Commercial do
       define :list_pursuits, action: :read
       define :get_pursuit, action: :read, get_by: [:id]
       define :create_pursuit, action: :create
+      define :create_pursuit_from_signal, action: :create_from_signal, args: [:source_signal_id]
       define :update_pursuit, action: :update
       define :qualify_pursuit, action: :qualify
       define :estimate_pursuit, action: :estimate

@@ -171,6 +171,19 @@ defmodule GnomeGarden.Finance.Payment do
     end
   end
 
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 received: :info,
+                 deposited: :success,
+                 reversed: :error
+               ],
+               default: :default}
+  end
+
   aggregates do
     count :application_count, :applications do
       public? true

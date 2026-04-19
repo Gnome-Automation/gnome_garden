@@ -49,7 +49,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
 
     ## Two Modes of Operation
 
-    ### Discovery Mode (when given a lead_source_id)
+    ### Discovery Mode (when given a procurement_source_id)
     Figure out how to scrape a new site and save the configuration:
     1. Navigate to the URL
     2. Find the bid listings page
@@ -123,16 +123,16 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   ## Example
 
       {:ok, pid} = Jido.start_agent(GnomeGarden.Jido, SmartScanner)
-      {:ok, result} = SmartScanner.discover_site(pid, lead_source_id)
+      {:ok, result} = SmartScanner.discover_site(pid, procurement_source_id)
 
   """
-  def discover_site(pid, lead_source_id, opts \\ []) do
-    case Ash.get(GnomeGarden.Procurement.ProcurementSource, lead_source_id) do
+  def discover_site(pid, procurement_source_id, opts \\ []) do
+    case Ash.get(GnomeGarden.Procurement.ProcurementSource, procurement_source_id) do
       {:ok, source} ->
         query = """
         DISCOVERY MODE - Figure out how to scrape this site and save the config.
 
-        Procurement Source ID: #{lead_source_id}
+        Procurement Source ID: #{procurement_source_id}
         Name: #{source.name}
         URL: #{source.url}
 
@@ -145,7 +145,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
            - Due date within each row (date_selector)
            - Link to bid details (link_selector)
         4. Test your selectors using browser_extract to confirm they work
-        5. Call save_discovery with the lead_source_id and all selectors you found
+        5. Call save_discovery with the procurement_source_id and all selectors you found
 
         The listing_url should be the URL of the page showing bid listings (after navigation).
 
@@ -155,7 +155,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
         ask_sync(pid, query, Keyword.put_new(opts, :timeout, @default_timeout))
 
       {:error, _} ->
-        {:error, "Lead source not found"}
+        {:error, "Procurement source not found"}
     end
   end
 
@@ -209,8 +209,8 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   @doc """
   Scan a procurement source by ID.
   """
-  def scan_lead_source(pid, lead_source_id, opts \\ []) do
-    case Ash.get(GnomeGarden.Procurement.ProcurementSource, lead_source_id) do
+  def scan_procurement_source(pid, procurement_source_id, opts \\ []) do
+    case Ash.get(GnomeGarden.Procurement.ProcurementSource, procurement_source_id) do
       {:ok, source} ->
         query = """
         Scan this procurement source: #{source.name}
@@ -223,7 +223,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
         ask_sync(pid, query, Keyword.put_new(opts, :timeout, @default_timeout))
 
       {:error, _} ->
-        {:error, "Lead source not found"}
+        {:error, "Procurement source not found"}
     end
   end
 

@@ -155,6 +155,19 @@ defmodule GnomeGarden.Operations.OrganizationAffiliation do
     end
   end
 
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 active: :success,
+                 inactive: :warning,
+                 former: :default
+               ],
+               default: :default}
+  end
+
   identities do
     identity :unique_active_affiliation, [:organization_id, :person_id, :status],
       where: expr(status == :active),

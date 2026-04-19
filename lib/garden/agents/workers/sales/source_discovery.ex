@@ -30,7 +30,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SourceDiscovery do
 
   use Jido.AI.Agent,
     name: "source_discovery",
-    description: "Lead source discovery agent that finds new procurement portals",
+    description: "Procurement source discovery agent that finds new procurement portals",
     tools: [
       # Discovery tools
       GnomeGarden.Agents.Tools.WebSearch,

@@ -17,7 +17,10 @@ defmodule GnomeGarden.Operations do
   resources do
     resource GnomeGarden.Operations.Organization do
       define :list_organizations, action: :read
+      define :list_active_organizations, action: :active
+      define :list_prospect_organizations, action: :prospects
       define :get_organization, action: :read, get_by: [:id]
+      define :get_organization_by_name, action: :read, get_by: [:name]
       define :create_organization, action: :create
       define :update_organization, action: :update
     end
@@ -25,10 +28,11 @@ defmodule GnomeGarden.Operations do
     resource GnomeGarden.Operations.Person do
       define :list_people, action: :read
       define :get_person, action: :read, get_by: [:id]
+      define :get_person_by_email, action: :read, get_by: [:email]
       define :create_person, action: :create
       define :update_person, action: :update
       define :list_active_people, action: :active
-      define :list_people_for_organization, action: :for_organization
+      define :list_people_for_organization, action: :for_organization, args: [:organization_id]
     end
 
     resource GnomeGarden.Operations.OrganizationAffiliation do
@@ -38,8 +42,12 @@ defmodule GnomeGarden.Operations do
       define :update_organization_affiliation, action: :update
       define :end_organization_affiliation, action: :end_affiliation
       define :list_active_organization_affiliations, action: :active
-      define :list_affiliations_for_organization, action: :for_organization
-      define :list_affiliations_for_person, action: :for_person
+
+      define :list_affiliations_for_organization,
+        action: :for_organization,
+        args: [:organization_id]
+
+      define :list_affiliations_for_person, action: :for_person, args: [:person_id]
     end
 
     resource GnomeGarden.Operations.Site do
@@ -47,7 +55,7 @@ defmodule GnomeGarden.Operations do
       define :get_site, action: :read, get_by: [:id]
       define :create_site, action: :create
       define :update_site, action: :update
-      define :list_sites_for_organization, action: :for_organization
+      define :list_sites_for_organization, action: :for_organization, args: [:organization_id]
     end
 
     resource GnomeGarden.Operations.ManagedSystem do
@@ -55,8 +63,12 @@ defmodule GnomeGarden.Operations do
       define :get_managed_system, action: :read, get_by: [:id]
       define :create_managed_system, action: :create
       define :update_managed_system, action: :update
-      define :list_managed_systems_for_organization, action: :for_organization
-      define :list_managed_systems_for_site, action: :for_site
+
+      define :list_managed_systems_for_organization,
+        action: :for_organization,
+        args: [:organization_id]
+
+      define :list_managed_systems_for_site, action: :for_site, args: [:site_id]
     end
 
     resource GnomeGarden.Operations.Asset do
@@ -64,7 +76,11 @@ defmodule GnomeGarden.Operations do
       define :get_asset, action: :read, get_by: [:id]
       define :create_asset, action: :create
       define :update_asset, action: :update
-      define :list_assets_for_managed_system, action: :for_managed_system
+
+      define :list_assets_for_managed_system,
+        action: :for_managed_system,
+        args: [:managed_system_id]
+
       define :list_root_assets, action: :root_assets
     end
 

@@ -254,8 +254,28 @@ defmodule GnomeGarden.Commercial.Proposal do
     end
   end
 
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 draft: :default,
+                 issued: :warning,
+                 accepted: :success,
+                 rejected: :error,
+                 expired: :warning,
+                 superseded: :default
+               ],
+               default: :default}
+  end
+
   aggregates do
     count :line_count, :proposal_lines do
+      public? true
+    end
+
+    count :agreement_count, :agreements do
       public? true
     end
 
