@@ -181,7 +181,9 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
       when is_atom(industry) and is_atom(region) do
     industry_config = Map.get(@industries, industry, @industries.manufacturing)
     region_name = Map.get(@regions, region, "Southern California")
-    company_profile_prompt = profile_prompt(mode: :industrial_plus_software)
+
+    company_profile_prompt =
+      profile_prompt(mode: Keyword.get(opts, :company_profile_mode, default_profile_mode()))
 
     query = """
     #{company_profile_prompt}
@@ -230,7 +232,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   Build the prompt used to run a focused discovery program.
   """
   def program_task(discovery_program) do
-    company_profile_prompt = profile_prompt(mode: :industrial_plus_software)
+    company_profile_prompt = profile_prompt(mode: default_profile_mode())
 
     """
     #{company_profile_prompt}
@@ -260,7 +262,8 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   Deep research a specific company to determine if they're a good discovery target.
   """
   def research_company(pid, company_name, opts \\ []) do
-    company_profile_prompt = profile_prompt(mode: :industrial_plus_software)
+    company_profile_prompt =
+      profile_prompt(mode: Keyword.get(opts, :company_profile_mode, default_profile_mode()))
 
     query = """
     #{company_profile_prompt}
@@ -286,7 +289,9 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   """
   def scan_job_postings(pid, region \\ :socal, opts \\ []) do
     region_name = Map.get(@regions, region, "Southern California")
-    company_profile_prompt = profile_prompt(mode: :industrial_plus_software)
+
+    company_profile_prompt =
+      profile_prompt(mode: Keyword.get(opts, :company_profile_mode, default_profile_mode()))
 
     query = """
     #{company_profile_prompt}
@@ -359,6 +364,35 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
 
   def create_targets_from_result(_, _opts), do: []
 
+  @impl true
+  def on_before_cmd(agent, {:ai_react_start, params} = _action) do
+    base_context = Map.get(params, :tool_context, %{})
+    profile_context = resolve_profile_context(base_context)
+
+    context =
+      base_context
+      |> Map.put(:company_profile_key, profile_context.company_profile_key)
+      |> Map.put(:company_profile_mode, profile_context.company_profile_mode)
+      |> Map.put(:company_profile, profile_context.profile)
+      |> Map.put(
+        :company_profile_prompt,
+        profile_prompt(
+          profile: profile_context.profile,
+          mode: profile_context.company_profile_mode
+        )
+      )
+
+    updated_params = Map.put(params, :tool_context, context)
+
+    updated_agent =
+      Jido.AI.set_system_prompt_direct(agent, target_discovery_system_prompt(profile_context))
+
+    {:ok, updated_agent, {:ai_react_start, updated_params}}
+  end
+
+  @impl true
+  def on_before_cmd(agent, action), do: {:ok, agent, action}
+
   defp profile_prompt(opts) do
     CompanyProfileContext.prompt_block(opts)
   end
@@ -389,6 +423,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     attrs = %{
       company_name: parsed.company_name,
       discovery_program_id: Keyword.get(opts, :discovery_program_id),
+      company_profile_mode: Keyword.get(opts, :company_profile_mode),
       company_description: fallback_company_description(parsed),
       industry: non_empty(parsed.industry),
       location: non_empty(parsed.location),
@@ -419,6 +454,47 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   defp non_empty(""), do: nil
   defp non_empty("[]"), do: nil
   defp non_empty(str), do: str
+
+  defp resolve_profile_context(tool_context) do
+    CompanyProfileContext.resolve(
+      profile_key:
+        nested_value(tool_context, [:company_profile_key]) ||
+          nested_value(tool_context, [:deployment_config, :company_profile_key]),
+      mode:
+        nested_value(tool_context, [:company_profile_mode]) ||
+          nested_value(tool_context, [:source_scope, :company_profile_mode])
+    )
+  end
+
+  defp target_discovery_system_prompt(profile_context) do
+    """
+    You are the Gnome target discovery agent.
+
+    #{profile_prompt(profile: profile_context.profile, mode: profile_context.company_profile_mode)}
+
+    Use this profile as the canonical operating context for the run.
+    Focus on real companies with concrete signals, verify they are active and local enough to matter,
+    and save only reviewable targets with specific evidence.
+    """
+    |> String.trim()
+  end
+
+  defp default_profile_mode, do: CompanyProfileContext.profile_mode()
+
+  defp nested_value(map, [key]) when is_map(map) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp nested_value(map, [key | rest]) when is_map(map) do
+    map
+    |> nested_value([key])
+    |> case do
+      %{} = nested -> nested_value(nested, rest)
+      _ -> nil
+    end
+  end
+
+  defp nested_value(_map, _path), do: nil
 
   defp fallback_company_description(parsed) do
     industry = non_empty(parsed.industry) || "industrial"
