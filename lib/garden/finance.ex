@@ -26,7 +26,10 @@ defmodule GnomeGarden.Finance do
       define :bill_time_entry, action: :mark_billed
       define :reopen_time_entry, action: :reopen
       define :list_open_time_entries, action: :open
-      define :list_billable_time_entries_for_agreement, action: :billable_for_agreement
+
+      define :list_billable_time_entries_for_agreement,
+        action: :billable_for_agreement,
+        args: [:agreement_id]
     end
 
     resource GnomeGarden.Finance.Expense do
@@ -40,7 +43,10 @@ defmodule GnomeGarden.Finance do
       define :bill_expense, action: :mark_billed
       define :reopen_expense, action: :reopen
       define :list_open_expenses, action: :open
-      define :list_billable_expenses_for_agreement, action: :billable_for_agreement
+
+      define :list_billable_expenses_for_agreement,
+        action: :billable_for_agreement,
+        args: [:agreement_id]
     end
 
     resource GnomeGarden.Finance.Invoice do
@@ -62,7 +68,7 @@ defmodule GnomeGarden.Finance do
       define :get_invoice_line, action: :read, get_by: [:id]
       define :create_invoice_line, action: :create
       define :update_invoice_line, action: :update
-      define :list_invoice_lines_for_invoice, action: :for_invoice
+      define :list_invoice_lines_for_invoice, action: :for_invoice, args: [:invoice_id]
     end
 
     resource GnomeGarden.Finance.Payment do
@@ -80,8 +86,8 @@ defmodule GnomeGarden.Finance do
       define :get_payment_application, action: :read, get_by: [:id]
       define :create_payment_application, action: :create
       define :update_payment_application, action: :update
-      define :list_payment_applications_for_invoice, action: :for_invoice
-      define :list_payment_applications_for_payment, action: :for_payment
+      define :list_payment_applications_for_invoice, action: :for_invoice, args: [:invoice_id]
+      define :list_payment_applications_for_payment, action: :for_payment, args: [:payment_id]
     end
   end
 end

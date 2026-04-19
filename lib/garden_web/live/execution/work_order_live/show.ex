@@ -68,6 +68,12 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
           >
             <.icon name="hero-lifebuoy" class="size-4" /> Service Ticket
           </.button>
+          <.button navigate={~p"/finance/time-entries/new?#{time_entry_params(@work_order)}"}>
+            <.icon name="hero-clock" class="size-4" /> New Time Entry
+          </.button>
+          <.button navigate={~p"/finance/expenses/new?#{expense_params(@work_order)}"}>
+            <.icon name="hero-credit-card" class="size-4" /> New Expense
+          </.button>
           <.button navigate={~p"/execution/assignments/new?#{assignment_params(@work_order)}"}>
             <.icon name="hero-calendar-days" class="size-4" /> New Assignment
           </.button>
@@ -240,6 +246,20 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
       <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
     </div>
     """
+  end
+
+  defp time_entry_params(work_order) do
+    %{}
+    |> Map.put(:organization_id, work_order.organization_id)
+    |> maybe_put(:project_id, work_order.project_id)
+    |> Map.put(:work_order_id, work_order.id)
+  end
+
+  defp expense_params(work_order) do
+    %{}
+    |> Map.put(:organization_id, work_order.organization_id)
+    |> maybe_put(:project_id, work_order.project_id)
+    |> Map.put(:work_order_id, work_order.id)
   end
 
   defp load_work_order!(id, actor) do

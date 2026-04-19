@@ -142,6 +142,18 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/invoices/:id", Finance.InvoiceLive.Show, :show
       live "/finance/invoices/:id/edit", Finance.InvoiceLive.Form, :edit
 
+      # Finance - Time Entries
+      live "/finance/time-entries", Finance.TimeEntryLive.Index, :index
+      live "/finance/time-entries/new", Finance.TimeEntryLive.Form, :new
+      live "/finance/time-entries/:id", Finance.TimeEntryLive.Show, :show
+      live "/finance/time-entries/:id/edit", Finance.TimeEntryLive.Form, :edit
+
+      # Finance - Expenses
+      live "/finance/expenses", Finance.ExpenseLive.Index, :index
+      live "/finance/expenses/new", Finance.ExpenseLive.Form, :new
+      live "/finance/expenses/:id", Finance.ExpenseLive.Show, :show
+      live "/finance/expenses/:id/edit", Finance.ExpenseLive.Form, :edit
+
       # Finance - Payments
       live "/finance/payments", Finance.PaymentLive.Index, :index
       live "/finance/payments/new", Finance.PaymentLive.Form, :new

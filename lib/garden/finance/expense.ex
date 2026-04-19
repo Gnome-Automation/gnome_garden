@@ -132,7 +132,7 @@ defmodule GnomeGarden.Finance.Expense do
 
       prepare build(
                 sort: [incurred_on: :desc, inserted_at: :desc],
-                load: [:project, :work_order, :incurred_by_user]
+                load: [:project, :work_order]
               )
     end
 
@@ -147,7 +147,7 @@ defmodule GnomeGarden.Finance.Expense do
 
       prepare build(
                 sort: [incurred_on: :asc, inserted_at: :asc],
-                load: [:project, :work_order, :incurred_by_user]
+                load: [:project, :work_order]
               )
     end
   end
@@ -257,6 +257,27 @@ defmodule GnomeGarden.Finance.Expense do
     end
 
     has_many :service_entitlement_usages, GnomeGarden.Commercial.ServiceEntitlementUsage do
+      public? true
+    end
+  end
+
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 draft: :default,
+                 submitted: :warning,
+                 approved: :success,
+                 rejected: :error,
+                 billed: :info
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :entitlement_usage_count, :service_entitlement_usages do
       public? true
     end
   end

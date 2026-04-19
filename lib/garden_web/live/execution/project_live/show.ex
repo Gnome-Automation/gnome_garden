@@ -58,6 +58,12 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
           <.button navigate={~p"/execution/projects"}>
             <.icon name="hero-arrow-left" class="size-4" /> Back
           </.button>
+          <.button navigate={~p"/finance/time-entries/new?#{time_entry_params(@project)}"}>
+            <.icon name="hero-clock" class="size-4" /> New Time Entry
+          </.button>
+          <.button navigate={~p"/finance/expenses/new?#{expense_params(@project)}"}>
+            <.icon name="hero-credit-card" class="size-4" /> New Expense
+          </.button>
           <.button navigate={~p"/execution/work-items/new?project_id=#{@project.id}"}>
             <.icon name="hero-queue-list" class="size-4" /> New Work Item
           </.button>
@@ -248,6 +254,20 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
       <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
     </div>
     """
+  end
+
+  defp time_entry_params(project) do
+    %{
+      organization_id: project.organization_id,
+      project_id: project.id
+    }
+  end
+
+  defp expense_params(project) do
+    %{
+      organization_id: project.organization_id,
+      project_id: project.id
+    }
   end
 
   defp load_project!(id, actor) do

@@ -7,6 +7,7 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
   alias GnomeGarden.Execution
   alias GnomeGarden.Finance
   alias GnomeGarden.Operations
+  alias GnomeGarden.Repo
 
   test "maintenance plan routes render", %{conn: conn} do
     {:ok, organization} =
@@ -135,5 +136,127 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
       )
 
     assert has_element?(form_view, "#payment-application-form")
+  end
+
+  test "time entry routes render", %{conn: conn} do
+    user =
+      Repo.insert!(%GnomeGarden.Accounts.User{
+        id: Ecto.UUID.generate(),
+        email: "timekeeper@example.com"
+      })
+
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Helix Integration",
+        organization_kind: :business,
+        status: :active
+      })
+
+    {:ok, agreement} =
+      Commercial.create_agreement(%{
+        organization_id: organization.id,
+        name: "Helix Support Agreement",
+        agreement_type: :service
+      })
+
+    {:ok, project} =
+      Execution.create_project(%{
+        organization_id: organization.id,
+        agreement_id: agreement.id,
+        name: "Helix Web Portal",
+        project_type: :software_delivery
+      })
+
+    {:ok, work_item} =
+      Execution.create_work_item(%{
+        project_id: project.id,
+        title: "Portal integration",
+        kind: :task,
+        discipline: :web
+      })
+
+    {:ok, time_entry} =
+      Finance.create_time_entry(%{
+        organization_id: organization.id,
+        agreement_id: agreement.id,
+        project_id: project.id,
+        work_item_id: work_item.id,
+        member_user_id: user.id,
+        work_date: ~D[2026-04-18],
+        minutes: 120,
+        description: "Integration buildout"
+      })
+
+    {:ok, index_view, index_html} = live(conn, ~p"/finance/time-entries")
+    assert has_element?(index_view, "#time-entries")
+    assert index_html =~ time_entry.description
+
+    {:ok, show_view, _show_html} = live(conn, ~p"/finance/time-entries/#{time_entry}")
+    assert render(show_view) =~ time_entry.description
+
+    {:ok, form_view, _form_html} =
+      live(
+        conn,
+        ~p"/finance/time-entries/new?organization_id=#{organization.id}&project_id=#{project.id}&work_item_id=#{work_item.id}"
+      )
+
+    assert has_element?(form_view, "#time-entry-form")
+  end
+
+  test "expense routes render", %{conn: conn} do
+    user =
+      Repo.insert!(%GnomeGarden.Accounts.User{
+        id: Ecto.UUID.generate(),
+        email: "expenses@example.com"
+      })
+
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Prairie Controls",
+        organization_kind: :business,
+        status: :active
+      })
+
+    {:ok, agreement} =
+      Commercial.create_agreement(%{
+        organization_id: organization.id,
+        name: "Prairie Field Service",
+        agreement_type: :service
+      })
+
+    {:ok, work_order} =
+      Execution.create_work_order(%{
+        organization_id: organization.id,
+        agreement_id: agreement.id,
+        title: "Field commissioning visit",
+        work_type: :commissioning
+      })
+
+    {:ok, expense} =
+      Finance.create_expense(%{
+        organization_id: organization.id,
+        agreement_id: agreement.id,
+        work_order_id: work_order.id,
+        incurred_by_user_id: user.id,
+        incurred_on: ~D[2026-04-18],
+        category: :travel,
+        description: "Mileage and tolls",
+        amount: Decimal.new("84.50")
+      })
+
+    {:ok, index_view, index_html} = live(conn, ~p"/finance/expenses")
+    assert has_element?(index_view, "#expenses")
+    assert index_html =~ expense.description
+
+    {:ok, show_view, _show_html} = live(conn, ~p"/finance/expenses/#{expense}")
+    assert render(show_view) =~ expense.description
+
+    {:ok, form_view, _form_html} =
+      live(
+        conn,
+        ~p"/finance/expenses/new?organization_id=#{organization.id}&work_order_id=#{work_order.id}"
+      )
+
+    assert has_element?(form_view, "#expense-form")
   end
 end

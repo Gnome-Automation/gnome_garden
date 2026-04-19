@@ -136,7 +136,7 @@ defmodule GnomeGarden.Finance.TimeEntry do
 
       prepare build(
                 sort: [work_date: :desc, inserted_at: :desc],
-                load: [:project, :work_order, :member_user]
+                load: [:project, :work_order]
               )
     end
 
@@ -151,7 +151,7 @@ defmodule GnomeGarden.Finance.TimeEntry do
 
       prepare build(
                 sort: [work_date: :asc, inserted_at: :asc],
-                load: [:project, :work_order, :member_user]
+                load: [:project, :work_order]
               )
     end
   end
@@ -249,6 +249,27 @@ defmodule GnomeGarden.Finance.TimeEntry do
     end
 
     has_many :service_entitlement_usages, GnomeGarden.Commercial.ServiceEntitlementUsage do
+      public? true
+    end
+  end
+
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 draft: :default,
+                 submitted: :warning,
+                 approved: :success,
+                 rejected: :error,
+                 billed: :info
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :entitlement_usage_count, :service_entitlement_usages do
       public? true
     end
   end

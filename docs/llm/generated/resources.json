@@ -25647,8 +25647,31 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "entitlement_usage_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "service_entitlement_usages"
+              ]
+            }
+          ],
           "identities": [],
           "schema": null,
           "primary_key": [
@@ -25758,7 +25781,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "agreement_id"
+              ],
               "name": "list_billable_expenses_for_agreement",
               "kind": "action",
               "action": "billable_for_agreement",
@@ -27625,7 +27650,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "invoice_id"
+              ],
               "name": "list_invoice_lines_for_invoice",
               "kind": "action",
               "action": "for_invoice",
@@ -28871,7 +28898,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "invoice_id"
+              ],
               "name": "list_payment_applications_for_invoice",
               "kind": "action",
               "action": "for_invoice",
@@ -28881,7 +28910,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "payment_id"
+              ],
               "name": "list_payment_applications_for_payment",
               "kind": "action",
               "action": "for_payment",
@@ -29752,8 +29783,31 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "entitlement_usage_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "service_entitlement_usages"
+              ]
+            }
+          ],
           "identities": [],
           "schema": null,
           "primary_key": [
@@ -29863,7 +29917,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "agreement_id"
+              ],
               "name": "list_billable_time_entries_for_agreement",
               "kind": "action",
               "action": "billable_for_agreement",
@@ -49075,7 +49131,7 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-19T03:43:13Z",
+  "generated_at": "2026-04-19T03:54:24Z",
   "resource_count": 55,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -59097,8 +59153,31 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "entitlement_usage_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "service_entitlement_usages"
+          ]
+        }
+      ],
       "identities": [],
       "schema": null,
       "primary_key": [
@@ -59208,7 +59287,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "agreement_id"
+          ],
           "name": "list_billable_time_entries_for_agreement",
           "kind": "action",
           "action": "billable_for_agreement",
@@ -71860,8 +71941,31 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "entitlement_usage_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "service_entitlement_usages"
+          ]
+        }
+      ],
       "identities": [],
       "schema": null,
       "primary_key": [
@@ -71971,7 +72075,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "agreement_id"
+          ],
           "name": "list_billable_expenses_for_agreement",
           "kind": "action",
           "action": "billable_for_agreement",
@@ -93191,7 +93297,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "invoice_id"
+          ],
           "name": "list_payment_applications_for_invoice",
           "kind": "action",
           "action": "for_invoice",
@@ -93201,7 +93309,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "payment_id"
+          ],
           "name": "list_payment_applications_for_payment",
           "kind": "action",
           "action": "for_payment",
@@ -96818,7 +96928,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "invoice_id"
+          ],
           "name": "list_invoice_lines_for_invoice",
           "kind": "action",
           "action": "for_invoice",

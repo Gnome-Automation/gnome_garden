@@ -227,6 +227,22 @@ defmodule GnomeGardenWeb.Nav do
               Invoices
             </.nav_item>
             <.nav_item
+              path={~p"/finance/time-entries"}
+              current_path={@current_path}
+              icon="hero-clock"
+              collapsed={@collapsed}
+            >
+              Time Entries
+            </.nav_item>
+            <.nav_item
+              path={~p"/finance/expenses"}
+              current_path={@current_path}
+              icon="hero-credit-card"
+              collapsed={@collapsed}
+            >
+              Expenses
+            </.nav_item>
+            <.nav_item
               path={~p"/finance/payments"}
               current_path={@current_path}
               icon="hero-banknotes"

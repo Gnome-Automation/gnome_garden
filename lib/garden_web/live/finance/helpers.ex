@@ -24,6 +24,15 @@ defmodule GnomeGardenWeb.Finance.Helpers do
   def format_datetime(nil), do: "-"
   def format_datetime(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%b %d, %Y %H:%M")
 
+  def format_minutes(nil), do: "-"
+  def format_minutes(value) when is_integer(value), do: "#{value} min"
+
+  def display_email(value, fallback \\ "-")
+  def display_email(nil, fallback), do: fallback
+  def display_email(%Ash.NotLoaded{}, fallback), do: fallback
+  def display_email(%{email: nil}, fallback), do: fallback
+  def display_email(%{email: email}, _fallback), do: email
+
   def sum_amounts(records, field) do
     Enum.reduce(records, Decimal.new(0), fn record, total ->
       Decimal.add(total, Map.get(record, field) || Decimal.new(0))
