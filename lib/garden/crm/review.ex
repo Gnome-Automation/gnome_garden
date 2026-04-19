@@ -4,12 +4,10 @@ defmodule GnomeGarden.CRM.Review do
   signal and pursuit model.
   """
 
-  alias GnomeGarden.Agents
-  alias GnomeGarden.Agents.Prospect
   alias GnomeGarden.CRM.PipelineEvents
   alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.Signal
   alias GnomeGarden.Commercial.Pursuit
+  alias GnomeGarden.Commercial.Signal
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
@@ -31,8 +29,8 @@ defmodule GnomeGarden.CRM.Review do
       bid_id = value(params, :bid_id) ->
         resolve_bid_signal(bid_id, actor)
 
-      prospect_id = value(params, :prospect_id) ->
-        resolve_prospect_signal(prospect_id, params, actor)
+      target_account_id = value(params, :target_account_id) ->
+        resolve_target_account_signal(target_account_id, actor)
 
       true ->
         create_manual_signal(params, actor)
@@ -48,45 +46,33 @@ defmodule GnomeGarden.CRM.Review do
     end
   end
 
-  defp resolve_prospect_signal(prospect_id, params, actor) do
-    with {:ok, prospect} <- Agents.get_prospect(prospect_id, actor: actor) do
+  defp resolve_target_account_signal(target_account_id, actor) do
+    with {:ok, target_account} <-
+           Commercial.get_target_account(
+             target_account_id,
+             actor: actor,
+             load: [:promoted_signal, :latest_observed_at, :latest_observation_summary]
+           ) do
       cond do
-        prospect.converted_signal_id ->
-          Commercial.get_signal(prospect.converted_signal_id, actor: actor)
+        target_account.promoted_signal_id ->
+          Commercial.get_signal(target_account.promoted_signal_id, actor: actor)
 
-        true ->
-          create_signal_from_prospect(prospect, params, actor)
+        target_account.status in [:new, :reviewing] ->
+          with {:ok, promoted_target_account} <-
+                 Commercial.promote_target_account_to_signal(target_account, actor: actor) do
+            Commercial.get_signal(promoted_target_account.promoted_signal_id, actor: actor)
+          end
+
+        target_account.status in [:rejected, :archived] ->
+          with {:ok, reopened_target_account} <-
+                 Commercial.reopen_target_account(target_account, actor: actor),
+               {:ok, promoted_target_account} <-
+                 Commercial.promote_target_account_to_signal(reopened_target_account,
+                   actor: actor
+                 ) do
+            Commercial.get_signal(promoted_target_account.promoted_signal_id, actor: actor)
+          end
       end
-    end
-  end
-
-  defp create_signal_from_prospect(%Prospect{} = prospect, params, actor) do
-    with {:ok, organization} <- ensure_organization(params, prospect.name, prospect.region, actor),
-         {:ok, signal} <-
-           Commercial.create_signal(
-             %{
-               title: signal_title(params, prospect.name),
-               description: value(params, :description) || prospect.notes,
-               signal_type: :outbound_target,
-               source_channel: :agent_discovery,
-               external_ref: "prospect:#{prospect.id}",
-               source_url: prospect.discovery_url || prospect.website,
-               observed_at: prospect.discovered_at,
-               organization_id: organization.id,
-               notes: prospect.notes,
-               metadata: %{
-                 prospect_id: prospect.id,
-                 discovered_via: prospect.discovered_via,
-                 signals: prospect.signals,
-                 tech_indicators: prospect.tech_indicators
-               }
-             },
-             actor: actor
-           ),
-         {:ok, _prospect} <-
-           Agents.convert_prospect_to_signal(prospect, %{signal_id: signal.id}, actor: actor),
-         {:ok, _prospect} <- maybe_link_prospect_organization(prospect, organization, actor) do
-      {:ok, signal}
     end
   end
 
@@ -112,7 +98,7 @@ defmodule GnomeGarden.CRM.Review do
           metadata:
             reject_nil_values(%{
               lead_id: value(params, :lead_id),
-              prospect_id: value(params, :prospect_id),
+              target_account_id: value(params, :target_account_id),
               bid_id: value(params, :bid_id),
               workflow: value(params, :workflow)
             })
@@ -205,23 +191,6 @@ defmodule GnomeGarden.CRM.Review do
     )
   end
 
-  defp maybe_link_prospect_organization(
-         %Prospect{converted_organization_id: organization_id},
-         organization,
-         _actor
-       )
-       when organization_id == organization.id do
-    {:ok, organization}
-  end
-
-  defp maybe_link_prospect_organization(%Prospect{} = prospect, organization, actor) do
-    Agents.convert_prospect_to_organization(
-      prospect,
-      %{organization_id: organization.id},
-      actor: actor
-    )
-  end
-
   defp pursuit_attrs(params, signal) do
     %{
       organization_id: signal.organization_id,
@@ -254,7 +223,7 @@ defmodule GnomeGarden.CRM.Review do
   end
 
   defp signal_type_from_source(:bid), do: :bid_notice
-  defp signal_type_from_source(:prospect), do: :outbound_target
+  defp signal_type_from_source(:target_account), do: :outbound_target
   defp signal_type_from_source(:outbound), do: :outbound_target
   defp signal_type_from_source(:referral), do: :referral
   defp signal_type_from_source(:renewal), do: :renewal
@@ -263,14 +232,14 @@ defmodule GnomeGarden.CRM.Review do
   defp signal_type_from_source(_), do: :other
 
   defp source_channel_from_source(:bid), do: :procurement_portal
-  defp source_channel_from_source(:prospect), do: :agent_discovery
+  defp source_channel_from_source(:target_account), do: :agent_discovery
   defp source_channel_from_source(:outbound), do: :agent_discovery
   defp source_channel_from_source(:referral), do: :referral
   defp source_channel_from_source(:inbound), do: :website
   defp source_channel_from_source(_), do: :manual
 
   defp organization_roles(:bid), do: ["prospect", "agency"]
-  defp organization_roles(:prospect), do: ["prospect"]
+  defp organization_roles(:target_account), do: ["prospect"]
   defp organization_roles(:outbound), do: ["prospect"]
   defp organization_roles(:referral), do: ["prospect"]
   defp organization_roles(:renewal), do: ["customer"]
@@ -281,14 +250,16 @@ defmodule GnomeGarden.CRM.Review do
   defp source_type_from(params) do
     cond do
       value(params, :bid_id) -> "bid"
+      value(params, :target_account_id) -> "target_account"
       value(params, :lead_id) -> "lead"
-      value(params, :prospect_id) -> "prospect"
       true -> "signal"
     end
   end
 
   defp source_id_from(params) do
-    value(params, :bid_id) || value(params, :lead_id) || value(params, :prospect_id)
+    value(params, :bid_id) ||
+      value(params, :target_account_id) ||
+      value(params, :lead_id)
   end
 
   defp manual_external_ref(params) do

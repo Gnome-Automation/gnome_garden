@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
+defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
   @moduledoc """
   Autonomous agent that discovers companies needing automation/controls work.
 
@@ -14,28 +14,29 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
 
   ## Usage
 
-      alias GnomeGarden.Agents.Workers.Sales.ProspectDiscovery
+      alias GnomeGarden.Agents.Workers.Sales.TargetDiscovery
 
-      {:ok, pid} = Jido.start_agent(GnomeGarden.Jido, ProspectDiscovery)
+      {:ok, pid} = Jido.start_agent(GnomeGarden.Jido, TargetDiscovery)
 
       # Discover by industry + region
-      ProspectDiscovery.discover(pid, :brewery, :oc)
-      ProspectDiscovery.discover(pid, :biotech, :socal)
-      ProspectDiscovery.discover(pid, :manufacturing, :ie)
+      TargetDiscovery.discover(pid, :brewery, :oc)
+      TargetDiscovery.discover(pid, :biotech, :socal)
+      TargetDiscovery.discover(pid, :manufacturing, :ie)
 
       # Deep dive a specific company
-      ProspectDiscovery.research_company(pid, "Ballast Point Brewing")
+      TargetDiscovery.research_company(pid, "Ballast Point Brewing")
 
       # Scan job boards for controls hiring signals
-      ProspectDiscovery.scan_job_postings(pid, :oc)
+      TargetDiscovery.scan_job_postings(pid, :oc)
 
       # Run a full sweep across all industries and regions
-      ProspectDiscovery.full_sweep(pid)
+      TargetDiscovery.full_sweep(pid)
   """
 
   use Jido.AI.Agent,
-    name: "prospect_discovery",
-    description: "Discovers companies needing automation/controls work and creates leads",
+    name: "target_discovery",
+    description:
+      "Discovers companies needing automation/controls work and creates reviewable target accounts",
     tools: [
       GnomeGarden.Agents.Tools.WebSearch,
       GnomeGarden.Agents.Tools.SaveLead,
@@ -44,7 +45,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
     ],
     request_transformer: GnomeGarden.Agents.RequestTransformer,
     system_prompt: """
-    You are the Gnome Automation Prospect Discovery Agent. Your job is to find companies
+    You are the Gnome Automation Target Discovery Agent. Your job is to find companies
     that need industrial automation, SCADA, PLC, or controls engineering services.
 
     ## Who is Gnome Automation?
@@ -87,7 +88,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
     3. **Right size** — skip Fortune 500 (too big) and 1-2 person shops (too small). Target 20-500 employees.
     4. **Actually makes/processes something** — we need companies with production/processing, not pure office/software
 
-    ## How to Save Leads
+    ## How To Save Discovery Targets
     Call **save_lead** for each qualifying company. ALL of these fields are important:
 
     REQUIRED:
@@ -111,7 +112,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
     1. **Search** for companies in the target industry/region
     2. **Research** — do multiple searches to verify the company is real, active, and local
     3. **Verify** — search for "[company name] closed" or "[company name] moved" to check they're still operating locally
-    4. **Save** with rich description and specific signal
+    4. **Save** with rich description and specific signal so it becomes a target account plus observation
     5. Do MORE SEARCHES, not just one — search for the company name, then their industry + location, then hiring signals
 
     ## Rules
@@ -123,6 +124,8 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
     """,
     max_iterations: 30,
     tool_timeout_ms: 30_000
+
+  alias GnomeGarden.Commercial
 
   @default_timeout 300_000
 
@@ -220,6 +223,42 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
   end
 
   @doc """
+  Run discovery against an explicit commercial discovery program.
+  """
+  def discover_for_program(pid, discovery_program_id, opts \\ [])
+      when is_binary(discovery_program_id) do
+    with {:ok, discovery_program} <- Commercial.get_discovery_program(discovery_program_id) do
+      query = """
+      DISCOVERY PROGRAM: #{discovery_program.name}
+
+      #{discovery_program.description || "Run a focused discovery sweep for this program."}
+
+      Program scope:
+      - Regions: #{render_list(discovery_program.target_regions, "No regions specified")}
+      - Industries: #{render_list(discovery_program.target_industries, "No industries specified")}
+      - Watch channels: #{render_list(discovery_program.watch_channels, "No channels specified")}
+      - Search terms:
+      #{render_search_terms(discovery_program.search_terms)}
+
+      IMPORTANT:
+      - Call **save_lead** for every qualifying company you find
+      - Always include discovery_program_id: "#{discovery_program.id}"
+      - Only save real companies that match this program's scope
+      - Keep the signal specific enough that a human can decide whether to promote the target into the signal inbox
+      """
+
+      case ask_sync(pid, query, Keyword.put_new(opts, :timeout, @default_timeout)) do
+        {:ok, _result} = success ->
+          _ = Commercial.mark_discovery_program_ran(discovery_program)
+          success
+
+        error ->
+          error
+      end
+    end
+  end
+
+  @doc """
   Deep research a specific company to determine if they're a good lead.
   """
   def research_company(pid, company_name, opts \\ []) do
@@ -298,19 +337,21 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
   end
 
   @doc """
-  Parse agent output and create leads from LEAD: formatted lines.
+    Parse agent output and create discovery targets from LEAD: formatted lines.
   Call this with the result text from discover/research_company/scan_job_postings.
   """
-  def create_leads_from_result(result_text) when is_binary(result_text) do
+  def create_leads_from_result(result_text, opts \\ [])
+
+  def create_leads_from_result(result_text, opts) when is_binary(result_text) and is_list(opts) do
     result_text
     |> String.split("\n")
     |> Enum.filter(&String.starts_with?(&1, "LEAD:"))
     |> Enum.map(&parse_lead_line/1)
     |> Enum.reject(&is_nil/1)
-    |> Enum.map(&create_lead/1)
+    |> Enum.map(&create_lead(&1, opts))
   end
 
-  def create_leads_from_result(_), do: []
+  def create_leads_from_result(_, _opts), do: []
 
   defp parse_lead_line("LEAD: " <> rest) do
     case String.split(rest, " | ") do
@@ -332,11 +373,12 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
 
   defp parse_lead_line(_), do: nil
 
-  defp create_lead(parsed) do
+  defp create_lead(parsed, opts) do
     {first, last} = split_name(parsed.contact_name)
 
     attrs = %{
       company_name: parsed.company_name,
+      discovery_program_id: Keyword.get(opts, :discovery_program_id),
       company_description: fallback_company_description(parsed),
       industry: non_empty(parsed.industry),
       location: non_empty(parsed.location),
@@ -373,6 +415,15 @@ defmodule GnomeGarden.Agents.Workers.Sales.ProspectDiscovery do
     location = non_empty(parsed.location) || "Southern California"
 
     "#{parsed.company_name} is a #{industry} company operating in #{location}. " <>
-      "This record came from the ProspectDiscovery result parser and should be enriched during review."
+      "This record came from the TargetDiscovery result parser and should be enriched during review."
+  end
+
+  defp render_list([], empty_label), do: empty_label
+  defp render_list(values, _empty_label), do: Enum.join(values, ", ")
+
+  defp render_search_terms([]), do: "- No explicit search terms provided"
+
+  defp render_search_terms(terms) do
+    Enum.map_join(terms, "\n", &"- #{&1}")
   end
 end

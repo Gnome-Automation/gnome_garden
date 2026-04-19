@@ -18,6 +18,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement.ProcurementSource
+  alias GnomeGarden.Support.WebIdentity
   alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
 
   require Logger
@@ -31,13 +32,14 @@ defmodule GnomeGarden.Agents.CompanyScanner do
 
     base_url = extract_base_url(source.url)
     organization = ensure_organization!(source)
-    results = %{contacts: [], signals: [], errors: []}
+    target_account = ensure_target_account!(source, organization)
+    results = %{contacts: [], observations: [], errors: []}
 
     results =
       results
       |> scan_for_contacts(base_url, source, organization)
-      |> scan_for_careers(base_url, source, organization)
-      |> scan_for_news(base_url, source, organization)
+      |> scan_for_careers(base_url, source, organization, target_account)
+      |> scan_for_news(base_url, source, organization, target_account)
 
     Ash.update!(source, %{}, action: :mark_scanned)
 
@@ -45,7 +47,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
      %{
        source: source.name,
        contacts_found: length(results.contacts),
-       signals_found: length(results.signals),
+       observations_found: length(results.observations),
        errors: length(results.errors)
      }}
   rescue
@@ -79,15 +81,15 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     end)
   end
 
-  defp scan_for_careers(results, base_url, source, organization) do
+  defp scan_for_careers(results, base_url, source, organization, target_account) do
     Enum.reduce(@career_paths, results, fn path, acc ->
       url = base_url <> path
 
       case try_extract_page(url) do
         {:ok, content} ->
           signals = extract_hiring_signals(content, url)
-          save_hiring_signals(signals, source, organization)
-          %{acc | signals: acc.signals ++ signals}
+          save_hiring_signals(signals, source, organization, target_account)
+          %{acc | observations: acc.observations ++ signals}
 
         :not_found ->
           acc
@@ -98,15 +100,15 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     end)
   end
 
-  defp scan_for_news(results, base_url, source, organization) do
+  defp scan_for_news(results, base_url, source, organization, target_account) do
     Enum.reduce(@news_paths, results, fn path, acc ->
       url = base_url <> path
 
       case try_extract_page(url) do
         {:ok, content} ->
           signals = extract_expansion_signals(content, url)
-          save_expansion_signals(signals, source, organization)
-          %{acc | signals: acc.signals ++ signals}
+          save_expansion_signals(signals, source, organization, target_account)
+          %{acc | observations: acc.observations ++ signals}
 
         :not_found ->
           acc
@@ -236,13 +238,14 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     end)
   end
 
-  defp save_hiring_signals([], _source, _organization), do: :ok
+  defp save_hiring_signals([], _source, _organization, _target_account), do: :ok
 
-  defp save_hiring_signals(signals, source, organization) do
+  defp save_hiring_signals(signals, source, organization, target_account) do
     Enum.each(signals, fn signal ->
-      create_signal_if_missing(
+      create_observation_if_missing(
         source,
         organization,
+        target_account,
         signal,
         "hiring",
         "Hiring signal found on company site"
@@ -250,13 +253,14 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     end)
   end
 
-  defp save_expansion_signals([], _source, _organization), do: :ok
+  defp save_expansion_signals([], _source, _organization, _target_account), do: :ok
 
-  defp save_expansion_signals(signals, source, organization) do
+  defp save_expansion_signals(signals, source, organization, target_account) do
     Enum.each(signals, fn signal ->
-      create_signal_if_missing(
+      create_observation_if_missing(
         source,
         organization,
+        target_account,
         signal,
         "expansion",
         "Expansion signal found on company site"
@@ -264,37 +268,50 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     end)
   end
 
-  defp create_signal_if_missing(source, organization, signal, signal_kind, description_prefix) do
+  defp create_observation_if_missing(
+         source,
+         organization,
+         target_account,
+         signal,
+         signal_kind,
+         description_prefix
+       ) do
     external_ref = "#{source.id}:#{signal_kind}:#{signal.url}"
 
-    case Commercial.get_signal_by_external_ref(external_ref) do
-      {:ok, _signal} ->
-        :ok
-
-      {:error, %Ash.Error.Query.NotFound{}} ->
-        Commercial.create_signal(%{
-          title: "#{source.name} — #{String.capitalize(signal_kind)} signal",
-          description: "#{description_prefix}: #{Enum.join(signal.keywords, ", ")}",
-          signal_type: :outbound_target,
-          source_channel: :agent_discovery,
-          external_ref: external_ref,
-          source_url: signal.url,
-          observed_at: DateTime.utc_now(),
-          organization_id: organization.id,
-          notes: "#{signal_kind} signal: #{Enum.join(signal.keywords, ", ")} — #{signal.url}",
-          metadata: %{
-            source: "company_scanner",
-            scan_type: signal_kind,
-            keywords: signal.keywords,
-            procurement_source_id: source.id
-          }
-        })
-
-      {:error, error} ->
-        Logger.warning(
-          "[CompanyScanner] Failed to check existing signal #{external_ref}: #{inspect(error)}"
-        )
-    end
+    Commercial.create_target_observation(
+      %{
+        target_account_id: target_account.id,
+        observation_type: observation_type(signal_kind),
+        source_channel: :company_website,
+        external_ref: external_ref,
+        source_url: signal.url,
+        observed_at: DateTime.utc_now(),
+        confidence_score: confidence_for_signal(signal_kind, signal.keywords),
+        summary: "#{description_prefix}: #{Enum.join(signal.keywords, ", ")}",
+        raw_excerpt: "#{signal_kind} signal: #{Enum.join(signal.keywords, ", ")} — #{signal.url}",
+        evidence_points: signal.keywords,
+        discovery_program_id: discovery_program_id(source),
+        metadata: %{
+          source: "company_scanner",
+          scan_type: signal_kind,
+          keywords: signal.keywords,
+          discovery_program_id: discovery_program_id(source),
+          procurement_source_id: source.id,
+          organization_id: organization.id
+        }
+      },
+      upsert?: true,
+      upsert_identity: :unique_external_ref,
+      upsert_fields: [
+        :source_url,
+        :observed_at,
+        :confidence_score,
+        :summary,
+        :raw_excerpt,
+        :evidence_points,
+        :metadata
+      ]
+    )
   end
 
   defp ensure_organization!(source) do
@@ -304,7 +321,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
           name: source.name,
           status: :prospect,
           relationship_roles: ["prospect"],
-          website: source.url,
+          website: WebIdentity.normalize_website(source.url),
           primary_region: source.region |> to_string(),
           notes: source.notes || "Discovered from company website monitoring source"
         },
@@ -316,10 +333,59 @@ defmodule GnomeGarden.Agents.CompanyScanner do
     organization
   end
 
+  defp ensure_target_account!(source, organization) do
+    {:ok, target_account} =
+      Commercial.create_target_account(
+        %{
+          name: source.name,
+          website: WebIdentity.normalize_website(source.url),
+          region: source.region && to_string(source.region),
+          fit_score: 70,
+          intent_score: 55,
+          status: :new,
+          discovery_program_id: discovery_program_id(source),
+          organization_id: organization.id,
+          notes: source.notes || "Discovered from monitored company website source",
+          metadata: %{
+            source: "company_scanner",
+            discovery_program_id: discovery_program_id(source),
+            procurement_source_id: source.id
+          }
+        },
+        upsert?: true,
+        upsert_identity:
+          if(WebIdentity.website_domain(source.url),
+            do: :unique_website_domain,
+            else: :unique_name_location
+          ),
+        upsert_fields: [:region, :fit_score, :intent_score, :organization_id, :notes, :metadata]
+      )
+
+    target_account
+  end
+
   defp extract_base_url(url) do
     uri = URI.parse(url)
     "#{uri.scheme}://#{uri.host}"
   end
+
+  defp observation_type("hiring"), do: :hiring
+  defp observation_type("expansion"), do: :expansion
+  defp observation_type(_), do: :other
+
+  defp confidence_for_signal("hiring", keywords) when is_list(keywords),
+    do: min(70 + length(keywords) * 5, 95)
+
+  defp confidence_for_signal("expansion", keywords) when is_list(keywords),
+    do: min(65 + length(keywords) * 5, 90)
+
+  defp confidence_for_signal(_, _), do: 60
+
+  defp discovery_program_id(%ProcurementSource{metadata: metadata}) when is_map(metadata) do
+    Map.get(metadata, :discovery_program_id) || Map.get(metadata, "discovery_program_id")
+  end
+
+  defp discovery_program_id(_source), do: nil
 
   defp contact_name_from_email(email) do
     email

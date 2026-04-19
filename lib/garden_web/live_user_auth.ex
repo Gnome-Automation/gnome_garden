@@ -64,15 +64,15 @@ defmodule GnomeGardenWeb.LiveUserAuth do
       |> Ash.Query.filter(status == :new)
       |> Ash.count!()
 
-    review_prospects =
-      GnomeGarden.Agents.Prospect
-      |> Ash.Query.filter(status == :researched)
+    review_targets =
+      GnomeGarden.Commercial.TargetAccount
+      |> Ash.Query.for_read(:review_queue)
       |> Ash.count!()
 
     %{
       signals: open_signals,
-      bids: review_bids,
-      prospects: review_prospects
+      targets: review_targets,
+      bids: review_bids
     }
   end
 end

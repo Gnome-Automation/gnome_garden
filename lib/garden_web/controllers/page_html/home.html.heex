@@ -8,6 +8,20 @@
 
   <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
     <.stat_card
+      title="Review Targets"
+      value={Integer.to_string(@review_target_count)}
+      description="Broad discovery candidates still waiting on human promotion into the formal signal inbox."
+      icon="hero-magnifying-glass"
+      accent="emerald"
+    />
+    <.stat_card
+      title="Active Programs"
+      value={Integer.to_string(@active_discovery_program_count)}
+      description="Discovery motions currently driving broad lead-finder work."
+      icon="hero-radar"
+      accent="sky"
+    />
+    <.stat_card
       title="Open Signals"
       value={Integer.to_string(@open_signal_count)}
       description="Raw commercial intake still waiting on a real pursue-or-pass decision."
@@ -84,7 +98,51 @@
       title="Commercial Queue"
       description="What needs attention before it either becomes a real project or gets parked."
     >
-      <div class="grid gap-4 lg:grid-cols-2">
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Targets</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                Broad discovery waiting on human review.
+              </p>
+            </div>
+            <.button navigate={~p"/commercial/targets"} class="px-2.5 py-1.5 text-xs">
+              Open Targets
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@review_targets)}>
+            <.empty_state
+              icon="hero-magnifying-glass"
+              title="No review targets"
+              description="The broad discovery queue is currently clear."
+            />
+          </div>
+
+          <.link
+            :for={target <- @review_targets}
+            navigate={~p"/commercial/targets/#{target}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{target.name}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(target.organization && target.organization.name) || target.website_domain ||
+                  "No organization linked"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                {target.observation_count} observations · {format_datetime(
+                  target.latest_observed_at
+                )}
+              </p>
+            </div>
+            <.status_badge status={target.status_variant}>
+              {format_atom(target.status)}
+            </.status_badge>
+          </.link>
+        </div>
+
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
@@ -499,6 +557,18 @@
       description="Jump straight into the main operating surfaces instead of the old CRM shells."
     >
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <.action_card
+          navigate={~p"/commercial/discovery-programs"}
+          title="Discovery Programs"
+          description="Define the discovery motions that should keep feeding target accounts."
+          icon="hero-radar"
+        />
+        <.action_card
+          navigate={~p"/commercial/targets"}
+          title="Target Accounts"
+          description="Review broad discovery before it becomes formal commercial intake."
+          icon="hero-magnifying-glass"
+        />
         <.action_card
           navigate={~p"/commercial/signals"}
           title="Signal Inbox"

@@ -15,6 +15,71 @@ defmodule GnomeGarden.Commercial do
   end
 
   resources do
+    resource GnomeGarden.Commercial.DiscoveryProgram do
+      define :list_discovery_programs, action: :read
+      define :list_active_discovery_programs, action: :active
+      define :get_discovery_program, action: :read, get_by: [:id]
+      define :create_discovery_program, action: :create
+      define :update_discovery_program, action: :update
+      define :activate_discovery_program, action: :activate
+      define :pause_discovery_program, action: :pause
+      define :archive_discovery_program, action: :archive
+      define :reopen_discovery_program, action: :reopen
+      define :mark_discovery_program_ran, action: :mark_ran
+
+      define :list_discovery_programs_for_owner,
+        action: :for_owner,
+        args: [:owner_user_id]
+    end
+
+    resource GnomeGarden.Commercial.TargetAccount do
+      define :list_target_accounts, action: :read
+      define :get_target_account, action: :read, get_by: [:id]
+
+      define :get_target_account_by_website_domain,
+        action: :by_website_domain,
+        args: [:website_domain]
+
+      define :create_target_account, action: :create
+      define :update_target_account, action: :update
+      define :review_target_account, action: :start_review
+      define :promote_target_account_to_signal, action: :promote_to_signal
+      define :reject_target_account, action: :reject
+      define :archive_target_account, action: :archive
+      define :reopen_target_account, action: :reopen
+      define :list_review_target_accounts, action: :review_queue
+      define :list_promoted_target_accounts, action: :promoted
+
+      define :list_target_accounts_for_organization,
+        action: :for_organization,
+        args: [:organization_id]
+
+      define :list_target_accounts_for_discovery_program,
+        action: :for_discovery_program,
+        args: [:discovery_program_id]
+    end
+
+    resource GnomeGarden.Commercial.TargetObservation do
+      define :list_target_observations, action: :read
+      define :get_target_observation, action: :read, get_by: [:id]
+
+      define :get_target_observation_by_external_ref,
+        action: :by_external_ref,
+        args: [:external_ref]
+
+      define :create_target_observation, action: :create
+      define :update_target_observation, action: :update
+      define :list_recent_target_observations, action: :recent
+
+      define :list_target_observations_for_target_account,
+        action: :for_target_account,
+        args: [:target_account_id]
+
+      define :list_target_observations_for_discovery_program,
+        action: :for_discovery_program,
+        args: [:discovery_program_id]
+    end
+
     resource GnomeGarden.Commercial.Signal do
       define :list_signals, action: :read
       define :get_signal, action: :read, get_by: [:id]

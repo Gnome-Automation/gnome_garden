@@ -119,6 +119,23 @@ defmodule GnomeGardenWeb.Nav do
               Signals
             </.nav_item>
             <.nav_item
+              path={~p"/commercial/discovery-programs"}
+              current_path={@current_path}
+              icon="hero-radar"
+              collapsed={@collapsed}
+            >
+              Discovery Programs
+            </.nav_item>
+            <.nav_item
+              path={~p"/commercial/targets"}
+              current_path={@current_path}
+              icon="hero-magnifying-glass"
+              collapsed={@collapsed}
+              badge={@nav_counts[:targets]}
+            >
+              Targets
+            </.nav_item>
+            <.nav_item
               path={~p"/commercial/pursuits"}
               current_path={@current_path}
               icon="hero-rocket-launch"
@@ -284,15 +301,6 @@ defmodule GnomeGardenWeb.Nav do
               badge={@nav_counts[:bids]}
             >
               Bids
-            </.nav_item>
-            <.nav_item
-              path={~p"/agents/sales/prospects"}
-              current_path={@current_path}
-              icon="hero-magnifying-glass"
-              collapsed={@collapsed}
-              badge={@nav_counts[:prospects]}
-            >
-              Prospects
             </.nav_item>
             <.nav_item
               path={~p"/procurement/sources"}

@@ -1,8 +1,8 @@
 defmodule GnomeGarden.CRM.ReviewTest do
   use GnomeGarden.DataCase, async: true
 
-  alias GnomeGarden.Agents
   alias GnomeGarden.CRM.Review
+  alias GnomeGarden.Commercial
   alias GnomeGarden.Procurement
 
   test "accept_review_item routes bids into signal and pursuit workflow" do
@@ -29,28 +29,39 @@ defmodule GnomeGarden.CRM.ReviewTest do
     assert pursuit.pursuit_type == :bid_response
   end
 
-  test "accept_review_item converts prospects into organizations, signals, and pursuits" do
-    {:ok, prospect} =
-      Agents.create_prospect(%{
+  test "accept_review_item converts target accounts into signals and pursuits" do
+    {:ok, target_account} =
+      Commercial.create_target_account(%{
         name: "Blue River Foods",
         website: "https://blueriver.example.com",
-        region: :oc,
-        signals: ["expansion", "hiring_controls_engineer"],
-        signal_strength: :strong,
-        discovered_via: "news",
+        region: "oc",
+        fit_score: 78,
+        intent_score: 82,
         notes: "New packaging line expansion appears to be underway."
+      })
+
+    {:ok, _observation} =
+      Commercial.create_target_observation(%{
+        target_account_id: target_account.id,
+        observation_type: :expansion,
+        source_channel: :news_site,
+        external_ref: "review-test:blue-river-foods:expansion",
+        source_url: "https://example.com/blue-river-foods-expansion",
+        observed_at: DateTime.utc_now(),
+        confidence_score: 82,
+        summary: "Expansion and hiring signal",
+        evidence_points: ["expansion", "hiring_controls_engineer"]
       })
 
     assert {:ok, %{signal: signal, pursuit: pursuit}} =
              Review.accept_review_item(%{
-               prospect_id: prospect.id,
+               target_account_id: target_account.id,
                reason: "Worth outbound follow-up"
              })
 
-    {:ok, reloaded_prospect} = Agents.get_prospect(prospect.id)
+    {:ok, reloaded_target_account} = Commercial.get_target_account(target_account.id)
 
-    assert reloaded_prospect.converted_signal_id == signal.id
-    assert reloaded_prospect.converted_organization_id == signal.organization_id
+    assert reloaded_target_account.promoted_signal_id == signal.id
     assert signal.status == :converted
     assert pursuit.signal_id == signal.id
     assert pursuit.organization_id == signal.organization_id

@@ -50,8 +50,7 @@ defmodule GnomeGarden.Sales.Lead do
         :source_url,
         :description,
         :owner_id,
-        :company_id,
-        :prospect_id
+        :company_id
       ]
 
       change set_attribute(:status, :new)
@@ -294,11 +293,6 @@ defmodule GnomeGarden.Sales.Lead do
     belongs_to :owner, GnomeGarden.Accounts.User do
       public? true
       description "User who owns this lead"
-    end
-
-    belongs_to :prospect, GnomeGarden.Agents.Prospect do
-      public? true
-      description "Source prospect if created from agent discovery"
     end
 
     has_many :activities, GnomeGarden.Sales.Activity do

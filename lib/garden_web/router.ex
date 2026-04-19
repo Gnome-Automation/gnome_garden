@@ -76,6 +76,18 @@ defmodule GnomeGardenWeb.Router do
       live "/commercial/signals/:id", Commercial.SignalLive.Show, :show
       live "/commercial/signals/:id/edit", Commercial.SignalLive.Form, :edit
 
+      # Commercial - Discovery Programs
+      live "/commercial/discovery-programs", Commercial.DiscoveryProgramLive.Index, :index
+      live "/commercial/discovery-programs/new", Commercial.DiscoveryProgramLive.Form, :new
+      live "/commercial/discovery-programs/:id", Commercial.DiscoveryProgramLive.Show, :show
+      live "/commercial/discovery-programs/:id/edit", Commercial.DiscoveryProgramLive.Form, :edit
+
+      # Commercial - Target Accounts
+      live "/commercial/targets", Commercial.TargetAccountLive.Index, :index
+      live "/commercial/targets/new", Commercial.TargetAccountLive.Form, :new
+      live "/commercial/targets/:id", Commercial.TargetAccountLive.Show, :show
+      live "/commercial/targets/:id/edit", Commercial.TargetAccountLive.Form, :edit
+
       # Commercial - Pursuits
       live "/commercial/pursuits", Commercial.PursuitLive.Index, :index
       live "/commercial/pursuits/new", Commercial.PursuitLive.Form, :new
@@ -169,7 +181,6 @@ defmodule GnomeGardenWeb.Router do
       # Agents - Sales Discovery
       live "/procurement/bids", Agents.Sales.BidLive.Index, :index
       live "/procurement/bids/:id", Agents.Sales.BidLive.Show, :show
-      live "/agents/sales/prospects", Agents.Sales.ProspectsLive
       live "/procurement/sources", Agents.Sales.ProcurementSourcesLive
     end
   end

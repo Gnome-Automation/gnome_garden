@@ -9,6 +9,8 @@ defmodule GnomeGardenWeb.PageController do
   def home(conn, _params) do
     actor = conn.assigns[:current_user]
 
+    review_targets = list_review_targets(actor)
+    active_discovery_programs = list_active_discovery_programs(actor)
     open_signals = list_open_signals(actor)
     active_pursuits = list_active_pursuits(actor)
 
@@ -28,6 +30,9 @@ defmodule GnomeGardenWeb.PageController do
       page_title: "Operations Cockpit",
       current_user: actor,
       current_path: conn.request_path,
+      active_discovery_program_count: length(active_discovery_programs),
+      review_target_count: length(review_targets),
+      review_targets: Enum.take(review_targets, 5),
       open_signal_count: length(open_signals),
       open_signals: Enum.take(open_signals, 5),
       active_pursuit_count: length(active_pursuits),
@@ -55,6 +60,24 @@ defmodule GnomeGardenWeb.PageController do
       Commercial.list_open_signals(
         actor: actor,
         load: [:status_variant, organization: [], site: []]
+      )
+    end)
+  end
+
+  defp list_review_targets(actor) do
+    safe_list(fn ->
+      Commercial.list_review_target_accounts(
+        actor: actor,
+        load: [:status_variant, :organization, :observation_count, :latest_observed_at]
+      )
+    end)
+  end
+
+  defp list_active_discovery_programs(actor) do
+    safe_list(fn ->
+      Commercial.list_active_discovery_programs(
+        actor: actor,
+        load: [:status_variant, :priority_variant, :review_target_count]
       )
     end)
   end

@@ -14,14 +14,26 @@
     },
     {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "\"other\"",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "name",
+      "source": "observation_type",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "\"agent_discovery\"",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "source_channel",
       "type": "text"
     },
     {
@@ -33,7 +45,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "website",
+      "source": "external_ref",
       "type": "text"
     },
     {
@@ -45,7 +57,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "location",
+      "source": "source_url",
       "type": "text"
     },
     {
@@ -57,128 +69,23 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "region",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "industry",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "size",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "\"researched\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "status",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "[]",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "signals",
-      "type": [
-        "array",
-        "text"
-      ]
-    },
-    {
-      "allow_nil?": true,
-      "default": "\"medium\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "signal_strength",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "[]",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "tech_indicators",
-      "type": [
-        "array",
-        "text"
-      ]
-    },
-    {
-      "allow_nil?": true,
-      "default": "[]",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "contacts",
-      "type": [
-        "array",
-        "map"
-      ]
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "discovered_via",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "discovered_at",
+      "source": "observed_at",
       "type": "utc_datetime"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
+      "default": "50",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "confidence_score",
+      "type": "bigint"
+    },
+    {
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -186,7 +93,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "discovery_url",
+      "source": "summary",
       "type": "text"
     },
     {
@@ -198,35 +105,26 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "notes",
+      "source": "raw_excerpt",
       "type": "text"
     },
     {
-      "allow_nil?": true,
-      "default": "nil",
+      "allow_nil?": false,
+      "default": "[]",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "next_action",
-      "type": "text"
+      "source": "evidence_points",
+      "type": [
+        "array",
+        "text"
+      ]
     },
     {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "next_action_date",
-      "type": "date"
-    },
-    {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "%{}",
       "generated?": false,
       "precision": null,
@@ -262,7 +160,7 @@
       "type": "utc_datetime_usec"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -280,47 +178,16 @@
           "global": null,
           "strategy": null
         },
-        "name": "prospects_converted_organization_id_fkey",
-        "on_delete": null,
+        "name": "commercial_target_observations_target_account_id_fkey",
+        "on_delete": "delete",
         "on_update": null,
         "primary_key?": true,
         "schema": "public",
-        "table": "organizations"
+        "table": "commercial_target_accounts"
       },
       "scale": null,
       "size": null,
-      "source": "converted_organization_id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": {
-        "deferrable": false,
-        "destination_attribute": "id",
-        "destination_attribute_default": null,
-        "destination_attribute_generated": null,
-        "index?": false,
-        "match_type": null,
-        "match_with": null,
-        "multitenancy": {
-          "attribute": null,
-          "global": null,
-          "strategy": null
-        },
-        "name": "prospects_converted_signal_id_fkey",
-        "on_delete": null,
-        "on_update": null,
-        "primary_key?": true,
-        "schema": "public",
-        "table": "commercial_signals"
-      },
-      "scale": null,
-      "size": null,
-      "source": "converted_signal_id",
+      "source": "target_account_id",
       "type": "uuid"
     }
   ],
@@ -330,23 +197,19 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "A884803FF0611FBC8E3F9AA04811ACB20CACD34D9B51DB8FFE26C2BE40C5C8D8",
+  "hash": "B237961CB45AA18C4C0E637A1C7165BB79983B358CA513E7B26A5DE1EC92E2C5",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "prospects_unique_name_location_index",
+      "index_name": "commercial_target_observations_unique_external_ref_index",
       "keys": [
         {
           "type": "atom",
-          "value": "name"
-        },
-        {
-          "type": "atom",
-          "value": "location"
+          "value": "external_ref"
         }
       ],
-      "name": "unique_name_location",
+      "name": "unique_external_ref",
       "nils_distinct?": true,
       "where": null
     }
@@ -358,5 +221,5 @@
   },
   "repo": "Elixir.GnomeGarden.Repo",
   "schema": null,
-  "table": "prospects"
+  "table": "commercial_target_observations"
 }

@@ -2,7 +2,7 @@ defmodule GnomeGarden.Sales.ResearchRequest do
   @moduledoc """
   Research request for CRM entities.
 
-  Tracks research tasks for companies, contacts, leads, and prospects.
+  Tracks research tasks for companies, contacts, leads, and target accounts.
   Uses AshStateMachine for status workflow.
   """
 
@@ -203,7 +203,7 @@ defmodule GnomeGarden.Sales.ResearchRequest do
     attribute :researchable_type, :string do
       allow_nil? false
       public? true
-      description "Type of entity: company, contact, lead, prospect"
+      description "Type of entity: company, contact, lead, target_account"
     end
 
     attribute :researchable_id, :uuid do
@@ -252,6 +252,12 @@ defmodule GnomeGarden.Sales.ResearchRequest do
       through GnomeGarden.Sales.ResearchLink
       source_attribute_on_join_resource :research_request_id
       destination_attribute_on_join_resource :event_id
+    end
+
+    many_to_many :target_accounts, GnomeGarden.Commercial.TargetAccount do
+      through GnomeGarden.Sales.ResearchLink
+      source_attribute_on_join_resource :research_request_id
+      destination_attribute_on_join_resource :target_account_id
     end
   end
 
