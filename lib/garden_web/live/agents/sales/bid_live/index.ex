@@ -138,6 +138,9 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
           Procurement intake runs through explicit bid states now. Review, park, reject, and advance bids directly from the queue instead of drilling into each record first.
         </:subtitle>
         <:actions>
+          <.button navigate={~p"/procurement/targeting"}>
+            <.icon name="hero-funnel" class="size-4" /> Targeting
+          </.button>
           <.button navigate={~p"/procurement/sources"}>
             <.icon name="hero-globe-alt" class="size-4" /> Sources
           </.button>

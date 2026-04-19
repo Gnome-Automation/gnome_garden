@@ -17,7 +17,8 @@ defmodule GnomeGarden.Commercial.CompanyProfile do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Commercial,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource],
+    notifiers: [Ash.Notifier.PubSub]
 
   admin do
     table_columns [:id, :key, :name, :default_profile_mode, :inserted_at]
@@ -86,6 +87,14 @@ defmodule GnomeGarden.Commercial.CompanyProfile do
       get? true
       filter expr(key == "primary")
     end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "company_profile"
+
+    publish :create, "created"
+    publish :update, "updated"
   end
 
   attributes do

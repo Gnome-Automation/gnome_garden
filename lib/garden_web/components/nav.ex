@@ -310,6 +310,14 @@ defmodule GnomeGardenWeb.Nav do
             >
               Sources
             </.nav_item>
+            <.nav_item
+              path={~p"/procurement/targeting"}
+              current_path={@current_path}
+              icon="hero-funnel"
+              collapsed={@collapsed}
+            >
+              Targeting
+            </.nav_item>
           </.nav_group>
 
           <%!-- Agents section --%>

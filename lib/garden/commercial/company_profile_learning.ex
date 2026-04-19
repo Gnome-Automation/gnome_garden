@@ -13,6 +13,29 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
   @learning_scopes ~w(out_of_scope not_targeting_right_now)
   @history_limit 50
 
+  @spec mode_snapshot(keyword()) :: {:ok, map()} | {:error, term()}
+  def mode_snapshot(opts \\ []) do
+    with {:ok, profile} <- load_profile(Keyword.get(opts, :company_profile_key)) do
+      profile_map = profile_to_map(profile)
+
+      context =
+        CompanyProfileContext.resolve(profile: profile_map, mode: Keyword.get(opts, :mode))
+
+      keyword_mode = CompanyProfileContext.keyword_mode(profile_map, context.company_profile_mode)
+
+      {:ok,
+       %{
+         profile: profile,
+         context: context,
+         mode: context.company_profile_mode,
+         learned_exclude: normalize_terms(Map.get(keyword_mode, "learned_exclude", [])),
+         fixed_exclude: normalize_terms(Map.get(keyword_mode, "exclude", [])),
+         include_keywords: normalize_terms(Map.get(keyword_mode, "include", [])),
+         feedback_history: feedback_history(profile.metadata || %{}, context.company_profile_mode)
+       }}
+    end
+  end
+
   @spec record_targeting_feedback(keyword()) :: {:ok, map()} | {:error, term()}
   def record_targeting_feedback(opts) do
     with {:ok, profile} <- load_profile(Keyword.get(opts, :company_profile_key)),
@@ -32,6 +55,41 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
          company_profile_key: updated_profile.key,
          company_profile_mode: context.company_profile_mode,
          learned_terms: learned_terms(opts)
+       }}
+    end
+  end
+
+  @spec add_learned_excludes(keyword()) :: {:ok, map()} | {:error, term()}
+  def add_learned_excludes(opts) do
+    record_targeting_feedback(
+      Keyword.merge(
+        [
+          feedback_scope: "manual",
+          reason: Keyword.get(opts, :reason) || "Manual targeting adjustment"
+        ],
+        opts
+      )
+    )
+  end
+
+  @spec remove_learned_exclude(keyword()) :: {:ok, map()} | {:error, term()}
+  def remove_learned_exclude(opts) do
+    with {:ok, profile} <- load_profile(Keyword.get(opts, :company_profile_key)),
+         context <-
+           CompanyProfileContext.resolve(
+             profile: profile_to_map(profile),
+             mode: Keyword.get(opts, :company_profile_mode)
+           ),
+         {:ok, updated_profile} <-
+           Commercial.update_company_profile(
+             profile,
+             remove_learned_exclude_attrs(profile, context.company_profile_mode, opts)
+           ) do
+      {:ok,
+       %{
+         profile: updated_profile,
+         company_profile_key: updated_profile.key,
+         company_profile_mode: context.company_profile_mode
        }}
     end
   end
@@ -77,8 +135,27 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
     }
   end
 
+  defp remove_learned_exclude_attrs(profile, mode, opts) do
+    term = normalize_text(Keyword.get(opts, :exclude_term))
+
+    %{
+      keyword_profiles: remove_keyword_profile_term(profile.keyword_profiles || %{}, mode, term),
+      metadata:
+        append_feedback_history(profile.metadata || %{}, %{
+          "feedback_scope" => "manual_remove",
+          "exclude_terms" => List.wrap(term),
+          "reason" => "Removed learned exclusion",
+          "source_type" => "manual",
+          "source_id" => nil,
+          "recorded_at" =>
+            DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601(),
+          "company_profile_mode" => mode
+        })
+    }
+  end
+
   defp merge_keyword_profiles(keyword_profiles, mode, feedback_scope, learned_terms) do
-    if feedback_scope in @learning_scopes and learned_terms != [] do
+    if feedback_scope in (@learning_scopes ++ ["manual"]) and learned_terms != [] do
       modes = Map.get(keyword_profiles, "modes", %{})
       mode_config = Map.get(modes, mode, %{})
 
@@ -100,6 +177,28 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
     end
   end
 
+  defp remove_keyword_profile_term(keyword_profiles, mode, term) do
+    modes = Map.get(keyword_profiles, "modes", %{})
+    mode_config = Map.get(modes, mode, %{})
+
+    Map.put(
+      keyword_profiles,
+      "modes",
+      Map.put(
+        modes,
+        mode,
+        Map.put(
+          mode_config,
+          "learned_exclude",
+          mode_config
+          |> Map.get("learned_exclude", [])
+          |> normalize_terms()
+          |> Enum.reject(&(&1 == term))
+        )
+      )
+    )
+  end
+
   defp append_feedback_history(metadata, entry) do
     history =
       metadata
@@ -117,6 +216,14 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
     opts
     |> Keyword.get(:exclude_terms, [])
     |> normalize_terms()
+  end
+
+  defp feedback_history(metadata, mode) do
+    metadata
+    |> Map.get("targeting_feedback_history", [])
+    |> List.wrap()
+    |> Enum.filter(&(Map.get(&1, "company_profile_mode") == mode))
+    |> Enum.reverse()
   end
 
   defp normalize_terms(values) do

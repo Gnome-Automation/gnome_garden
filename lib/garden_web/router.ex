@@ -187,6 +187,7 @@ defmodule GnomeGardenWeb.Router do
       # Agents - Sales Discovery
       live "/procurement/bids", Agents.Sales.BidLive.Index, :index
       live "/procurement/bids/:id", Agents.Sales.BidLive.Show, :show
+      live "/procurement/targeting", Agents.Sales.ProcurementTargetingLive, :index
       live "/procurement/sources", Agents.Sales.ProcurementSourcesLive
     end
   end
