@@ -21,6 +21,11 @@ defmodule GnomeGarden.Operations do
       define :list_prospect_organizations, action: :prospects
       define :get_organization, action: :read, get_by: [:id]
       define :get_organization_by_name, action: :read, get_by: [:name]
+
+      define :get_organization_by_website_domain,
+        action: :by_website_domain,
+        args: [:website_domain]
+
       define :create_organization, action: :create
       define :update_organization, action: :update
     end

@@ -1,7 +1,7 @@
 defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Agents.SourceConfigurator
+  alias GnomeGarden.Agents.Procurement.SourceConfigurator
   alias GnomeGarden.Procurement
 
   @topics [

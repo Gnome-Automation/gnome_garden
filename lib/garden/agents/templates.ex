@@ -49,24 +49,30 @@ defmodule GnomeGarden.Agents.Templates do
       model: :fast,
       max_iterations: 25
     },
-    # Sales workers
+    # Procurement and commercial discovery workers
     "bid_scanner" => %{
-      module: GnomeGarden.Agents.Workers.Sales.BidScanner,
+      module: GnomeGarden.Agents.Workers.Procurement.BidScanner,
       description: "Scans procurement portals for bid opportunities",
       model: :fast,
       max_iterations: 30
     },
     "source_discovery" => %{
-      module: GnomeGarden.Agents.Workers.Sales.SourceDiscovery,
+      module: GnomeGarden.Agents.Workers.Procurement.SourceDiscovery,
       description: "Discovers new procurement portals to monitor",
       model: :fast,
       max_iterations: 25
     },
     "smart_scanner" => %{
-      module: GnomeGarden.Agents.Workers.Sales.SmartScanner,
+      module: GnomeGarden.Agents.Workers.Procurement.SmartScanner,
       description: "Autonomous browser-based scanner that figures out any site",
       model: :capable,
       max_iterations: 25
+    },
+    "target_discovery" => %{
+      module: GnomeGarden.Agents.Workers.Commercial.TargetDiscovery,
+      description: "Discovers target companies and saves reviewable target accounts",
+      model: :fast,
+      max_iterations: 30
     }
   }
 

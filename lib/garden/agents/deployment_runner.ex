@@ -407,6 +407,26 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
     |> String.trim()
   end
 
+  defp default_task_for(%{agent: %{template: "target_discovery"}} = deployment) do
+    """
+    Run the TargetDiscovery deployment "#{deployment.name}".
+
+    Goal:
+    Find real companies that fit Gnome's automation, controls, service, or
+    industrial software profile and save them as reviewable target accounts.
+
+    Source scope:
+    #{inspect(deployment.source_scope, pretty: true, limit: :infinity)}
+
+    Deployment config:
+    #{inspect(deployment.config, pretty: true, limit: :infinity)}
+
+    Verify the company is active, local enough to matter, and has a specific
+    signal before saving it.
+    """
+    |> String.trim()
+  end
+
   defp default_task_for(deployment) do
     """
     Run the "#{deployment.name}" deployment.

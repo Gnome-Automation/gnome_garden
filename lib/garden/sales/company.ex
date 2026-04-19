@@ -323,10 +323,6 @@ defmodule GnomeGarden.Sales.Company do
     has_many :leads, GnomeGarden.Sales.Lead do
       public? true
     end
-
-    has_many :procurement_sources, GnomeGarden.Procurement.ProcurementSource do
-      public? true
-    end
   end
 
   identities do

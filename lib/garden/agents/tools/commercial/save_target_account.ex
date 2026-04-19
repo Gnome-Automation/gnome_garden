@@ -1,6 +1,6 @@
-defmodule GnomeGarden.Agents.Tools.SaveLead do
+defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
   @moduledoc """
-  Save a discovered company signal into the long-term operating model.
+  Save a discovered company into the durable commercial discovery model.
 
   Agent intake creates or updates the durable organization record first,
   optionally records a contact person, then creates or updates a commercial
@@ -9,7 +9,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
   """
 
   use Jido.Action,
-    name: "save_lead",
+    name: "save_target_account",
     description: """
     Save a discovered company into Operations + Commercial. Creates or updates
     the Organization first, optionally records a Person and affiliation, then
@@ -39,7 +39,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
         type: :string,
         required: true,
         doc:
-          "Why this is a lead RIGHT NOW. Be specific: 'Hiring PLC programmer per Indeed posting 3/15', 'Expanding with new $2M production line per press release', 'Posted RFP for SCADA upgrade'"
+          "Why this target matters RIGHT NOW. Be specific: 'Hiring PLC programmer per Indeed posting 3/15', 'Expanding with new $2M production line per press release', 'Posted RFP for SCADA upgrade'"
       ],
       employee_count: [type: :integer, doc: "Approximate number of employees"],
       contact_first_name: [type: :string, doc: "Contact first name if found"],
@@ -53,14 +53,26 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
   alias GnomeGarden.Support.WebIdentity
+  alias GnomeGarden.Agents.RunOutputLogger
 
   @impl true
-  def run(params, _context) do
+  def run(params, context) do
+    existing_target_account = existing_target_account(params)
+    existing_observation = existing_observation(params)
+
     with {:ok, organization} <- upsert_organization(params),
          {:ok, person} <- maybe_upsert_person(params),
          {:ok, _affiliation} <- maybe_upsert_affiliation(person, organization, params),
          {:ok, target_account} <- upsert_target_account(params, organization, person),
          {:ok, observation} <- upsert_target_observation(params, target_account, person) do
+      log_target_output(
+        context,
+        target_account,
+        observation,
+        existing_target_account,
+        existing_observation
+      )
+
       {:ok,
        %{
          saved: true,
@@ -73,7 +85,29 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
        }}
     else
       {:error, reason} ->
-        {:error, "Failed to save lead: #{inspect(reason)}"}
+        {:error, "Failed to save target account: #{inspect(reason)}"}
+    end
+  end
+
+  defp existing_target_account(params) do
+    params[:website]
+    |> WebIdentity.website_domain()
+    |> case do
+      nil ->
+        nil
+
+      website_domain ->
+        case Commercial.get_target_account_by_website_domain(website_domain) do
+          {:ok, target_account} -> target_account
+          _ -> nil
+        end
+    end
+  end
+
+  defp existing_observation(params) do
+    case Commercial.get_target_observation_by_external_ref(observation_external_ref(params)) do
+      {:ok, observation} -> observation
+      _ -> nil
     end
   end
 
@@ -95,7 +129,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
     Operations.create_organization(
       attrs,
       upsert?: true,
-      upsert_identity: :unique_name,
+      upsert_identity: organization_upsert_identity(attrs),
       upsert_fields: [:website, :primary_region, :notes]
     )
   end
@@ -174,7 +208,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
         employee_count: params[:employee_count],
         contact_person_id: person && person.id,
         discovery_program_id: blank_to_nil(params[:discovery_program_id]),
-        source: "save_lead"
+        source: "save_target_account"
       }
     }
 
@@ -220,7 +254,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
         employee_count: params[:employee_count],
         contact_person_id: person && person.id,
         discovery_program_id: blank_to_nil(params[:discovery_program_id]),
-        source: "save_lead"
+        source: "save_target_account"
       }
     }
 
@@ -443,7 +477,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
       |> String.replace(~r/[^a-z0-9]+/, "-")
       |> String.slice(0, 80)
 
-    "save_lead:#{company_ref}:#{signal_ref}:#{source_ref}"
+    "save_target_account:#{company_ref}:#{signal_ref}:#{source_ref}"
   end
 
   defp observation_evidence_points(params) do
@@ -460,6 +494,45 @@ defmodule GnomeGarden.Agents.Tools.SaveLead do
     do: :unique_website_domain
 
   defp target_account_upsert_identity(_attrs), do: :unique_name_location
+
+  defp organization_upsert_identity(%{website: website}) when is_binary(website),
+    do: :unique_website_domain
+
+  defp organization_upsert_identity(_attrs), do: :unique_name
+
+  defp log_target_output(
+         context,
+         target_account,
+         observation,
+         existing_target_account,
+         existing_observation
+       ) do
+    event =
+      cond do
+        existing_observation -> :existing
+        existing_target_account -> :updated
+        true -> :created
+      end
+
+    RunOutputLogger.log(context, %{
+      output_type: :target_account,
+      output_id: target_account.id,
+      event: event,
+      label: target_account.name,
+      summary: "#{event_label(event)} discovery target #{target_account.name}",
+      metadata: %{
+        website: target_account.website,
+        website_domain: target_account.website_domain,
+        organization_id: target_account.organization_id,
+        discovery_program_id: target_account.discovery_program_id,
+        target_observation_id: observation.id
+      }
+    })
+  end
+
+  defp event_label(:created), do: "Created"
+  defp event_label(:existing), do: "Reused existing"
+  defp event_label(:updated), do: "Updated"
 
   defp blank_to_nil(nil), do: nil
   defp blank_to_nil(""), do: nil

@@ -1,15 +1,15 @@
-defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscoveryTest do
+defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscoveryTest do
   use GnomeGarden.DataCase, async: true
 
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
-  alias GnomeGarden.Agents.Workers.Sales.TargetDiscovery
+  alias GnomeGarden.Agents.Workers.Commercial.TargetDiscovery
 
-  test "create_leads_from_result routes parsed agent output through SaveLead" do
+  test "create_targets_from_result routes parsed agent output through SaveTargetAccount" do
     result_text =
       "LEAD: Apex Beverage Systems | food_bev | Anaheim, CA | Hiring PLC programmer for line expansion | Maya Lopez | Controls Manager | https://example.com/jobs/apex"
 
-    assert [{:ok, result}] = TargetDiscovery.create_leads_from_result(result_text)
+    assert [{:ok, result}] = TargetDiscovery.create_targets_from_result(result_text)
 
     {:ok, organization} = Operations.get_organization(result.organization_id)
     {:ok, target_account} = Commercial.get_target_account(result.target_account_id)
@@ -23,7 +23,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscoveryTest do
     assert observation.summary =~ "Hiring PLC programmer"
   end
 
-  test "create_leads_from_result threads discovery_program_id through save_lead" do
+  test "create_targets_from_result threads discovery_program_id through save_target_account" do
     {:ok, discovery_program} =
       Commercial.create_discovery_program(%{
         name: "Packaging Target Sweep",
@@ -35,7 +35,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscoveryTest do
       "LEAD: Boxline Packaging | packaging | Anaheim, CA | Hiring automation technician for conveyor upgrade | Alex Kim | Ops Director | https://example.com/jobs/boxline"
 
     assert [{:ok, result}] =
-             TargetDiscovery.create_leads_from_result(
+             TargetDiscovery.create_targets_from_result(
                result_text,
                discovery_program_id: discovery_program.id
              )

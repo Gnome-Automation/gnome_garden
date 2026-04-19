@@ -41,7 +41,7 @@ defmodule GnomeGarden.Agents.AgentRunOutput do
     attribute :output_type, :atom do
       allow_nil? false
       public? true
-      constraints one_of: [:procurement_source, :bid]
+      constraints one_of: [:procurement_source, :bid, :target_account]
     end
 
     attribute :output_id, :uuid do

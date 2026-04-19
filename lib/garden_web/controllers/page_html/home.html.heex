@@ -22,6 +22,13 @@
       accent="sky"
     />
     <.stat_card
+      title="Due Discovery"
+      value={Integer.to_string(@due_discovery_program_count)}
+      description="Active discovery programs that should launch now based on cadence."
+      icon="hero-bolt"
+      accent="amber"
+    />
+    <.stat_card
       title="Open Signals"
       value={Integer.to_string(@open_signal_count)}
       description="Raw commercial intake still waiting on a real pursue-or-pass decision."
@@ -98,7 +105,53 @@
       title="Commercial Queue"
       description="What needs attention before it either becomes a real project or gets parked."
     >
-      <div class="grid gap-4 lg:grid-cols-3">
+      <div class="grid gap-4 lg:grid-cols-4">
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Due Discovery</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                Active programs that should be running right now.
+              </p>
+            </div>
+            <.button navigate={~p"/commercial/discovery-programs"} class="px-2.5 py-1.5 text-xs">
+              View Programs
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@due_discovery_programs)}>
+            <.empty_state
+              icon="hero-bolt"
+              title="No programs due"
+              description="The current discovery cadence is on track."
+            />
+          </div>
+
+          <.link
+            :for={program <- @due_discovery_programs}
+            navigate={~p"/commercial/discovery-programs/#{program}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{program.name}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {program.review_target_count} targets waiting review
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                Every {program.cadence_hours}h · {format_datetime(program.last_run_at)}
+              </p>
+            </div>
+            <div class="space-y-2 text-right">
+              <.status_badge status={program.run_status_variant}>
+                {program.run_status_label}
+              </.status_badge>
+              <.status_badge status={program.priority_variant}>
+                {format_atom(program.priority)}
+              </.status_badge>
+            </div>
+          </.link>
+        </div>
+
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>

@@ -469,6 +469,7 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
 
   defp output_type_badge(:procurement_source), do: "badge badge-info badge-sm"
   defp output_type_badge(:bid), do: "badge badge-secondary badge-sm"
+  defp output_type_badge(:target_account), do: "badge badge-accent badge-sm"
   defp output_type_badge(_type), do: "badge badge-ghost badge-sm"
 
   defp output_event_badge(:created), do: "badge badge-success badge-sm"
@@ -507,12 +508,16 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
   defp output_path(%{output_type: :bid, output_id: output_id}),
     do: ~p"/procurement/bids/#{output_id}"
 
+  defp output_path(%{output_type: :target_account, output_id: output_id}),
+    do: ~p"/commercial/targets/#{output_id}"
+
   defp output_path(%{output_type: :procurement_source, output_id: output_id}),
     do: ~p"/procurement/sources?#{[focus: output_id]}"
 
   defp output_path(_output), do: nil
 
   defp output_action_label(%{output_type: :bid}), do: "Review Bid"
+  defp output_action_label(%{output_type: :target_account}), do: "Open Target"
   defp output_action_label(%{output_type: :procurement_source}), do: "Open Source"
   defp output_action_label(_output), do: "Open"
 

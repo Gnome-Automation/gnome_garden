@@ -46,6 +46,22 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
         keywords: ["scada", "plc", "controls", "automation", "instrumentation"],
         notes: "Focus on water, wastewater, biotech, food and beverage, and utility work."
       }
+    },
+    %{
+      name: "Commercial Target Discovery",
+      template: "target_discovery",
+      description:
+        "Launch focused company discovery sweeps that populate target accounts for human review.",
+      visibility: :shared,
+      enabled: true,
+      schedule: nil,
+      memory_namespace: "agents.target_discovery.commercial",
+      config: %{
+        timeout_ms: 300_000
+      },
+      source_scope: %{
+        notes: "Used by commercial discovery programs to run targeted market discovery sweeps."
+      }
     }
   ]
 

@@ -19,6 +19,7 @@ defmodule GnomeGarden.Procurement do
       define :list_procurement_sources, action: :read
       define :list_console_procurement_sources, action: :console
       define :get_procurement_source, action: :read, get_by: [:id]
+      define :get_procurement_source_by_url, action: :by_url, args: [:url]
       define :create_procurement_source, action: :create
       define :create_procurement_source_for_organization, action: :create_for_organization
       define :update_procurement_source, action: :update
@@ -27,10 +28,23 @@ defmodule GnomeGarden.Procurement do
       define :block_procurement_source, action: :block
       define :reconsider_procurement_source, action: :reconsider
       define :queue_procurement_source, action: :queue
+      define :configure_procurement_source, action: :configure
       define :config_fail_procurement_source, action: :config_fail
       define :scan_procurement_source, action: :scan
+      define :scan_fail_procurement_source, action: :scan_fail
       define :retry_procurement_source_config, action: :retry_config
       define :retry_procurement_source_scan, action: :retry_scan
+      define :mark_procurement_source_scanned, action: :mark_scanned
+
+      define :list_procurement_sources_needing_configuration, action: :needs_configuration
+
+      define :list_procurement_sources_ready_for_scan,
+        action: :ready_for_scan,
+        args: [:since_hours]
+
+      define :list_procurement_sources_by_type,
+        action: :by_type,
+        args: [:source_type]
 
       define :list_procurement_sources_by_organization,
         action: :by_organization,

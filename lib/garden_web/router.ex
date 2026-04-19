@@ -88,6 +88,12 @@ defmodule GnomeGardenWeb.Router do
       live "/commercial/targets/:id", Commercial.TargetAccountLive.Show, :show
       live "/commercial/targets/:id/edit", Commercial.TargetAccountLive.Form, :edit
 
+      # Commercial - Target Observations
+      live "/commercial/observations", Commercial.TargetObservationLive.Index, :index
+      live "/commercial/observations/new", Commercial.TargetObservationLive.Form, :new
+      live "/commercial/observations/:id", Commercial.TargetObservationLive.Show, :show
+      live "/commercial/observations/:id/edit", Commercial.TargetObservationLive.Form, :edit
+
       # Commercial - Pursuits
       live "/commercial/pursuits", Commercial.PursuitLive.Index, :index
       live "/commercial/pursuits/new", Commercial.PursuitLive.Form, :new

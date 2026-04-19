@@ -46,9 +46,13 @@ defmodule GnomeGarden.Operations.Organization do
         :primary_region,
         :notes
       ]
+
+      change {GnomeGarden.Operations.Changes.NormalizeOrganizationWebsite, []}
     end
 
     update :update do
+      require_atomic? false
+
       accept [
         :name,
         :legal_name,
@@ -60,6 +64,8 @@ defmodule GnomeGarden.Operations.Organization do
         :primary_region,
         :notes
       ]
+
+      change {GnomeGarden.Operations.Changes.NormalizeOrganizationWebsite, []}
     end
 
     read :active do
@@ -92,6 +98,11 @@ defmodule GnomeGarden.Operations.Organization do
                   :people
                 ]
               )
+    end
+
+    read :by_website_domain do
+      argument :website_domain, :string, allow_nil?: false
+      get_by [:website_domain]
     end
   end
 
@@ -142,6 +153,10 @@ defmodule GnomeGarden.Operations.Organization do
     end
 
     attribute :website, :string do
+      public? true
+    end
+
+    attribute :website_domain, :string do
       public? true
     end
 
@@ -247,5 +262,6 @@ defmodule GnomeGarden.Operations.Organization do
 
   identities do
     identity :unique_name, [:name]
+    identity :unique_website_domain, [:website_domain]
   end
 end

@@ -1,9 +1,10 @@
-defmodule GnomeGarden.Agents.DeterministicScanner do
+defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   @moduledoc """
-  Deterministic bid scanner that uses saved scrape_config.
+  Procurement listing scanner that uses saved scrape_config.
 
   This module performs fast, cheap scraping using configuration
-  discovered by SmartScanner. No LLM is involved - just browser
+  discovered by `SourceConfigurator`. No LLM is involved beyond bid scoring -
+  just browser
   automation with known selectors.
 
   ## Flow
@@ -17,15 +18,15 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
   ## Usage
 
       # Scan a single source
-      {:ok, results} = DeterministicScanner.scan(procurement_source_id)
+      {:ok, results} = ListingScanner.scan(procurement_source_id)
 
       # Scan all ready sources
-      {:ok, results} = DeterministicScanner.scan_all_ready()
+      {:ok, results} = ListingScanner.scan_all_ready()
   """
 
-  alias GnomeGarden.Procurement.ProcurementSource
+  alias GnomeGarden.Procurement
   alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
-  alias GnomeGarden.Agents.Tools.{ScoreBid, SaveBid}
+  alias GnomeGarden.Agents.Tools.Procurement.{SaveBid, ScoreBid}
 
   require Logger
 
@@ -33,7 +34,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
   Scan a single procurement source using its saved scrape_config.
   """
   def scan(procurement_source_id) when is_binary(procurement_source_id) do
-    case Ash.get(ProcurementSource, procurement_source_id) do
+    case Procurement.get_procurement_source(procurement_source_id) do
       {:ok, %{config_status: :configured, scrape_config: config} = source}
       when config != %{} ->
         do_scan(source)
@@ -51,11 +52,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
   """
   def scan_all_ready(opts \\ []) do
     since_hours = Keyword.get(opts, :since_hours, 24)
-
-    sources =
-      ProcurementSource
-      |> Ash.Query.for_read(:ready_for_scan, %{since_hours: since_hours})
-      |> Ash.read!()
+    sources = Procurement.list_procurement_sources_ready_for_scan!(since_hours)
 
     results =
       Enum.map(sources, fn source ->
@@ -89,7 +86,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
          {:ok, scored} <- score_bids(bids, source),
          {:ok, saved} <- save_qualifying_bids(scored, source, listing_url) do
       # Mark as scanned
-      Ash.update!(source, %{}, action: :mark_scanned)
+      Procurement.mark_procurement_source_scanned!(source, %{})
 
       # Enrich newly saved bids with detail page data
       enriched = enrich_bids(saved)
@@ -106,7 +103,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
     else
       {:error, reason} ->
         Logger.error("Scan failed for #{source.name}: #{inspect(reason)}")
-        Ash.update(source, %{}, action: :scan_fail)
+        Procurement.scan_fail_procurement_source(source, %{})
         {:error, reason}
     end
   end
@@ -261,7 +258,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
   end
 
   defp enrich_bid(bid_id) do
-    case Ash.get(GnomeGarden.Procurement.Bid, bid_id) do
+    case Procurement.get_bid(bid_id) do
       {:ok, bid} ->
         if String.contains?(bid.url || "", "bo-detail") &&
              (is_nil(bid.description) || String.length(bid.description || "") < 20) do
@@ -288,7 +285,7 @@ defmodule GnomeGarden.Agents.DeterministicScanner do
         |> maybe_enrich_bid_type(data["bid_type"], bid.bid_type)
 
       if map_size(updates) > 0 do
-        Ash.update(bid, updates, action: :update)
+        Procurement.update_bid(bid, updates)
         Logger.info("Enriched #{bid.title}: #{inspect(Map.keys(updates))}")
       end
 

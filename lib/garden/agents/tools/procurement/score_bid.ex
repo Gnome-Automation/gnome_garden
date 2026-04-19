@@ -1,6 +1,6 @@
-defmodule GnomeGarden.Agents.Tools.ScoreBid do
+defmodule GnomeGarden.Agents.Tools.Procurement.ScoreBid do
   @moduledoc """
-  Score a bid opportunity using Gnome Automation's lead scoring rubric.
+  Score a bid opportunity using Gnome Automation's procurement scoring rubric.
 
   Scoring rubric (100 points max):
   - Service Match (30): Core services = 30, adjacent = 20, tangential = 10
@@ -18,7 +18,7 @@ defmodule GnomeGarden.Agents.Tools.ScoreBid do
 
   use Jido.Action,
     name: "score_bid",
-    description: "Score a bid opportunity using the lead scoring rubric",
+    description: "Score a bid opportunity using the procurement scoring rubric",
     schema: [
       title: [type: :string, required: true, doc: "Bid title"],
       description: [type: :string, doc: "Bid description/synopsis"],

@@ -11,6 +11,7 @@ defmodule GnomeGardenWeb.PageController do
 
     review_targets = list_review_targets(actor)
     active_discovery_programs = list_active_discovery_programs(actor)
+    due_discovery_programs = list_due_discovery_programs(actor)
     open_signals = list_open_signals(actor)
     active_pursuits = list_active_pursuits(actor)
 
@@ -31,6 +32,8 @@ defmodule GnomeGardenWeb.PageController do
       current_user: actor,
       current_path: conn.request_path,
       active_discovery_program_count: length(active_discovery_programs),
+      due_discovery_program_count: length(due_discovery_programs),
+      due_discovery_programs: Enum.take(due_discovery_programs, 5),
       review_target_count: length(review_targets),
       review_targets: Enum.take(review_targets, 5),
       open_signal_count: length(open_signals),
@@ -77,7 +80,28 @@ defmodule GnomeGardenWeb.PageController do
     safe_list(fn ->
       Commercial.list_active_discovery_programs(
         actor: actor,
-        load: [:status_variant, :priority_variant, :review_target_count]
+        load: [
+          :status_variant,
+          :priority_variant,
+          :review_target_count,
+          :run_status_variant,
+          :run_status_label
+        ]
+      )
+    end)
+  end
+
+  defp list_due_discovery_programs(actor) do
+    safe_list(fn ->
+      Commercial.list_due_discovery_programs(
+        actor: actor,
+        load: [
+          :status_variant,
+          :priority_variant,
+          :run_status_variant,
+          :run_status_label,
+          :review_target_count
+        ]
       )
     end)
   end

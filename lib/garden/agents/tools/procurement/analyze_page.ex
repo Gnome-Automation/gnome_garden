@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Tools.AnalyzePage do
+defmodule GnomeGarden.Agents.Tools.Procurement.AnalyzePage do
   @moduledoc """
   Analyze a web page to determine if it's a procurement portal.
 

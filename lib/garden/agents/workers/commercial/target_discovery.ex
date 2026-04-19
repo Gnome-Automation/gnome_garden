@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
+defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   @moduledoc """
   Autonomous agent that discovers companies needing automation/controls work.
 
@@ -9,12 +9,12 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
   - Industry directory listings in target verticals
 
   Persists discovered targets into the long-term operating model via
-  `SaveLead`, creating Operations + Commercial intake records for human
-  review instead of writing directly into the legacy sales lead table.
+  `SaveTargetAccount`, creating Operations + Commercial intake records for human
+  review instead of inventing ad hoc prospect records.
 
   ## Usage
 
-      alias GnomeGarden.Agents.Workers.Sales.TargetDiscovery
+      alias GnomeGarden.Agents.Workers.Commercial.TargetDiscovery
 
       {:ok, pid} = Jido.start_agent(GnomeGarden.Jido, TargetDiscovery)
 
@@ -39,7 +39,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
       "Discovers companies needing automation/controls work and creates reviewable target accounts",
     tools: [
       GnomeGarden.Agents.Tools.WebSearch,
-      GnomeGarden.Agents.Tools.SaveLead,
+      GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount,
       GnomeGarden.Agents.Tools.MemoryRemember,
       GnomeGarden.Agents.Tools.MemoryRecall
     ],
@@ -89,7 +89,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
     4. **Actually makes/processes something** — we need companies with production/processing, not pure office/software
 
     ## How To Save Discovery Targets
-    Call **save_lead** for each qualifying company. ALL of these fields are important:
+    Call **save_target_account** for each qualifying company. ALL of these fields are important:
 
     REQUIRED:
     - **company_name**: Exact company name
@@ -116,7 +116,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
     5. Do MORE SEARCHES, not just one — search for the company name, then their industry + location, then hiring signals
 
     ## Rules
-    - QUALITY over quantity — 3 well-researched leads beat 10 vague ones
+    - QUALITY over quantity — 3 well-researched targets beat 10 vague ones
     - VERIFY before saving — don't save closed/moved/non-local companies
     - SPECIFIC signals — "hiring automation engineer per Indeed 3/2026" not "might need automation"
     - Remember what you've saved (use memory tools) to avoid duplicates
@@ -213,7 +213,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
     1. Verify they're real and in the target region
     2. Look for signals they need automation help (hiring, expansion, legacy equipment)
     3. Find a contact name and title if possible
-    4. Call **save_lead** immediately for each qualifying company
+    4. Call **save_target_account** immediately for each qualifying company
 
     Remember each company you save using the memory tool to avoid duplicates.
     Focus on #{region_name} specifically.
@@ -228,26 +228,11 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
   def discover_for_program(pid, discovery_program_id, opts \\ [])
       when is_binary(discovery_program_id) do
     with {:ok, discovery_program} <- Commercial.get_discovery_program(discovery_program_id) do
-      query = """
-      DISCOVERY PROGRAM: #{discovery_program.name}
-
-      #{discovery_program.description || "Run a focused discovery sweep for this program."}
-
-      Program scope:
-      - Regions: #{render_list(discovery_program.target_regions, "No regions specified")}
-      - Industries: #{render_list(discovery_program.target_industries, "No industries specified")}
-      - Watch channels: #{render_list(discovery_program.watch_channels, "No channels specified")}
-      - Search terms:
-      #{render_search_terms(discovery_program.search_terms)}
-
-      IMPORTANT:
-      - Call **save_lead** for every qualifying company you find
-      - Always include discovery_program_id: "#{discovery_program.id}"
-      - Only save real companies that match this program's scope
-      - Keep the signal specific enough that a human can decide whether to promote the target into the signal inbox
-      """
-
-      case ask_sync(pid, query, Keyword.put_new(opts, :timeout, @default_timeout)) do
+      case ask_sync(
+             pid,
+             program_task(discovery_program),
+             Keyword.put_new(opts, :timeout, @default_timeout)
+           ) do
         {:ok, _result} = success ->
           _ = Commercial.mark_discovery_program_ran(discovery_program)
           success
@@ -259,7 +244,33 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
   end
 
   @doc """
-  Deep research a specific company to determine if they're a good lead.
+  Build the prompt used to run a focused discovery program.
+  """
+  def program_task(discovery_program) do
+    """
+    DISCOVERY PROGRAM: #{discovery_program.name}
+
+    #{discovery_program.description || "Run a focused discovery sweep for this program."}
+
+    Program scope:
+    - Discovery program id: #{discovery_program.id}
+    - Regions: #{render_list(discovery_program.target_regions, "No regions specified")}
+    - Industries: #{render_list(discovery_program.target_industries, "No industries specified")}
+    - Watch channels: #{render_list(discovery_program.watch_channels, "No channels specified")}
+    - Search terms:
+    #{render_search_terms(discovery_program.search_terms)}
+
+    IMPORTANT:
+      - Call **save_target_account** for every qualifying company you find
+      - Always include discovery_program_id: "#{discovery_program.id}"
+      - Only save real companies that match this program's scope
+      - Keep the signal specific enough that a human can decide whether to promote the target into the signal inbox
+    """
+    |> String.trim()
+  end
+
+  @doc """
+  Deep research a specific company to determine if they're a good discovery target.
   """
   def research_company(pid, company_name, opts \\ []) do
     query = """
@@ -272,7 +283,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
     4. Browse their website if possible
     5. Check if they have manufacturing/processing operations
 
-    If they look like a good lead (medium or high confidence), call **save_lead** with
+    If they look like a good target (medium or high confidence), call **save_target_account** with
     all the details you found. Include the signal, contact info, and source URL.
     """
 
@@ -298,7 +309,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
     1. Note the company name and location
     2. What role are they hiring for?
     3. This is a STRONG signal they need help — they may also need a contractor
-    4. Call **save_lead** with signal "hiring: [job_title]" and the job posting URL
+    4. Call **save_target_account** with signal "hiring: [job_title]" and the job posting URL
     """
 
     ask_sync(pid, query, Keyword.put_new(opts, :timeout, @default_timeout))
@@ -306,7 +317,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
 
   @doc """
   Run a full sweep across all priority industries and regions.
-  Creates leads for every qualifying company found.
+  Creates target accounts for every qualifying company found.
   """
   def full_sweep(pid, opts \\ []) do
     priorities = [
@@ -340,18 +351,19 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
     Parse agent output and create discovery targets from LEAD: formatted lines.
   Call this with the result text from discover/research_company/scan_job_postings.
   """
-  def create_leads_from_result(result_text, opts \\ [])
+  def create_targets_from_result(result_text, opts \\ [])
 
-  def create_leads_from_result(result_text, opts) when is_binary(result_text) and is_list(opts) do
+  def create_targets_from_result(result_text, opts)
+      when is_binary(result_text) and is_list(opts) do
     result_text
     |> String.split("\n")
     |> Enum.filter(&String.starts_with?(&1, "LEAD:"))
     |> Enum.map(&parse_lead_line/1)
     |> Enum.reject(&is_nil/1)
-    |> Enum.map(&create_lead(&1, opts))
+    |> Enum.map(&create_target_account(&1, opts))
   end
 
-  def create_leads_from_result(_, _opts), do: []
+  def create_targets_from_result(_, _opts), do: []
 
   defp parse_lead_line("LEAD: " <> rest) do
     case String.split(rest, " | ") do
@@ -373,7 +385,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
 
   defp parse_lead_line(_), do: nil
 
-  defp create_lead(parsed, opts) do
+  defp create_target_account(parsed, opts) do
     {first, last} = split_name(parsed.contact_name)
 
     attrs = %{
@@ -389,7 +401,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.TargetDiscovery do
       source_url: non_empty(parsed.source_url)
     }
 
-    case GnomeGarden.Agents.Tools.SaveLead.run(attrs, %{}) do
+    case GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount.run(attrs, %{}) do
       {:ok, result} -> {:ok, result}
       {:error, reason} -> {:error, parsed.company_name, reason}
     end

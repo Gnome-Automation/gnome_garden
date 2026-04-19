@@ -18,6 +18,7 @@ defmodule GnomeGarden.Commercial do
     resource GnomeGarden.Commercial.DiscoveryProgram do
       define :list_discovery_programs, action: :read
       define :list_active_discovery_programs, action: :active
+      define :list_due_discovery_programs, action: :due_for_run
       define :get_discovery_program, action: :read, get_by: [:id]
       define :create_discovery_program, action: :create
       define :update_discovery_program, action: :update
@@ -49,6 +50,8 @@ defmodule GnomeGarden.Commercial do
       define :reopen_target_account, action: :reopen
       define :list_review_target_accounts, action: :review_queue
       define :list_promoted_target_accounts, action: :promoted
+      define :list_rejected_target_accounts, action: :rejected
+      define :list_archived_target_accounts, action: :archived
 
       define :list_target_accounts_for_organization,
         action: :for_organization,
@@ -213,5 +216,9 @@ defmodule GnomeGarden.Commercial do
       define :list_usage_for_expense, action: :for_expense
       define :list_usage_for_work_order, action: :for_work_order
     end
+  end
+
+  def launch_discovery_program(program_or_id, opts \\ []) do
+    GnomeGarden.Commercial.DiscoveryRunner.launch_program(program_or_id, opts)
   end
 end

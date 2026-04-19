@@ -1,6 +1,6 @@
-defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
+defmodule GnomeGarden.Agents.Workers.Procurement.SmartScanner do
   @moduledoc """
-  Autonomous bid scanner that figures out any website.
+  Autonomous procurement scanner that figures out how to monitor an unfamiliar site.
 
   Uses browser primitives + LLM reasoning to:
   1. Navigate to a procurement site
@@ -24,10 +24,10 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
       GnomeGarden.Agents.Tools.Browser.Fill,
       GnomeGarden.Agents.Tools.Browser.Press,
       # Discovery - saves scraping config for future deterministic scans
-      GnomeGarden.Agents.Tools.SaveDiscovery,
+      GnomeGarden.Agents.Tools.Procurement.SaveSourceConfig,
       # Scoring and saving
-      GnomeGarden.Agents.Tools.ScoreBid,
-      GnomeGarden.Agents.Tools.SaveBid
+      GnomeGarden.Agents.Tools.Procurement.ScoreBid,
+      GnomeGarden.Agents.Tools.Procurement.SaveBid
     ],
     streaming: true,
     tool_timeout_ms: 90_000,
@@ -54,7 +54,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
     1. Navigate to the URL
     2. Find the bid listings page
     3. Identify CSS selectors for: bid rows, titles, dates, links
-    4. Use **save_discovery** to save the config for future deterministic scans
+    4. Use **save_source_config** to save the config for future deterministic scans
     5. This is a ONE-TIME cost - future scans won't need LLM
 
     ### Scan Mode (default)
@@ -104,11 +104,11 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
 
     ## CRITICAL for Discovery Mode
 
-    In discovery mode, you MUST call save_discovery before finishing!
+    In discovery mode, you MUST call save_source_config before finishing!
     - Don't over-analyze. Once you find a working listing_selector and title_selector, SAVE IT.
     - PlanetBids sites use: listing_selector="table tbody tr" or ".results-row"
     - If unsure, make your best guess and save - we can refine later.
-    - Call save_discovery EARLY rather than running out of iterations.
+    - Call save_source_config EARLY rather than running out of iterations.
     """,
     max_iterations: 30
 
@@ -117,7 +117,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   @doc """
   Discover how to scrape a site and save the config for future deterministic scans.
 
-  This is a ONE-TIME operation per site. After discovery, use DeterministicScanner
+  This is a ONE-TIME operation per site. After discovery, use ListingScanner
   for fast, cheap scans without LLM.
 
   ## Example
@@ -127,7 +127,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
 
   """
   def discover_site(pid, procurement_source_id, opts \\ []) do
-    case Ash.get(GnomeGarden.Procurement.ProcurementSource, procurement_source_id) do
+    case GnomeGarden.Procurement.get_procurement_source(procurement_source_id) do
       {:ok, source} ->
         query = """
         DISCOVERY MODE - Figure out how to scrape this site and save the config.
@@ -145,11 +145,11 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
            - Due date within each row (date_selector)
            - Link to bid details (link_selector)
         4. Test your selectors using browser_extract to confirm they work
-        5. Call save_discovery with the procurement_source_id and all selectors you found
+        5. Call save_source_config with the procurement_source_id and all selectors you found
 
         The listing_url should be the URL of the page showing bid listings (after navigation).
 
-        IMPORTANT: You MUST call save_discovery at the end with the selectors you found.
+        IMPORTANT: You MUST call save_source_config at the end with the selectors you found.
         """
 
         ask_sync(pid, query, Keyword.put_new(opts, :timeout, @default_timeout))
@@ -163,7 +163,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   Discover all pending procurement sources.
   """
   def discover_all_pending(pid, opts \\ []) do
-    sources = Ash.read!(GnomeGarden.Procurement.ProcurementSource, action: :needs_configuration)
+    sources = GnomeGarden.Procurement.list_procurement_sources_needing_configuration!()
 
     results =
       Enum.map(sources, fn source ->
@@ -210,7 +210,7 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   Scan a procurement source by ID.
   """
   def scan_procurement_source(pid, procurement_source_id, opts \\ []) do
-    case Ash.get(GnomeGarden.Procurement.ProcurementSource, procurement_source_id) do
+    case GnomeGarden.Procurement.get_procurement_source(procurement_source_id) do
       {:ok, source} ->
         query = """
         Scan this procurement source: #{source.name}
@@ -231,10 +231,8 @@ defmodule GnomeGarden.Agents.Workers.Sales.SmartScanner do
   Scan all enabled procurement sources that don't require login.
   """
   def scan_all_enabled(pid, opts \\ []) do
-    sources =
-      Ash.read!(GnomeGarden.Procurement.ProcurementSource,
-        filter: [enabled: true, requires_login: false]
-      )
+    sources = GnomeGarden.Procurement.list_procurement_sources!()
+    sources = Enum.filter(sources, &(&1.enabled && !&1.requires_login))
 
     query = """
     Scan these #{length(sources)} procurement sources for bids:

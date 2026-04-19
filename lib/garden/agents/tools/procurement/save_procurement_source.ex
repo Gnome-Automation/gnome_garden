@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Tools.SaveProcurementSource do
+defmodule GnomeGarden.Agents.Tools.Procurement.SaveProcurementSource do
   @moduledoc """
   Save a new procurement source to the database.
 
@@ -25,6 +25,7 @@ defmodule GnomeGarden.Agents.Tools.SaveProcurementSource do
   require Logger
 
   alias GnomeGarden.Agents.RunOutputLogger
+  alias GnomeGarden.Procurement
 
   @impl true
   def run(params, context) do
@@ -40,7 +41,7 @@ defmodule GnomeGarden.Agents.Tools.SaveProcurementSource do
       enabled: true
     }
 
-    case Ash.create(GnomeGarden.Procurement.ProcurementSource, attrs) do
+    case Procurement.create_procurement_source(attrs) do
       {:ok, source} ->
         Logger.info(
           "[SaveProcurementSource] Created new procurement source: #{source.name} (#{source.url})"
@@ -84,8 +85,8 @@ defmodule GnomeGarden.Agents.Tools.SaveProcurementSource do
   end
 
   defp existing_source(url) do
-    case Ash.read(GnomeGarden.Procurement.ProcurementSource, filter: [url: url]) do
-      {:ok, [source | _]} -> source
+    case Procurement.get_procurement_source_by_url(url) do
+      {:ok, source} -> source
       _ -> nil
     end
   end

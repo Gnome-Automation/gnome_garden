@@ -48,6 +48,7 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
       live(conn, ~p"/commercial/discovery-programs/#{discovery_program}")
 
     assert render(show_view) =~ discovery_program.name
+    assert has_element?(show_view, "button[phx-click='run_now']")
 
     {:ok, form_view, _form_html} = live(conn, ~p"/commercial/discovery-programs/new")
     assert has_element?(form_view, "#discovery-program-form")

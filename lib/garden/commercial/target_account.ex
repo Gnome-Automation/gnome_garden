@@ -154,6 +154,40 @@ defmodule GnomeGarden.Commercial.TargetAccount do
               )
     end
 
+    read :rejected do
+      filter expr(status == :rejected)
+
+      prepare build(
+                sort: [updated_at: :desc, inserted_at: :desc],
+                load: [
+                  :discovery_program,
+                  :organization,
+                  :promoted_signal,
+                  :observation_count,
+                  :latest_observed_at,
+                  :latest_observation_summary,
+                  :status_variant
+                ]
+              )
+    end
+
+    read :archived do
+      filter expr(status == :archived)
+
+      prepare build(
+                sort: [updated_at: :desc, inserted_at: :desc],
+                load: [
+                  :discovery_program,
+                  :organization,
+                  :promoted_signal,
+                  :observation_count,
+                  :latest_observed_at,
+                  :latest_observation_summary,
+                  :status_variant
+                ]
+              )
+    end
+
     read :for_organization do
       argument :organization_id, :uuid, allow_nil?: false
       filter expr(organization_id == ^arg(:organization_id))

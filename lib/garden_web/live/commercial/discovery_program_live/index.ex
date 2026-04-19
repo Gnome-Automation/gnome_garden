@@ -147,9 +147,12 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
                 <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
                   <div class="space-y-1">
                     <p>Every {program.cadence_hours}h</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {format_datetime(program.last_run_at)}
-                    </p>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
+                      <span>{format_datetime(program.last_run_at)}</span>
+                      <.status_badge status={program.run_status_variant}>
+                        {program.run_status_label}
+                      </.status_badge>
+                    </div>
                   </div>
                 </td>
                 <td class="px-5 py-4 align-top">
@@ -178,6 +181,9 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
            load: [
              :status_variant,
              :priority_variant,
+             :is_due_to_run,
+             :run_status_variant,
+             :run_status_label,
              :target_account_count,
              :review_target_count,
              :observation_count,

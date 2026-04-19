@@ -121,7 +121,7 @@ defmodule GnomeGarden.Commercial.Changes.PromoteTargetAccountToSignal do
 
   defp organization_upsert_identity(%{website_domain: website_domain})
        when is_binary(website_domain) do
-    :unique_name
+    :unique_website_domain
   end
 
   defp organization_upsert_identity(_target_account), do: :unique_name

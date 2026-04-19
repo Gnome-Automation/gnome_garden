@@ -112,7 +112,11 @@ config :gnome_garden, Oban,
   repo: GnomeGarden.Repo,
   plugins: [
     {Oban.Plugins.Cron,
-     crontab: [{"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker}], timezone: "Etc/UTC"}
+     crontab: [
+       {"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker},
+       {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker}
+     ],
+     timezone: "Etc/UTC"}
   ]
 
 config :ash,

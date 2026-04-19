@@ -1,9 +1,10 @@
-defmodule GnomeGarden.Agents.ScannerRouter do
+defmodule GnomeGarden.Agents.Procurement.ScannerRouter do
   @moduledoc """
   Routes scan requests to the appropriate scanner based on source_type.
   """
 
-  alias GnomeGarden.Agents.{DeterministicScanner, CompanyScanner}
+  alias GnomeGarden.Agents.Commercial.SiteScanner
+  alias GnomeGarden.Agents.Procurement.ListingScanner
   alias GnomeGarden.Procurement.ProcurementSource
 
   require Logger
@@ -14,10 +15,10 @@ defmodule GnomeGarden.Agents.ScannerRouter do
 
     case strategy do
       :deterministic ->
-        DeterministicScanner.scan(source.id)
+        ListingScanner.scan(source.id)
 
       :company ->
-        CompanyScanner.scan(source)
+        SiteScanner.scan(source)
 
       other ->
         Logger.info("[ScannerRouter] #{other} scanner not yet implemented for #{source.name}")

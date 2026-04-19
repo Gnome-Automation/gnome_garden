@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Tools.ScanPlanetBids do
+defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
   @moduledoc """
   Scan a PlanetBids portal for bid opportunities.
 

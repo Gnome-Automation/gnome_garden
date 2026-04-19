@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Workers.Sales.SourceDiscovery do
+defmodule GnomeGarden.Agents.Workers.Procurement.SourceDiscovery do
   @moduledoc """
   Autonomous agent that discovers new procurement sources.
 
@@ -16,16 +16,16 @@ defmodule GnomeGarden.Agents.Workers.Sales.SourceDiscovery do
 
   ## Usage
 
-      {:ok, pid} = Jido.start_agent(GnomeGarden.Jido, GnomeGarden.Agents.Workers.Sales.SourceDiscovery)
+      {:ok, pid} = Jido.start_agent(GnomeGarden.Jido, GnomeGarden.Agents.Workers.Procurement.SourceDiscovery)
 
       # Discover portals in a region
-      GnomeGarden.Agents.Workers.Sales.SourceDiscovery.discover_region(pid, :oc)
+      GnomeGarden.Agents.Workers.Procurement.SourceDiscovery.discover_region(pid, :oc)
 
       # Search for specific agency
-      GnomeGarden.Agents.Workers.Sales.SourceDiscovery.find_agency(pid, "City of Mission Viejo")
+      GnomeGarden.Agents.Workers.Procurement.SourceDiscovery.find_agency(pid, "City of Mission Viejo")
 
       # Discover water districts
-      GnomeGarden.Agents.Workers.Sales.SourceDiscovery.discover_industry(pid, :water)
+      GnomeGarden.Agents.Workers.Procurement.SourceDiscovery.discover_industry(pid, :water)
   """
 
   use Jido.AI.Agent,
@@ -35,15 +35,15 @@ defmodule GnomeGarden.Agents.Workers.Sales.SourceDiscovery do
       # Discovery tools
       GnomeGarden.Agents.Tools.WebSearch,
       GnomeGarden.Agents.Tools.BrowseWeb,
-      GnomeGarden.Agents.Tools.AnalyzePage,
-      GnomeGarden.Agents.Tools.SaveProcurementSource,
+      GnomeGarden.Agents.Tools.Procurement.AnalyzePage,
+      GnomeGarden.Agents.Tools.Procurement.SaveProcurementSource,
 
       # Memory for tracking
       GnomeGarden.Agents.Tools.MemoryRemember,
       GnomeGarden.Agents.Tools.MemoryRecall
     ],
     system_prompt: """
-    You are the Gnome Automation Source Discovery Agent. Your job is to find NEW
+    You are the Gnome Automation Procurement Source Discovery Agent. Your job is to find NEW
     procurement portals that the BidScanner can monitor.
 
     ## What We're Looking For

@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
+defmodule GnomeGarden.Agents.Tools.Procurement.SaveSourceConfig do
   @moduledoc """
   Save discovered scraping configuration for a procurement source.
 
@@ -7,7 +7,7 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
   """
 
   use Jido.Action,
-    name: "save_discovery",
+    name: "save_source_config",
     description: """
     Save discovered scraping configuration for a procurement site.
     Call this after you've figured out how to extract bids from a site.
@@ -67,9 +67,11 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
       notes: params[:notes]
     }
 
-    case Ash.get(GnomeGarden.Procurement.ProcurementSource, params.procurement_source_id) do
+    case GnomeGarden.Procurement.get_procurement_source(params.procurement_source_id) do
       {:ok, source} ->
-        case Ash.update(source, %{scrape_config: scrape_config}, action: :configure) do
+        case GnomeGarden.Procurement.configure_procurement_source(source, %{
+               scrape_config: scrape_config
+             }) do
           {:ok, updated} ->
             {:ok,
              %{
@@ -82,7 +84,7 @@ defmodule GnomeGarden.Agents.Tools.SaveDiscovery do
              }}
 
           {:error, error} ->
-            {:error, "Failed to save discovery: #{inspect(error)}"}
+            {:error, "Failed to save source config: #{inspect(error)}"}
         end
 
       {:error, _} ->

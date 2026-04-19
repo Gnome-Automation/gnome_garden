@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
+defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
   @moduledoc """
   Autonomous agent that scans procurement portals for bid opportunities.
 
@@ -10,16 +10,16 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
 
   ## Usage
 
-      {:ok, pid} = Jido.start_agent(GnomeGarden.Jido, GnomeGarden.Agents.Workers.Sales.BidScanner)
+      {:ok, pid} = Jido.start_agent(GnomeGarden.Jido, GnomeGarden.Agents.Workers.Procurement.BidScanner)
 
       # Scan all sources due for scanning
-      GnomeGarden.Agents.Workers.Sales.BidScanner.scan_all(pid)
+      GnomeGarden.Agents.Workers.Procurement.BidScanner.scan_all(pid)
 
       # Scan specific source type
-      GnomeGarden.Agents.Workers.Sales.BidScanner.scan_type(pid, :planetbids)
+      GnomeGarden.Agents.Workers.Procurement.BidScanner.scan_type(pid, :planetbids)
 
       # Get today's hot bids
-      GnomeGarden.Agents.Workers.Sales.BidScanner.hot_bids(pid)
+      GnomeGarden.Agents.Workers.Procurement.BidScanner.hot_bids(pid)
   """
 
   use Jido.AI.Agent,
@@ -27,12 +27,12 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
     description: "Procurement bid scanner that monitors government portals for opportunities",
     tools: [
       # Scanning tools
-      GnomeGarden.Agents.Tools.ScanPlanetBids,
-      GnomeGarden.Agents.Tools.QuerySamGov,
+      GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids,
+      GnomeGarden.Agents.Tools.Procurement.QuerySamGov,
 
       # Scoring and storage
-      GnomeGarden.Agents.Tools.ScoreBid,
-      GnomeGarden.Agents.Tools.SaveBid,
+      GnomeGarden.Agents.Tools.Procurement.ScoreBid,
+      GnomeGarden.Agents.Tools.Procurement.SaveBid,
 
       # Existing tools for flexibility
       GnomeGarden.Agents.Tools.WebSearch,
@@ -204,11 +204,11 @@ defmodule GnomeGarden.Agents.Workers.Sales.BidScanner do
   end
 
   defp load_procurement_sources do
-    case Ash.read(GnomeGarden.Procurement.ProcurementSource,
-           filter: [enabled: true, status: :approved]
-         ) do
+    case GnomeGarden.Procurement.list_procurement_sources() do
       {:ok, sources} ->
-        Enum.map(sources, fn s ->
+        sources
+        |> Enum.filter(&(&1.enabled && &1.status == :approved))
+        |> Enum.map(fn s ->
           %{
             id: s.id,
             name: s.name,

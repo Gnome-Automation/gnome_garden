@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.BatchDiscovery do
+defmodule GnomeGarden.Agents.Procurement.SourceBootstrapper do
   @moduledoc """
   Batch discovery for PlanetBids sites.
 
@@ -7,7 +7,8 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
   """
 
   alias GnomeGarden.Agents.Tools.Browser.Navigate
-  alias GnomeGarden.Agents.Tools.SaveDiscovery
+  alias GnomeGarden.Agents.Tools.Procurement.SaveSourceConfig
+  alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
 
   require Logger
@@ -17,20 +18,18 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
 
   ## Example
 
-      GnomeGarden.Agents.BatchDiscovery.discover_all_planetbids()
+      GnomeGarden.Agents.Procurement.SourceBootstrapper.discover_all_planetbids()
   """
   def discover_all_planetbids do
-    # Get all sources and filter in Elixir
     sources =
-      Ash.read!(ProcurementSource)
+      Procurement.list_procurement_sources!()
       |> Enum.filter(fn s ->
         s.source_type == :planetbids and s.status == :approved and
           s.config_status in [:found, :pending]
       end)
       |> Enum.map(fn source ->
-        # Ensure source is in :pending state for the configure transition
         if source.config_status == :found do
-          Ash.update!(source, %{}, action: :queue)
+          Procurement.queue_procurement_source!(source, %{})
         else
           source
         end
@@ -70,7 +69,7 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
   Discover a single PlanetBids site by ID.
   """
   def discover_one(procurement_source_id) when is_binary(procurement_source_id) do
-    case Ash.get(ProcurementSource, procurement_source_id) do
+    case Procurement.get_procurement_source(procurement_source_id) do
       {:ok, source} -> discover_one(source)
       {:error, _} -> {:error, "Procurement source not found"}
     end
@@ -83,7 +82,7 @@ defmodule GnomeGarden.Agents.BatchDiscovery do
         Logger.debug("Loaded: #{title}")
 
         # Save standard PlanetBids selectors
-        SaveDiscovery.run(
+        SaveSourceConfig.run(
           %{
             procurement_source_id: source.id,
             listing_url: source.url,

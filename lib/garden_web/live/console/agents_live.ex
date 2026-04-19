@@ -637,7 +637,9 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
     [
       run.procurement_source_output_count && run.procurement_source_output_count > 0 &&
         "#{run.procurement_source_output_count} sources",
-      run.bid_output_count && run.bid_output_count > 0 && "#{run.bid_output_count} bids"
+      run.bid_output_count && run.bid_output_count > 0 && "#{run.bid_output_count} bids",
+      run.target_account_output_count && run.target_account_output_count > 0 &&
+        "#{run.target_account_output_count} targets"
     ]
     |> Enum.reject(&(!&1))
     |> Enum.join(" · ")

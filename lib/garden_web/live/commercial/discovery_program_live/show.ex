@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
 
   import GnomeGardenWeb.Commercial.Helpers
 
+  alias GnomeGarden.Agents
   alias GnomeGarden.Commercial
 
   @impl true
@@ -13,6 +14,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
      socket
      |> assign(:page_title, discovery_program.name)
      |> assign(:discovery_program, discovery_program)
+     |> assign(:latest_run, load_latest_run(discovery_program))
      |> assign(:targets, load_targets(id, socket.assigns.current_user))
      |> assign(:observations, load_observations(id, socket.assigns.current_user))}
   end
@@ -47,6 +49,38 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
   end
 
   @impl true
+  def handle_event("run_now", _params, socket) do
+    discovery_program = socket.assigns.discovery_program
+
+    case Commercial.launch_discovery_program(discovery_program,
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, %{program: refreshed_program, run: run}} ->
+        {:noreply,
+         socket
+         |> assign(:discovery_program, refreshed_program)
+         |> assign(:latest_run, load_latest_run(refreshed_program))
+         |> assign(:targets, load_targets(discovery_program.id, socket.assigns.current_user))
+         |> assign(
+           :observations,
+           load_observations(discovery_program.id, socket.assigns.current_user)
+         )
+         |> put_flash(:info, "Started discovery run #{short_id(run.id)}.")}
+
+      {:error, :active_run_exists} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "This discovery program already has an active run. Wait for it to finish before launching another."
+         )}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not start discovery run: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <.page class="pb-8">
@@ -62,6 +96,16 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
           </span>
         </:subtitle>
         <:actions>
+          <.button
+            :if={program_runnable?(@discovery_program)}
+            phx-click="run_now"
+            variant="primary"
+          >
+            <.icon name="hero-play" class="size-4" /> Run Discovery
+          </.button>
+          <.button navigate={~p"/commercial/observations"}>
+            <.icon name="hero-document-magnifying-glass" class="size-4" /> Observations
+          </.button>
           <.button navigate={~p"/commercial/discovery-programs"}>
             <.icon name="hero-arrow-left" class="size-4" /> Back
           </.button>
@@ -92,6 +136,11 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
           <div class="grid gap-5 sm:grid-cols-2">
             <.property_item label="Priority" value={format_atom(@discovery_program.priority)} />
             <.property_item label="Cadence" value={"Every #{@discovery_program.cadence_hours} hours"} />
+            <.property_item
+              label="Cadence Status"
+              value={@discovery_program.run_status_label}
+              badge={@discovery_program.run_status_variant}
+            />
             <.property_item
               label="Target Regions"
               value={summary_list(@discovery_program.target_regions, "No regions defined")}
@@ -132,6 +181,51 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
           </div>
         </.section>
       </div>
+
+      <.section
+        title="Latest Agent Run"
+        description="Discovery programs now launch through the durable agent deployment/run stack, not a hidden ad hoc task."
+      >
+        <div
+          :if={@latest_run}
+          class="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="space-y-1">
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">
+                Run {short_id(@latest_run.id)}
+              </p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                {run_deployment_label(@latest_run)}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                Started {format_datetime(@latest_run.started_at || @latest_run.inserted_at)}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <.status_badge status={run_state_variant(@latest_run.state)}>
+                {format_atom(@latest_run.state)}
+              </.status_badge>
+
+              <.link
+                navigate={~p"/console/agents/runs/#{@latest_run.id}"}
+                class="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-300"
+              >
+                Open run
+              </.link>
+            </div>
+          </div>
+        </div>
+
+        <div :if={is_nil(@latest_run)}>
+          <.empty_state
+            icon="hero-cpu-chip"
+            title="No run launched yet"
+            description="Use Run Discovery to launch this program onto the real agent run stack."
+          />
+        </div>
+      </.section>
 
       <.section :if={@discovery_program.description} title="Description">
         <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -216,6 +310,12 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
                 >
                   Source
                 </.link>
+                <.link
+                  navigate={~p"/commercial/observations/#{observation}"}
+                  class="text-sm font-medium text-sky-600 hover:text-sky-500 dark:text-sky-300"
+                >
+                  Details
+                </.link>
               </div>
             </div>
           </div>
@@ -227,6 +327,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
 
   attr :label, :string, required: true
   attr :value, :string, required: true
+  attr :badge, :atom, default: nil
 
   defp property_item(assigns) do
     ~H"""
@@ -234,7 +335,8 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p :if={is_nil(@badge)} class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <.status_badge :if={@badge} status={@badge}>{@value}</.status_badge>
     </div>
     """
   end
@@ -246,6 +348,9 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
            load: [
              :status_variant,
              :priority_variant,
+             :is_due_to_run,
+             :run_status_variant,
+             :run_status_label,
              :target_account_count,
              :review_target_count,
              :observation_count,
@@ -275,8 +380,37 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
     end
   end
 
+  defp load_latest_run(%{metadata: metadata}) when is_map(metadata) do
+    case Map.get(metadata, "last_agent_run_id") || Map.get(metadata, :last_agent_run_id) do
+      run_id when is_binary(run_id) ->
+        case Agents.get_agent_run(run_id, load: [:agent, :deployment]) do
+          {:ok, run} -> run
+          {:error, _error} -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp load_latest_run(_program), do: nil
+
   defp summary_list([], empty_label), do: empty_label
   defp summary_list(values, _empty_label), do: Enum.join(values, ", ")
+
+  defp program_runnable?(%{status: :archived}), do: false
+  defp program_runnable?(_program), do: true
+
+  defp run_state_variant(:completed), do: :success
+  defp run_state_variant(:running), do: :info
+  defp run_state_variant(:failed), do: :error
+  defp run_state_variant(:cancelled), do: :warning
+  defp run_state_variant(_state), do: :default
+
+  defp run_deployment_label(%{deployment: %{name: name}}), do: name
+  defp run_deployment_label(_run), do: "Commercial Target Discovery"
+
+  defp short_id(id), do: String.slice(id, 0, 8)
 
   defp program_actions(%{status: :draft}) do
     [

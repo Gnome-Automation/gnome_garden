@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Tools.SaveBid do
+defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
   @moduledoc """
   Save a discovered bid opportunity to the database.
 

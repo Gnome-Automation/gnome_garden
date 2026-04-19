@@ -125,10 +125,32 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
                 load: [
                   :status_variant,
                   :priority_variant,
+                  :is_due_to_run,
+                  :run_status_variant,
+                  :run_status_label,
                   :target_account_count,
                   :review_target_count,
                   :observation_count,
                   :latest_observed_at
+                ]
+              )
+    end
+
+    read :due_for_run do
+      filter expr(
+               status == :active and
+                 (is_nil(last_run_at) or last_run_at < ago(cadence_hours, :hour))
+             )
+
+      prepare build(
+                sort: [priority: :desc, last_run_at: :asc, inserted_at: :asc],
+                load: [
+                  :status_variant,
+                  :priority_variant,
+                  :is_due_to_run,
+                  :run_status_variant,
+                  :run_status_label,
+                  :review_target_count
                 ]
               )
     end
@@ -139,7 +161,13 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
 
       prepare build(
                 sort: [priority: :desc, inserted_at: :desc],
-                load: [:target_account_count, :review_target_count]
+                load: [
+                  :target_account_count,
+                  :review_target_count,
+                  :is_due_to_run,
+                  :run_status_variant,
+                  :run_status_label
+                ]
               )
     end
   end
@@ -273,6 +301,35 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
                  low: :default
                ],
                default: :default}
+
+    calculate :is_due_to_run,
+              :boolean,
+              expr(
+                status == :active and
+                  (is_nil(last_run_at) or last_run_at < ago(cadence_hours, :hour))
+              )
+
+    calculate :run_status_variant,
+              :atom,
+              expr(
+                cond do
+                  status != :active -> :default
+                  is_nil(last_run_at) -> :warning
+                  last_run_at < ago(cadence_hours, :hour) -> :warning
+                  true -> :success
+                end
+              )
+
+    calculate :run_status_label,
+              :string,
+              expr(
+                cond do
+                  status != :active -> "Inactive"
+                  is_nil(last_run_at) -> "Never run"
+                  last_run_at < ago(cadence_hours, :hour) -> "Due now"
+                  true -> "On cadence"
+                end
+              )
   end
 
   aggregates do

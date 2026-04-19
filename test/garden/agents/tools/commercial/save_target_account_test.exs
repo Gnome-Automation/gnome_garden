@@ -1,13 +1,15 @@
-defmodule GnomeGarden.Agents.Tools.SaveLeadTest do
+defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccountTest do
   use GnomeGarden.DataCase, async: true
 
-  alias GnomeGarden.Agents.Tools.SaveLead
+  alias GnomeGarden.Agents
+  alias GnomeGarden.Agents.TemplateCatalog
+  alias GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
 
-  test "stores discovered lead data in operations and commercial intake" do
+  test "stores discovered target-account data in operations and commercial intake" do
     {:ok, result} =
-      SaveLead.run(
+      SaveTargetAccount.run(
         %{
           company_name: "North Coast Packaging",
           company_description:
@@ -36,7 +38,13 @@ defmodule GnomeGarden.Agents.Tools.SaveLeadTest do
     assert organization.name == "North Coast Packaging"
     assert organization.status == :prospect
     assert organization.website == "https://northcoastpackaging.com"
+    assert organization.website_domain == "northcoastpackaging.com"
     assert organization.relationship_roles == ["prospect"]
+
+    assert {:ok, same_organization} =
+             Operations.get_organization_by_website_domain("northcoastpackaging.com")
+
+    assert same_organization.id == organization.id
 
     assert person.first_name == "Maya"
     assert person.last_name == "Lopez"
@@ -57,7 +65,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLeadTest do
     assert target_account.fit_score >= 70
     assert target_account.intent_score >= 65
     assert metadata_value(target_account.metadata, :contact_person_id) == person.id
-    assert metadata_value(target_account.metadata, :source) == "save_lead"
+    assert metadata_value(target_account.metadata, :source) == "save_target_account"
 
     assert observation.target_account_id == target_account.id
     assert observation.source_channel in [:news_site, :agent_discovery]
@@ -65,7 +73,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLeadTest do
     assert observation.summary =~ "Hiring controls engineer"
     assert metadata_value(observation.metadata, :contact_person_id) == person.id
     assert metadata_value(observation.metadata, :industry) == "manufacturing"
-    assert metadata_value(observation.metadata, :source) == "save_lead"
+    assert metadata_value(observation.metadata, :source) == "save_target_account"
   end
 
   test "attaches discovered records to a discovery program when provided" do
@@ -77,7 +85,7 @@ defmodule GnomeGarden.Agents.Tools.SaveLeadTest do
       })
 
     {:ok, result} =
-      SaveLead.run(
+      SaveTargetAccount.run(
         %{
           company_name: "Coastal Canning",
           discovery_program_id: discovery_program.id,
@@ -99,6 +107,53 @@ defmodule GnomeGarden.Agents.Tools.SaveLeadTest do
     assert observation.discovery_program_id == discovery_program.id
     assert metadata_value(target_account.metadata, :discovery_program_id) == discovery_program.id
     assert metadata_value(observation.metadata, :discovery_program_id) == discovery_program.id
+  end
+
+  test "logs target-account outputs onto the originating agent run when run context is present" do
+    _ = TemplateCatalog.sync_templates()
+    {:ok, template} = Agents.get_agent_template_by_name("target_discovery")
+
+    {:ok, deployment} =
+      Agents.create_agent_deployment(%{
+        name: "SaveTargetAccount Test Deployment #{System.unique_integer([:positive])}",
+        visibility: :private,
+        enabled: true,
+        config: %{},
+        source_scope: %{},
+        agent_id: template.id
+      })
+
+    {:ok, run} =
+      Agents.create_agent_run(%{
+        agent_id: template.id,
+        deployment_id: deployment.id,
+        task: "Test target discovery run",
+        run_kind: :manual
+      })
+
+    {:ok, result} =
+      SaveTargetAccount.run(
+        %{
+          company_name: "West Basin Foods",
+          company_description:
+            "Regional food manufacturer with multiple batch lines and a modernization push.",
+          industry: "food_bev",
+          location: "Long Beach, CA",
+          website: "https://westbasinfoods.example.com",
+          signal: "Hiring controls engineer for batch line modernization",
+          source_url: "https://example.com/west-basin-foods-controls-role"
+        },
+        %{tool_context: %{run_id: run.id}}
+      )
+
+    {:ok, outputs} = Agents.list_agent_run_outputs_for_run(run.id)
+    output = Enum.find(outputs, &(&1.output_type == :target_account))
+
+    assert output
+    assert output.output_id == result.target_account_id
+    assert output.event == :created
+    assert output.label == "West Basin Foods"
+    assert metadata_value(output.metadata, :target_observation_id) == result.target_observation_id
   end
 
   defp metadata_value(metadata, key) do

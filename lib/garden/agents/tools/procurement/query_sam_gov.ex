@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Agents.Tools.QuerySamGov do
+defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   @moduledoc """
   Query SAM.gov for federal procurement opportunities.
 

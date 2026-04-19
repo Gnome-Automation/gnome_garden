@@ -1,9 +1,9 @@
-defmodule GnomeGarden.Agents.CompanyScanner do
+defmodule GnomeGarden.Agents.Commercial.SiteScanner do
   @moduledoc """
   Scans company websites for contacts, hiring signals, and news.
 
-  Unlike DeterministicScanner (which uses saved CSS selectors for procurement
-  portals), CompanyScanner uses common URL patterns and page structure
+  Unlike `ListingScanner` (which uses saved CSS selectors for procurement
+  portals), `SiteScanner` uses common URL patterns and page structure
   heuristics to extract useful information from any company website.
 
   Extracts:
@@ -17,6 +17,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
 
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
+  alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
   alias GnomeGarden.Support.WebIdentity
   alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
@@ -28,7 +29,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
   @news_paths ["/news", "/press", "/blog", "/press-releases", "/announcements"]
 
   def scan(%ProcurementSource{source_type: :company_site} = source) do
-    Logger.info("[CompanyScanner] Scanning #{source.name} at #{source.url}")
+    Logger.info("[SiteScanner] Scanning #{source.name} at #{source.url}")
 
     base_url = extract_base_url(source.url)
     organization = ensure_organization!(source)
@@ -41,7 +42,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
       |> scan_for_careers(base_url, source, organization, target_account)
       |> scan_for_news(base_url, source, organization, target_account)
 
-    Ash.update!(source, %{}, action: :mark_scanned)
+    Procurement.mark_procurement_source_scanned!(source, %{})
 
     {:ok,
      %{
@@ -52,13 +53,13 @@ defmodule GnomeGarden.Agents.CompanyScanner do
      }}
   rescue
     e ->
-      Logger.error("[CompanyScanner] Failed for #{source.name}: #{Exception.message(e)}")
-      Ash.update(source, %{}, action: :scan_fail)
+      Logger.error("[SiteScanner] Failed for #{source.name}: #{Exception.message(e)}")
+      Procurement.scan_fail_procurement_source(source, %{})
       {:error, Exception.message(e)}
   end
 
   def scan(%ProcurementSource{} = source) do
-    Logger.warning("[CompanyScanner] #{source.name} is not a company_site source, skipping")
+    Logger.warning("[SiteScanner] #{source.name} is not a company_site source, skipping")
     {:ok, %{skipped: true, reason: "not_company_site"}}
   end
 
@@ -207,7 +208,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
                first_name: first_name,
                last_name: last_name,
                email: email,
-               notes: "Discovered by CompanyScanner from #{discovered_url}"
+               notes: "Discovered by SiteScanner from #{discovered_url}"
              },
              upsert?: true,
              upsert_identity: :unique_email,
@@ -232,7 +233,7 @@ defmodule GnomeGarden.Agents.CompanyScanner do
 
         {:error, error} ->
           Logger.warning(
-            "[CompanyScanner] Failed to upsert person #{email} for #{source.name}: #{inspect(error)}"
+            "[SiteScanner] Failed to upsert person #{email} for #{source.name}: #{inspect(error)}"
           )
       end
     end)

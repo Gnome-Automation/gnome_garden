@@ -10,8 +10,8 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
 
   | Type | Scanner | What it finds |
   |------|---------|---------------|
-  | planetbids, opengov, cal_eprocure, utility, school, port, custom | DeterministicScanner | Bids/RFPs |
-  | company_site | CompanyScanner | Contacts, hiring signals, news |
+  | planetbids, opengov, cal_eprocure, utility, school, port, custom | ListingScanner | Bids/RFPs |
+  | company_site | SiteScanner | Contacts, hiring signals, news |
   | sam_gov | SAM.gov API (future) | Federal opportunities |
   | job_board | JobScanner (future) | Hiring signals |
   | directory | DirectoryScanner (future) | Company listings |
@@ -202,7 +202,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         changeset
         |> Ash.Changeset.after_action(fn _changeset, record ->
           Task.start(fn ->
-            GnomeGarden.Agents.ScannerRouter.scan(record)
+            GnomeGarden.Agents.Procurement.ScannerRouter.scan(record)
           end)
 
           {:ok, record}
@@ -267,6 +267,11 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
     read :by_region do
       argument :region, :atom, allow_nil?: false
       filter expr(region == ^arg(:region) and enabled == true and status == :approved)
+    end
+
+    read :by_url do
+      argument :url, :string, allow_nil?: false
+      get_by [:url]
     end
 
     read :by_organization do

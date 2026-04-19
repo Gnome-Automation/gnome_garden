@@ -136,6 +136,14 @@ defmodule GnomeGardenWeb.Nav do
               Targets
             </.nav_item>
             <.nav_item
+              path={~p"/commercial/observations"}
+              current_path={@current_path}
+              icon="hero-document-magnifying-glass"
+              collapsed={@collapsed}
+            >
+              Observations
+            </.nav_item>
+            <.nav_item
               path={~p"/commercial/pursuits"}
               current_path={@current_path}
               icon="hero-rocket-launch"

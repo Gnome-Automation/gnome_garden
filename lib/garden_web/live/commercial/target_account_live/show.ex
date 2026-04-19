@@ -64,6 +64,11 @@ defmodule GnomeGardenWeb.Commercial.TargetAccountLive.Show do
           <.button navigate={~p"/commercial/targets"}>
             <.icon name="hero-arrow-left" class="size-4" /> Back
           </.button>
+          <.button navigate={
+            ~p"/commercial/observations/new?target_account_id=#{@target_account.id}&discovery_program_id=#{@target_account.discovery_program_id}"
+          }>
+            <.icon name="hero-plus" class="size-4" /> New Observation
+          </.button>
           <.button
             :if={@target_account.promoted_signal}
             navigate={~p"/commercial/signals/#{@target_account.promoted_signal}"}
@@ -178,6 +183,12 @@ defmodule GnomeGardenWeb.Commercial.TargetAccountLive.Show do
               >
                 Source
               </.link>
+              <.link
+                navigate={~p"/commercial/observations/#{observation}"}
+                class="text-sm font-medium text-sky-600 hover:text-sky-500 dark:text-sky-300"
+              >
+                Details
+              </.link>
             </div>
 
             <p
@@ -202,7 +213,9 @@ defmodule GnomeGardenWeb.Commercial.TargetAccountLive.Show do
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      </div>
     </div>
     """
   end

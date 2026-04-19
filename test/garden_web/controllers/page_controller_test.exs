@@ -1,6 +1,7 @@
 defmodule GnomeGardenWeb.PageControllerTest do
   use GnomeGardenWeb.ConnCase
 
+  alias GnomeGarden.Commercial
   alias GnomeGarden.Execution
   alias GnomeGarden.Operations
 
@@ -40,5 +41,23 @@ defmodule GnomeGardenWeb.PageControllerTest do
 
     assert response =~ "Due Soon Maintenance"
     assert response =~ maintenance_plan.name
+  end
+
+  test "GET / surfaces discovery programs that are due to run", %{conn: conn} do
+    {:ok, discovery_program} =
+      Commercial.create_discovery_program(%{
+        name: "Due Discovery #{System.unique_integer([:positive])}",
+        target_regions: ["oc"],
+        target_industries: ["packaging"],
+        cadence_hours: 24
+      })
+
+    {:ok, _discovery_program} = Commercial.activate_discovery_program(discovery_program)
+
+    conn = get(conn, ~p"/")
+    response = html_response(conn, 200)
+
+    assert response =~ "Due Discovery"
+    assert response =~ discovery_program.name
   end
 end

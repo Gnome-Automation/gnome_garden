@@ -1,17 +1,17 @@
-defmodule GnomeGarden.Agents.SourceConfigurator do
+defmodule GnomeGarden.Agents.Procurement.SourceConfigurator do
   @moduledoc """
   Launches browser-based site discovery for procurement sources.
 
   This is the "figure out the site once" path: SmartScanner uses Jido browser
   primitives to discover a source's scrape configuration and saves it for later
-  deterministic scans.
+  listing scans.
   """
 
   require Logger
 
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
-  alias GnomeGarden.Agents.Workers.Sales.SmartScanner
+  alias GnomeGarden.Agents.Workers.Procurement.SmartScanner
 
   @default_timeout 600_000
 
