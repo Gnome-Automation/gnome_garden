@@ -25361,6 +25361,20 @@
               "manual?": false
             },
             {
+              "name": "approved_unbilled",
+              "type": "read",
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": null
+            },
+            {
               "name": "billable_for_agreement",
               "type": "read",
               "description": null,
@@ -25813,6 +25827,16 @@
               "name": "list_open_expenses",
               "kind": "action",
               "action": "open",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "list_unbilled_approved_expenses",
+              "kind": "action",
+              "action": "approved_unbilled",
               "get?": false,
               "get_by": null,
               "get_by_identity": null,
@@ -29479,6 +29503,20 @@
               "manual?": false
             },
             {
+              "name": "approved_unbilled",
+              "type": "read",
+              "description": null,
+              "arguments": [],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": null
+            },
+            {
               "name": "billable_for_agreement",
               "type": "read",
               "description": null,
@@ -29949,6 +29987,16 @@
               "name": "list_open_time_entries",
               "kind": "action",
               "action": "open",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "list_unbilled_approved_time_entries",
+              "kind": "action",
+              "action": "approved_unbilled",
               "get?": false,
               "get_by": null,
               "get_by_identity": null,
@@ -49169,7 +49217,7 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-19T04:00:40Z",
+  "generated_at": "2026-04-19T04:17:08Z",
   "resource_count": 55,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -58849,6 +58897,20 @@
           "manual?": false
         },
         {
+          "name": "approved_unbilled",
+          "type": "read",
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": null
+        },
+        {
           "name": "billable_for_agreement",
           "type": "read",
           "description": null,
@@ -59319,6 +59381,16 @@
           "name": "list_open_time_entries",
           "kind": "action",
           "action": "open",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "list_unbilled_approved_time_entries",
+          "kind": "action",
+          "action": "approved_unbilled",
           "get?": false,
           "get_by": null,
           "get_by_identity": null,
@@ -71655,6 +71727,20 @@
           "manual?": false
         },
         {
+          "name": "approved_unbilled",
+          "type": "read",
+          "description": null,
+          "arguments": [],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": null
+        },
+        {
           "name": "billable_for_agreement",
           "type": "read",
           "description": null,
@@ -72107,6 +72193,16 @@
           "name": "list_open_expenses",
           "kind": "action",
           "action": "open",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "list_unbilled_approved_expenses",
+          "kind": "action",
+          "action": "approved_unbilled",
           "get?": false,
           "get_by": null,
           "get_by_identity": null,

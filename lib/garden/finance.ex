@@ -26,6 +26,7 @@ defmodule GnomeGarden.Finance do
       define :bill_time_entry, action: :mark_billed
       define :reopen_time_entry, action: :reopen
       define :list_open_time_entries, action: :open
+      define :list_unbilled_approved_time_entries, action: :approved_unbilled
 
       define :list_billable_time_entries_for_agreement,
         action: :billable_for_agreement,
@@ -43,6 +44,7 @@ defmodule GnomeGarden.Finance do
       define :bill_expense, action: :mark_billed
       define :reopen_expense, action: :reopen
       define :list_open_expenses, action: :open
+      define :list_unbilled_approved_expenses, action: :approved_unbilled
 
       define :list_billable_expenses_for_agreement,
         action: :billable_for_agreement,

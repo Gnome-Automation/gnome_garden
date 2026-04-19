@@ -150,6 +150,15 @@ defmodule GnomeGarden.Finance.Expense do
                 load: [:project, :work_order]
               )
     end
+
+    read :approved_unbilled do
+      filter expr(status == :approved)
+
+      prepare build(
+                sort: [incurred_on: :desc, inserted_at: :desc],
+                load: [:organization, :project, :work_order]
+              )
+    end
   end
 
   attributes do

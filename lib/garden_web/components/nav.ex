@@ -260,57 +260,6 @@ defmodule GnomeGardenWeb.Nav do
             </.nav_item>
           </.nav_group>
 
-          <%!-- CRM section --%>
-          <.nav_group
-            id={"#{@id}-crm"}
-            label="CRM"
-            icon="hero-briefcase"
-            collapsed={@collapsed}
-            current_path={@current_path}
-          >
-            <.nav_item
-              path={~p"/crm/companies"}
-              current_path={@current_path}
-              icon="hero-building-office-2"
-              collapsed={@collapsed}
-            >
-              Companies
-            </.nav_item>
-            <.nav_item
-              path={~p"/crm/contacts"}
-              current_path={@current_path}
-              icon="hero-users"
-              collapsed={@collapsed}
-            >
-              Contacts
-            </.nav_item>
-            <.nav_item
-              path={~p"/crm/opportunities"}
-              current_path={@current_path}
-              icon="hero-currency-dollar"
-              collapsed={@collapsed}
-            >
-              Opportunities
-            </.nav_item>
-            <.nav_item
-              path={~p"/crm/leads"}
-              current_path={@current_path}
-              icon="hero-user-plus"
-              collapsed={@collapsed}
-              badge={@nav_counts[:leads]}
-            >
-              Leads
-            </.nav_item>
-            <.nav_item
-              path={~p"/crm/tasks"}
-              current_path={@current_path}
-              icon="hero-clipboard-document-check"
-              collapsed={@collapsed}
-            >
-              Tasks
-            </.nav_item>
-          </.nav_group>
-
           <%!-- Agents section --%>
           <.nav_group
             id={"#{@id}-agents"}

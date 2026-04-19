@@ -6,7 +6,7 @@ defmodule GnomeGardenWeb.PageControllerTest do
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Signal Inbox"
+    assert html_response(conn, 200) =~ "Operations Cockpit"
   end
 
   test "GET / surfaces due-soon maintenance plans", %{conn: conn} do

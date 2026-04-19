@@ -166,39 +166,6 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/payment-applications/:id", Finance.PaymentApplicationLive.Show, :show
       live "/finance/payment-applications/:id/edit", Finance.PaymentApplicationLive.Form, :edit
 
-      # CRM - Review Queue
-      live "/crm/review", CRM.ReviewLive, :index
-
-      # CRM - Companies
-      live "/crm/companies", CRM.CompanyLive.Index, :index
-      live "/crm/companies/new", CRM.CompanyLive.Form, :new
-      live "/crm/companies/:id", CRM.CompanyLive.Show, :show
-      live "/crm/companies/:id/edit", CRM.CompanyLive.Form, :edit
-
-      # CRM - Contacts
-      live "/crm/contacts", CRM.ContactLive.Index, :index
-      live "/crm/contacts/new", CRM.ContactLive.Form, :new
-      live "/crm/contacts/:id", CRM.ContactLive.Show, :show
-      live "/crm/contacts/:id/edit", CRM.ContactLive.Form, :edit
-
-      # CRM - Leads
-      live "/crm/leads", CRM.LeadLive.Index, :index
-      live "/crm/leads/new", CRM.LeadLive.Form, :new
-      live "/crm/leads/:id", CRM.LeadLive.Show, :show
-      live "/crm/leads/:id/edit", CRM.LeadLive.Form, :edit
-
-      # CRM - Opportunities
-      live "/crm/opportunities", CRM.OpportunityLive.Index, :index
-      live "/crm/opportunities/new", CRM.OpportunityLive.Form, :new
-      live "/crm/opportunities/:id", CRM.OpportunityLive.Show, :show
-      live "/crm/opportunities/:id/edit", CRM.OpportunityLive.Form, :edit
-
-      # CRM - Tasks
-      live "/crm/tasks", CRM.TaskLive.Index, :index
-      live "/crm/tasks/new", CRM.TaskLive.Form, :new
-      live "/crm/tasks/:id", CRM.TaskLive.Show, :show
-      live "/crm/tasks/:id/edit", CRM.TaskLive.Form, :edit
-
       # Agents - Sales Discovery
       live "/procurement/bids", Agents.Sales.BidLive.Index, :index
       live "/procurement/bids/:id", Agents.Sales.BidLive.Show, :show

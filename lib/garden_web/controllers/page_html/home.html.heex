@@ -1,328 +1,553 @@
 <.page class="pb-8">
-  <.page_header eyebrow="Overview">
-    Gnome Garden
+  <.page_header eyebrow="Cockpit">
+    Operations Cockpit
     <:subtitle>
-      Operating workspace for pursuit intelligence, CRM relationships, and autonomous agent tooling.
+      One live view of commercial intake, execution pressure, finance exceptions, and agent-fed queues.
     </:subtitle>
   </.page_header>
 
-  <div class="grid gap-4 md:grid-cols-4">
+  <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
     <.stat_card
-      title="Operations Backbone"
-      value="Live"
-      description="Organizations and people are now first-class operating records instead of CRM-only duplicates."
-      icon="hero-building-office-2"
-      accent="rose"
-    />
-    <.stat_card
-      title="Signal Inbox"
-      value="0"
-      description="Agent-found market signals should land here first for explicit human review."
+      title="Open Signals"
+      value={Integer.to_string(@open_signal_count)}
+      description="Raw commercial intake still waiting on a real pursue-or-pass decision."
       icon="hero-inbox-stack"
       accent="emerald"
     />
     <.stat_card
       title="Active Pursuits"
-      value="0"
-      description="Accepted signals become owned pursuits only when someone is ready to work them."
+      value={Integer.to_string(@active_pursuit_count)}
+      description="Owned commercial pipeline that still needs estimating, proposal, or negotiation work."
       icon="hero-arrow-trending-up"
       accent="sky"
     />
     <.stat_card
       title="Due Soon Maintenance"
       value={Integer.to_string(@due_soon_maintenance_count)}
-      description="Preventive schedules that need action before they slip into reactive service work."
+      description="Preventive schedules close enough to need planning before they go reactive."
       icon="hero-clock"
       accent="amber"
     />
+    <.stat_card
+      title="Open Service Tickets"
+      value={Integer.to_string(@open_service_ticket_count)}
+      description="Customer-facing service intake still moving through triage, execution, or resolution."
+      icon="hero-lifebuoy"
+      accent="rose"
+    />
+    <.stat_card
+      title="Open Work Orders"
+      value={Integer.to_string(@open_work_order_count)}
+      description="Execution units still needing dispatch, completion, or field follow-through."
+      icon="hero-wrench-screwdriver"
+      accent="sky"
+    />
+    <.stat_card
+      title="Review Bids"
+      value={Integer.to_string(@review_bid_count)}
+      description="Fresh procurement notices discovered by agents before they are worked into the signal inbox."
+      icon="hero-document-magnifying-glass"
+      accent="emerald"
+    />
+    <.stat_card
+      title="Approved Time"
+      value={Integer.to_string(@unbilled_time_entry_count)}
+      description="Labor already approved but not yet rolled into billing."
+      icon="hero-clock"
+      accent="emerald"
+    />
+    <.stat_card
+      title="Approved Expenses"
+      value={Integer.to_string(@unbilled_expense_count)}
+      description="Non-labor costs approved but still waiting on billing follow-through."
+      icon="hero-credit-card"
+      accent="amber"
+    />
+    <.stat_card
+      title="Overdue Invoices"
+      value={Integer.to_string(@overdue_invoice_count)}
+      description="Receivables already past due and needing attention."
+      icon="hero-exclamation-triangle"
+      accent="rose"
+    />
+    <.stat_card
+      title="Unapplied Payments"
+      value={Integer.to_string(@unapplied_payment_count)}
+      description="Money received but not yet fully allocated against invoices."
+      icon="hero-banknotes"
+      accent="sky"
+    />
   </div>
 
-  <.section
-    title="Due Soon Maintenance"
-    description="Recurring work that needs attention now so it stays preventive instead of becoming a surprise dispatch."
-  >
-    <div :if={Enum.empty?(@due_soon_maintenance_plans)} class="space-y-4">
-      <.empty_state
-        icon="hero-clock"
-        title="No due-soon maintenance plans"
-        description="The preventive schedule is currently clear for the next 30 days."
-      >
-        <:action>
-          <.button navigate={~p"/execution/maintenance-plans"}>
-            View Maintenance Plans
-          </.button>
-        </:action>
-      </.empty_state>
-    </div>
+  <div class="grid gap-6 xl:grid-cols-2">
+    <.section
+      title="Commercial Queue"
+      description="What needs attention before it either becomes a real project or gets parked."
+    >
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Signals</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                Raw intake awaiting a decision.
+              </p>
+            </div>
+            <.button navigate={~p"/commercial/signals"} class="px-2.5 py-1.5 text-xs">
+              Open Inbox
+            </.button>
+          </div>
 
-    <div :if={!Enum.empty?(@due_soon_maintenance_plans)} class="space-y-3">
-      <.link
-        :for={maintenance_plan <- @due_soon_maintenance_plans}
-        navigate={~p"/execution/maintenance-plans/#{maintenance_plan}"}
-        class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
-      >
-        <div class="space-y-1">
-          <p class="font-medium text-zinc-900 dark:text-white">{maintenance_plan.name}</p>
-          <p class="text-sm text-zinc-500 dark:text-zinc-400">
-            {(maintenance_plan.asset && maintenance_plan.asset.name) || "No asset linked"} · due {format_date(
-              maintenance_plan.next_due_on
-            )}
-          </p>
+          <div :if={Enum.empty?(@open_signals)}>
+            <.empty_state
+              icon="hero-inbox-stack"
+              title="No open signals"
+              description="The commercial inbox is currently clear."
+            />
+          </div>
+
+          <.link
+            :for={signal <- @open_signals}
+            navigate={~p"/commercial/signals/#{signal}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{signal.title}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(signal.organization && signal.organization.name) || "No organization linked"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                {format_datetime(signal.observed_at)}
+              </p>
+            </div>
+            <.status_badge status={signal.status_variant}>
+              {format_atom(signal.status)}
+            </.status_badge>
+          </.link>
         </div>
-        <div class="space-y-2 text-right">
-          <.status_badge status={maintenance_plan.due_status_variant}>
-            {maintenance_plan.due_status_label}
-          </.status_badge>
-          <p class="text-xs text-zinc-400 dark:text-zinc-500">
-            {(maintenance_plan.organization && maintenance_plan.organization.name) ||
-              "No organization linked"}
-          </p>
+
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Pursuits</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                Commercial work already in motion.
+              </p>
+            </div>
+            <.button navigate={~p"/commercial/pursuits"} class="px-2.5 py-1.5 text-xs">
+              View Pursuits
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@active_pursuits)}>
+            <.empty_state
+              icon="hero-arrow-trending-up"
+              title="No active pursuits"
+              description="There are no open pursuits in the current pipeline."
+            />
+          </div>
+
+          <.link
+            :for={pursuit <- @active_pursuits}
+            navigate={~p"/commercial/pursuits/#{pursuit}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{pursuit.name}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(pursuit.organization && pursuit.organization.name) || "No organization linked"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                Expected close {format_date(pursuit.expected_close_on)}
+              </p>
+            </div>
+            <div class="space-y-2 text-right">
+              <.status_badge status={pursuit.stage_variant}>
+                {format_atom(pursuit.stage)}
+              </.status_badge>
+              <.status_badge status={pursuit.priority_variant}>
+                {format_atom(pursuit.priority)}
+              </.status_badge>
+            </div>
+          </.link>
         </div>
-      </.link>
-    </div>
-  </.section>
+      </div>
+    </.section>
 
-  <.section
-    title="Quick Actions"
-    description="Start with durable operations records, then move only the right market signals into active pursuits."
-  >
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      <.action_card
-        navigate={~p"/operations/organizations"}
-        title="Organizations"
-        description="Manage the durable account backbone that commercial, service, and delivery work should attach to."
-        icon="hero-building-office-2"
-      />
-      <.action_card
-        navigate={~p"/operations/people"}
-        title="People"
-        description="Track shared external contacts once, then relate them to the right organizations over time."
-        icon="hero-users"
-      />
-      <.action_card
-        navigate={~p"/operations/sites"}
-        title="Sites"
-        description="Track the physical and digital operating locations where systems, assets, and service work live."
-        icon="hero-map-pin"
-      />
-      <.action_card
-        navigate={~p"/operations/managed-systems"}
-        title="Managed Systems"
-        description="Capture the named automation, software, and hybrid stacks that sit between sites and assets."
-        icon="hero-circle-stack"
-      />
-      <.action_card
-        navigate={~p"/operations/assets"}
-        title="Assets"
-        description="Track the installed base that service, maintenance, and support work should attach to."
-        icon="hero-cpu-chip"
-      />
-      <.action_card
-        navigate={~p"/commercial/signals"}
-        title="Signal Inbox"
-        description="Review raw bids, referrals, outbound targets, and inbound requests before they become pipeline."
-        icon="hero-inbox-stack"
-      />
-      <.action_card
-        navigate={~p"/commercial/pursuits"}
-        title="Pursuits"
-        description="Work the qualified pipeline with explicit stage transitions and commercial ownership."
-        icon="hero-arrow-trending-up"
-      />
-      <.action_card
-        navigate={~p"/commercial/proposals"}
-        title="Proposals"
-        description="Turn qualified pursuits into priced offers that can be issued, accepted, and converted into agreements."
-        icon="hero-document-text"
-      />
-      <.action_card
-        navigate={~p"/commercial/agreements"}
-        title="Agreements"
-        description="Manage the commercial commitments that seed execution, service, and finance work."
-        icon="hero-document-check"
-      />
-      <.action_card
-        navigate={~p"/commercial/change-orders"}
-        title="Change Orders"
-        description="Track post-award scope, pricing, and schedule deltas without mutating the original agreement."
-        icon="hero-arrow-path"
-      />
-      <.action_card
-        navigate={~p"/execution/projects"}
-        title="Projects"
-        description="Run delivery against active agreements with explicit project state and execution counts."
-        icon="hero-wrench-screwdriver"
-      />
-      <.action_card
-        navigate={~p"/execution/work-items"}
-        title="Work Items"
-        description="Plan the actual phases, tasks, issues, and deliverables that sit underneath project containers."
-        icon="hero-queue-list"
-      />
-      <.action_card
-        navigate={~p"/execution/assignments"}
-        title="Assignments"
-        description="Schedule real owners and calendar commitments across project work, remote sessions, and onsite visits."
-        icon="hero-calendar-days"
-      />
-      <.action_card
-        navigate={~p"/execution/service-tickets"}
-        title="Service Tickets"
-        description="Capture support and maintenance intake with the customer context needed for triage and dispatch."
-        icon="hero-lifebuoy"
-      />
-      <.action_card
-        navigate={~p"/execution/work-orders"}
-        title="Work Orders"
-        description="Track the actual execution units that service, maintenance, and field work run through."
-        icon="hero-wrench-screwdriver"
-      />
-      <.action_card
-        navigate={~p"/execution/maintenance-plans"}
-        title="Maintenance Plans"
-        description="Define recurring schedules that turn the installed base into preventive work instead of tribal memory."
-        icon="hero-arrow-path"
-      />
-      <.action_card
-        navigate={~p"/finance/invoices"}
-        title="Invoices"
-        description="Review operational invoices tied back to agreements, projects, work orders, and source records."
-        icon="hero-receipt-percent"
-      />
-      <.action_card
-        navigate={~p"/finance/time-entries"}
-        title="Time Entries"
-        description="Capture labor as first-class operational finance so approvals, contract usage, and invoice drafting share the same source rows."
-        icon="hero-clock"
-      />
-      <.action_card
-        navigate={~p"/finance/expenses"}
-        title="Expenses"
-        description="Track non-labor cost explicitly instead of burying it in project notes or invoice adjustments."
-        icon="hero-credit-card"
-      />
-      <.action_card
-        navigate={~p"/finance/payments"}
-        title="Payments"
-        description="Record receipt events explicitly, then allocate them against invoices through payment applications."
-        icon="hero-banknotes"
-      />
-      <.action_card
-        navigate={~p"/console/agents"}
-        title="Agent Console"
-        description="Inspect deployments, runs, and the discovery infrastructure feeding the commercial inbox."
-        icon="hero-cpu-chip"
-      />
-    </div>
-  </.section>
+    <.section
+      title="Execution Queue"
+      description="What field and delivery work needs attention right now."
+    >
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Maintenance</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">Preventive plans due soon.</p>
+            </div>
+            <.button navigate={~p"/execution/maintenance-plans"} class="px-2.5 py-1.5 text-xs">
+              Open Plans
+            </.button>
+          </div>
 
-  <.section
-    title="Operations Model"
-    description="The long-term operating system starts with durable organizations and people, then layers commercial workflow on top."
-  >
-    <div class="overflow-hidden rounded-[1.5rem] border border-dashed border-zinc-300/80 dark:border-white/10">
-      <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-        <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-          <tr>
-            <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-              Record
-            </th>
-            <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-              Purpose
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Organization</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Durable business account that can be a prospect, customer, partner, vendor, or agency over time.
-            </td>
-          </tr>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Person</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Durable external contact record that can belong to multiple organizations through affiliations.
-            </td>
-          </tr>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Signal</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Raw intake from agents or humans that still needs an explicit pursuit decision.
-            </td>
-          </tr>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Pursuit</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Owned commercial pipeline only after a signal is accepted and someone decides it deserves energy.
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </.section>
+          <div :if={Enum.empty?(@due_soon_maintenance_plans)}>
+            <.empty_state
+              icon="hero-clock"
+              title="No due-soon plans"
+              description="Nothing is due inside the 30-day window."
+            />
+          </div>
 
-  <.section
-    title="Commercial Model"
-    description="The long-term flow is intentionally explicit: signals first, pursuits second, proposals and agreements after that."
-  >
-    <div class="overflow-hidden rounded-[1.5rem] border border-dashed border-zinc-300/80 dark:border-white/10">
-      <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-        <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-          <tr>
-            <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-              Stage
-            </th>
-            <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-              Purpose
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Signal</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Raw intake from agents or humans that still needs a pursuit decision.
-            </td>
-          </tr>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Pursuit</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Owned commercial pipeline with probability, target value, and stage transitions.
-            </td>
-          </tr>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Proposal</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Priced commercial offer issued only after a pursuit is real.
-            </td>
-          </tr>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Agreement</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Signed commercial commitment that can seed projects, work orders, and finance.
-            </td>
-          </tr>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Change Order</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Explicit post-award amendment that preserves original agreement history while tracking deltas.
-            </td>
-          </tr>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Project</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Delivery container created from an active agreement instead of directly from raw pipeline.
-            </td>
-          </tr>
-          <tr>
-            <td class="px-5 py-4 font-medium text-zinc-900 dark:text-white">Invoice</td>
-            <td class="px-5 py-4 text-zinc-600 dark:text-zinc-300">
-              Operational billing record that stays traceable to agreement-backed time, expense, and service work.
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </.section>
+          <.link
+            :for={maintenance_plan <- @due_soon_maintenance_plans}
+            navigate={~p"/execution/maintenance-plans/#{maintenance_plan}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{maintenance_plan.name}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(maintenance_plan.asset && maintenance_plan.asset.name) || "No asset linked"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                Due {format_date(maintenance_plan.next_due_on)}
+              </p>
+            </div>
+            <.status_badge status={maintenance_plan.due_status_variant}>
+              {maintenance_plan.due_status_label}
+            </.status_badge>
+          </.link>
+        </div>
+
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Service Tickets</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                Customer-facing support queue.
+              </p>
+            </div>
+            <.button navigate={~p"/execution/service-tickets"} class="px-2.5 py-1.5 text-xs">
+              Open Tickets
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@open_service_tickets)}>
+            <.empty_state
+              icon="hero-lifebuoy"
+              title="No open tickets"
+              description="The current service queue is clear."
+            />
+          </div>
+
+          <.link
+            :for={service_ticket <- @open_service_tickets}
+            navigate={~p"/execution/service-tickets/#{service_ticket}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{service_ticket.title}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(service_ticket.organization && service_ticket.organization.name) ||
+                  "No organization linked"}
+              </p>
+            </div>
+            <div class="space-y-2 text-right">
+              <.status_badge status={service_ticket.status_variant}>
+                {format_atom(service_ticket.status)}
+              </.status_badge>
+              <.status_badge status={service_ticket.severity_variant}>
+                {format_atom(service_ticket.severity)}
+              </.status_badge>
+            </div>
+          </.link>
+        </div>
+
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Work Orders</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                Dispatch and execution pressure.
+              </p>
+            </div>
+            <.button navigate={~p"/execution/work-orders"} class="px-2.5 py-1.5 text-xs">
+              Open Orders
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@open_work_orders)}>
+            <.empty_state
+              icon="hero-wrench-screwdriver"
+              title="No open work orders"
+              description="There are no active work orders right now."
+            />
+          </div>
+
+          <.link
+            :for={work_order <- @open_work_orders}
+            navigate={~p"/execution/work-orders/#{work_order}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{work_order.title}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(work_order.asset && work_order.asset.name) ||
+                  (work_order.maintenance_plan && work_order.maintenance_plan.name) ||
+                  "No asset or plan linked"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                Due {format_date(work_order.due_on)}
+              </p>
+            </div>
+            <.status_badge status={work_order.status_variant}>
+              {format_atom(work_order.status)}
+            </.status_badge>
+          </.link>
+        </div>
+      </div>
+    </.section>
+
+    <.section
+      title="Finance Queue"
+      description="What is approved, overdue, or received but still unfinished in operations finance."
+    >
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Overdue Invoices</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                Receivables that need follow-up.
+              </p>
+            </div>
+            <.button navigate={~p"/finance/invoices"} class="px-2.5 py-1.5 text-xs">
+              Open Invoices
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@overdue_invoices)}>
+            <.empty_state
+              icon="hero-exclamation-triangle"
+              title="No overdue invoices"
+              description="There are no currently overdue receivables."
+            />
+          </div>
+
+          <.link
+            :for={invoice <- @overdue_invoices}
+            navigate={~p"/finance/invoices/#{invoice}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">
+                {invoice.invoice_number || "Invoice"}
+              </p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(invoice.organization && invoice.organization.name) || "No organization linked"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                Due {format_date(invoice.due_on)}
+              </p>
+            </div>
+            <div class="space-y-2 text-right">
+              <.status_badge status={invoice.status_variant}>
+                {format_atom(invoice.status)}
+              </.status_badge>
+              <p class="text-sm font-medium text-zinc-900 dark:text-white">
+                {format_amount(invoice.balance_amount)}
+              </p>
+            </div>
+          </.link>
+        </div>
+
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">
+                Unapplied Payments
+              </p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                Cash received but not fully allocated.
+              </p>
+            </div>
+            <.button navigate={~p"/finance/payments"} class="px-2.5 py-1.5 text-xs">
+              Open Payments
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@unapplied_payments)}>
+            <.empty_state
+              icon="hero-banknotes"
+              title="No unapplied payments"
+              description="All received payments are fully allocated right now."
+            />
+          </div>
+
+          <.link
+            :for={payment <- @unapplied_payments}
+            navigate={~p"/finance/payments/#{payment}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">
+                {payment.payment_number || "Payment"}
+              </p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(payment.organization && payment.organization.name) || "No organization linked"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                Received {format_date(payment.received_on)}
+              </p>
+            </div>
+            <div class="space-y-2 text-right">
+              <.status_badge status={payment.status_variant}>
+                {format_atom(payment.status)}
+              </.status_badge>
+              <p class="text-sm font-medium text-zinc-900 dark:text-white">
+                {format_amount(payment.amount)}
+              </p>
+            </div>
+          </.link>
+        </div>
+
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Approved Time</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">Labor ready for billing.</p>
+            </div>
+            <.button navigate={~p"/finance/time-entries"} class="px-2.5 py-1.5 text-xs">
+              Open Time
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@unbilled_time_entries)}>
+            <.empty_state
+              icon="hero-clock"
+              title="No approved time"
+              description="There are no approved unbilled time entries."
+            />
+          </div>
+
+          <.link
+            :for={time_entry <- @unbilled_time_entries}
+            navigate={~p"/finance/time-entries/#{time_entry}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{time_entry.description}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(time_entry.project && time_entry.project.name) ||
+                  (time_entry.work_order && time_entry.work_order.title) ||
+                  "No project or work order linked"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                {format_date(time_entry.work_date)}
+              </p>
+            </div>
+            <p class="text-sm font-medium text-zinc-900 dark:text-white">
+              {format_minutes(time_entry.minutes)}
+            </p>
+          </.link>
+        </div>
+
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Approved Expenses</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">Costs ready for billing.</p>
+            </div>
+            <.button navigate={~p"/finance/expenses"} class="px-2.5 py-1.5 text-xs">
+              Open Expenses
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@unbilled_expenses)}>
+            <.empty_state
+              icon="hero-credit-card"
+              title="No approved expenses"
+              description="There are no approved unbilled expenses."
+            />
+          </div>
+
+          <.link
+            :for={expense <- @unbilled_expenses}
+            navigate={~p"/finance/expenses/#{expense}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{expense.description}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(expense.project && expense.project.name) ||
+                  (expense.work_order && expense.work_order.title) ||
+                  "No project or work order linked"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                {format_date(expense.incurred_on)}
+              </p>
+            </div>
+            <p class="text-sm font-medium text-zinc-900 dark:text-white">
+              {format_amount(expense.amount)}
+            </p>
+          </.link>
+        </div>
+      </div>
+    </.section>
+
+    <.section
+      title="Launch Points"
+      description="Jump straight into the main operating surfaces instead of the old CRM shells."
+    >
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <.action_card
+          navigate={~p"/commercial/signals"}
+          title="Signal Inbox"
+          description="Review raw market intake and decide what deserves energy."
+          icon="hero-inbox-stack"
+        />
+        <.action_card
+          navigate={~p"/commercial/pursuits"}
+          title="Pursuits"
+          description="Push qualified work through estimating, proposal, and negotiation."
+          icon="hero-arrow-trending-up"
+        />
+        <.action_card
+          navigate={~p"/execution/projects"}
+          title="Projects"
+          description="Run delivery and planning under active agreements."
+          icon="hero-wrench-screwdriver"
+        />
+        <.action_card
+          navigate={~p"/execution/service-tickets"}
+          title="Service Tickets"
+          description="Triage support and maintenance intake."
+          icon="hero-lifebuoy"
+        />
+        <.action_card
+          navigate={~p"/execution/maintenance-plans"}
+          title="Maintenance Plans"
+          description="Keep preventive work visible before it becomes reactive."
+          icon="hero-arrow-path"
+        />
+        <.action_card
+          navigate={~p"/finance/invoices"}
+          title="Invoices"
+          description="Watch receivables and billing exceptions."
+          icon="hero-receipt-percent"
+        />
+        <.action_card
+          navigate={~p"/procurement/bids"}
+          title="Procurement Bids"
+          description="Review raw bid notices still upstream of commercial signals."
+          icon="hero-document-magnifying-glass"
+        />
+        <.action_card
+          navigate={~p"/console/agents"}
+          title="Agent Console"
+          description="Inspect the agent runtime feeding the operating model."
+          icon="hero-cpu-chip"
+        />
+      </div>
+    </.section>
+  </div>
 </.page>
