@@ -7,12 +7,14 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    work_order = load_work_order!(id, socket.assigns.current_user)
+    actor = socket.assigns.current_user
+    work_order = load_work_order!(id, actor)
 
     {:ok,
      socket
      |> assign(:page_title, work_order.title)
-     |> assign(:work_order, work_order)}
+     |> assign(:work_order, work_order)
+     |> assign(:work_order_assignments, load_work_order_assignments!(work_order.id, actor))}
   end
 
   @impl true
@@ -25,11 +27,14 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
            socket.assigns.current_user
          ) do
       {:ok, updated_work_order} ->
+        work_order = load_work_order!(updated_work_order.id, socket.assigns.current_user)
+
         {:noreply,
          socket
+         |> assign(:work_order, work_order)
          |> assign(
-           :work_order,
-           load_work_order!(updated_work_order.id, socket.assigns.current_user)
+           :work_order_assignments,
+           load_work_order_assignments!(work_order.id, socket.assigns.current_user)
          )
          |> put_flash(:info, "Work order updated")}
 
@@ -62,6 +67,9 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
             navigate={~p"/execution/service-tickets/#{@work_order.service_ticket}"}
           >
             <.icon name="hero-lifebuoy" class="size-4" /> Service Ticket
+          </.button>
+          <.button navigate={~p"/execution/assignments/new?#{assignment_params(@work_order)}"}>
+            <.icon name="hero-calendar-days" class="size-4" /> New Assignment
           </.button>
           <.button navigate={~p"/execution/work-orders/#{@work_order}/edit"}>
             <.icon name="hero-pencil-square" class="size-4" /> Edit
@@ -166,6 +174,45 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
         </div>
       </.section>
 
+      <.section
+        title="Assignments"
+        description="Dispatch work orders through explicit assignments so schedule commitments stay attached to the actual execution record."
+      >
+        <div :if={Enum.empty?(@work_order_assignments)} class="space-y-4">
+          <.empty_state
+            icon="hero-calendar-days"
+            title="No assignments yet"
+            description="Create assignments here when the work order is ready to reserve delivery capacity."
+          >
+            <:action>
+              <.button navigate={~p"/execution/assignments/new?#{assignment_params(@work_order)}"}>
+                Create Assignment
+              </.button>
+            </:action>
+          </.empty_state>
+        </div>
+
+        <div :if={!Enum.empty?(@work_order_assignments)} class="space-y-3">
+          <.link
+            :for={assignment <- @work_order_assignments}
+            navigate={~p"/execution/assignments/#{assignment}"}
+            class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{assignment.title}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {display_email(assignment.assigned_user, "Unassigned")} · {format_datetime(
+                  assignment.scheduled_start_at
+                )}
+              </p>
+            </div>
+            <.status_badge status={assignment.status_variant}>
+              {format_atom(assignment.status)}
+            </.status_badge>
+          </.link>
+        </div>
+      </.section>
+
       <.section :if={@work_order.description} title="Description">
         <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
           {@work_order.description}
@@ -219,6 +266,32 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
       {:error, error} -> raise "failed to load work order #{id}: #{inspect(error)}"
     end
   end
+
+  defp load_work_order_assignments!(work_order_id, actor) do
+    user_loads = if actor, do: [assigned_user: []], else: []
+
+    case Execution.list_assignments_for_work_order(
+           work_order_id,
+           actor: actor,
+           load: [:status_variant] ++ user_loads
+         ) do
+      {:ok, assignments} ->
+        assignments
+
+      {:error, error} ->
+        raise "failed to load assignments for work order #{work_order_id}: #{inspect(error)}"
+    end
+  end
+
+  defp assignment_params(work_order) do
+    %{}
+    |> maybe_put(:organization_id, work_order.organization_id)
+    |> maybe_put(:project_id, work_order.project_id)
+    |> Map.put(:work_order_id, work_order.id)
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp integer_or_dash(nil), do: "-"
   defp integer_or_dash(value), do: Integer.to_string(value)

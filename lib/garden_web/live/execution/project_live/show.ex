@@ -7,12 +7,14 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    project = load_project!(id, socket.assigns.current_user)
+    actor = socket.assigns.current_user
+    project = load_project!(id, actor)
 
     {:ok,
      socket
      |> assign(:page_title, project.name)
-     |> assign(:project, project)}
+     |> assign(:project, project)
+     |> assign(:project_work_items, load_project_work_items!(project.id, actor))}
   end
 
   @impl true
@@ -21,9 +23,15 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
 
     case transition_project(project, String.to_existing_atom(action), socket.assigns.current_user) do
       {:ok, updated_project} ->
+        project = load_project!(updated_project.id, socket.assigns.current_user)
+
         {:noreply,
          socket
-         |> assign(:project, load_project!(updated_project.id, socket.assigns.current_user))
+         |> assign(:project, project)
+         |> assign(
+           :project_work_items,
+           load_project_work_items!(project.id, socket.assigns.current_user)
+         )
          |> put_flash(:info, "Project updated")}
 
       {:error, error} ->
@@ -49,6 +57,9 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
         <:actions>
           <.button navigate={~p"/execution/projects"}>
             <.icon name="hero-arrow-left" class="size-4" /> Back
+          </.button>
+          <.button navigate={~p"/execution/work-items/new?project_id=#{@project.id}"}>
+            <.icon name="hero-queue-list" class="size-4" /> New Work Item
           </.button>
           <.button navigate={~p"/commercial/change-orders/new?project_id=#{@project.id}"}>
             <.icon name="hero-arrow-path" class="size-4" /> New Change Order
@@ -126,6 +137,50 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
             label="Material Usage"
             value={Integer.to_string(@project.material_usage_count || 0)}
           />
+        </div>
+      </.section>
+
+      <.section
+        title="Work Items"
+        description="Keep the actual project plan visible here instead of forcing operators to bounce between separate execution screens."
+      >
+        <div :if={Enum.empty?(@project_work_items)} class="space-y-4">
+          <.empty_state
+            icon="hero-queue-list"
+            title="No work items yet"
+            description="Create work items now so project execution has explicit phases, tasks, and deliverables to run through."
+          >
+            <:action>
+              <.button navigate={~p"/execution/work-items/new?project_id=#{@project.id}"}>
+                Create Work Item
+              </.button>
+            </:action>
+          </.empty_state>
+        </div>
+
+        <div :if={!Enum.empty?(@project_work_items)} class="space-y-3">
+          <.link
+            :for={work_item <- @project_work_items}
+            navigate={~p"/execution/work-items/#{work_item}"}
+            class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{work_item.title}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {format_atom(work_item.kind)} · {display_email(work_item.owner_user, "Unassigned")}
+              </p>
+            </div>
+            <div class="space-y-2 text-right">
+              <.status_badge status={work_item.status_variant}>
+                {format_atom(work_item.status)}
+              </.status_badge>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                {work_item.assignment_count || 0} assignments · {format_minutes(
+                  work_item.estimate_minutes
+                )}
+              </p>
+            </div>
+          </.link>
         </div>
       </.section>
 
@@ -213,6 +268,22 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
          ) do
       {:ok, project} -> project
       {:error, error} -> raise "failed to load project #{id}: #{inspect(error)}"
+    end
+  end
+
+  defp load_project_work_items!(project_id, actor) do
+    user_loads = if actor, do: [owner_user: []], else: []
+
+    case Execution.list_work_items_for_project(
+           project_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant, :assignment_count] ++ user_loads
+         ) do
+      {:ok, work_items} ->
+        work_items
+
+      {:error, error} ->
+        raise "failed to load work items for project #{project_id}: #{inspect(error)}"
     end
   end
 

@@ -169,6 +169,22 @@ defmodule GnomeGardenWeb.Nav do
               Projects
             </.nav_item>
             <.nav_item
+              path={~p"/execution/work-items"}
+              current_path={@current_path}
+              icon="hero-queue-list"
+              collapsed={@collapsed}
+            >
+              Work Items
+            </.nav_item>
+            <.nav_item
+              path={~p"/execution/assignments"}
+              current_path={@current_path}
+              icon="hero-calendar-days"
+              collapsed={@collapsed}
+            >
+              Assignments
+            </.nav_item>
+            <.nav_item
               path={~p"/execution/service-tickets"}
               current_path={@current_path}
               icon="hero-lifebuoy"

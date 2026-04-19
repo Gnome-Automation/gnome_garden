@@ -7,6 +7,7 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
   alias GnomeGarden.Execution
   alias GnomeGarden.Finance
   alias GnomeGarden.Operations
+  alias GnomeGarden.Repo
 
   test "proposal routes render", %{conn: conn} do
     {:ok, organization} =
@@ -126,6 +127,113 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
       live(conn, ~p"/execution/projects/new?agreement_id=#{active_agreement.id}")
 
     assert has_element?(form_view, "#project-form")
+  end
+
+  test "work item routes render", %{conn: conn} do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Northwind Automation",
+        organization_kind: :business,
+        status: :active
+      })
+
+    {:ok, agreement} =
+      Commercial.create_agreement(%{
+        organization_id: organization.id,
+        name: "Northwind Delivery Agreement",
+        agreement_type: :project
+      })
+
+    {:ok, project} =
+      Execution.create_project(%{
+        organization_id: organization.id,
+        agreement_id: agreement.id,
+        name: "Northwind Controls Upgrade",
+        project_type: :upgrade
+      })
+
+    {:ok, work_item} =
+      Execution.create_work_item(%{
+        project_id: project.id,
+        title: "Panel design review",
+        kind: :task,
+        discipline: :automation
+      })
+
+    {:ok, index_view, index_html} = live(conn, ~p"/execution/work-items")
+    assert has_element?(index_view, "#work-items")
+    assert index_html =~ work_item.title
+
+    {:ok, show_view, _show_html} = live(conn, ~p"/execution/work-items/#{work_item}")
+    assert render(show_view) =~ work_item.title
+
+    {:ok, form_view, _form_html} =
+      live(conn, ~p"/execution/work-items/new?project_id=#{project.id}")
+
+    assert has_element?(form_view, "#work-item-form")
+  end
+
+  test "assignment routes render", %{conn: conn} do
+    user =
+      Repo.insert!(%GnomeGarden.Accounts.User{
+        id: Ecto.UUID.generate(),
+        email: "scheduler@example.com"
+      })
+
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Atlas Dispatch",
+        organization_kind: :business,
+        status: :active
+      })
+
+    {:ok, agreement} =
+      Commercial.create_agreement(%{
+        organization_id: organization.id,
+        name: "Atlas Dispatch Agreement",
+        agreement_type: :project
+      })
+
+    {:ok, project} =
+      Execution.create_project(%{
+        organization_id: organization.id,
+        agreement_id: agreement.id,
+        name: "Atlas Site Upgrade",
+        project_type: :upgrade
+      })
+
+    {:ok, work_item} =
+      Execution.create_work_item(%{
+        project_id: project.id,
+        title: "Commissioning prep",
+        kind: :task,
+        discipline: :commissioning
+      })
+
+    {:ok, assignment} =
+      Execution.create_assignment(%{
+        organization_id: organization.id,
+        project_id: project.id,
+        work_item_id: work_item.id,
+        assigned_user_id: user.id,
+        title: "Commissioning visit",
+        scheduled_start_at: ~U[2026-04-21 17:00:00Z]
+      })
+
+    {:ok, index_view, index_html} = live(conn, ~p"/execution/assignments")
+    assert has_element?(index_view, "#assignments")
+    assert index_html =~ assignment.title
+
+    {:ok, show_view, _show_html} = live(conn, ~p"/execution/assignments/#{assignment}")
+    assert render(show_view) =~ assignment.title
+
+    {:ok, form_view, _form_html} =
+      live(
+        conn,
+        ~p"/execution/assignments/new?organization_id=#{organization.id}&project_id=#{project.id}&work_item_id=#{work_item.id}"
+      )
+
+    assert has_element?(form_view, "#assignment-form")
   end
 
   test "change order routes render", %{conn: conn} do

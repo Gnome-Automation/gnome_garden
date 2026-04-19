@@ -26,9 +26,14 @@ defmodule GnomeGarden.Execution do
       define :cancel_assignment, action: :cancel
       define :reopen_assignment, action: :reopen
       define :list_open_assignments, action: :open
-      define :list_assignments_for_assigned_user, action: :for_assigned_user
-      define :list_assignments_for_project, action: :for_project
-      define :list_assignments_for_work_order, action: :for_work_order
+
+      define :list_assignments_for_assigned_user,
+        action: :for_assigned_user,
+        args: [:assigned_user_id]
+
+      define :list_assignments_for_project, action: :for_project, args: [:project_id]
+      define :list_assignments_for_work_item, action: :for_work_item, args: [:work_item_id]
+      define :list_assignments_for_work_order, action: :for_work_order, args: [:work_order_id]
     end
 
     resource GnomeGarden.Execution.Project do
@@ -44,7 +49,7 @@ defmodule GnomeGarden.Execution do
       define :cancel_project, action: :cancel
       define :reopen_project, action: :reopen
       define :list_active_projects, action: :active
-      define :list_projects_for_organization, action: :for_organization
+      define :list_projects_for_organization, action: :for_organization, args: [:organization_id]
     end
 
     resource GnomeGarden.Execution.WorkItem do
@@ -60,7 +65,7 @@ defmodule GnomeGarden.Execution do
       define :cancel_work_item, action: :cancel
       define :reopen_work_item, action: :reopen
       define :list_open_work_items, action: :open
-      define :list_work_items_for_project, action: :for_project
+      define :list_work_items_for_project, action: :for_project, args: [:project_id]
     end
 
     resource GnomeGarden.Execution.WorkOrder do
@@ -75,7 +80,10 @@ defmodule GnomeGarden.Execution do
       define :cancel_work_order, action: :cancel
       define :reopen_work_order, action: :reopen
       define :list_open_work_orders, action: :open
-      define :list_work_orders_for_organization, action: :for_organization
+
+      define :list_work_orders_for_organization,
+        action: :for_organization,
+        args: [:organization_id]
     end
 
     resource GnomeGarden.Execution.ServiceTicket do
@@ -91,7 +99,10 @@ defmodule GnomeGarden.Execution do
       define :cancel_service_ticket, action: :cancel
       define :reopen_service_ticket, action: :reopen
       define :list_open_service_tickets, action: :open
-      define :list_service_tickets_for_organization, action: :for_organization
+
+      define :list_service_tickets_for_organization,
+        action: :for_organization,
+        args: [:organization_id]
     end
 
     resource GnomeGarden.Execution.MaintenancePlan do
@@ -107,7 +118,7 @@ defmodule GnomeGarden.Execution do
       define :generate_maintenance_plan_work_order, action: :generate_work_order
       define :list_active_maintenance_plans, action: :active
       define :list_due_soon_maintenance_plans, action: :due_soon
-      define :list_maintenance_plans_for_asset, action: :for_asset
+      define :list_maintenance_plans_for_asset, action: :for_asset, args: [:asset_id]
     end
 
     resource GnomeGarden.Execution.MaterialUsage do
@@ -121,8 +132,8 @@ defmodule GnomeGarden.Execution do
       define :cancel_material_usage, action: :cancel
       define :reopen_material_usage, action: :reopen
       define :list_open_material_usages, action: :open
-      define :list_material_usages_for_project, action: :for_project
-      define :list_material_usages_for_work_order, action: :for_work_order
+      define :list_material_usages_for_project, action: :for_project, args: [:project_id]
+      define :list_material_usages_for_work_order, action: :for_work_order, args: [:work_order_id]
     end
   end
 end

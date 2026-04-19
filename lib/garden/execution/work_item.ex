@@ -133,7 +133,7 @@ defmodule GnomeGarden.Execution.WorkItem do
 
       prepare build(
                 sort: [due_on: :asc, sort_order: :asc, inserted_at: :asc],
-                load: [:project, :owner_user]
+                load: [:project]
               )
     end
 
@@ -143,7 +143,7 @@ defmodule GnomeGarden.Execution.WorkItem do
 
       prepare build(
                 sort: [sort_order: :asc, inserted_at: :asc],
-                load: [:project, :owner_user, :child_work_items]
+                load: [:project, :child_work_items]
               )
     end
   end
@@ -268,6 +268,49 @@ defmodule GnomeGarden.Execution.WorkItem do
     end
 
     has_many :material_usages, GnomeGarden.Execution.MaterialUsage do
+      public? true
+    end
+  end
+
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 backlog: :default,
+                 ready: :info,
+                 in_progress: :warning,
+                 blocked: :error,
+                 review: :warning,
+                 done: :success,
+                 cancelled: :default
+               ],
+               default: :default}
+
+    calculate :priority_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :priority,
+               mapping: [
+                 critical: :error,
+                 high: :warning,
+                 normal: :info,
+                 low: :default
+               ],
+               default: :default}
+  end
+
+  aggregates do
+    count :child_work_item_count, :child_work_items do
+      public? true
+    end
+
+    count :assignment_count, :assignments do
+      public? true
+    end
+
+    count :material_usage_count, :material_usages do
       public? true
     end
   end

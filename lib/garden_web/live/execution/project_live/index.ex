@@ -29,6 +29,9 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Index do
           Delivery projects created from active agreements and tracked with explicit lifecycle states.
         </:subtitle>
         <:actions>
+          <.button navigate={~p"/execution/work-items"}>
+            <.icon name="hero-queue-list" class="size-4" /> Work Items
+          </.button>
           <.button navigate={~p"/commercial/agreements"}>
             <.icon name="hero-document-check" class="size-4" /> Agreements
           </.button>

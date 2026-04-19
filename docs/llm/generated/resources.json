@@ -1002,7 +1002,42 @@
           "primary_key": [
             "id"
           ],
-          "code_interfaces": [],
+          "code_interfaces": [
+            {
+              "args": [],
+              "name": "list_users",
+              "kind": "action",
+              "action": "read",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "get_user",
+              "kind": "action",
+              "action": "read",
+              "get?": true,
+              "get_by": [
+                "id"
+              ],
+              "get_by_identity": null,
+              "require_reference?": false
+            },
+            {
+              "args": [
+                "email"
+              ],
+              "name": "get_user_by_email",
+              "kind": "action",
+              "action": "get_by_email",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            }
+          ],
           "cross_domain_relationships": []
         }
       ],
@@ -16504,6 +16539,31 @@
               "pagination": null
             },
             {
+              "name": "for_work_item",
+              "type": "read",
+              "description": null,
+              "arguments": [
+                {
+                  "default": null,
+                  "name": "work_item_id",
+                  "type": "Ash.Type.UUID",
+                  "description": null,
+                  "constraints": [],
+                  "public?": true,
+                  "allow_nil?": false,
+                  "sensitive?": false
+                }
+              ],
+              "primary?": false,
+              "public?": true,
+              "transaction?": false,
+              "touches_resources": [],
+              "manual?": false,
+              "get?": false,
+              "get_by": [],
+              "pagination": null
+            },
+            {
               "name": "for_work_order",
               "type": "read",
               "description": null,
@@ -16734,7 +16794,17 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
+          "calculations": [
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
           "aggregates": [],
           "identities": [],
           "schema": null,
@@ -16845,7 +16915,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "assigned_user_id"
+              ],
               "name": "list_assignments_for_assigned_user",
               "kind": "action",
               "action": "for_assigned_user",
@@ -16855,7 +16927,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "project_id"
+              ],
               "name": "list_assignments_for_project",
               "kind": "action",
               "action": "for_project",
@@ -16865,7 +16939,21 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "work_item_id"
+              ],
+              "name": "list_assignments_for_work_item",
+              "kind": "action",
+              "action": "for_work_item",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [
+                "work_order_id"
+              ],
               "name": "list_assignments_for_work_order",
               "kind": "action",
               "action": "for_work_order",
@@ -18083,7 +18171,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "asset_id"
+              ],
               "name": "list_maintenance_plans_for_asset",
               "kind": "action",
               "action": "for_asset",
@@ -19170,7 +19260,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "project_id"
+              ],
               "name": "list_material_usages_for_project",
               "kind": "action",
               "action": "for_project",
@@ -19180,7 +19272,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "work_order_id"
+              ],
               "name": "list_material_usages_for_work_order",
               "kind": "action",
               "action": "for_work_order",
@@ -20490,7 +20584,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "organization_id"
+              ],
               "name": "list_projects_for_organization",
               "kind": "action",
               "action": "for_organization",
@@ -21933,7 +22029,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "organization_id"
+              ],
               "name": "list_service_tickets_for_organization",
               "kind": "action",
               "action": "for_organization",
@@ -22982,8 +23080,64 @@
               "destination_domain": "GnomeGarden.Execution"
             }
           ],
-          "calculations": [],
-          "aggregates": [],
+          "calculations": [
+            {
+              "name": "priority_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            },
+            {
+              "name": "status_variant",
+              "type": "Ash.Type.Atom",
+              "description": null,
+              "load": [],
+              "public?": false,
+              "allow_nil?": true,
+              "async?": false
+            }
+          ],
+          "aggregates": [
+            {
+              "default": null,
+              "name": "assignment_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "assignments"
+              ]
+            },
+            {
+              "default": null,
+              "name": "child_work_item_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "child_work_items"
+              ]
+            },
+            {
+              "default": null,
+              "name": "material_usage_count",
+              "type": "nil",
+              "description": null,
+              "field": null,
+              "kind": "count",
+              "public?": true,
+              "relationship_path": [
+                "material_usages"
+              ]
+            }
+          ],
           "identities": [],
           "schema": null,
           "primary_key": [
@@ -23113,7 +23267,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "project_id"
+              ],
               "name": "list_work_items_for_project",
               "kind": "action",
               "action": "for_project",
@@ -24453,7 +24609,9 @@
               "require_reference?": true
             },
             {
-              "args": [],
+              "args": [
+                "organization_id"
+              ],
               "name": "list_work_orders_for_organization",
               "kind": "action",
               "action": "for_organization",
@@ -48917,7 +49075,7 @@
       "resource_count": 14
     }
   ],
-  "generated_at": "2026-04-18T22:42:15Z",
+  "generated_at": "2026-04-19T03:43:13Z",
   "resource_count": 55,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -54008,7 +54166,42 @@
       "primary_key": [
         "id"
       ],
-      "code_interfaces": [],
+      "code_interfaces": [
+        {
+          "args": [],
+          "name": "list_users",
+          "kind": "action",
+          "action": "read",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "get_user",
+          "kind": "action",
+          "action": "read",
+          "get?": true,
+          "get_by": [
+            "id"
+          ],
+          "get_by_identity": null,
+          "require_reference?": false
+        },
+        {
+          "args": [
+            "email"
+          ],
+          "name": "get_user_by_email",
+          "kind": "action",
+          "action": "get_by_email",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        }
+      ],
       "cross_domain_relationships": []
     },
     "GnomeGarden.Sales.Opportunity": {
@@ -56727,6 +56920,31 @@
           "pagination": null
         },
         {
+          "name": "for_work_item",
+          "type": "read",
+          "description": null,
+          "arguments": [
+            {
+              "default": null,
+              "name": "work_item_id",
+              "type": "Ash.Type.UUID",
+              "description": null,
+              "constraints": [],
+              "public?": true,
+              "allow_nil?": false,
+              "sensitive?": false
+            }
+          ],
+          "primary?": false,
+          "public?": true,
+          "transaction?": false,
+          "touches_resources": [],
+          "manual?": false,
+          "get?": false,
+          "get_by": [],
+          "pagination": null
+        },
+        {
           "name": "for_work_order",
           "type": "read",
           "description": null,
@@ -56957,7 +57175,17 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
+      "calculations": [
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
       "aggregates": [],
       "identities": [],
       "schema": null,
@@ -57068,7 +57296,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "assigned_user_id"
+          ],
           "name": "list_assignments_for_assigned_user",
           "kind": "action",
           "action": "for_assigned_user",
@@ -57078,7 +57308,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "project_id"
+          ],
           "name": "list_assignments_for_project",
           "kind": "action",
           "action": "for_project",
@@ -57088,7 +57320,21 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "work_item_id"
+          ],
+          "name": "list_assignments_for_work_item",
+          "kind": "action",
+          "action": "for_work_item",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [
+            "work_order_id"
+          ],
           "name": "list_assignments_for_work_order",
           "kind": "action",
           "action": "for_work_order",
@@ -60441,7 +60687,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "organization_id"
+          ],
           "name": "list_service_tickets_for_organization",
           "kind": "action",
           "action": "for_organization",
@@ -65971,7 +66219,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "organization_id"
+          ],
           "name": "list_projects_for_organization",
           "kind": "action",
           "action": "for_organization",
@@ -80320,7 +80570,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "organization_id"
+          ],
           "name": "list_work_orders_for_organization",
           "kind": "action",
           "action": "for_organization",
@@ -86601,7 +86853,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "asset_id"
+          ],
           "name": "list_maintenance_plans_for_asset",
           "kind": "action",
           "action": "for_asset",
@@ -88824,7 +89078,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "project_id"
+          ],
           "name": "list_material_usages_for_project",
           "kind": "action",
           "action": "for_project",
@@ -88834,7 +89090,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "work_order_id"
+          ],
           "name": "list_material_usages_for_work_order",
           "kind": "action",
           "action": "for_work_order",
@@ -95149,8 +95407,64 @@
           "destination_domain": "GnomeGarden.Execution"
         }
       ],
-      "calculations": [],
-      "aggregates": [],
+      "calculations": [
+        {
+          "name": "priority_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        },
+        {
+          "name": "status_variant",
+          "type": "Ash.Type.Atom",
+          "description": null,
+          "load": [],
+          "public?": false,
+          "allow_nil?": true,
+          "async?": false
+        }
+      ],
+      "aggregates": [
+        {
+          "default": null,
+          "name": "assignment_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "assignments"
+          ]
+        },
+        {
+          "default": null,
+          "name": "child_work_item_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "child_work_items"
+          ]
+        },
+        {
+          "default": null,
+          "name": "material_usage_count",
+          "type": "nil",
+          "description": null,
+          "field": null,
+          "kind": "count",
+          "public?": true,
+          "relationship_path": [
+            "material_usages"
+          ]
+        }
+      ],
       "identities": [],
       "schema": null,
       "primary_key": [
@@ -95280,7 +95594,9 @@
           "require_reference?": true
         },
         {
-          "args": [],
+          "args": [
+            "project_id"
+          ],
           "name": "list_work_items_for_project",
           "kind": "action",
           "action": "for_project",

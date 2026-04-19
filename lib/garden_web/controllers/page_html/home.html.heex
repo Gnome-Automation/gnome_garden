@@ -102,6 +102,18 @@
         icon="hero-wrench-screwdriver"
       />
       <.action_card
+        navigate={~p"/execution/work-items"}
+        title="Work Items"
+        description="Plan the actual phases, tasks, issues, and deliverables that sit underneath project containers."
+        icon="hero-queue-list"
+      />
+      <.action_card
+        navigate={~p"/execution/assignments"}
+        title="Assignments"
+        description="Schedule real owners and calendar commitments across project work, remote sessions, and onsite visits."
+        icon="hero-calendar-days"
+      />
+      <.action_card
         navigate={~p"/execution/service-tickets"}
         title="Service Tickets"
         description="Capture support and maintenance intake with the customer context needed for triage and dispatch."

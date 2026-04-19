@@ -106,6 +106,18 @@ defmodule GnomeGardenWeb.Router do
       live "/execution/projects/:id", Execution.ProjectLive.Show, :show
       live "/execution/projects/:id/edit", Execution.ProjectLive.Form, :edit
 
+      # Execution - Work Items
+      live "/execution/work-items", Execution.WorkItemLive.Index, :index
+      live "/execution/work-items/new", Execution.WorkItemLive.Form, :new
+      live "/execution/work-items/:id", Execution.WorkItemLive.Show, :show
+      live "/execution/work-items/:id/edit", Execution.WorkItemLive.Form, :edit
+
+      # Execution - Assignments
+      live "/execution/assignments", Execution.AssignmentLive.Index, :index
+      live "/execution/assignments/new", Execution.AssignmentLive.Form, :new
+      live "/execution/assignments/:id", Execution.AssignmentLive.Show, :show
+      live "/execution/assignments/:id/edit", Execution.AssignmentLive.Form, :edit
+
       # Execution - Service Tickets
       live "/execution/service-tickets", Execution.ServiceTicketLive.Index, :index
       live "/execution/service-tickets/new", Execution.ServiceTicketLive.Form, :new

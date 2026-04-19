@@ -155,6 +155,16 @@ defmodule GnomeGarden.Execution.Assignment do
               )
     end
 
+    read :for_work_item do
+      argument :work_item_id, :uuid, allow_nil?: false
+      filter expr(work_item_id == ^arg(:work_item_id))
+
+      prepare build(
+                sort: [scheduled_start_at: :asc, inserted_at: :asc],
+                load: [:project, :work_order, :assigned_user]
+              )
+    end
+
     read :for_work_order do
       argument :work_order_id, :uuid, allow_nil?: false
       filter expr(work_order_id == ^arg(:work_order_id))
@@ -266,5 +276,20 @@ defmodule GnomeGarden.Execution.Assignment do
     belongs_to :assigned_by_user, GnomeGarden.Accounts.User do
       public? true
     end
+  end
+
+  calculations do
+    calculate :status_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :status,
+               mapping: [
+                 planned: :default,
+                 confirmed: :info,
+                 in_progress: :warning,
+                 completed: :success,
+                 cancelled: :error
+               ],
+               default: :default}
   end
 end
