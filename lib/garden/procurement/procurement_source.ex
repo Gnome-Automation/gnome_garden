@@ -10,7 +10,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
 
   | Type | Scanner | What it finds |
   |------|---------|---------------|
-  | planetbids, opengov, cal_eprocure, utility, school, port, custom | ListingScanner | Bids/RFPs |
+  | planetbids, opengov, bidnet, cal_eprocure, utility, school, port, custom | ListingScanner | Bids/RFPs |
   | company_site | SiteScanner | Contacts, hiring signals, news |
   | sam_gov | SAM.gov API (future) | Federal opportunities |
   | job_board | JobScanner (future) | Hiring signals |
@@ -71,6 +71,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
   end
 
   state_machine do
+    state_attribute :config_status
     initial_states [:found, :configured]
     default_initial_state :found
 
@@ -137,6 +138,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       accept [
         :name,
         :url,
+        :organization_id,
         :priority,
         :enabled,
         :scan_frequency_hours,
@@ -181,22 +183,26 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
     update :queue do
       description "Queue source for SmartScanner configuration"
       accept []
+      change transition_state(:pending)
     end
 
     update :configure do
       description "Save discovered scraping configuration"
       accept [:scrape_config]
+      change transition_state(:configured)
       change set_attribute(:configured_at, &DateTime.utc_now/0)
     end
 
     update :config_fail do
       accept []
+      change transition_state(:config_failed)
     end
 
     update :scan do
       description "Run scanner on this source (routed by source_type)"
       require_atomic? false
       accept []
+      change transition_state(:configured)
 
       change fn changeset, _ctx ->
         changeset
@@ -212,20 +218,24 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
 
     update :scan_fail do
       accept []
+      change transition_state(:scan_failed)
     end
 
     update :retry_config do
       accept []
+      change transition_state(:pending)
       change set_attribute(:scrape_config, %{})
       change set_attribute(:configured_at, nil)
     end
 
     update :retry_scan do
       accept []
+      change transition_state(:configured)
     end
 
     update :set_manual do
       accept [:scrape_config]
+      change transition_state(:manual)
       change set_attribute(:configured_at, &DateTime.utc_now/0)
     end
 
@@ -316,6 +326,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         one_of: [
           :planetbids,
           :opengov,
+          :bidnet,
           :sam_gov,
           :cal_eprocure,
           :utility,
@@ -356,6 +367,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
 
     attribute :config_status, :atom,
       default: :found,
+      allow_nil?: false,
       public?: true,
       constraints: [
         one_of: [:found, :pending, :configured, :config_failed, :scan_failed, :manual]
@@ -444,7 +456,8 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
   @doc "Returns the scanner strategy for a given source type atom."
   def scanner_strategy(source_type) when is_atom(source_type) do
     case source_type do
-      t when t in [:planetbids, :opengov, :cal_eprocure, :utility, :school, :port, :custom] ->
+      t
+      when t in [:planetbids, :opengov, :bidnet, :cal_eprocure, :utility, :school, :port, :custom] ->
         :deterministic
 
       :company_site ->

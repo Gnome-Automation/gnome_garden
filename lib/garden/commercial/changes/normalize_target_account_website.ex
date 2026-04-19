@@ -5,6 +5,7 @@ defmodule GnomeGarden.Commercial.Changes.NormalizeTargetAccountWebsite do
 
   use Ash.Resource.Change
 
+  alias GnomeGarden.Support.IdentityNormalizer
   alias GnomeGarden.Support.WebIdentity
 
   @impl true
@@ -17,6 +18,10 @@ defmodule GnomeGarden.Commercial.Changes.NormalizeTargetAccountWebsite do
     |> Ash.Changeset.force_change_attribute(
       :website_domain,
       WebIdentity.website_domain(normalized_website)
+    )
+    |> Ash.Changeset.force_change_attribute(
+      :name_key,
+      IdentityNormalizer.organization_name_key(Ash.Changeset.get_attribute(changeset, :name))
     )
   end
 end

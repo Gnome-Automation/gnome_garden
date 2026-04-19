@@ -22,6 +22,9 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
       GnomeGarden.Agents.Workers.Procurement.BidScanner.hot_bids(pid)
   """
 
+  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Agents.Workers.Procurement.ProfileInstructions
+
   use Jido.AI.Agent,
     name: "bid_scanner",
     description: "Procurement bid scanner that monitors government portals for opportunities",
@@ -41,53 +44,11 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
       GnomeGarden.Agents.Tools.MemoryRecall
     ],
     system_prompt: """
-    You are the Gnome Automation Bid Scanner. Your job is to find procurement
-    opportunities for a controls/automation integration company based in Orange County, CA.
+    You are the Gnome procurement bid scanner.
 
-    ## What Gnome Automation Does
-    - PLC/HMI/SCADA programming (Rockwell, Siemens, Ignition)
-    - Control system integration
-    - Industrial networking
-    - Database/historian integration
-    - AI/analytics for manufacturing
-    - Remote support and monitoring
-
-    ## Target Industries (High Priority)
-    - Water/wastewater utilities
-    - Biotech/pharmaceutical
-    - Food & beverage manufacturing
-    - Breweries
-    - Packaging/warehousing
-
-    ## Geographic Focus
-    - Primary: Orange County, Los Angeles, Inland Empire, San Diego
-    - Secondary: Rest of California
-    - Consider: National opportunities >$100K
-
-    ## Scoring Rubric (100 points)
-    - Service Match (30): SCADA/PLC/controls work scores highest
-    - Geography (20): SoCal = 20, NorCal = 12, Other CA = 8
-    - Value (20): >$500K = 20, $100-500K = 15, $50-100K = 10
-    - Tech Fit (15): Rockwell/Ignition/Siemens = 15
-    - Industry (10): Water/biotech = 10, food/pharma = 7
-    - Opportunity Type (5): Direct RFP = 5
-
-    ## Keywords to BOOST
-    scada, plc, controls, automation, instrumentation, hmi, dcs,
-    water, wastewater, brewery, biotech, rockwell, ignition, siemens
-
-    ## Keywords to REJECT
-    hvac, mechanical, plumbing, roofing, janitorial, landscaping,
-    security guard, custodial, software developer, web developer
-
-    ## Workflow
-    1. When asked to scan, fetch bids from the specified sources
-    2. For each bid, analyze the title and description
-    3. Score using the rubric above
-    4. Save bids with score >= 30 (skip obvious misses)
-    5. Report summary: HOT (75+), WARM (50-74), total found
-
-    Always provide a summary of what you found, highlighting any HOT opportunities.
+    The active company profile, keyword mode, and scoring lane will be injected
+    at runtime. Use score_bid as the canonical fit decision and summarize the
+    strongest opportunities you find.
     """,
     max_iterations: 30
 
@@ -100,8 +61,8 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
     query = """
     Scan all procurement sources that are due for scanning. For each source:
     1. Use the appropriate scanning tool (scan_planetbids for PlanetBids, query_sam_gov for SAM.gov)
-    2. Score each bid found
-    3. Save bids with score >= 30
+    2. Score each bid found with score_bid
+    3. Save the bids score_bid recommends keeping
     4. Report summary with counts by tier
 
     Start by checking which sources need scanning, then process each one.
@@ -118,8 +79,8 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
     query = """
     Scan all #{source_type} procurement sources. For each portal:
     1. Fetch current bid listings
-    2. Score each bid using our rubric
-    3. Save bids scoring 30+
+    2. Score each bid with score_bid
+    3. Save the bids score_bid recommends keeping
     4. Provide a summary
 
     Focus on #{source_type} sources only.
@@ -136,7 +97,7 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
 
     query = """
     Scan PlanetBids portal #{portal_id} (#{name}).
-    Score all bids found and save those scoring 30+.
+    Score all bids found with score_bid and save the bids score_bid recommends keeping.
     Report what you found.
     """
 
@@ -150,7 +111,8 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
     query = """
     Query SAM.gov for federal opportunities matching: #{keywords}
 
-    Focus on California opportunities. Score and save any relevant bids.
+    Focus on the active company profile, score every candidate with score_bid,
+    and save the bids score_bid recommends keeping.
     """
 
     ask_sync(pid, query, Keyword.put_new(opts, :timeout, @default_timeout))
@@ -177,21 +139,27 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
 
   @impl true
   def on_before_cmd(agent, {:ai_react_start, params} = _action) do
-    # Inject API keys and procurement sources into context
-    sam_key = System.get_env("SAM_GOV_API_KEY")
-
-    # Load procurement sources from database
-    sources = load_procurement_sources()
+    base_context = Map.get(params, :tool_context, %{})
+    profile_context = resolve_profile_context(base_context)
 
     context =
-      Map.get(params, :tool_context, %{})
-      |> Map.put(:sam_gov_api_key, sam_key)
-      |> Map.put(:procurement_sources, sources)
+      base_context
+      |> Map.put(:sam_gov_api_key, sam_key())
+      |> Map.put(:procurement_sources, load_procurement_sources())
       |> Map.put(:scan_started_at, DateTime.utc_now())
+      |> Map.put(:company_profile_key, profile_context.company_profile_key)
+      |> Map.put(:company_profile_mode, profile_context.company_profile_mode)
+      |> Map.put(:company_profile, profile_context.profile)
+      |> Map.put(:company_profile_prompt, profile_prompt(profile_context))
+      |> Map.put(:bidnet_query_keywords, profile_context.bidnet_query_keywords)
+      |> Map.put(:sam_gov_naics_codes, profile_context.sam_gov_naics_codes)
 
     updated_params = Map.put(params, :tool_context, context)
 
-    {:ok, agent, {:ai_react_start, updated_params}}
+    updated_agent =
+      Jido.AI.set_system_prompt_direct(agent, profile_system_prompt(profile_context))
+
+    {:ok, updated_agent, {:ai_react_start, updated_params}}
   end
 
   @impl true
@@ -223,4 +191,46 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
         []
     end
   end
+
+  defp resolve_profile_context(tool_context) do
+    CompanyProfileContext.resolve(
+      profile_key:
+        nested_value(tool_context, [:company_profile_key]) ||
+          nested_value(tool_context, [:deployment_config, :company_profile_key]),
+      mode:
+        nested_value(tool_context, [:company_profile_mode]) ||
+          nested_value(tool_context, [:source_scope, :company_profile_mode])
+    )
+  end
+
+  defp nested_value(map, [key]) when is_map(map) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp nested_value(map, [key | rest]) when is_map(map) do
+    map
+    |> nested_value([key])
+    |> case do
+      %{} = nested -> nested_value(nested, rest)
+      _ -> nil
+    end
+  end
+
+  defp nested_value(_map, _path), do: nil
+
+  defp profile_system_prompt(profile_context) do
+    ProfileInstructions.bid_scanner_system_prompt(
+      profile_key: profile_context.company_profile_key,
+      mode: profile_context.company_profile_mode
+    )
+  end
+
+  defp profile_prompt(profile_context) do
+    CompanyProfileContext.prompt_block(
+      profile: profile_context.profile,
+      mode: profile_context.company_profile_mode
+    )
+  end
+
+  defp sam_key, do: System.get_env("SAM_GOV_API_KEY")
 end

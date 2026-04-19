@@ -21,7 +21,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
       posted_at: [type: :string, doc: "Posted date (ISO8601)"],
       due_at: [type: :string, doc: "Due date (ISO8601)"],
       estimated_value: [type: :float, doc: "Estimated value"],
-      scores: [type: :map, doc: "Pre-calculated scores"]
+      scores: [type: :map, doc: "Pre-calculated scores"],
+      metadata: [type: :map, doc: "Additional source and scoring metadata"]
     ]
 
   require Logger
@@ -82,7 +83,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
         score_total: Map.get(params, :score_total),
         score_tier: Map.get(params, :score_tier),
         keywords_matched: Map.get(params, :keywords_matched, []),
-        keywords_rejected: Map.get(params, :keywords_rejected, [])
+        keywords_rejected: Map.get(params, :keywords_rejected, []),
+        metadata: Map.get(params, :metadata, %{})
       }
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()

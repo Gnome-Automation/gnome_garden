@@ -14,6 +14,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   API limit: 1000 requests/day
   """
 
+  alias GnomeGarden.Commercial.CompanyProfileContext
+
   use Jido.Action,
     name: "query_sam_gov",
     description: "Query SAM.gov for federal procurement opportunities",
@@ -21,7 +23,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
       keywords: [type: :string, doc: "Search keywords (e.g., 'SCADA PLC controls')"],
       naics_codes: [
         type: {:array, :string},
-        default: ["541330", "541512"],
+        default: [],
         doc: "NAICS codes to filter by"
       ],
       posted_from: [type: :string, doc: "Start date (MM/DD/YYYY)"],
@@ -41,7 +43,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
     if is_nil(api_key) do
       {:error, "SAM.gov API key not configured. Set SAM_GOV_API_KEY environment variable."}
     else
-      query_params = build_query_params(params, api_key)
+      query_params = build_query_params(params, context, api_key)
 
       Logger.info(
         "[QuerySamGov] Searching with params: #{inspect(Map.delete(query_params, :api_key))}"
@@ -79,7 +81,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
       System.get_env("SAM_GOV_API_KEY")
   end
 
-  defp build_query_params(params, api_key) do
+  defp build_query_params(params, context, api_key) do
     base = %{
       api_key: api_key,
       limit: Map.get(params, :limit, 100),
@@ -90,7 +92,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
     # Add optional filters
     base
     |> maybe_add(:keywords, Map.get(params, :keywords))
-    |> maybe_add(:ncode, format_naics(Map.get(params, :naics_codes, [])))
+    |> maybe_add(:ncode, format_naics(default_naics_codes(params, context)))
     |> maybe_add(:state, Map.get(params, :state))
   end
 
@@ -101,6 +103,29 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   defp format_naics([]), do: nil
   defp format_naics(codes) when is_list(codes), do: Enum.join(codes, ",")
   defp format_naics(code) when is_binary(code), do: code
+
+  defp default_naics_codes(params, context) do
+    case Map.get(params, :naics_codes, []) do
+      [] ->
+        tool_context = Map.get(context, :tool_context, context)
+
+        scope_mode =
+          nested_value(tool_context, [:company_profile_mode]) ||
+            nested_value(tool_context, [:source_scope, :company_profile_mode])
+
+        profile_key =
+          nested_value(tool_context, [:company_profile_key]) ||
+            nested_value(tool_context, [:deployment_config, :company_profile_key])
+
+        CompanyProfileContext.sam_gov_naics_codes(
+          profile_key && CompanyProfileContext.profile(profile_key),
+          scope_mode
+        )
+
+      codes ->
+        codes
+    end
+  end
 
   defp default_posted_from do
     Date.utc_today()
@@ -212,4 +237,19 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
 
   defp build_sam_url(nil), do: "https://sam.gov"
   defp build_sam_url(notice_id), do: "https://sam.gov/opp/#{notice_id}/view"
+
+  defp nested_value(map, [key]) when is_map(map) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp nested_value(map, [key | rest]) when is_map(map) do
+    map
+    |> nested_value([key])
+    |> case do
+      %{} = nested -> nested_value(nested, rest)
+      _ -> nil
+    end
+  end
+
+  defp nested_value(_map, _path), do: nil
 end

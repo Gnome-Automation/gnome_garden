@@ -26,18 +26,30 @@ defmodule GnomeGarden.Operations do
         action: :by_website_domain,
         args: [:website_domain]
 
+      define :list_organizations_by_name_key, action: :by_name_key, args: [:name_key]
+
       define :create_organization, action: :create
       define :update_organization, action: :update
+      define :merge_organization, action: :merge_into
     end
 
     resource GnomeGarden.Operations.Person do
       define :list_people, action: :read
       define :get_person, action: :read, get_by: [:id]
-      define :get_person_by_email, action: :read, get_by: [:email]
+      define :get_person_by_email, action: :by_email, args: [:email]
       define :create_person, action: :create
       define :update_person, action: :update
+      define :merge_person, action: :merge_into
       define :list_active_people, action: :active
       define :list_people_for_organization, action: :for_organization, args: [:organization_id]
+
+      define :list_people_for_organization_by_name_key,
+        action: :for_organization_and_name_key,
+        args: [:organization_id, :name_key]
+
+      define :list_people_by_name_key_and_email_domain,
+        action: :by_name_key_and_email_domain,
+        args: [:name_key, :email_domain]
     end
 
     resource GnomeGarden.Operations.OrganizationAffiliation do

@@ -16,6 +16,9 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
   """
 
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Commercial.DiscoveryIdentityResolver
+  alias GnomeGarden.Commercial.MarketFocus
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
@@ -32,8 +35,9 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     Logger.info("[SiteScanner] Scanning #{source.name} at #{source.url}")
 
     base_url = extract_base_url(source.url)
-    organization = ensure_organization!(source)
-    target_account = ensure_target_account!(source, organization)
+    organization_resolution = resolve_organization(source)
+    organization = organization_resolution.organization
+    target_account = ensure_target_account!(source, organization_resolution)
     results = %{contacts: [], observations: [], errors: []}
 
     results =
@@ -201,35 +205,19 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
 
   defp save_contacts(contacts, organization, source, discovered_url) do
     Enum.each(contacts, fn %{email: email, has_engineering_context: has_engineering_context} ->
-      {first_name, last_name} = contact_name_from_email(email)
-
-      case Operations.create_person(
+      case DiscoveryIdentityResolver.resolve_person(
              %{
-               first_name: first_name,
-               last_name: last_name,
                email: email,
                notes: "Discovered by SiteScanner from #{discovered_url}"
              },
-             upsert?: true,
-             upsert_identity: :unique_email,
-             upsert_fields: [:first_name, :last_name, :notes]
+             organization,
+             actor: nil
            ) do
-        {:ok, person} ->
-          Operations.create_organization_affiliation(
-            %{
-              organization_id: organization.id,
-              person_id: person.id,
-              title:
-                if(has_engineering_context, do: "Engineering contact", else: "Website contact"),
-              contact_roles:
-                if(has_engineering_context, do: ["technical_contact"], else: ["general_contact"]),
-              is_primary: false,
-              notes: "Discovered from company website source #{source.name}"
-            },
-            upsert?: true,
-            upsert_identity: :unique_active_affiliation,
-            upsert_fields: [:title, :contact_roles, :notes]
-          )
+        {:ok, %{person: nil}} ->
+          :ok
+
+        {:ok, %{person: person}} ->
+          maybe_upsert_affiliation(person, organization, source, has_engineering_context)
 
         {:error, error} ->
           Logger.warning(
@@ -298,7 +286,7 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
           keywords: signal.keywords,
           discovery_program_id: discovery_program_id(source),
           procurement_source_id: source.id,
-          organization_id: organization.id
+          organization_id: organization && organization.id
         }
       },
       upsert?: true,
@@ -315,54 +303,122 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     )
   end
 
-  defp ensure_organization!(source) do
-    {:ok, organization} =
-      Operations.create_organization(
-        %{
-          name: source.name,
-          status: :prospect,
-          relationship_roles: ["prospect"],
-          website: WebIdentity.normalize_website(source.url),
-          primary_region: source.region |> to_string(),
-          notes: source.notes || "Discovered from company website monitoring source"
-        },
-        upsert?: true,
-        upsert_identity: :unique_name,
-        upsert_fields: [:website, :primary_region, :notes]
-      )
+  defp resolve_organization(%ProcurementSource{organization_id: organization_id})
+       when not is_nil(organization_id) do
+    {:ok, organization} = Operations.get_organization(organization_id)
 
-    organization
+    %{
+      organization: organization,
+      resolution: :source_link,
+      website_domain: organization.website_domain,
+      name_key: organization.name_key,
+      candidates: []
+    }
   end
 
-  defp ensure_target_account!(source, organization) do
-    {:ok, target_account} =
-      Commercial.create_target_account(
-        %{
-          name: source.name,
-          website: WebIdentity.normalize_website(source.url),
-          region: source.region && to_string(source.region),
-          fit_score: 70,
-          intent_score: 55,
-          status: :new,
-          discovery_program_id: discovery_program_id(source),
-          organization_id: organization.id,
-          notes: source.notes || "Discovered from monitored company website source",
-          metadata: %{
-            source: "company_scanner",
-            discovery_program_id: discovery_program_id(source),
-            procurement_source_id: source.id
-          }
-        },
-        upsert?: true,
-        upsert_identity:
-          if(WebIdentity.website_domain(source.url),
-            do: :unique_website_domain,
-            else: :unique_name_location
-          ),
-        upsert_fields: [:region, :fit_score, :intent_score, :organization_id, :notes, :metadata]
+  defp resolve_organization(source) do
+    {:ok, resolution} =
+      DiscoveryIdentityResolver.resolve_organization(%{
+        name: source.name,
+        status: :prospect,
+        relationship_roles: ["prospect"],
+        website: WebIdentity.normalize_website(source.url),
+        primary_region: source.region && to_string(source.region),
+        notes: source.notes || "Discovered from company website monitoring source"
+      })
+
+    resolution
+  end
+
+  defp ensure_target_account!(source, organization_resolution) do
+    profile_context =
+      CompanyProfileContext.resolve(
+        profile_key: source.metadata && source.metadata["company_profile_key"],
+        mode: source.metadata && source.metadata["company_profile_mode"]
       )
 
+    target_score =
+      MarketFocus.assess_target(%{
+        company_name: source.name,
+        company_description: source.notes || "",
+        signal: source.notes || "Monitored company site for discovery",
+        region: source.region,
+        company_profile_key: profile_context.company_profile_key,
+        company_profile_mode: profile_context.company_profile_mode
+      })
+
+    attrs = %{
+      name: source.name,
+      website: WebIdentity.normalize_website(source.url),
+      region: source.region && to_string(source.region),
+      fit_score: target_score.fit_score,
+      intent_score: target_score.intent_score,
+      status: :new,
+      discovery_program_id: discovery_program_id(source),
+      organization_id:
+        organization_resolution.organization && organization_resolution.organization.id,
+      notes: source.notes || "Discovered from monitored company website source",
+      metadata: %{
+        source: "company_scanner",
+        discovery_program_id: discovery_program_id(source),
+        procurement_source_id: source.id,
+        market_focus: %{
+          company_profile_key: profile_context.company_profile_key,
+          company_profile_mode: profile_context.company_profile_mode,
+          icp_matches: target_score.icp_matches,
+          risk_flags: target_score.risk_flags,
+          fit_rationale: target_score.fit_rationale,
+          intent_signals: target_score.intent_signals
+        },
+        identity_review:
+          DiscoveryIdentityResolver.target_identity_review(
+            organization_resolution,
+            %{person: nil, resolution: :none, email_domain: nil, name_key: nil, candidates: []}
+          )
+      }
+    }
+
+    {:ok, target_account} =
+      case WebIdentity.website_domain(source.url) do
+        nil ->
+          Commercial.create_target_account(attrs)
+
+        _website_domain ->
+          Commercial.create_target_account(
+            attrs,
+            upsert?: true,
+            upsert_identity: :unique_website_domain,
+            upsert_fields: [
+              :region,
+              :fit_score,
+              :intent_score,
+              :organization_id,
+              :notes,
+              :metadata
+            ]
+          )
+      end
+
     target_account
+  end
+
+  defp maybe_upsert_affiliation(_person, nil, _source, _has_engineering_context), do: :ok
+
+  defp maybe_upsert_affiliation(person, organization, source, has_engineering_context) do
+    Operations.create_organization_affiliation(
+      %{
+        organization_id: organization.id,
+        person_id: person.id,
+        title: if(has_engineering_context, do: "Engineering contact", else: "Website contact"),
+        contact_roles:
+          if(has_engineering_context, do: ["technical_contact"], else: ["general_contact"]),
+        is_primary: false,
+        notes: "Discovered from company website source #{source.name}"
+      },
+      upsert?: true,
+      upsert_identity: :unique_active_affiliation,
+      upsert_fields: [:title, :contact_roles, :notes]
+    )
   end
 
   defp extract_base_url(url) do
@@ -387,16 +443,4 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
   end
 
   defp discovery_program_id(_source), do: nil
-
-  defp contact_name_from_email(email) do
-    email
-    |> String.split("@")
-    |> hd()
-    |> String.split(~r/[._-]/)
-    |> case do
-      [first, last | _rest] -> {String.capitalize(first), String.capitalize(last)}
-      [single] -> {String.capitalize(single), "Unknown"}
-      _ -> {"Unknown", "Unknown"}
-    end
-  end
 end

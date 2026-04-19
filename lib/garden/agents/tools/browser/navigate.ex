@@ -20,16 +20,15 @@ defmodule GnomeGarden.Agents.Tools.Browser.Navigate do
   @impl true
   def run(%{url: url} = params, _context) do
     wait_for_network = Map.get(params, :wait_for_network, true)
-    browser = Browser.binary_path()
 
-    case System.cmd(browser, Browser.default_args() ++ ["open", url, "--timeout", "30000"],
-           stderr_to_stdout: true
-         ) do
+    case open_url(url) do
       {output, 0} ->
         title = parse_title(output)
 
         if wait_for_network do
-          System.cmd(browser, ["wait", "--load", "networkidle", "--timeout", "30000"],
+          System.cmd(
+            Browser.binary_path(),
+            ["wait", "--load", "networkidle", "--timeout", "30000"],
             stderr_to_stdout: true
           )
         end
@@ -38,6 +37,23 @@ defmodule GnomeGarden.Agents.Tools.Browser.Navigate do
 
       {output, _} ->
         {:ok, %{url: url, title: nil, status: :error, error: String.trim(output)}}
+    end
+  end
+
+  defp open_url(url) do
+    command = Browser.default_args() ++ ["open", url, "--timeout", "30000"]
+
+    case System.cmd(Browser.binary_path(), command, stderr_to_stdout: true) do
+      {_output, 0} = result ->
+        result
+
+      {output, _code} ->
+        if Browser.restart_required?(output) do
+          _ = Browser.close()
+          System.cmd(Browser.binary_path(), command, stderr_to_stdout: true)
+        else
+          {output, 1}
+        end
     end
   end
 

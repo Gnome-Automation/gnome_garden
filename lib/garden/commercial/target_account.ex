@@ -31,9 +31,14 @@ defmodule GnomeGarden.Commercial.TargetAccount do
     table "commercial_target_accounts"
     repo GnomeGarden.Repo
 
+    custom_indexes do
+      index [:website_domain], name: "commercial_target_accounts_website_domain_idx"
+    end
+
     references do
       reference :discovery_program, on_delete: :nilify
       reference :organization, on_delete: :nilify
+      reference :contact_person, on_delete: :nilify
       reference :owner_user, on_delete: :nilify
       reference :promoted_signal, on_delete: :nilify
     end
@@ -73,6 +78,7 @@ defmodule GnomeGarden.Commercial.TargetAccount do
         :metadata,
         :discovery_program_id,
         :organization_id,
+        :contact_person_id,
         :owner_user_id
       ]
 
@@ -96,6 +102,7 @@ defmodule GnomeGarden.Commercial.TargetAccount do
         :metadata,
         :discovery_program_id,
         :organization_id,
+        :contact_person_id,
         :owner_user_id
       ]
 
@@ -127,6 +134,14 @@ defmodule GnomeGarden.Commercial.TargetAccount do
     update :reopen do
       accept []
       change transition_state(:new)
+    end
+
+    update :resolve_identity do
+      require_atomic? false
+      accept []
+      argument :organization_id, :uuid
+      argument :contact_person_id, :uuid
+      change {GnomeGarden.Commercial.Changes.ResolveTargetAccountIdentity, []}
     end
 
     read :review_queue do
@@ -198,6 +213,16 @@ defmodule GnomeGarden.Commercial.TargetAccount do
               )
     end
 
+    read :for_contact_person do
+      argument :contact_person_id, :uuid, allow_nil?: false
+      filter expr(contact_person_id == ^arg(:contact_person_id))
+
+      prepare build(
+                sort: [inserted_at: :desc],
+                load: [:discovery_program, :organization, :observation_count, :latest_observed_at]
+              )
+    end
+
     read :for_discovery_program do
       argument :discovery_program_id, :uuid, allow_nil?: false
       filter expr(discovery_program_id == ^arg(:discovery_program_id))
@@ -227,6 +252,10 @@ defmodule GnomeGarden.Commercial.TargetAccount do
     end
 
     attribute :website_domain, :string do
+      public? true
+    end
+
+    attribute :name_key, :string do
       public? true
     end
 
@@ -294,6 +323,10 @@ defmodule GnomeGarden.Commercial.TargetAccount do
       public? true
     end
 
+    belongs_to :contact_person, GnomeGarden.Operations.Person do
+      public? true
+    end
+
     belongs_to :owner_user, GnomeGarden.Accounts.User do
       public? true
     end
@@ -340,6 +373,6 @@ defmodule GnomeGarden.Commercial.TargetAccount do
 
   identities do
     identity :unique_website_domain, [:website_domain]
-    identity :unique_name_location, [:name, :location]
+    identity :unique_name_key_location, [:name_key, :location]
   end
 end

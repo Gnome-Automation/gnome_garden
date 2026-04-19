@@ -1,0 +1,71 @@
+defmodule GnomeGarden.Commercial.CompanyProfileContextTest do
+  use GnomeGarden.DataCase, async: true
+
+  alias GnomeGarden.Commercial
+  alias GnomeGarden.Commercial.CompanyProfileContext
+
+  test "falls back to the seeded default profile when no record exists" do
+    profile = CompanyProfileContext.primary_profile()
+    prompt = CompanyProfileContext.prompt_block()
+    scope = CompanyProfileContext.deployment_scope(mode: :industrial_core)
+
+    assert profile.key == "primary"
+    assert profile.default_profile_mode == :industrial_plus_software
+    assert prompt =~ "COMPANY PROFILE"
+    assert prompt =~ "controller-connected systems"
+    assert scope.company_profile_mode == "industrial_core"
+
+    assert scope.bidnet_query_keywords == [
+             "scada",
+             "plc",
+             "controls",
+             "instrumentation",
+             "automation"
+           ]
+
+    assert scope.sam_gov_naics_codes == ["541330", "238210"]
+  end
+
+  test "uses the durable primary profile when it exists" do
+    {:ok, _profile} =
+      Commercial.create_company_profile(%{
+        key: "primary",
+        name: "Gnome Labs",
+        positioning_summary: "Industrial apps and software delivery for operations teams.",
+        specialty_summary: "Modern web environments tied to production systems.",
+        voice_summary: "Direct and technical.",
+        core_capabilities: ["Phoenix applications", "industrial integrations"],
+        adjacent_capabilities: ["analytics"],
+        target_industries: ["manufacturing"],
+        preferred_engagements: ["operations software"],
+        disqualifiers: ["staff augmentation"],
+        voice_principles: ["be specific"],
+        preferred_phrases: ["operator-facing web environments"],
+        avoid_phrases: ["growth hacking"],
+        default_profile_mode: :broad_software,
+        keyword_profiles: %{
+          "modes" => %{
+            "broad_software" => %{
+              "include" => ["workflow software", "web application"],
+              "exclude" => ["staff augmentation"],
+              "bidnet_queries" => ["workflow software"],
+              "sam_gov_naics_codes" => ["541511"]
+            }
+          }
+        }
+      })
+
+    profile = CompanyProfileContext.primary_profile()
+    prompt = CompanyProfileContext.prompt_block()
+    scope = CompanyProfileContext.deployment_scope()
+
+    assert profile.name == "Gnome Labs"
+    assert profile.default_profile_mode == :broad_software
+    assert prompt =~ "Modern web environments tied to production systems."
+    assert prompt =~ "workflow software"
+    assert scope.company_profile_mode == "broad_software"
+    assert "manufacturing" in scope.target_industries
+    assert scope.bidnet_query_keywords == ["workflow software"]
+    assert scope.sam_gov_naics_codes == ["541511"]
+  end
+end

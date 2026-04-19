@@ -8,6 +8,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
   alias GnomeGarden.Agents.TemplateCatalog
   alias GnomeGarden.Agents.Workers.Commercial.TargetDiscovery
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Commercial.CompanyProfileContext
 
   @deployment_name "Commercial Target Discovery"
 
@@ -82,6 +83,8 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
   end
 
   defp create_target_discovery_deployment(actor) do
+    profile_scope = CompanyProfileContext.deployment_scope(mode: :industrial_plus_software)
+
     with {:ok, template} <- Agents.get_agent_template_by_name("target_discovery"),
          {:ok, deployment} <-
            Agents.create_agent_deployment(
@@ -93,8 +96,14 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
                enabled: true,
                schedule: nil,
                memory_namespace: "agents.target_discovery.commercial",
-               config: %{timeout_ms: 300_000},
+               config: %{
+                 timeout_ms: 300_000,
+                 company_profile_key: profile_scope.company_profile_key
+               },
                source_scope: %{
+                 company_profile_mode: profile_scope.company_profile_mode,
+                 industries: profile_scope.target_industries,
+                 preferred_engagements: profile_scope.preferred_engagements,
                  notes:
                    "Used by commercial discovery programs to run targeted market discovery sweeps."
                },

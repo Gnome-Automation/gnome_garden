@@ -7,16 +7,41 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    programs = load_programs(socket.assigns.current_user)
-
     {:ok,
      socket
      |> assign(:page_title, "Discovery Programs")
-     |> assign(:program_count, length(programs))
-     |> assign(:active_count, Enum.count(programs, &(&1.status == :active)))
-     |> assign(:review_target_count, Enum.reduce(programs, 0, &(&1.review_target_count + &2)))
-     |> assign(:last_run_count, Enum.count(programs, & &1.last_run_at))
-     |> stream(:programs, programs)}
+     |> assign(:program_count, 0)
+     |> assign(:active_count, 0)
+     |> assign(:review_target_count, 0)
+     |> assign(:pilot_ready_count, 0)
+     |> stream(:programs, [], reset: true)
+     |> refresh_program_listing()}
+  end
+
+  @impl true
+  def handle_event("run_now", %{"id" => id}, socket) do
+    with {:ok, discovery_program} <-
+           Commercial.get_discovery_program(id, actor: socket.assigns.current_user),
+         {:ok, %{run: run}} <-
+           Commercial.launch_discovery_program(discovery_program,
+             actor: socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> refresh_program_listing()
+       |> put_flash(:info, "Started discovery run #{short_id(run.id)}.")}
+    else
+      {:error, :active_run_exists} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "This discovery program already has an active run. Wait for it to finish before launching another."
+         )}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not start discovery run: #{inspect(error)}")}
+    end
   end
 
   @impl true
@@ -60,10 +85,10 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
           accent="sky"
         />
         <.stat_card
-          title="Recently Run"
-          value={Integer.to_string(@last_run_count)}
-          description="Programs that have an execution timestamp recorded."
-          icon="hero-clock"
+          title="Pilot Ready"
+          value={Integer.to_string(@pilot_ready_count)}
+          description="Programs that are active and due for a manual run right now."
+          icon="hero-bolt"
           accent="amber"
         />
       </div>
@@ -107,6 +132,9 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
                 <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
                   Status
                 </th>
+                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody
@@ -142,6 +170,9 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
                     <p class="text-xs text-zinc-400 dark:text-zinc-500">
                       {program.review_target_count} waiting review
                     </p>
+                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                      {program.observation_count} observations
+                    </p>
                   </div>
                 </td>
                 <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
@@ -163,6 +194,33 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
                     <.status_badge status={program.priority_variant}>
                       {format_atom(program.priority)}
                     </.status_badge>
+                  </div>
+                </td>
+                <td class="px-5 py-4 align-top">
+                  <div class="flex flex-wrap gap-2">
+                    <.button
+                      :if={program_runnable?(program)}
+                      id={"run-program-#{program.id}"}
+                      phx-click="run_now"
+                      phx-value-id={program.id}
+                      class="px-2.5 py-1.5 text-xs"
+                      variant={if(program.is_due_to_run, do: "primary", else: nil)}
+                    >
+                      <.icon name="hero-play" class="size-4" /> Run Now
+                    </.button>
+                    <.button
+                      id={"program-targets-#{program.id}"}
+                      navigate={~p"/commercial/targets?program_id=#{program.id}"}
+                      class="px-2.5 py-1.5 text-xs"
+                    >
+                      <.icon name="hero-magnifying-glass" class="size-4" /> Targets
+                    </.button>
+                    <.button
+                      navigate={~p"/commercial/discovery-programs/#{program}"}
+                      class="px-2.5 py-1.5 text-xs"
+                    >
+                      Open
+                    </.button>
                   </div>
                 </td>
               </tr>
@@ -194,6 +252,25 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
       {:error, error} -> raise "failed to load discovery programs: #{inspect(error)}"
     end
   end
+
+  defp refresh_program_listing(socket) do
+    programs = load_programs(socket.assigns.current_user)
+
+    socket
+    |> assign(:program_count, length(programs))
+    |> assign(:active_count, Enum.count(programs, &(&1.status == :active)))
+    |> assign(:review_target_count, Enum.reduce(programs, 0, &(&1.review_target_count + &2)))
+    |> assign(
+      :pilot_ready_count,
+      Enum.count(programs, &(&1.status == :active and &1.is_due_to_run))
+    )
+    |> stream(:programs, programs, reset: true)
+  end
+
+  defp program_runnable?(%{status: :archived}), do: false
+  defp program_runnable?(_program), do: true
+
+  defp short_id(id), do: String.slice(id, 0, 8)
 
   defp summary_list([], empty_label), do: empty_label
   defp summary_list(values, _empty_label), do: Enum.join(values, ", ")

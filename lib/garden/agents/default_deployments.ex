@@ -8,62 +8,7 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
 
   alias GnomeGarden.Agents
   alias GnomeGarden.Agents.TemplateCatalog
-
-  @default_specs [
-    %{
-      name: "SoCal Source Discovery",
-      template: "source_discovery",
-      description: "Discover new public procurement portals across Southern California.",
-      visibility: :shared,
-      enabled: true,
-      schedule: "0 9 * * *",
-      memory_namespace: "agents.source_discovery.socal",
-      config: %{
-        timeout_ms: 180_000
-      },
-      source_scope: %{
-        regions: ["oc", "la", "ie", "sd"],
-        industries: ["water", "wastewater", "utility", "school", "port"],
-        portal_types: ["planetbids", "opengov", "custom"],
-        notes: "Find new public-sector procurement portals in Southern California."
-      }
-    },
-    %{
-      name: "SoCal Bid Scanner",
-      template: "bid_scanner",
-      description:
-        "Scan approved procurement sources for controls, SCADA, and automation opportunities.",
-      visibility: :shared,
-      enabled: true,
-      schedule: "0 */6 * * *",
-      memory_namespace: "agents.bid_scanner.socal",
-      config: %{
-        timeout_ms: 180_000
-      },
-      source_scope: %{
-        regions: ["oc", "la", "ie", "sd"],
-        source_types: ["planetbids", "opengov", "sam_gov"],
-        keywords: ["scada", "plc", "controls", "automation", "instrumentation"],
-        notes: "Focus on water, wastewater, biotech, food and beverage, and utility work."
-      }
-    },
-    %{
-      name: "Commercial Target Discovery",
-      template: "target_discovery",
-      description:
-        "Launch focused company discovery sweeps that populate target accounts for human review.",
-      visibility: :shared,
-      enabled: true,
-      schedule: nil,
-      memory_namespace: "agents.target_discovery.commercial",
-      config: %{
-        timeout_ms: 300_000
-      },
-      source_scope: %{
-        notes: "Used by commercial discovery programs to run targeted market discovery sweeps."
-      }
-    }
-  ]
+  alias GnomeGarden.Commercial.CompanyProfileContext
 
   @type sync_result :: %{created: [String.t()], existing: [String.t()]}
 
@@ -77,7 +22,7 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
       TemplateCatalog.sync_templates()
       |> Map.new(fn template -> {template.template, template.id} end)
 
-    Enum.reduce(@default_specs, %{created: [], existing: []}, fn spec, acc ->
+    Enum.reduce(default_specs(), %{created: [], existing: []}, fn spec, acc ->
       if Map.has_key?(existing_by_name, spec.name) do
         %{acc | existing: [spec.name | acc.existing]}
       else
@@ -97,7 +42,79 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
   end
 
   @spec specs() :: [map()]
-  def specs, do: @default_specs
+  def specs, do: default_specs()
+
+  defp default_specs do
+    profile_scope = CompanyProfileContext.deployment_scope(mode: :industrial_plus_software)
+    industrial_scope = CompanyProfileContext.deployment_scope(mode: :industrial_core)
+
+    [
+      %{
+        name: "SoCal Source Discovery",
+        template: "source_discovery",
+        description: "Discover new public procurement portals across Southern California.",
+        visibility: :shared,
+        enabled: true,
+        schedule: "0 9 * * *",
+        memory_namespace: "agents.source_discovery.socal",
+        config: %{
+          timeout_ms: 180_000,
+          company_profile_key: profile_scope.company_profile_key
+        },
+        source_scope: %{
+          regions: ["oc", "la", "ie", "sd"],
+          industries: ["water", "wastewater", "utility", "school", "port"],
+          portal_types: ["planetbids", "opengov", "custom"],
+          company_profile_mode: industrial_scope.company_profile_mode,
+          notes: "Find new public-sector procurement portals across Southern California."
+        }
+      },
+      %{
+        name: "SoCal Bid Scanner",
+        template: "bid_scanner",
+        description:
+          "Scan approved procurement sources for controller, SCADA, integration, and operations-software opportunities.",
+        visibility: :shared,
+        enabled: true,
+        schedule: "0 */6 * * *",
+        memory_namespace: "agents.bid_scanner.socal",
+        config: %{
+          timeout_ms: 180_000,
+          company_profile_key: industrial_scope.company_profile_key
+        },
+        source_scope: %{
+          regions: ["oc", "la", "ie", "sd"],
+          source_types: ["planetbids", "opengov", "sam_gov", "bidnet"],
+          keywords: industrial_scope.keywords,
+          bidnet_query_keywords: industrial_scope.bidnet_query_keywords,
+          sam_gov_naics_codes: industrial_scope.sam_gov_naics_codes,
+          industries: industrial_scope.target_industries,
+          company_profile_mode: industrial_scope.company_profile_mode,
+          notes: industrial_scope.notes
+        }
+      },
+      %{
+        name: "Commercial Target Discovery",
+        template: "target_discovery",
+        description:
+          "Launch focused company discovery sweeps that populate target accounts for human review.",
+        visibility: :shared,
+        enabled: true,
+        schedule: nil,
+        memory_namespace: "agents.target_discovery.commercial",
+        config: %{
+          timeout_ms: 300_000,
+          company_profile_key: profile_scope.company_profile_key
+        },
+        source_scope: %{
+          company_profile_mode: profile_scope.company_profile_mode,
+          industries: profile_scope.target_industries,
+          preferred_engagements: profile_scope.preferred_engagements,
+          notes: "Used by commercial discovery programs to run targeted market discovery sweeps."
+        }
+      }
+    ]
+  end
 
   defp attrs_for(spec, template_ids) do
     agent_id =

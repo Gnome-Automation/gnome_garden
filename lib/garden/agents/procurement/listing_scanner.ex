@@ -25,8 +25,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   """
 
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Commercial.CompanyProfileContext
   alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
-  alias GnomeGarden.Agents.Tools.Procurement.{SaveBid, ScoreBid}
+  alias GnomeGarden.Agents.Tools.Procurement.{SaveBid, ScoreBid, ScanBidNet, ScanPlanetBids}
 
   require Logger
 
@@ -70,6 +71,40 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   end
 
   defp do_scan(source) do
+    result =
+      case source.source_type do
+        :planetbids ->
+          case do_browser_scan(source) do
+            {:ok, _result} = ok ->
+              ok
+
+            {:error, browser_reason} ->
+              Logger.warning(
+                "Browser scan failed for #{source.name}, falling back to HTTP scanner: #{inspect(browser_reason)}"
+              )
+
+              do_planetbids_scan(source)
+          end
+
+        :bidnet ->
+          do_bidnet_scan(source)
+
+        _other ->
+          do_browser_scan(source)
+      end
+
+    case result do
+      {:ok, _payload} = ok ->
+        ok
+
+      {:error, reason} ->
+        Logger.error("Scan failed for #{source.name}: #{inspect(reason)}")
+        Procurement.scan_fail_procurement_source(source, %{})
+        {:error, reason}
+    end
+  end
+
+  defp do_browser_scan(source) do
     config = source.scrape_config
     listing_url = config["listing_url"] || config[:listing_url]
 
@@ -85,27 +120,60 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
          {:ok, bids} <- extract_bids(config),
          {:ok, scored} <- score_bids(bids, source),
          {:ok, saved} <- save_qualifying_bids(scored, source, listing_url) do
-      # Mark as scanned
-      Procurement.mark_procurement_source_scanned!(source, %{})
-
-      # Enrich newly saved bids with detail page data
-      enriched = enrich_bids(saved)
-
-      {:ok,
-       %{
-         source: source.name,
-         extracted: length(bids),
-         scored: length(scored),
-         saved: length(saved),
-         enriched: enriched,
-         bids: saved
-       }}
-    else
-      {:error, reason} ->
-        Logger.error("Scan failed for #{source.name}: #{inspect(reason)}")
-        Procurement.scan_fail_procurement_source(source, %{})
-        {:error, reason}
+      complete_scan(source, bids, scored, saved, enrich_bids(saved))
     end
+  end
+
+  defp do_planetbids_scan(source) do
+    Logger.info("Scanning #{source.name} via PlanetBids HTTP scanner")
+
+    with {:ok, %{bids: bids}} <-
+           ScanPlanetBids.run(
+             %{
+               portal_id: source.portal_id,
+               portal_name: source.name,
+               max_results: 100
+             },
+             %{}
+           ),
+         {:ok, scored} <- score_bids(bids, source),
+         {:ok, saved} <- save_qualifying_bids(scored, source, source.url) do
+      # Skip detail-page browser enrichment for the HTTP path.
+      complete_scan(source, bids, scored, saved, 0)
+    end
+  end
+
+  defp do_bidnet_scan(source) do
+    Logger.info("Scanning #{source.name} via BidNet HTML scanner")
+
+    with {:ok, %{bids: bids}} <-
+           ScanBidNet.run(
+             %{
+               url: source.url,
+               source_name: source.name,
+               max_results: 20,
+               detail_limit: 20
+             },
+             %{}
+           ),
+         {:ok, scored} <- score_bids(bids, source),
+         {:ok, saved} <- save_qualifying_bids(scored, source, source.url) do
+      complete_scan(source, bids, scored, saved, 0)
+    end
+  end
+
+  defp complete_scan(source, bids, scored, saved, enriched) do
+    Procurement.mark_procurement_source_scanned!(source, %{})
+
+    {:ok,
+     %{
+       source: source.name,
+       extracted: length(bids),
+       scored: length(scored),
+       saved: length(saved),
+       enriched: enriched,
+       bids: saved
+     }}
   end
 
   defp extract_bids(config) do
@@ -147,25 +215,37 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   defp escape_js(str), do: String.replace(str, "'", "\\'")
 
   defp score_bids(bids, source) do
+    profile_context =
+      CompanyProfileContext.resolve(
+        profile_key: source.metadata && source.metadata["company_profile_key"],
+        mode: source.metadata && source.metadata["company_profile_mode"]
+      )
+
     scored =
       bids
       |> Enum.map(fn bid ->
         params = %{
-          title: bid["title"] || "",
-          description: bid["description"] || "",
-          agency: source.name,
-          location: region_to_location(source.region)
+          title: bid_value(bid, :title) || "",
+          description: bid_value(bid, :description) || "",
+          agency: bid_value(bid, :agency) || source.name,
+          location: bid_value(bid, :location) || region_to_location(source.region),
+          region: source.region,
+          source_type: source.source_type,
+          source_name: source.name,
+          source_url: source.url,
+          company_profile_key: profile_context.company_profile_key,
+          company_profile_mode: profile_context.company_profile_mode
         }
 
         {:ok, score_result} = ScoreBid.run(params, %{})
 
         Map.merge(bid, %{
-          "score" => score_result,
-          "source_id" => source.id,
-          "source_url" => source.url
+          :score => score_result,
+          :source_id => source.id,
+          :source_url => source.url
         })
       end)
-      |> Enum.reject(&is_nil(&1["score"]))
+      |> Enum.reject(&is_nil(bid_value(&1, :score)))
 
     {:ok, scored}
   end
@@ -174,29 +254,30 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     relevant =
       scored_bids
       |> Enum.filter(fn bid ->
-        score = bid["score"]
-        # Must have keyword matches and not be rejected
-        score && score.score_tier != :rejected &&
-          score.keywords_matched && length(score.keywords_matched) > 0
+        score = bid_value(bid, :score)
+        score && score.score_tier != :rejected && Map.get(score, :save_candidate?, false)
       end)
       |> Enum.reject(fn bid ->
         # Skip expired bids
-        due = parse_date(bid["date"])
+        due = parse_bid_due_at(bid)
         due != nil and DateTime.compare(due, DateTime.utc_now()) == :lt
       end)
 
     saved =
       Enum.map(relevant, fn bid ->
-        score = bid["score"]
+        score = bid_value(bid, :score)
 
         params = %{
-          title: bid["title"],
-          description: bid["description"] || "",
-          url: resolve_bid_url(bid["link"], listing_url),
-          agency: source.name,
-          location: region_to_location(source.region),
+          title: bid_value(bid, :title),
+          description: bid_value(bid, :description) || "",
+          url: resolve_bid_url(bid_value(bid, :link) || bid_value(bid, :url), listing_url),
+          agency: bid_value(bid, :agency) || source.name,
+          location: bid_value(bid, :location) || region_to_location(source.region),
           region: source.region,
-          due_at: parse_date(bid["date"]),
+          posted_at: bid_value(bid, :posted_at),
+          due_at: parse_bid_due_at(bid),
+          external_id: bid_value(bid, :external_id),
+          source_url: bid_value(bid, :source_url) || source.url,
           score_total: score.score_total,
           score_tier: score.score_tier,
           score_service_match: score.score_service_match,
@@ -206,6 +287,25 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
           score_industry: score.score_industry,
           score_opportunity_type: score.score_opportunity_type,
           keywords_matched: score.keywords_matched,
+          keywords_rejected: score.keywords_rejected,
+          metadata: %{
+            source: %{
+              procurement_source_id: source.id,
+              source_type: source.source_type,
+              source_name: source.name,
+              listing_url: listing_url,
+              source_url: source.url
+            },
+            scoring: %{
+              recommendation: score.recommendation,
+              company_profile_key: Map.get(score, :company_profile_key),
+              company_profile_mode: Map.get(score, :company_profile_mode),
+              icp_matches: Map.get(score, :icp_matches, []),
+              risk_flags: Map.get(score, :risk_flags, []),
+              source_confidence: Map.get(score, :source_confidence),
+              save_candidate?: Map.get(score, :save_candidate?, false)
+            }
+          },
           procurement_source_id: source.id
         }
 
@@ -214,7 +314,10 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
             result
 
           {:error, reason} ->
-            Logger.warning("SaveBid failed for '#{bid["title"]}': #{inspect(reason)}")
+            Logger.warning(
+              "SaveBid failed for '#{bid_value(bid, :title) || "unknown"}': #{inspect(reason)}"
+            )
+
             nil
         end
       end)
@@ -234,6 +337,17 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp resolve_bid_url("http" <> _ = absolute, _source_url), do: absolute
   defp resolve_bid_url(_other, source_url), do: source_url
+
+  defp bid_value(bid, key) when is_atom(key) do
+    Map.get(bid, key) || Map.get(bid, Atom.to_string(key))
+  end
+
+  defp parse_bid_due_at(bid) do
+    case bid_value(bid, :due_at) || bid_value(bid, :due_date) do
+      %DateTime{} = due_at -> due_at
+      value -> parse_date(value || bid_value(bid, :date))
+    end
+  end
 
   # -- Bid enrichment (detail page scraping) --
 

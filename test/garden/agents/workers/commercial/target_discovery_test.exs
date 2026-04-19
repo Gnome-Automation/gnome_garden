@@ -1,49 +1,50 @@
 defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscoveryTest do
   use GnomeGarden.DataCase, async: true
 
-  alias GnomeGarden.Commercial
-  alias GnomeGarden.Operations
   alias GnomeGarden.Agents.Workers.Commercial.TargetDiscovery
+  alias GnomeGarden.Commercial
 
-  test "create_targets_from_result routes parsed agent output through SaveTargetAccount" do
-    result_text =
-      "LEAD: Apex Beverage Systems | food_bev | Anaheim, CA | Hiring PLC programmer for line expansion | Maya Lopez | Controls Manager | https://example.com/jobs/apex"
-
-    assert [{:ok, result}] = TargetDiscovery.create_targets_from_result(result_text)
-
-    {:ok, organization} = Operations.get_organization(result.organization_id)
-    {:ok, target_account} = Commercial.get_target_account(result.target_account_id)
-    {:ok, observation} = Commercial.get_target_observation(result.target_observation_id)
-
-    assert organization.name == "Apex Beverage Systems"
-    assert organization.status == :prospect
-    assert target_account.organization_id == organization.id
-    assert target_account.name == "Apex Beverage Systems"
-    assert observation.target_account_id == target_account.id
-    assert observation.summary =~ "Hiring PLC programmer"
-  end
-
-  test "create_targets_from_result threads discovery_program_id through save_target_account" do
-    {:ok, discovery_program} =
-      Commercial.create_discovery_program(%{
-        name: "Packaging Target Sweep",
-        target_regions: ["oc"],
-        target_industries: ["packaging"]
+  test "program_task includes the company profile context" do
+    {:ok, _profile} =
+      Commercial.create_company_profile(%{
+        key: "primary",
+        name: "Gnome",
+        positioning_summary: "Industrial integration plus custom software.",
+        specialty_summary: "Operator-facing web environments tied to controllers.",
+        voice_summary: "Technical and direct.",
+        core_capabilities: ["PLC integration"],
+        adjacent_capabilities: ["workflow software"],
+        target_industries: ["manufacturing"],
+        preferred_engagements: ["operations portals"],
+        disqualifiers: ["staff augmentation"],
+        voice_principles: ["be specific"],
+        preferred_phrases: ["controller-connected systems"],
+        avoid_phrases: ["growth hacking"],
+        default_profile_mode: :industrial_plus_software,
+        keyword_profiles: %{
+          "modes" => %{
+            "industrial_plus_software" => %{
+              "include" => ["operations portal"],
+              "exclude" => ["staff augmentation"]
+            }
+          }
+        }
       })
 
-    result_text =
-      "LEAD: Boxline Packaging | packaging | Anaheim, CA | Hiring automation technician for conveyor upgrade | Alex Kim | Ops Director | https://example.com/jobs/boxline"
+    {:ok, program} =
+      Commercial.create_discovery_program(%{
+        name: "Ops Software Hunt",
+        description: "Find controller-adjacent software targets.",
+        target_regions: ["oc"],
+        target_industries: ["manufacturing"]
+      })
 
-    assert [{:ok, result}] =
-             TargetDiscovery.create_targets_from_result(
-               result_text,
-               discovery_program_id: discovery_program.id
-             )
+    prompt = TargetDiscovery.program_task(program)
 
-    {:ok, target_account} = Commercial.get_target_account(result.target_account_id)
-    {:ok, observation} = Commercial.get_target_observation(result.target_observation_id)
-
-    assert target_account.discovery_program_id == discovery_program.id
-    assert observation.discovery_program_id == discovery_program.id
+    assert prompt =~ "COMPANY PROFILE"
+    assert prompt =~ "Industrial integration plus custom software."
+    assert prompt =~ "Operator-facing web environments tied to controllers."
+    assert prompt =~ "operations portal"
+    assert prompt =~ program.id
   end
 end

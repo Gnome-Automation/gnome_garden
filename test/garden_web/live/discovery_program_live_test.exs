@@ -43,6 +43,17 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
     {:ok, index_view, index_html} = live(conn, ~p"/commercial/discovery-programs")
     assert has_element?(index_view, "#discovery-programs")
     assert index_html =~ discovery_program.name
+    assert has_element?(index_view, "#run-program-#{discovery_program.id}")
+    assert has_element?(index_view, "#program-targets-#{discovery_program.id}")
+
+    index_view
+    |> element("#run-program-#{discovery_program.id}")
+    |> render_click()
+
+    assert render(index_view) =~ "Started discovery run"
+
+    {:ok, refreshed_program} = Commercial.get_discovery_program(discovery_program.id)
+    assert refreshed_program.last_run_at
 
     {:ok, show_view, _show_html} =
       live(conn, ~p"/commercial/discovery-programs/#{discovery_program}")

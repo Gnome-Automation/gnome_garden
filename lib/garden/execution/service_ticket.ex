@@ -190,6 +190,25 @@ defmodule GnomeGarden.Execution.ServiceTicket do
                 ]
               )
     end
+
+    read :for_requester_person do
+      argument :requester_person_id, :uuid, allow_nil?: false
+      filter expr(requester_person_id == ^arg(:requester_person_id))
+
+      prepare build(
+                sort: [reported_at: :desc, inserted_at: :desc],
+                load: [
+                  :organization,
+                  :site,
+                  :managed_system,
+                  :asset,
+                  :agreement,
+                  :requester_person,
+                  :service_level_policy,
+                  :work_orders
+                ]
+              )
+    end
   end
 
   attributes do

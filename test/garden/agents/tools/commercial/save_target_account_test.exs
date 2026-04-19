@@ -6,6 +6,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccountTest do
   alias GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
+  alias GnomeGarden.Support.IdentityNormalizer
 
   test "stores discovered target-account data in operations and commercial intake" do
     {:ok, result} =
@@ -60,11 +61,11 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccountTest do
     assert affiliation.is_primary
 
     assert target_account.organization_id == organization.id
+    assert target_account.contact_person_id == person.id
     assert target_account.name == "North Coast Packaging"
     assert target_account.website_domain == "northcoastpackaging.com"
     assert target_account.fit_score >= 70
     assert target_account.intent_score >= 65
-    assert metadata_value(target_account.metadata, :contact_person_id) == person.id
     assert metadata_value(target_account.metadata, :source) == "save_target_account"
 
     assert observation.target_account_id == target_account.id
@@ -154,6 +155,83 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccountTest do
     assert output.event == :created
     assert output.label == "West Basin Foods"
     assert metadata_value(output.metadata, :target_observation_id) == result.target_observation_id
+  end
+
+  test "matches an existing organization by normalized company name" do
+    {:ok, existing_organization} =
+      Operations.create_organization(%{
+        name: "North Coast Packaging, Inc.",
+        status: :prospect,
+        relationship_roles: ["prospect"]
+      })
+
+    {:ok, result} =
+      SaveTargetAccount.run(
+        %{
+          company_name: "North Coast Packaging",
+          company_description: "Packaging manufacturer adding controls-heavy production work.",
+          location: "Anaheim, CA",
+          signal: "Expansion and controls hiring signal"
+        },
+        %{}
+      )
+
+    {:ok, target_account} = Commercial.get_target_account(result.target_account_id)
+
+    assert result.organization_id == existing_organization.id
+    assert target_account.organization_id == existing_organization.id
+
+    assert {:ok, [matched_organization]} =
+             Operations.list_organizations_by_name_key(
+               IdentityNormalizer.organization_name_key("North Coast Packaging")
+             )
+
+    assert matched_organization.id == existing_organization.id
+  end
+
+  test "matches an existing affiliated person by organization and normalized name" do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "North Coast Packaging",
+        status: :prospect,
+        relationship_roles: ["prospect"],
+        website: "https://northcoastpackaging.com"
+      })
+
+    {:ok, person} =
+      Operations.create_person(%{
+        first_name: "Maya",
+        last_name: "Lopez",
+        email: "m.lopez@northcoastpackaging.com"
+      })
+
+    {:ok, _affiliation} =
+      Operations.create_organization_affiliation(%{
+        organization_id: organization.id,
+        person_id: person.id,
+        title: "Controls Engineer",
+        is_primary: true
+      })
+
+    {:ok, result} =
+      SaveTargetAccount.run(
+        %{
+          company_name: "North Coast Packaging",
+          company_description: "Packaging manufacturer expanding controls work.",
+          website: "https://northcoastpackaging.com",
+          signal: "Hiring controls engineer for expansion work",
+          contact_first_name: "Maya",
+          contact_last_name: "Lopez",
+          contact_title: "Controls Engineer",
+          contact_email: "maya.lopez@northcoastpackaging.com"
+        },
+        %{}
+      )
+
+    {:ok, target_account} = Commercial.get_target_account(result.target_account_id)
+
+    assert result.person_id == person.id
+    assert target_account.contact_person_id == person.id
   end
 
   defp metadata_value(metadata, key) do

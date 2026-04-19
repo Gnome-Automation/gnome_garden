@@ -27,6 +27,15 @@ defmodule GnomeGarden.Operations.Organization do
   postgres do
     table "organizations"
     repo GnomeGarden.Repo
+
+    custom_indexes do
+      index [:website_domain], name: "organizations_website_domain_idx"
+      index [:name_key], name: "organizations_name_key_idx"
+    end
+
+    references do
+      reference :merged_into, on_delete: :nilify
+    end
   end
 
   actions do
@@ -68,8 +77,15 @@ defmodule GnomeGarden.Operations.Organization do
       change {GnomeGarden.Operations.Changes.NormalizeOrganizationWebsite, []}
     end
 
+    update :merge_into do
+      require_atomic? false
+      accept []
+      argument :into_organization_id, :uuid, allow_nil?: false
+      change {GnomeGarden.Operations.Changes.MergeOrganization, []}
+    end
+
     read :active do
-      filter expr(status == :active)
+      filter expr(status == :active and is_nil(merged_into_id))
 
       prepare build(
                 sort: [name: :asc],
@@ -85,7 +101,7 @@ defmodule GnomeGarden.Operations.Organization do
     end
 
     read :prospects do
-      filter expr(status == :prospect)
+      filter expr(status == :prospect and is_nil(merged_into_id))
 
       prepare build(
                 sort: [name: :asc],
@@ -103,6 +119,15 @@ defmodule GnomeGarden.Operations.Organization do
     read :by_website_domain do
       argument :website_domain, :string, allow_nil?: false
       get_by [:website_domain]
+      filter expr(is_nil(merged_into_id))
+    end
+
+    read :by_name_key do
+      argument :name_key, :string, allow_nil?: false
+
+      filter expr(name_key == ^arg(:name_key) and is_nil(merged_into_id))
+
+      prepare build(sort: [inserted_at: :desc])
     end
   end
 
@@ -160,6 +185,14 @@ defmodule GnomeGarden.Operations.Organization do
       public? true
     end
 
+    attribute :name_key, :string do
+      public? true
+    end
+
+    attribute :merged_into_id, :uuid do
+      public? true
+    end
+
     attribute :phone, :string do
       public? true
     end
@@ -176,6 +209,15 @@ defmodule GnomeGarden.Operations.Organization do
   end
 
   relationships do
+    belongs_to :merged_into, __MODULE__ do
+      public? true
+    end
+
+    has_many :merged_organizations, __MODULE__ do
+      destination_attribute :merged_into_id
+      public? true
+    end
+
     has_many :sites, GnomeGarden.Operations.Site do
       public? true
     end

@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
 
   alias GnomeGarden.Agents.Procurement.SourceConfigurator
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.SourceCatalog
 
   @topics [
     "procurement_source:configured",
@@ -23,6 +24,7 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
      |> assign(:page_title, "Procurement Sources")
      |> assign(:focus_id, nil)
      |> assign(:source_count, 0)
+     |> assign(:ready_to_scan_count, 0)
      |> stream(:sources, [], reset: true)}
   end
 
@@ -143,6 +145,45 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
     end
   end
 
+  def handle_event("load_oc_bid_pilot", _params, socket) do
+    case SourceCatalog.ensure_oc_bid_pilot(actor: socket.assigns.current_user) do
+      {:ok, result} ->
+        {:noreply,
+         socket
+         |> load_sources()
+         |> put_flash(:info, pilot_message(result))}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, error_message(error))}
+    end
+  end
+
+  def handle_event("load_bidnet_pilot", _params, socket) do
+    case SourceCatalog.ensure_bidnet_controls_pilot(actor: socket.assigns.current_user) do
+      {:ok, result} ->
+        {:noreply,
+         socket
+         |> load_sources()
+         |> put_flash(:info, bidnet_pilot_message(result))}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, error_message(error))}
+    end
+  end
+
+  def handle_event("load_utility_discovery_pilot", _params, socket) do
+    case SourceCatalog.ensure_utility_discovery_pilot(actor: socket.assigns.current_user) do
+      {:ok, result} ->
+        {:noreply,
+         socket
+         |> load_sources()
+         |> put_flash(:info, utility_pilot_message(result))}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, error_message(error))}
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -157,11 +198,57 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
           </p>
         </div>
 
-        <div class="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-right shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p class="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Sources
-          </p>
-          <p class="mt-1 text-2xl font-semibold text-zinc-900 dark:text-white">{@source_count}</p>
+        <div class="flex flex-wrap items-center justify-end gap-3">
+          <button
+            id="load-oc-bid-pilot"
+            type="button"
+            class="btn btn-primary"
+            phx-click="load_oc_bid_pilot"
+          >
+            Load OC PlanetBids Pilot
+          </button>
+
+          <button
+            id="load-bidnet-pilot"
+            type="button"
+            class="btn btn-primary"
+            phx-click="load_bidnet_pilot"
+          >
+            Load BidNet Pilot
+          </button>
+
+          <button
+            id="load-utility-discovery-pilot"
+            type="button"
+            class="btn btn-secondary"
+            phx-click="load_utility_discovery_pilot"
+          >
+            Load Utility Discovery Pilot
+          </button>
+
+          <div class="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-right shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <p class="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Sources
+            </p>
+            <p
+              id="procurement-source-count"
+              class="mt-1 text-2xl font-semibold text-zinc-900 dark:text-white"
+            >
+              {@source_count}
+            </p>
+          </div>
+
+          <div class="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-right shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <p class="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Ready to Scan
+            </p>
+            <p
+              id="procurement-ready-count"
+              class="mt-1 text-2xl font-semibold text-zinc-900 dark:text-white"
+            >
+              {@ready_to_scan_count}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -178,7 +265,10 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
           phx-update="stream"
           class="divide-y divide-zinc-200 dark:divide-zinc-800"
         >
-          <div class="hidden only:block px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+          <div
+            id="procurement-sources-empty"
+            class="hidden only:block px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400"
+          >
             No procurement sources yet.
           </div>
 
@@ -325,9 +415,11 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
 
   defp load_sources(socket) do
     sources = Procurement.list_console_procurement_sources!(actor_opts(socket))
+    ready_to_scan_count = Enum.count(sources, &ready_to_scan?/1)
 
     socket
     |> assign(:source_count, length(sources))
+    |> assign(:ready_to_scan_count, ready_to_scan_count)
     |> stream(:sources, sources, reset: true)
   end
 
@@ -367,11 +459,61 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementSourcesLive do
   defp discovery_button_label(%{config_status: :pending}), do: "Run Discovery"
   defp discovery_button_label(_source), do: "Discover Config"
 
+  defp pilot_message(result) do
+    parts = [
+      "Loaded OC PlanetBids pilot",
+      "#{length(result.created)} created",
+      "#{length(result.existing)} existing",
+      "#{length(result.configured)} auto-configured",
+      "#{length(result.ready)} ready to scan"
+    ]
+
+    parts =
+      if result.skipped_configuration == [] do
+        parts
+      else
+        parts ++ ["#{length(result.skipped_configuration)} need review"]
+      end
+
+    Enum.join(parts, ", ") <> "."
+  end
+
+  defp bidnet_pilot_message(result) do
+    parts = [
+      "Loaded BidNet controls pilot",
+      "#{length(result.created)} created",
+      "#{length(result.existing)} existing",
+      "#{length(result.configured)} auto-configured",
+      "#{length(result.ready)} ready to scan"
+    ]
+
+    Enum.join(parts, ", ") <> "."
+  end
+
+  defp utility_pilot_message(result) do
+    need_discovery =
+      length(result.created) + length(result.existing) - length(result.ready)
+
+    parts = [
+      "Loaded utility discovery pilot",
+      "#{length(result.created)} created",
+      "#{length(result.existing)} existing",
+      "#{need_discovery} need discovery",
+      "#{length(result.ready)} ready to scan"
+    ]
+
+    Enum.join(parts, ", ") <> "."
+  end
+
   defp actor_opts(socket) do
     case socket.assigns.current_user do
       nil -> []
       user -> [actor: user]
     end
+  end
+
+  defp ready_to_scan?(source) do
+    source.enabled and source.status == :approved and source.config_status == :configured
   end
 
   defp source_focus_class(%{id: id}, id),

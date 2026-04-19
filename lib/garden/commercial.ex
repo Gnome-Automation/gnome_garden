@@ -15,6 +15,16 @@ defmodule GnomeGarden.Commercial do
   end
 
   resources do
+    resource GnomeGarden.Commercial.CompanyProfile do
+      define :list_company_profiles, action: :read
+      define :get_company_profile, action: :read, get_by: [:id]
+      define :get_company_profile_by_key, action: :by_key, args: [:key]
+      define :get_primary_company_profile, action: :primary
+      define :create_company_profile, action: :create
+      define :update_company_profile, action: :update
+      define :delete_company_profile, action: :destroy
+    end
+
     resource GnomeGarden.Commercial.DiscoveryProgram do
       define :list_discovery_programs, action: :read
       define :list_active_discovery_programs, action: :active
@@ -43,6 +53,7 @@ defmodule GnomeGarden.Commercial do
 
       define :create_target_account, action: :create
       define :update_target_account, action: :update
+      define :resolve_target_account_identity, action: :resolve_identity
       define :review_target_account, action: :start_review
       define :promote_target_account_to_signal, action: :promote_to_signal
       define :reject_target_account, action: :reject
@@ -56,6 +67,10 @@ defmodule GnomeGarden.Commercial do
       define :list_target_accounts_for_organization,
         action: :for_organization,
         args: [:organization_id]
+
+      define :list_target_accounts_for_contact_person,
+        action: :for_contact_person,
+        args: [:contact_person_id]
 
       define :list_target_accounts_for_discovery_program,
         action: :for_discovery_program,
@@ -89,6 +104,7 @@ defmodule GnomeGarden.Commercial do
       define :get_signal_by_external_ref, action: :by_external_ref, args: [:external_ref]
       define :create_signal, action: :create
       define :update_signal, action: :update
+      define :list_signals_for_organization, action: :for_organization, args: [:organization_id]
       define :create_signal_from_bid, action: :create_from_bid, args: [:source_bid_id]
       define :review_signal, action: :start_review
       define :accept_signal, action: :accept
@@ -114,7 +130,7 @@ defmodule GnomeGarden.Commercial do
       define :archive_pursuit, action: :archive
       define :reopen_pursuit, action: :reopen
       define :list_active_pursuits, action: :active
-      define :list_pursuits_for_organization, action: :for_organization
+      define :list_pursuits_for_organization, action: :for_organization, args: [:organization_id]
     end
 
     resource GnomeGarden.Commercial.Proposal do

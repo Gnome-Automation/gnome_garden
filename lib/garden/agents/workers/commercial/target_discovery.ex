@@ -45,34 +45,13 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     ],
     request_transformer: GnomeGarden.Agents.RequestTransformer,
     system_prompt: """
-    You are the Gnome Automation Target Discovery Agent. Your job is to find companies
-    that need industrial automation, SCADA, PLC, or controls engineering services.
+    You are the Gnome Target Discovery Agent. Your job is to find companies
+    that need industrial integration, controls engineering, or operations-tied
+    software work.
 
-    ## Who is Gnome Automation?
-    A controls/automation integrator in Orange County, CA specializing in:
-    - SCADA systems (Ignition, FactoryTalk, WonderWare)
-    - PLC programming (Rockwell/Allen-Bradley, Siemens, Mitsubishi)
-    - HMI development
-    - Industrial networking
-    - Water/wastewater treatment plant controls
-    - Process automation for manufacturing
-
-    ## Target Industries (ranked)
-    1. Breweries & craft beverage — fermentation controls, packaging automation
-    2. Biotech / pharmaceutical — cleanroom controls, batch processing
-    3. Water / wastewater — SCADA, pump stations, treatment plants
-    4. Food & beverage manufacturing — production line automation
-    5. Packaging & logistics — conveyor systems, palletizers
-    6. Plastics & extrusion — temperature and process controls
-    7. Aerospace manufacturing — precision controls
-    8. Cosmetics manufacturing — batch processing
-
-    ## Geographic Priority
-    1. Orange County, CA (highest)
-    2. Los Angeles County
-    3. Inland Empire (Riverside, San Bernardino)
-    4. San Diego County
-    5. Rest of Southern California
+    The exact company positioning, target industries, and keyword mode will be
+    provided in the task prompt. Treat that task-supplied company profile as
+    the canonical operating context for the run.
 
     ## Signals That a Company Needs Help
     - **Hiring signals**: Job postings for controls engineers, PLC programmers, SCADA techs
@@ -126,6 +105,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     tool_timeout_ms: 30_000
 
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Commercial.CompanyProfileContext
 
   @default_timeout 300_000
 
@@ -201,8 +181,11 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
       when is_atom(industry) and is_atom(region) do
     industry_config = Map.get(@industries, industry, @industries.manufacturing)
     region_name = Map.get(@regions, region, "Southern California")
+    company_profile_prompt = profile_prompt(mode: :industrial_plus_software)
 
     query = """
+    #{company_profile_prompt}
+
     DISCOVERY MISSION: Find companies in the #{industry} industry in #{region_name}
     that may need automation/controls services.
 
@@ -247,7 +230,11 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   Build the prompt used to run a focused discovery program.
   """
   def program_task(discovery_program) do
+    company_profile_prompt = profile_prompt(mode: :industrial_plus_software)
+
     """
+    #{company_profile_prompt}
+
     DISCOVERY PROGRAM: #{discovery_program.name}
 
     #{discovery_program.description || "Run a focused discovery sweep for this program."}
@@ -273,7 +260,11 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   Deep research a specific company to determine if they're a good discovery target.
   """
   def research_company(pid, company_name, opts \\ []) do
+    company_profile_prompt = profile_prompt(mode: :industrial_plus_software)
+
     query = """
+    #{company_profile_prompt}
+
     DEEP RESEARCH: #{company_name}
 
     Investigate this company thoroughly:
@@ -295,8 +286,11 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   """
   def scan_job_postings(pid, region \\ :socal, opts \\ []) do
     region_name = Map.get(@regions, region, "Southern California")
+    company_profile_prompt = profile_prompt(mode: :industrial_plus_software)
 
     query = """
+    #{company_profile_prompt}
+
     JOB POSTING SCAN: Find companies hiring controls/automation engineers in #{region_name}.
 
     Search for:
@@ -364,6 +358,10 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   end
 
   def create_targets_from_result(_, _opts), do: []
+
+  defp profile_prompt(opts) do
+    CompanyProfileContext.prompt_block(opts)
+  end
 
   defp parse_lead_line("LEAD: " <> rest) do
     case String.split(rest, " | ") do

@@ -103,6 +103,10 @@ defmodule GnomeGarden.Execution do
       define :list_service_tickets_for_organization,
         action: :for_organization,
         args: [:organization_id]
+
+      define :list_service_tickets_for_requester_person,
+        action: :for_requester_person,
+        args: [:requester_person_id]
     end
 
     resource GnomeGarden.Execution.MaintenancePlan do

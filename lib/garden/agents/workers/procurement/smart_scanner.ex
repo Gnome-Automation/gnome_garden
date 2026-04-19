@@ -11,6 +11,9 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SmartScanner do
   No site-specific code needed - the agent figures it out.
   """
 
+  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Agents.Workers.Procurement.ProfileInstructions
+
   use Jido.AI.Agent,
     name: "smart_scanner",
     description: "Autonomous browser-based bid scanner",
@@ -36,79 +39,11 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SmartScanner do
     llm_opts: [provider_options: [thinking: %{type: "disabled"}]],
     request_transformer: GnomeGarden.Agents.RequestTransformer,
     system_prompt: """
-    You are an autonomous bid scanner for Gnome Automation LLC, a controls/automation integrator in Orange County, CA.
+    You are an autonomous procurement site scanner for Gnome.
 
-    ## Your Mission
-    Navigate procurement websites, find bid opportunities, and identify ones relevant to:
-    - SCADA systems
-    - PLC programming (Rockwell/Allen-Bradley, Siemens)
-    - HMI development (Ignition, FactoryTalk)
-    - Industrial automation
-    - Water/wastewater treatment plants
-    - Instrumentation & controls
-
-    ## Two Modes of Operation
-
-    ### Discovery Mode (when given a procurement_source_id)
-    Figure out how to scrape a new site and save the configuration:
-    1. Navigate to the URL
-    2. Find the bid listings page
-    3. Identify CSS selectors for: bid rows, titles, dates, links
-    4. Use **save_source_config** to save the config for future deterministic scans
-    5. This is a ONE-TIME cost - future scans won't need LLM
-
-    ### Scan Mode (default)
-    Scan and score bids immediately:
-    1. Navigate and extract bids
-    2. Score each with score_bid
-    3. Save qualifying bids (50+)
-
-    ## How to Scan a Site
-
-    1. **Navigate** to the URL using browser_navigate
-    2. **Snapshot** the page to see structure using browser_snapshot
-    3. **Find the bids listing** - look for links like "Open Bids", "Current Solicitations", "RFPs", etc.
-    4. **Click** to navigate to the listings using browser_click with the ref (e.g., @e9)
-    5. **Extract** bid data using browser_extract with JavaScript
-
-    ## Discovery - Finding CSS Selectors
-
-    When discovering a site, you need to identify:
-    - **listing_selector**: CSS path to each bid row (e.g., "table.bids tbody tr", ".bid-item")
-    - **title_selector**: Within each row, selector for title (e.g., "td:first-child a", ".title")
-    - **date_selector**: Within each row, selector for due date
-    - **link_selector**: Within each row, selector for the detail link
-
-    Use browser_extract with JavaScript to test selectors:
-    ```javascript
-    document.querySelectorAll('YOUR_SELECTOR').length  // Should return count
-    ```
-
-    ## Scoring
-
-    For each bid you find, use score_bid to evaluate it. Pass:
-    - title: The bid title
-    - description: Full description text
-    - agency: Who issued it
-    - location: Where it is
-    - estimated_value: Dollar amount if shown
-
-    Only save bids that score 50+ (WARM or HOT tier).
-
-    ## Tips
-
-    - After clicking, wait and snapshot again to see the new page
-    - If a page is blank or says "loading", try snapshot again after a moment
-    - Look for pagination to get more results
-    - Skip bids that are clearly not relevant (HVAC, janitorial, landscaping)
-
-    ## CRITICAL for Discovery Mode
-
-    In discovery mode, you MUST call save_source_config before finishing!
-    - Don't over-analyze. Once you find a working listing_selector and title_selector, SAVE IT.
-    - PlanetBids sites use: listing_selector="table tbody tr" or ".results-row"
-    - If unsure, make your best guess and save - we can refine later.
-    - Call save_source_config EARLY rather than running out of iterations.
+    The active company profile, keyword mode, and scoring lane will be injected
+    at runtime. Use score_bid as the canonical fit decision and save selectors
+    as soon as they are good enough for deterministic scans.
     """,
     max_iterations: 30
 
@@ -198,7 +133,7 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SmartScanner do
     2. Find the bid listings (look for "Open Bids", "Solicitations", etc.)
     3. Extract all bids from the page
     4. Score each one using score_bid
-    5. Save any that score 50+ (WARM or HOT)
+    5. Save the bids score_bid recommends keeping
 
     Report what you find.
     """
@@ -217,7 +152,7 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SmartScanner do
         URL: #{source.url}
         Type: #{source.source_type}
 
-        Find and score all relevant bids. Save any that are WARM or HOT.
+        Find and score all relevant bids. Save the bids score_bid recommends keeping.
         """
 
         ask_sync(pid, query, Keyword.put_new(opts, :timeout, @default_timeout))
@@ -242,13 +177,78 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SmartScanner do
     For each site:
     1. Try to access it
     2. If accessible, find and extract bids
-    3. Score each bid
-    4. Save WARM and HOT bids
+    3. Score each bid with score_bid
+    4. Save the bids score_bid recommends keeping
 
     Skip sites that require login or are blocked.
     Report your findings for each site.
     """
 
     ask_sync(pid, query, Keyword.put_new(opts, :timeout, 600_000))
+  end
+
+  @impl true
+  def on_before_cmd(agent, {:ai_react_start, params} = _action) do
+    base_context = Map.get(params, :tool_context, %{})
+    profile_context = resolve_profile_context(base_context)
+
+    context =
+      base_context
+      |> Map.put(:company_profile_key, profile_context.company_profile_key)
+      |> Map.put(:company_profile_mode, profile_context.company_profile_mode)
+      |> Map.put(:company_profile, profile_context.profile)
+      |> Map.put(:company_profile_prompt, profile_prompt(profile_context))
+      |> Map.put(:bidnet_query_keywords, profile_context.bidnet_query_keywords)
+      |> Map.put(:sam_gov_naics_codes, profile_context.sam_gov_naics_codes)
+
+    updated_params = Map.put(params, :tool_context, context)
+
+    updated_agent =
+      Jido.AI.set_system_prompt_direct(agent, profile_system_prompt(profile_context))
+
+    {:ok, updated_agent, {:ai_react_start, updated_params}}
+  end
+
+  @impl true
+  def on_before_cmd(agent, action), do: {:ok, agent, action}
+
+  defp resolve_profile_context(tool_context) do
+    CompanyProfileContext.resolve(
+      profile_key:
+        nested_value(tool_context, [:company_profile_key]) ||
+          nested_value(tool_context, [:deployment_config, :company_profile_key]),
+      mode:
+        nested_value(tool_context, [:company_profile_mode]) ||
+          nested_value(tool_context, [:source_scope, :company_profile_mode])
+    )
+  end
+
+  defp nested_value(map, [key]) when is_map(map) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp nested_value(map, [key | rest]) when is_map(map) do
+    map
+    |> nested_value([key])
+    |> case do
+      %{} = nested -> nested_value(nested, rest)
+      _ -> nil
+    end
+  end
+
+  defp nested_value(_map, _path), do: nil
+
+  defp profile_system_prompt(profile_context) do
+    ProfileInstructions.smart_scanner_system_prompt(
+      profile_key: profile_context.company_profile_key,
+      mode: profile_context.company_profile_mode
+    )
+  end
+
+  defp profile_prompt(profile_context) do
+    CompanyProfileContext.prompt_block(
+      profile: profile_context.profile,
+      mode: profile_context.company_profile_mode
+    )
   end
 end

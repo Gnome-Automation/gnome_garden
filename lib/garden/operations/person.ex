@@ -28,8 +28,14 @@ defmodule GnomeGarden.Operations.Person do
     table "people"
     repo GnomeGarden.Repo
 
+    custom_indexes do
+      index [:name_key], name: "people_name_key_idx"
+      index [:name_key, :email_domain], name: "people_name_key_email_domain_idx"
+    end
+
     references do
       reference :owner_user, on_delete: :nilify
+      reference :merged_into, on_delete: :nilify
     end
   end
 
@@ -54,9 +60,13 @@ defmodule GnomeGarden.Operations.Person do
         :notes,
         :owner_user_id
       ]
+
+      change {GnomeGarden.Operations.Changes.NormalizePersonIdentity, []}
     end
 
     update :update do
+      require_atomic? false
+
       accept [
         :first_name,
         :last_name,
@@ -72,10 +82,19 @@ defmodule GnomeGarden.Operations.Person do
         :notes,
         :owner_user_id
       ]
+
+      change {GnomeGarden.Operations.Changes.NormalizePersonIdentity, []}
+    end
+
+    update :merge_into do
+      require_atomic? false
+      accept []
+      argument :into_person_id, :uuid, allow_nil?: false
+      change {GnomeGarden.Operations.Changes.MergePerson, []}
     end
 
     read :active do
-      filter expr(status == :active)
+      filter expr(status == :active and is_nil(merged_into_id))
 
       prepare build(
                 sort: [last_name: :asc, first_name: :asc],
@@ -87,14 +106,52 @@ defmodule GnomeGarden.Operations.Person do
       argument :organization_id, :uuid, allow_nil?: false
 
       filter expr(
-               exists organization_affiliations,
-                      organization_id == ^arg(:organization_id) and status == :active
+               is_nil(merged_into_id) and
+                 exists(
+                   organization_affiliations,
+                   organization_id == ^arg(:organization_id) and status == :active
+                 )
              )
 
       prepare build(
                 sort: [last_name: :asc, first_name: :asc],
                 load: [:owner_user, :organization_affiliations, :organizations]
               )
+    end
+
+    read :for_organization_and_name_key do
+      argument :organization_id, :uuid, allow_nil?: false
+      argument :name_key, :string, allow_nil?: false
+
+      filter expr(
+               is_nil(merged_into_id) and
+                 name_key == ^arg(:name_key) and
+                 exists(
+                   organization_affiliations,
+                   organization_id == ^arg(:organization_id) and status == :active
+                 )
+             )
+
+      prepare build(sort: [last_name: :asc, first_name: :asc])
+    end
+
+    read :by_name_key_and_email_domain do
+      argument :name_key, :string, allow_nil?: false
+      argument :email_domain, :string, allow_nil?: false
+
+      filter expr(
+               is_nil(merged_into_id) and
+                 name_key == ^arg(:name_key) and
+                 email_domain == ^arg(:email_domain)
+             )
+
+      prepare build(sort: [last_name: :asc, first_name: :asc])
+    end
+
+    read :by_email do
+      argument :email, :ci_string, allow_nil?: false
+      get_by [:email]
+      filter expr(is_nil(merged_into_id))
     end
   end
 
@@ -112,6 +169,14 @@ defmodule GnomeGarden.Operations.Person do
     end
 
     attribute :email, :ci_string do
+      public? true
+    end
+
+    attribute :email_domain, :string do
+      public? true
+    end
+
+    attribute :merged_into_id, :uuid do
       public? true
     end
 
@@ -161,11 +226,24 @@ defmodule GnomeGarden.Operations.Person do
       public? true
     end
 
+    attribute :name_key, :string do
+      public? true
+    end
+
     timestamps()
   end
 
   relationships do
     belongs_to :owner_user, GnomeGarden.Accounts.User do
+      public? true
+    end
+
+    belongs_to :merged_into, __MODULE__ do
+      public? true
+    end
+
+    has_many :merged_people, __MODULE__ do
+      destination_attribute :merged_into_id
       public? true
     end
 

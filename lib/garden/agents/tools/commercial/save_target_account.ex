@@ -51,6 +51,8 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
     ]
 
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Commercial.DiscoveryIdentityResolver
+  alias GnomeGarden.Commercial.MarketFocus
   alias GnomeGarden.Operations
   alias GnomeGarden.Support.WebIdentity
   alias GnomeGarden.Agents.RunOutputLogger
@@ -59,12 +61,42 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
   def run(params, context) do
     existing_target_account = existing_target_account(params)
     existing_observation = existing_observation(params)
+    actor = context_actor(context)
+    profile_context = context_profile(context, params)
 
-    with {:ok, organization} <- upsert_organization(params),
-         {:ok, person} <- maybe_upsert_person(params),
-         {:ok, _affiliation} <- maybe_upsert_affiliation(person, organization, params),
-         {:ok, target_account} <- upsert_target_account(params, organization, person),
-         {:ok, observation} <- upsert_target_observation(params, target_account, person) do
+    target_score =
+      params
+      |> with_profile_context(profile_context)
+      |> MarketFocus.assess_target()
+
+    with {:ok, organization_resolution} <- resolve_organization(params, actor),
+         {:ok, person_resolution} <-
+           resolve_person(params, organization_resolution.organization, actor),
+         {:ok, _affiliation} <-
+           maybe_upsert_affiliation(
+             person_resolution.person,
+             organization_resolution.organization,
+             params,
+             actor
+           ),
+         {:ok, target_account} <-
+           upsert_target_account(
+             params,
+             organization_resolution,
+             person_resolution,
+             target_score,
+             profile_context
+           ),
+         person = person_resolution.person,
+         organization = organization_resolution.organization,
+         {:ok, observation} <-
+           upsert_target_observation(
+             params,
+             target_account,
+             person,
+             target_score,
+             profile_context
+           ) do
       log_target_output(
         context,
         target_account,
@@ -76,12 +108,12 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
       {:ok,
        %{
          saved: true,
-         organization_id: organization.id,
+         organization_id: organization && organization.id,
          person_id: person && person.id,
          target_account_id: target_account.id,
          target_observation_id: observation.id,
          company: params.company_name,
-         message: "Organization + Target saved for commercial review."
+         message: "Target saved for commercial review."
        }}
     else
       {:error, reason} ->
@@ -111,10 +143,10 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
     end
   end
 
-  defp upsert_organization(params) do
+  defp resolve_organization(params, actor) do
     {city, state} = parse_location(params[:location])
 
-    attrs =
+    DiscoveryIdentityResolver.resolve_organization(
       %{
         name: params.company_name,
         status: :prospect,
@@ -122,55 +154,29 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
         website: WebIdentity.normalize_website(params[:website]),
         primary_region: infer_region(city, state) |> to_string(),
         notes: build_organization_notes(params, city, state)
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) end)
-      |> Map.new()
-
-    Operations.create_organization(
-      attrs,
-      upsert?: true,
-      upsert_identity: organization_upsert_identity(attrs),
-      upsert_fields: [:website, :primary_region, :notes]
+      },
+      actor: actor
     )
   end
 
-  defp maybe_upsert_person(params) do
-    {first, last} = split_name(params[:contact_first_name], params[:contact_last_name])
-    email = blank_to_nil(params[:contact_email])
-    phone = blank_to_nil(params[:contact_phone])
-
-    cond do
-      is_nil(email) and is_nil(first) and is_nil(last) ->
-        {:ok, nil}
-
-      true ->
-        attrs =
-          %{
-            first_name: first || "Unknown",
-            last_name: last || params.company_name,
-            email: email,
-            phone: phone,
-            notes: params[:contact_title]
-          }
-          |> Enum.reject(fn {_key, value} -> is_nil(value) end)
-          |> Map.new()
-
-        if email do
-          Operations.create_person(
-            attrs,
-            upsert?: true,
-            upsert_identity: :unique_email,
-            upsert_fields: [:first_name, :last_name, :phone, :notes]
-          )
-        else
-          Operations.create_person(attrs)
-        end
-    end
+  defp resolve_person(params, organization, actor) do
+    DiscoveryIdentityResolver.resolve_person(
+      %{
+        first_name: blank_to_nil(params[:contact_first_name]),
+        last_name: blank_to_nil(params[:contact_last_name]),
+        email: blank_to_nil(params[:contact_email]),
+        phone: blank_to_nil(params[:contact_phone]),
+        notes: blank_to_nil(params[:contact_title])
+      },
+      organization,
+      actor: actor
+    )
   end
 
-  defp maybe_upsert_affiliation(nil, _organization, _params), do: {:ok, nil}
+  defp maybe_upsert_affiliation(nil, _organization, _params, _actor), do: {:ok, nil}
+  defp maybe_upsert_affiliation(_person, nil, _params, _actor), do: {:ok, nil}
 
-  defp maybe_upsert_affiliation(person, organization, params) do
+  defp maybe_upsert_affiliation(person, organization, params, actor) do
     attrs =
       %{
         organization_id: organization.id,
@@ -184,13 +190,20 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
 
     Operations.create_organization_affiliation(
       attrs,
+      actor: actor,
       upsert?: true,
       upsert_identity: :unique_active_affiliation,
       upsert_fields: [:title, :contact_roles, :is_primary]
     )
   end
 
-  defp upsert_target_account(params, organization, person) do
+  defp upsert_target_account(
+         params,
+         organization_resolution,
+         person_resolution,
+         target_score,
+         profile_context
+       ) do
     attrs = %{
       name: params.company_name,
       website: WebIdentity.normalize_website(params[:website]),
@@ -198,40 +211,68 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
       region: infer_region_from_location(params[:location]),
       industry: blank_to_nil(params[:industry]),
       size_bucket: infer_size_bucket(params[:employee_count]),
-      fit_score: fit_score(params),
-      intent_score: intent_score(params[:signal]),
+      fit_score: target_score.fit_score,
+      intent_score: target_score.intent_score,
       status: :new,
       notes: build_target_notes(params),
       discovery_program_id: blank_to_nil(params[:discovery_program_id]),
-      organization_id: organization.id,
+      organization_id:
+        organization_resolution.organization && organization_resolution.organization.id,
+      contact_person_id: person_resolution.person && person_resolution.person.id,
       metadata: %{
         employee_count: params[:employee_count],
-        contact_person_id: person && person.id,
         discovery_program_id: blank_to_nil(params[:discovery_program_id]),
-        source: "save_target_account"
+        source: "save_target_account",
+        market_focus: %{
+          company_profile_key: profile_context.company_profile_key,
+          company_profile_mode: profile_context.company_profile_mode,
+          icp_matches: target_score.icp_matches,
+          risk_flags: target_score.risk_flags,
+          fit_rationale: target_score.fit_rationale,
+          intent_signals: target_score.intent_signals
+        },
+        contact_snapshot: DiscoveryIdentityResolver.target_contact_snapshot(params),
+        identity_review:
+          DiscoveryIdentityResolver.target_identity_review(
+            organization_resolution,
+            person_resolution
+          )
       }
     }
 
-    Commercial.create_target_account(
-      attrs,
-      upsert?: true,
-      upsert_identity: target_account_upsert_identity(attrs),
-      upsert_fields: [
-        :website,
-        :location,
-        :region,
-        :industry,
-        :size_bucket,
-        :fit_score,
-        :intent_score,
-        :notes,
-        :organization_id,
-        :metadata
-      ]
-    )
+    case target_account_upsert_identity(attrs) do
+      nil ->
+        Commercial.create_target_account(attrs)
+
+      upsert_identity ->
+        Commercial.create_target_account(
+          attrs,
+          upsert?: true,
+          upsert_identity: upsert_identity,
+          upsert_fields: [
+            :website,
+            :location,
+            :region,
+            :industry,
+            :size_bucket,
+            :fit_score,
+            :intent_score,
+            :notes,
+            :organization_id,
+            :contact_person_id,
+            :metadata
+          ]
+        )
+    end
   end
 
-  defp upsert_target_observation(params, target_account, person) do
+  defp upsert_target_observation(
+         params,
+         target_account,
+         person,
+         target_score,
+         profile_context
+       ) do
     summary = params.signal
 
     attrs = %{
@@ -241,7 +282,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
       external_ref: observation_external_ref(params),
       source_url: blank_to_nil(params[:source_url]),
       observed_at: DateTime.utc_now(),
-      confidence_score: intent_score(summary),
+      confidence_score: target_score.intent_score,
       summary: summary,
       raw_excerpt: params.company_description,
       evidence_points: observation_evidence_points(params),
@@ -254,7 +295,14 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
         employee_count: params[:employee_count],
         contact_person_id: person && person.id,
         discovery_program_id: blank_to_nil(params[:discovery_program_id]),
-        source: "save_target_account"
+        source: "save_target_account",
+        market_focus: %{
+          company_profile_key: profile_context.company_profile_key,
+          company_profile_mode: profile_context.company_profile_mode,
+          icp_matches: target_score.icp_matches,
+          risk_flags: target_score.risk_flags,
+          intent_signals: target_score.intent_signals
+        }
       }
     }
 
@@ -273,12 +321,6 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
       ]
     )
   end
-
-  defp split_name(nil, nil), do: {nil, nil}
-  defp split_name(first, last) when is_binary(first) and is_binary(last), do: {first, last}
-  defp split_name(first, nil) when is_binary(first) and first != "", do: {first, "Unknown"}
-  defp split_name(nil, last) when is_binary(last) and last != "", do: {"Unknown", last}
-  defp split_name(_, _), do: {nil, nil}
 
   defp parse_location(nil), do: {nil, nil}
 
@@ -399,60 +441,6 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
   defp infer_size_bucket(employee_count) when is_integer(employee_count), do: :enterprise
   defp infer_size_bucket(_employee_count), do: nil
 
-  defp fit_score(params) do
-    industry_score =
-      case blank_to_nil(params[:industry]) do
-        industry when industry in ["brewery", "biotech", "water", "food_bev", "packaging"] -> 80
-        "manufacturing" -> 70
-        _ -> 55
-      end
-
-    size_bonus =
-      case infer_size_bucket(params[:employee_count]) do
-        :medium -> 10
-        :large -> 8
-        :small -> 4
-        :enterprise -> -5
-        _ -> 0
-      end
-
-    min(industry_score + size_bonus, 100)
-  end
-
-  defp intent_score(signal) when is_binary(signal) do
-    signal
-    |> String.downcase()
-    |> then(fn text ->
-      cond do
-        String.contains?(text, [
-          "hiring",
-          "controls engineer",
-          "plc programmer",
-          "modernization initiative",
-          "rfp",
-          "scada upgrade"
-        ]) ->
-          85
-
-        String.contains?(text, [
-          "expansion",
-          "new line",
-          "capacity increase",
-          "capital improvement"
-        ]) ->
-          75
-
-        String.contains?(text, ["legacy", "manual process", "downtime", "reporting gaps"]) ->
-          65
-
-        true ->
-          50
-      end
-    end)
-  end
-
-  defp intent_score(_signal), do: 50
-
   defp infer_region_from_location(nil), do: nil
 
   defp infer_region_from_location(location),
@@ -493,12 +481,10 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
   defp target_account_upsert_identity(%{website: website}) when is_binary(website),
     do: :unique_website_domain
 
-  defp target_account_upsert_identity(_attrs), do: :unique_name_location
+  defp target_account_upsert_identity(%{location: location}) when is_binary(location),
+    do: :unique_name_key_location
 
-  defp organization_upsert_identity(%{website: website}) when is_binary(website),
-    do: :unique_website_domain
-
-  defp organization_upsert_identity(_attrs), do: :unique_name
+  defp target_account_upsert_identity(_attrs), do: nil
 
   defp log_target_output(
          context,
@@ -537,6 +523,48 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount do
   defp blank_to_nil(nil), do: nil
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
+
+  defp context_actor(context) when is_map(context) do
+    Map.get(context, :actor) || get_in(context, [:tool_context, :actor])
+  end
+
+  defp context_actor(_context), do: nil
+
+  defp context_profile(context, params) do
+    tool_context = Map.get(context, :tool_context, %{})
+
+    GnomeGarden.Commercial.CompanyProfileContext.resolve(
+      profile_key:
+        Map.get(params, :company_profile_key) ||
+          nested_value(tool_context, [:company_profile_key]) ||
+          nested_value(tool_context, [:deployment_config, :company_profile_key]),
+      mode:
+        Map.get(params, :company_profile_mode) ||
+          nested_value(tool_context, [:company_profile_mode]) ||
+          nested_value(tool_context, [:source_scope, :company_profile_mode])
+    )
+  end
+
+  defp with_profile_context(params, profile_context) do
+    params
+    |> Map.put_new(:company_profile_key, profile_context.company_profile_key)
+    |> Map.put_new(:company_profile_mode, profile_context.company_profile_mode)
+  end
+
+  defp nested_value(map, [key]) when is_map(map) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp nested_value(map, [key | rest]) when is_map(map) do
+    map
+    |> nested_value([key])
+    |> case do
+      %{} = nested -> nested_value(nested, rest)
+      _ -> nil
+    end
+  end
+
+  defp nested_value(_map, _path), do: nil
 
   defp build_organization_notes(params, city, state) do
     [
