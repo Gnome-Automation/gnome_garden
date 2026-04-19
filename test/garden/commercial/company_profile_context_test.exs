@@ -104,4 +104,36 @@ defmodule GnomeGarden.Commercial.CompanyProfileContextTest do
     assert "video surveillance" in resolved.exclude_keywords
     assert CompanyProfileContext.prompt_block() =~ "cctv"
   end
+
+  test "bidnet query keywords drop terms excluded by the active profile mode" do
+    {:ok, _profile} =
+      Commercial.create_company_profile(%{
+        key: "primary",
+        name: "Gnome",
+        positioning_summary: "Industrial apps",
+        specialty_summary: "Plant-floor systems",
+        voice_summary: "Direct",
+        core_capabilities: ["industrial integrations"],
+        adjacent_capabilities: ["custom software"],
+        target_industries: ["manufacturing"],
+        preferred_engagements: ["operations software"],
+        disqualifiers: ["staff augmentation"],
+        voice_principles: ["be specific"],
+        preferred_phrases: ["industrial integrations"],
+        avoid_phrases: ["growth hacking"],
+        default_profile_mode: :industrial_core,
+        keyword_profiles: %{
+          "modes" => %{
+            "industrial_core" => %{
+              "include" => ["plc", "scada"],
+              "exclude" => ["controls"],
+              "learned_exclude" => ["automation"],
+              "bidnet_queries" => ["scada", "controls", "automation", "plc"]
+            }
+          }
+        }
+      })
+
+    assert CompanyProfileContext.bidnet_query_keywords(nil, :industrial_core) == ["scada", "plc"]
+  end
 end

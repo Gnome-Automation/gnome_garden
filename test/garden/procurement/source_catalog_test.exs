@@ -71,6 +71,40 @@ defmodule GnomeGarden.Procurement.SourceCatalogTest do
     assert length(second_result.ready) == 5
   end
 
+  test "bidnet controls pilot respects active profile query exclusions" do
+    {:ok, _profile} =
+      GnomeGarden.Commercial.create_company_profile(%{
+        key: "primary",
+        name: "Gnome",
+        positioning_summary: "Industrial and software shop.",
+        specialty_summary: "Controller-connected systems plus operations apps.",
+        voice_summary: "Direct and clear.",
+        core_capabilities: ["industrial integrations"],
+        adjacent_capabilities: ["workflow software"],
+        target_industries: ["food and beverage", "packaging"],
+        preferred_engagements: ["modernization"],
+        disqualifiers: ["staff augmentation"],
+        voice_principles: ["be specific"],
+        preferred_phrases: ["operations software"],
+        avoid_phrases: ["growth hacking"],
+        default_profile_mode: :industrial_plus_software,
+        keyword_profiles: %{
+          "modes" => %{
+            "industrial_core" => %{
+              "include" => ["plc", "scada", "controls"],
+              "exclude" => ["controls"],
+              "learned_exclude" => ["automation"],
+              "bidnet_queries" => ["scada", "controls", "automation", "plc"]
+            }
+          }
+        }
+      })
+
+    sources = SourceCatalog.bidnet_controls_pilot()
+
+    assert Enum.map(sources, &get_in(&1, [:metadata, "search_keywords"])) == [["scada"], ["plc"]]
+  end
+
   test "ensure_utility_discovery_pilot creates in-scope water utility sources for discovery" do
     assert {:ok, first_result} = SourceCatalog.ensure_utility_discovery_pilot()
 

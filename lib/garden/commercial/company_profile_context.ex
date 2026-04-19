@@ -114,11 +114,13 @@ defmodule GnomeGarden.Commercial.CompanyProfileContext do
   @spec bidnet_query_keywords(map() | nil, atom() | String.t() | nil) :: [String.t()]
   def bidnet_query_keywords(profile \\ nil, mode \\ nil) do
     profile = profile || primary_profile()
+    resolved = resolve(profile: profile, mode: mode)
 
     profile
     |> keyword_mode(mode)
     |> Map.get("bidnet_queries", default_bidnet_queries(mode))
     |> normalize_terms()
+    |> Enum.reject(&(&1 in resolved.exclude_keywords))
   end
 
   @spec sam_gov_naics_codes(map() | nil, atom() | String.t() | nil) :: [String.t()]

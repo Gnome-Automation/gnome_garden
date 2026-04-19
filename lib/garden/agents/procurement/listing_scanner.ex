@@ -25,6 +25,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   """
 
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.TargetingFilter
   alias GnomeGarden.Commercial.CompanyProfileContext
   alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
   alias GnomeGarden.Agents.Tools.Procurement.{SaveBid, ScoreBid, ScanBidNet, ScanPlanetBids}
@@ -107,6 +108,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   defp do_browser_scan(source) do
     config = source.scrape_config
     listing_url = config["listing_url"] || config[:listing_url]
+    profile_context = profile_context_for_source(source)
 
     Logger.info("Scanning #{source.name} at #{listing_url}")
 
@@ -118,14 +120,16 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
              :ok
            ),
          {:ok, bids} <- extract_bids(config),
-         {:ok, scored} <- score_bids(bids, source),
+         filtered = TargetingFilter.filter_bids(bids, profile_context),
+         {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, listing_url) do
-      complete_scan(source, bids, scored, saved, enrich_bids(saved))
+      complete_scan(source, bids, filtered.excluded, scored, saved, enrich_bids(saved))
     end
   end
 
   defp do_planetbids_scan(source) do
     Logger.info("Scanning #{source.name} via PlanetBids HTTP scanner")
+    profile_context = profile_context_for_source(source)
 
     with {:ok, %{bids: bids}} <-
            ScanPlanetBids.run(
@@ -136,15 +140,17 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
              },
              %{}
            ),
-         {:ok, scored} <- score_bids(bids, source),
+         filtered = TargetingFilter.filter_bids(bids, profile_context),
+         {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url) do
       # Skip detail-page browser enrichment for the HTTP path.
-      complete_scan(source, bids, scored, saved, 0)
+      complete_scan(source, bids, filtered.excluded, scored, saved, 0)
     end
   end
 
   defp do_bidnet_scan(source) do
     Logger.info("Scanning #{source.name} via BidNet HTML scanner")
+    profile_context = profile_context_for_source(source)
 
     with {:ok, %{bids: bids}} <-
            ScanBidNet.run(
@@ -156,19 +162,21 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
              },
              %{}
            ),
-         {:ok, scored} <- score_bids(bids, source),
+         filtered = TargetingFilter.filter_bids(bids, profile_context),
+         {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url) do
-      complete_scan(source, bids, scored, saved, 0)
+      complete_scan(source, bids, filtered.excluded, scored, saved, 0)
     end
   end
 
-  defp complete_scan(source, bids, scored, saved, enriched) do
+  defp complete_scan(source, bids, excluded, scored, saved, enriched) do
     Procurement.mark_procurement_source_scanned!(source, %{})
 
     {:ok,
      %{
        source: source.name,
        extracted: length(bids),
+       excluded: length(excluded),
        scored: length(scored),
        saved: length(saved),
        enriched: enriched,
@@ -214,13 +222,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   defp escape_js(nil), do: ""
   defp escape_js(str), do: String.replace(str, "'", "\\'")
 
-  defp score_bids(bids, source) do
-    profile_context =
-      CompanyProfileContext.resolve(
-        profile_key: source.metadata && source.metadata["company_profile_key"],
-        mode: source.metadata && source.metadata["company_profile_mode"]
-      )
-
+  defp score_bids(bids, source, profile_context) do
     scored =
       bids
       |> Enum.map(fn bid ->
@@ -248,6 +250,13 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       |> Enum.reject(&is_nil(bid_value(&1, :score)))
 
     {:ok, scored}
+  end
+
+  defp profile_context_for_source(source) do
+    CompanyProfileContext.resolve(
+      profile_key: source.metadata && source.metadata["company_profile_key"],
+      mode: source.metadata && source.metadata["company_profile_mode"]
+    )
   end
 
   defp save_qualifying_bids(scored_bids, source, listing_url) do
