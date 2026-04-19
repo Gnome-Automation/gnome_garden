@@ -5,13 +5,27 @@ defmodule GnomeGardenWeb.BidLiveTest do
 
   alias GnomeGarden.Procurement
 
-  test "bids index renders operator console chrome", %{conn: conn} do
-    _bid = bid_fixture()
+  test "bids index renders queue backlog and inline actions", %{conn: conn} do
+    bid = bid_fixture()
 
     {:ok, view, _html} = live(conn, ~p"/procurement/bids")
 
-    assert render(view) =~ "Bids"
+    assert render(view) =~ "Bid Queue"
     assert render(view) =~ "Open in Admin"
+    assert has_element?(view, "#bids")
+    assert render(view) =~ bid.title
+    assert has_element?(view, "#bid-action-start_review-#{bid.id}")
+    assert has_element?(view, ~s(a[href="/procurement/bids?queue=parked"]))
+  end
+
+  test "parked queue renders parked bids", %{conn: conn} do
+    bid = bid_fixture()
+    {:ok, _parked_bid} = Procurement.BidReview.park_bid(bid, "Interesting but low priority")
+
+    {:ok, view, _html} = live(conn, ~p"/procurement/bids?queue=parked")
+
+    assert render(view) =~ bid.title
+    assert render(view) =~ "Parked"
   end
 
   test "bid show renders summary and scoring context", %{conn: conn} do

@@ -2,8 +2,9 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
   use GnomeGardenWeb, :live_view
 
   alias GnomeGarden.Procurement
-  alias GnomeGarden.Procurement.Bid
   alias GnomeGarden.Procurement.BidReview
+
+  @queues [:review, :active, :parked, :rejected, :closed]
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,12 +17,30 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Bids")
-     |> assign(:action_dialog, nil)}
+     |> assign(:selected_queue, :review)
+     |> assign(:action_dialog, nil)
+     |> assign(:queue_counts, zero_counts())
+     |> assign(:bids_empty?, true)
+     |> stream(:bids, [], reset: true)}
+  end
+
+  @impl true
+  def handle_params(params, _uri, socket) do
+    queue = parse_queue(Map.get(params, "queue"))
+    bids = load_bids_for_queue(queue, socket.assigns.current_user)
+    queue_counts = load_queue_counts(socket.assigns.current_user)
+
+    {:noreply,
+     socket
+     |> assign(:selected_queue, queue)
+     |> assign(:queue_counts, queue_counts)
+     |> assign(:bids_empty?, bids == [])
+     |> stream(:bids, bids, reset: true)}
   end
 
   @impl true
   def handle_info(%{topic: "bid:" <> _}, socket) do
-    {:noreply, Cinder.refresh_table(socket, "bids")}
+    {:noreply, refresh_backlog(socket)}
   end
 
   @impl true
@@ -43,9 +62,7 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
 
     case transition_bid(id, action, socket.assigns.current_user) do
       {:ok, _bid} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Bid updated")}
+        {:noreply, put_flash(socket, :info, "Bid updated")}
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not update bid: #{inspect(error)}")}
@@ -112,75 +129,170 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-4">
-      <div class="flex justify-end">
-        <a href="/admin/agents/bid" class="btn btn-sm btn-ghost gap-1">
-          Open in Admin <.icon name="hero-arrow-top-right-on-square" class="size-4" />
-        </a>
+    <.page class="pb-8">
+      <.page_header eyebrow="Procurement">
+        Bid Queue
+        <:subtitle>
+          Procurement intake runs through explicit bid states now. Review, park, reject, and advance bids directly from the queue instead of drilling into each record first.
+        </:subtitle>
+        <:actions>
+          <.button navigate={~p"/procurement/sources"}>
+            <.icon name="hero-globe-alt" class="size-4" /> Sources
+          </.button>
+          <a href="/admin/agents/bid" class="btn btn-sm btn-ghost gap-1">
+            Open in Admin <.icon name="hero-arrow-top-right-on-square" class="size-4" />
+          </a>
+        </:actions>
+      </.page_header>
+
+      <div class="grid gap-4 md:grid-cols-3">
+        <.stat_card
+          title="Review Queue"
+          value={Integer.to_string(@queue_counts.review)}
+          description="New and reviewing bids waiting for qualification."
+          icon="hero-eye"
+        />
+        <.stat_card
+          title="Active Pursuit"
+          value={Integer.to_string(@queue_counts.active)}
+          description="Bids already in pursuing or submitted states."
+          icon="hero-rocket-launch"
+          accent="sky"
+        />
+        <.stat_card
+          title="Parked"
+          value={Integer.to_string(@queue_counts.parked)}
+          description="Deferred bids that should stay visible without polluting the live queue."
+          icon="hero-pause-circle"
+          accent="amber"
+        />
       </div>
 
-      <Cinder.collection
-        id="bids"
-        resource={Bid}
-        actor={@current_user}
-        search={[placeholder: "Search bids..."]}
+      <.section
+        title="Bid Backlog"
+        description="Queues map directly to the bid state machine and refresh from Ash PubSub updates."
+        compact
+        body_class="p-0"
       >
-        <:col :let={bid} field="title" label="Title" sort search>
-          <div class="space-y-1 py-1">
-            <.link
-              navigate={~p"/procurement/bids/#{bid}"}
-              class="font-medium text-sm leading-tight max-w-[250px] break-words whitespace-normal hover:text-emerald-600"
-              title={bid.title}
-            >
-              {bid.title}
-            </.link>
-            <div :if={bid.score_icp_matches != []} class="flex max-w-[320px] flex-wrap gap-1">
-              <span
-                :for={match <- Enum.take(bid.score_icp_matches || [], 2)}
-                class="badge badge-success badge-xs"
-              >
-                {match}
-              </span>
-            </div>
-            <p :if={bid.score_recommendation} class="max-w-[320px] text-xs text-zinc-500">
-              {short_recommendation(bid.score_recommendation)}
-            </p>
+        <div class="border-b border-zinc-200 px-5 py-4 dark:border-white/10">
+          <div class="flex flex-wrap items-center gap-2">
+            <.queue_link
+              :for={queue <- queues()}
+              queue={queue}
+              selected_queue={@selected_queue}
+              count={Map.fetch!(@queue_counts, queue)}
+            />
           </div>
-        </:col>
-        <:col :let={bid} field="score_total" label="Score" sort>
-          <span class={score_color(bid.score_total)}>{bid.score_total || "-"}</span>
-        </:col>
-        <:col :let={bid} field="score_tier" label="Tier" sort>
-          <span class={tier_badge(bid.score_tier)}>{format_tier(bid.score_tier)}</span>
-        </:col>
-        <:col :let={bid} field="agency" label="Agency" search>
-          <span class="max-w-[150px] truncate">{bid.agency}</span>
-        </:col>
-        <:col :let={bid} field="region" label="Region" sort>
-          {format_region(bid.region)}
-        </:col>
-        <:col :let={bid} field="due_at" label="Due" sort>
-          {format_date(bid.due_at)}
-        </:col>
-        <:col :let={bid} field="status" label="Status" sort>
-          <span class={badge_class(bid.status)}>{format_status(bid.status)}</span>
-        </:col>
-        <:col :let={bid} label="Actions">
-          <div class="flex max-w-[240px] flex-wrap gap-2 py-1">
-            <.button
-              :for={action <- bid_actions(bid)}
-              id={"bid-action-#{action.action}-#{bid.id}"}
-              phx-click={action_click(action.kind)}
-              phx-value-id={bid.id}
-              phx-value-action={action.action}
-              class="px-2.5 py-1.5 text-xs"
-              variant={action.variant}
-            >
-              <.icon name={action.icon} class="size-4" /> {action.label}
-            </.button>
-          </div>
-        </:col>
-      </Cinder.collection>
+        </div>
+
+        <div :if={@bids_empty?} class="p-6 sm:p-7">
+          <.empty_state
+            icon="hero-document-text"
+            title={"No #{queue_label(@selected_queue)} bids"}
+            description={empty_description(@selected_queue)}
+          />
+        </div>
+
+        <div :if={!@bids_empty?} class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
+            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
+              <tr>
+                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+                  Bid
+                </th>
+                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+                  Score
+                </th>
+                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+                  Agency
+                </th>
+                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+                  Due
+                </th>
+                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+                  Status
+                </th>
+                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody id="bids" phx-update="stream" class="divide-y divide-zinc-200 dark:divide-white/10">
+              <tr :for={{dom_id, bid} <- @streams.bids} id={dom_id}>
+                <td class="px-5 py-4 align-top">
+                  <div class="space-y-1">
+                    <.link
+                      navigate={~p"/procurement/bids/#{bid}"}
+                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
+                    >
+                      {bid.title}
+                    </.link>
+                    <div :if={bid.score_icp_matches != []} class="flex max-w-[320px] flex-wrap gap-1">
+                      <span
+                        :for={match <- Enum.take(bid.score_icp_matches || [], 2)}
+                        class="badge badge-success badge-xs"
+                      >
+                        {match}
+                      </span>
+                    </div>
+                    <p :if={bid.score_recommendation} class="max-w-[360px] text-xs text-zinc-500">
+                      {short_recommendation(bid.score_recommendation)}
+                    </p>
+                  </div>
+                </td>
+                <td class="px-5 py-4 align-top">
+                  <div class="space-y-2">
+                    <span class={score_color(bid.score_total)}>{bid.score_total || "-"}</span>
+                    <div>
+                      <span class={tier_badge(bid.score_tier)}>{format_tier(bid.score_tier)}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
+                  <div class="space-y-1">
+                    <p>{bid.agency || "-"}</p>
+                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                      {format_region(bid.region)}
+                    </p>
+                  </div>
+                </td>
+                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
+                  {format_date(bid.due_at)}
+                </td>
+                <td class="px-5 py-4 align-top">
+                  <div class="space-y-2">
+                    <.status_badge status={bid.status_variant}>
+                      {format_status(bid.status)}
+                    </.status_badge>
+                    <.link
+                      :if={bid.signal}
+                      navigate={~p"/commercial/signals/#{bid.signal}"}
+                      class="block text-xs font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-300"
+                    >
+                      Open Signal
+                    </.link>
+                  </div>
+                </td>
+                <td class="px-5 py-4 align-top">
+                  <div class="flex max-w-[240px] flex-wrap gap-2">
+                    <.button
+                      :for={action <- bid_actions(bid)}
+                      id={"bid-action-#{action.action}-#{bid.id}"}
+                      phx-click={action_click(action.kind)}
+                      phx-value-id={bid.id}
+                      phx-value-action={action.action}
+                      class="px-2.5 py-1.5 text-xs"
+                      variant={action.variant}
+                    >
+                      <.icon name={action.icon} class="size-4" /> {action.label}
+                    </.button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </.section>
 
       <dialog
         :if={@action_dialog && @action_dialog.type == :pass}
@@ -279,8 +391,125 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
           <button phx-click="close_dialog">close</button>
         </form>
       </dialog>
-    </div>
+    </.page>
     """
+  end
+
+  attr :queue, :atom, required: true
+  attr :selected_queue, :atom, required: true
+  attr :count, :integer, required: true
+
+  defp queue_link(assigns) do
+    selected? = assigns.queue == assigns.selected_queue
+
+    assigns =
+      assign(assigns,
+        selected?: selected?,
+        label: queue_label(assigns.queue)
+      )
+
+    ~H"""
+    <.link
+      patch={~p"/procurement/bids?queue=#{@queue}"}
+      class={[
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition",
+        if(
+          @selected?,
+          do: "border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/25",
+          else:
+            "border-zinc-200 bg-white text-zinc-600 hover:border-emerald-300 hover:text-emerald-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-emerald-400/40 dark:hover:text-emerald-300"
+        )
+      ]}
+    >
+      <span>{@label}</span>
+      <span class={[
+        "inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs",
+        if(@selected?,
+          do: "bg-white/20 text-white",
+          else: "bg-zinc-100 text-zinc-500 dark:bg-white/10 dark:text-zinc-300"
+        )
+      ]}>
+        {@count}
+      </span>
+    </.link>
+    """
+  end
+
+  defp load_bids_for_queue(:review, actor),
+    do: load_bids(fn -> Procurement.list_review_bids(actor: actor, load: bid_loads()) end)
+
+  defp load_bids_for_queue(:active, actor),
+    do: load_bids(fn -> Procurement.list_active_bids(actor: actor, load: bid_loads()) end)
+
+  defp load_bids_for_queue(:parked, actor),
+    do: load_bids(fn -> Procurement.list_parked_bids(actor: actor, load: bid_loads()) end)
+
+  defp load_bids_for_queue(:rejected, actor),
+    do: load_bids(fn -> Procurement.list_rejected_bids(actor: actor, load: bid_loads()) end)
+
+  defp load_bids_for_queue(:closed, actor),
+    do: load_bids(fn -> Procurement.list_closed_bids(actor: actor, load: bid_loads()) end)
+
+  defp load_bids(fun) do
+    case fun.() do
+      {:ok, bids} -> bids
+      {:error, error} -> raise "failed to load bids: #{inspect(error)}"
+    end
+  end
+
+  defp load_queue_counts(actor) do
+    @queues
+    |> Enum.map(fn queue -> {queue, queue |> load_bids_for_queue(actor) |> length()} end)
+    |> Map.new()
+  end
+
+  defp refresh_backlog(socket) do
+    bids = load_bids_for_queue(socket.assigns.selected_queue, socket.assigns.current_user)
+    queue_counts = load_queue_counts(socket.assigns.current_user)
+
+    socket
+    |> assign(:queue_counts, queue_counts)
+    |> assign(:bids_empty?, bids == [])
+    |> stream(:bids, bids, reset: true)
+  end
+
+  defp bid_loads do
+    [:signal, :status_variant]
+  end
+
+  defp parse_queue(nil), do: :review
+
+  defp parse_queue(queue) when is_binary(queue) do
+    queue
+    |> String.to_existing_atom()
+    |> then(fn queue_atom -> if queue_atom in @queues, do: queue_atom, else: :review end)
+  rescue
+    ArgumentError -> :review
+  end
+
+  defp queue_label(:review), do: "Review"
+  defp queue_label(:active), do: "Active"
+  defp queue_label(:parked), do: "Parked"
+  defp queue_label(:rejected), do: "Rejected"
+  defp queue_label(:closed), do: "Closed"
+
+  defp empty_description(:review),
+    do: "New and reviewing bids will appear here until they are advanced, parked, or rejected."
+
+  defp empty_description(:active),
+    do: "Bids in pursuing or submitted states will appear here."
+
+  defp empty_description(:parked),
+    do: "Deferred bids stay here so they are easy to reopen later."
+
+  defp empty_description(:rejected),
+    do: "Rejected bids stay visible here so scoring and sourcing can learn from misses."
+
+  defp empty_description(:closed),
+    do: "Won, lost, and expired bids stay here as procurement history."
+
+  defp zero_counts do
+    %{review: 0, active: 0, parked: 0, rejected: 0, closed: 0}
   end
 
   defp score_color(nil), do: "opacity-50"
@@ -296,16 +525,6 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
 
   defp format_tier(nil), do: "-"
   defp format_tier(tier), do: tier |> to_string() |> String.upcase()
-
-  defp badge_class(nil), do: "badge badge-ghost badge-sm"
-  defp badge_class(:new), do: "badge badge-primary badge-sm"
-  defp badge_class(:reviewing), do: "badge badge-info badge-sm"
-  defp badge_class(:submitted), do: "badge badge-success badge-sm"
-  defp badge_class(:won), do: "badge badge-success badge-sm"
-  defp badge_class(:lost), do: "badge badge-error badge-sm"
-  defp badge_class(:rejected), do: "badge badge-error badge-sm"
-  defp badge_class(:parked), do: "badge badge-warning badge-sm"
-  defp badge_class(_), do: "badge badge-ghost badge-sm"
 
   defp format_status(nil), do: "new"
   defp format_status(status), do: status |> to_string() |> String.replace("_", " ")
@@ -384,4 +603,6 @@ defmodule GnomeGardenWeb.Agents.Sales.BidLive.Index do
 
   defp transition_bid(id, :start_review, actor), do: BidReview.start_review(id, actor)
   defp transition_bid(id, :unpark, actor), do: BidReview.unpark_bid(id, actor)
+
+  defp queues, do: @queues
 end

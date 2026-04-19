@@ -221,8 +221,13 @@ defmodule GnomeGarden.Procurement.Bid do
     end
 
     read :needs_review do
-      filter expr(status == :new)
-      prepare build(sort: [score_total: :desc, inserted_at: :desc])
+      filter expr(status in [:new, :reviewing])
+      prepare build(sort: [score_total: :desc, due_at: :asc, inserted_at: :desc])
+    end
+
+    read :active do
+      filter expr(status in [:pursuing, :submitted])
+      prepare build(sort: [due_at: :asc, score_total: :desc, updated_at: :desc])
     end
 
     read :by_url do
@@ -238,6 +243,16 @@ defmodule GnomeGarden.Procurement.Bid do
 
     read :parked do
       filter expr(status == :parked)
+      prepare build(sort: [updated_at: :desc])
+    end
+
+    read :rejected do
+      filter expr(status == :rejected)
+      prepare build(sort: [updated_at: :desc])
+    end
+
+    read :closed do
+      filter expr(status in [:won, :lost, :expired])
       prepare build(sort: [updated_at: :desc])
     end
   end
