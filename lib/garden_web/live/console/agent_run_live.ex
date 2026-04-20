@@ -1,6 +1,7 @@
 defmodule GnomeGardenWeb.Console.AgentRunLive do
   use GnomeGardenWeb, :live_view
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Agents
   alias GnomeGarden.Agents.DeploymentRunner
 
@@ -255,7 +256,7 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
               <div :for={{dom_id, output} <- @streams.outputs} id={dom_id} class="px-5 py-4">
                 <div class="flex items-center gap-3">
                   <span class={output_type_badge(output.output_type)}>
-                    {format_atom(output.output_type)}
+                    {output_type_label(output.output_type)}
                   </span>
                   <span class={output_event_badge(output.event)}>{format_atom(output.event)}</span>
                   <span class="text-xs text-zinc-500 dark:text-zinc-400">
@@ -469,8 +470,13 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
 
   defp output_type_badge(:procurement_source), do: "badge badge-info badge-sm"
   defp output_type_badge(:bid), do: "badge badge-secondary badge-sm"
-  defp output_type_badge(:target_account), do: "badge badge-accent badge-sm"
+  defp output_type_badge(:finding), do: "badge badge-accent badge-sm"
   defp output_type_badge(_type), do: "badge badge-ghost badge-sm"
+
+  defp output_type_label(:procurement_source), do: "procurement source"
+  defp output_type_label(:bid), do: "bid"
+  defp output_type_label(:finding), do: "finding"
+  defp output_type_label(type), do: format_atom(type)
 
   defp output_event_badge(:created), do: "badge badge-success badge-sm"
   defp output_event_badge(:existing), do: "badge badge-ghost badge-sm"
@@ -505,19 +511,27 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
     end
   end
 
-  defp output_path(%{output_type: :bid, output_id: output_id}),
-    do: ~p"/procurement/bids/#{output_id}"
+  defp output_path(%{output_type: :bid, output_id: output_id}) do
+    case Acquisition.get_finding_by_source_bid(output_id) do
+      {:ok, finding} -> ~p"/acquisition/findings/#{finding.id}"
+      _ -> ~p"/acquisition/findings?family=procurement"
+    end
+  end
 
-  defp output_path(%{output_type: :target_account, output_id: output_id}),
-    do: ~p"/commercial/targets/#{output_id}"
+  defp output_path(%{output_type: :finding, output_id: output_id}) do
+    case Acquisition.get_finding(output_id) do
+      {:ok, finding} -> ~p"/acquisition/findings/#{finding.id}"
+      _ -> ~p"/acquisition/findings"
+    end
+  end
 
-  defp output_path(%{output_type: :procurement_source, output_id: output_id}),
-    do: ~p"/procurement/sources?#{[focus: output_id]}"
+  defp output_path(%{output_type: :procurement_source, output_id: _output_id}),
+    do: ~p"/acquisition/sources"
 
   defp output_path(_output), do: nil
 
-  defp output_action_label(%{output_type: :bid}), do: "Review Bid"
-  defp output_action_label(%{output_type: :target_account}), do: "Open Target"
+  defp output_action_label(%{output_type: :bid}), do: "Open Finding"
+  defp output_action_label(%{output_type: :finding}), do: "Open Finding"
   defp output_action_label(%{output_type: :procurement_source}), do: "Open Source"
   defp output_action_label(_output), do: "Open"
 

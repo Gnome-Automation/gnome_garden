@@ -5,6 +5,7 @@ defmodule GnomeGarden.Commercial.Changes.CreateSignalFromBid do
 
   use Ash.Resource.Change
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
@@ -66,6 +67,7 @@ defmodule GnomeGarden.Commercial.Changes.CreateSignalFromBid do
     |> Ash.Changeset.change_new_attribute(:notes, bid.notes)
     |> merge_metadata(%{
       procurement_bid_id: bid.id,
+      finding_id: finding_id_for_bid(bid.id),
       agency: bid.agency,
       location: bid.location,
       region: bid.region,
@@ -125,6 +127,13 @@ defmodule GnomeGarden.Commercial.Changes.CreateSignalFromBid do
   end
 
   defp upsert_organization_id(_bid), do: nil
+
+  defp finding_id_for_bid(bid_id) do
+    case Acquisition.get_finding_by_source_bid(bid_id) do
+      {:ok, finding} -> finding.id
+      _ -> nil
+    end
+  end
 
   defp reject_nil_values(map) do
     Map.reject(map, fn {_key, value} -> is_nil(value) end)

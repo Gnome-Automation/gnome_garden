@@ -1,15 +1,17 @@
 defmodule GnomeGarden.CRM.Review do
   @moduledoc """
-  Compatibility wrapper that routes older review flows into the commercial
+  Commercial review handoff that routes intake findings and bids into the
   signal and pursuit model.
   """
 
   alias GnomeGarden.CRM.PipelineEvents
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.Pursuit
   alias GnomeGarden.Commercial.Signal
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.BidReview
 
   def accept_review_item(params, opts \\ []) do
     actor = Keyword.get(opts, :actor)
@@ -26,11 +28,11 @@ defmodule GnomeGarden.CRM.Review do
 
   defp resolve_signal(params, actor) do
     cond do
+      finding_id = value(params, :finding_id) ->
+        resolve_finding_signal(finding_id, actor)
+
       bid_id = value(params, :bid_id) ->
         resolve_bid_signal(bid_id, actor)
-
-      target_account_id = value(params, :target_account_id) ->
-        resolve_target_account_signal(target_account_id, actor)
 
       true ->
         create_manual_signal(params, actor)
@@ -38,7 +40,8 @@ defmodule GnomeGarden.CRM.Review do
   end
 
   defp resolve_bid_signal(bid_id, actor) do
-    with {:ok, bid} <- Procurement.get_bid(bid_id, actor: actor, load: [:signal]) do
+    with {:ok, _discovery_result} <- BidReview.ensure_discovery_record(bid_id, actor),
+         {:ok, bid} <- Procurement.get_bid(bid_id, actor: actor, load: [:signal]) do
       case bid.signal do
         %Signal{} = signal -> {:ok, signal}
         nil -> Commercial.create_signal_from_bid(bid.id, actor: actor)
@@ -46,31 +49,49 @@ defmodule GnomeGarden.CRM.Review do
     end
   end
 
-  defp resolve_target_account_signal(target_account_id, actor) do
-    with {:ok, target_account} <-
-           Commercial.get_target_account(
-             target_account_id,
+  defp resolve_finding_signal(finding_id, actor) do
+    with {:ok, finding} <- Acquisition.get_finding(finding_id, actor: actor) do
+      cond do
+        finding.signal_id ->
+          Commercial.get_signal(finding.signal_id, actor: actor)
+
+        finding.source_bid_id ->
+          resolve_bid_signal(finding.source_bid_id, actor)
+
+        finding.source_discovery_record_id ->
+          resolve_discovery_record_signal(finding.source_discovery_record_id, actor)
+
+        true ->
+          {:error, "finding cannot yet be resolved into a commercial signal"}
+      end
+    end
+  end
+
+  defp resolve_discovery_record_signal(discovery_record_id, actor) do
+    with {:ok, discovery_record} <-
+           Acquisition.get_discovery_record(
+             discovery_record_id,
              actor: actor,
-             load: [:promoted_signal, :latest_observed_at, :latest_observation_summary]
+             load: [:promoted_signal, :latest_evidence_at, :latest_evidence_summary]
            ) do
       cond do
-        target_account.promoted_signal_id ->
-          Commercial.get_signal(target_account.promoted_signal_id, actor: actor)
+        discovery_record.promoted_signal_id ->
+          Commercial.get_signal(discovery_record.promoted_signal_id, actor: actor)
 
-        target_account.status in [:new, :reviewing] ->
-          with {:ok, promoted_target_account} <-
-                 Commercial.promote_target_account_to_signal(target_account, actor: actor) do
-            Commercial.get_signal(promoted_target_account.promoted_signal_id, actor: actor)
+        discovery_record.status in [:new, :reviewing] ->
+          with {:ok, promoted_discovery_record} <-
+                 Acquisition.promote_discovery_record_to_signal(discovery_record, actor: actor) do
+            Commercial.get_signal(promoted_discovery_record.promoted_signal_id, actor: actor)
           end
 
-        target_account.status in [:rejected, :archived] ->
-          with {:ok, reopened_target_account} <-
-                 Commercial.reopen_target_account(target_account, actor: actor),
-               {:ok, promoted_target_account} <-
-                 Commercial.promote_target_account_to_signal(reopened_target_account,
+        discovery_record.status in [:rejected, :archived] ->
+          with {:ok, reopened_discovery_record} <-
+                 Acquisition.reopen_discovery_record(discovery_record, actor: actor),
+               {:ok, promoted_discovery_record} <-
+                 Acquisition.promote_discovery_record_to_signal(reopened_discovery_record,
                    actor: actor
                  ) do
-            Commercial.get_signal(promoted_target_account.promoted_signal_id, actor: actor)
+            Commercial.get_signal(promoted_discovery_record.promoted_signal_id, actor: actor)
           end
       end
     end
@@ -98,7 +119,7 @@ defmodule GnomeGarden.CRM.Review do
           metadata:
             reject_nil_values(%{
               lead_id: value(params, :lead_id),
-              target_account_id: value(params, :target_account_id),
+              finding_id: value(params, :finding_id),
               bid_id: value(params, :bid_id),
               workflow: value(params, :workflow)
             })
@@ -223,7 +244,7 @@ defmodule GnomeGarden.CRM.Review do
   end
 
   defp signal_type_from_source(:bid), do: :bid_notice
-  defp signal_type_from_source(:target_account), do: :outbound_target
+  defp signal_type_from_source(:finding), do: :outbound_target
   defp signal_type_from_source(:outbound), do: :outbound_target
   defp signal_type_from_source(:referral), do: :referral
   defp signal_type_from_source(:renewal), do: :renewal
@@ -232,14 +253,14 @@ defmodule GnomeGarden.CRM.Review do
   defp signal_type_from_source(_), do: :other
 
   defp source_channel_from_source(:bid), do: :procurement_portal
-  defp source_channel_from_source(:target_account), do: :agent_discovery
+  defp source_channel_from_source(:finding), do: :agent_discovery
   defp source_channel_from_source(:outbound), do: :agent_discovery
   defp source_channel_from_source(:referral), do: :referral
   defp source_channel_from_source(:inbound), do: :website
   defp source_channel_from_source(_), do: :manual
 
   defp organization_roles(:bid), do: ["prospect", "agency"]
-  defp organization_roles(:target_account), do: ["prospect"]
+  defp organization_roles(:finding), do: ["prospect"]
   defp organization_roles(:outbound), do: ["prospect"]
   defp organization_roles(:referral), do: ["prospect"]
   defp organization_roles(:renewal), do: ["customer"]
@@ -249,16 +270,16 @@ defmodule GnomeGarden.CRM.Review do
 
   defp source_type_from(params) do
     cond do
+      value(params, :finding_id) -> "finding"
       value(params, :bid_id) -> "bid"
-      value(params, :target_account_id) -> "target_account"
       value(params, :lead_id) -> "lead"
       true -> "signal"
     end
   end
 
   defp source_id_from(params) do
-    value(params, :bid_id) ||
-      value(params, :target_account_id) ||
+    value(params, :finding_id) ||
+      value(params, :bid_id) ||
       value(params, :lead_id)
   end
 

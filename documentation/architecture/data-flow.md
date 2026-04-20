@@ -1,349 +1,185 @@
 # Data Flow
 
-## Primary Business Flows
+This file describes the implemented operating flow.
 
-### 1. Lead to Cash Flow
+The old `lead -> opportunity -> company/contact` story is no longer the primary model. Discovery and intake are now staged more deliberately.
 
-The complete journey from discovering an opportunity to receiving payment.
+## 1. Broad Discovery Flow
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  LeadSource  │────▶│     Bid      │────▶│  Opportunity │
-│   (Agents)   │     │   (Agents)   │     │   (Sales)    │
-└──────────────┘     └──────────────┘     └──────────────┘
-                                                 │
-                                                 │ qualifies
-                                                 ▼
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Company    │◀────│   Contact    │◀────│  Proposal    │
-│   (Sales)    │     │   (Sales)    │     │   (Sales)    │
-└──────────────┘     └──────────────┘     └──────────────┘
-                                                 │
-                                                 │ accepted
-                                                 ▼
-                     ┌──────────────┐     ┌──────────────┐
-                     │   Contract   │────▶│   Project    │
-                     │   (Sales)    │     │  (Projects)  │
-                     └──────────────┘     └──────────────┘
-                                                 │
-                                                 │ work done
-                                                 ▼
-                     ┌──────────────┐     ┌──────────────┐
-                     │  TimeEntry   │────▶│   Invoice    │
-                     │  (Projects)  │     │  (Finance)   │
-                     └──────────────┘     └──────────────┘
-                                                 │
-                                                 │ paid
-                                                 ▼
-                                          ┌──────────────┐
-                                          │   Payment    │
-                                          │  (Finance)   │
-                                          └──────────────┘
+Broad outbound discovery is used when the company wants to look for likely prospects across industries, regions, or web signals.
+
+```text
+DiscoveryProgram
+  -> AgentRun
+  -> DiscoveryEvidence
+  -> DiscoveryRecord
+  -> Finding
+  -> Signal
+  -> Pursuit
 ```
 
-**Key Transitions:**
-1. AI discovers bids from LeadSources
-2. Bids scored → hot bids become Opportunities
-3. Opportunities create Company + Contact records
-4. Proposals generated with ProposalLines (using Parts catalog)
-5. Accepted Proposals become Contracts
-6. Contracts spawn Projects
-7. Projects track TimeEntries + Expenses
-8. TimeEntries generate Invoices
-9. Invoices receive Payments
+Meaning of each stage:
+- `DiscoveryProgram`: defines the hunt and cadence
+- `DiscoveryEvidence`: raw evidence from a source page or discovered fact
+- `DiscoveryRecord`: reviewable company/account record assembled from evidence
+- `Finding`: unified intake queue record across discovery and procurement
+- `Signal`: formal commercial intake record
+- `Pursuit`: human-owned pipeline item
 
----
+This staging prevents broad discovery from flooding the formal signal inbox and
+keeps procurement and discovery in the same operator review layer.
 
-### 2. Bid Import Flow
+## 2. Procurement Intake Flow
 
-AI-driven bid discovery and qualification.
+Structured procurement discovery is modeled separately from outbound market discovery.
 
-```
-┌─────────────────┐
-│   LeadSource    │
-│  (PlanetBids)   │
-└────────┬────────┘
-         │
-         │ agent scans
-         ▼
-┌─────────────────┐
-│   BidScanner    │
-│    (Worker)     │
-└────────┬────────┘
-         │
-         │ discovers
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│      Bid        │────▶│    AI Scorer    │
-│   (raw data)    │     │   (enrichment)  │
-└─────────────────┘     └────────┬────────┘
-                                 │
-         ┌───────────────────────┼───────────────────────┐
-         ▼                       ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│    HOT tier     │     │   WARM tier     │     │   COLD tier     │
-│   (auto-track)  │     │  (needs review) │     │   (archive)     │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-         │
-         │ converts
-         ▼
-┌─────────────────┐
-│   Opportunity   │
-│    (Sales)      │
-└─────────────────┘
+```text
+ProcurementSource
+  -> Bid
+  -> Finding
+  -> Signal
+  -> Pursuit
 ```
 
----
+The distinction matters:
+- `Bid` is a discovered procurement notice
+- `Finding` is the internal intake review record
+- `Signal` is the internal commercial intake record after acceptance/promotion
+- `Pursuit` is a conscious decision to work the opportunity
 
-### 3. Proposal Building Flow
+## 3. Commercial Conversion Flow
 
-Creating proposals with parts and labor.
+Once something is worth working, the commercial path becomes more formal.
 
-```
-┌─────────────────┐
-│   Opportunity   │
-└────────┬────────┘
-         │
-         │ create proposal
-         ▼
-┌─────────────────┐
-│    Proposal     │
-└────────┬────────┘
-         │
-         ├─────────────────────────────────────┐
-         │                                     │
-         ▼                                     ▼
-┌─────────────────┐                   ┌─────────────────┐
-│  ProposalLine   │                   │  ProposalLine   │
-│    (Labor)      │                   │   (Materials)   │
-└────────┬────────┘                   └────────┬────────┘
-         │                                     │
-         ▼                                     ▼
-┌─────────────────┐                   ┌─────────────────┐
-│    Service      │                   │      Part       │
-│ (rate: $175/hr) │                   │  (Engineering)  │
-└─────────────────┘                   └────────┬────────┘
-                                               │
-                                               ▼
-                                      ┌─────────────────┐
-                                      │   VendorPart    │
-                                      │  (best price)   │
-                                      └─────────────────┘
+```text
+Signal
+  -> Pursuit
+  -> Proposal
+  -> Agreement
+  -> Project
 ```
 
----
+Related side paths:
+- `Agreement -> ChangeOrder`
+- `Agreement -> ServiceLevelPolicy`
+- `Agreement -> ServiceEntitlement`
 
-### 4. Project Execution Flow
+The important boundary is:
+- `Signal` and `Pursuit` are commercial review/pipeline
+- `Project` is committed execution
 
-Work delivery and billing cycle.
+## 4. Operations Context Flow
 
-```
-┌─────────────────┐
-│    Contract     │
-│    (signed)     │
-└────────┬────────┘
-         │
-         │ spawns
-         ▼
-┌─────────────────┐
-│    Project      │
-│   (active)      │
-└────────┬────────┘
-         │
-         │ contains
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│     Phase       │────▶│      Task       │
-│  (milestone)    │     │   (work item)   │
-└─────────────────┘     └────────┬────────┘
-                                 │
-         ┌───────────────────────┼───────────────────────┐
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Assignment    │     │   TimeEntry     │     │    Expense      │
-│  (who + when)   │     │  (hours + $)    │     │  (receipts)     │
-└─────────────────┘     └────────┬────────┘     └────────┬────────┘
-                                 │                       │
-                                 └───────────┬───────────┘
-                                             │
-                                             │ aggregates
-                                             ▼
-                                    ┌─────────────────┐
-                                    │    Invoice      │
-                                    │   (Finance)     │
-                                    └─────────────────┘
+Commercial and execution records are anchored to durable real-world context.
+
+```text
+Organization
+  -> Site
+  -> ManagedSystem
+  -> Asset
 ```
 
----
+People are modeled separately:
 
-### 5. Service & Support Flow
-
-Customer support and field service.
-
-```
-┌─────────────────┐
-│    Contact      │
-│   (customer)    │
-└────────┬────────┘
-         │
-         │ requests help
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│     Ticket      │────▶│      SLA        │
-│   (Service)     │     │  (time rules)   │
-└────────┬────────┘     └─────────────────┘
-         │
-         │ needs on-site?
-         │
-    ┌────┴────┐
-    ▼         ▼
-┌────────┐ ┌─────────────────┐
-│ Remote │ │   WorkOrder     │
-│  Fix   │ │  (dispatch)     │
-└────────┘ └────────┬────────┘
-                    │
-                    │ creates
-                    ▼
-           ┌─────────────────┐
-           │    Project      │
-           │  (small job)    │
-           └────────┬────────┘
-                    │
-                    ▼
-           ┌─────────────────┐
-           │   TimeEntry     │
-           │  + Invoice      │
-           └─────────────────┘
+```text
+Person
+  <-> OrganizationAffiliation
+  -> Organization
 ```
 
----
+This lets the platform support:
+- physical controls work
+- digital systems and software work
+- mixed installations
 
-### 6. Retainer Billing Flow
+## 5. Service and Maintenance Flow
 
-Recurring revenue from support contracts.
+Service is not a separate standalone domain anymore. It is modeled through `Operations`, `Commercial`, `Execution`, and `Finance`.
 
-```
-┌─────────────────┐
-│    Company      │
-│   (customer)    │
-└────────┬────────┘
-         │
-         │ signs retainer
-         ▼
-┌─────────────────┐
-│    Retainer     │
-│  ($3K/month)    │
-└────────┬────────┘
-         │
-         │ monthly cycle
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│  Auto-Invoice   │────▶│    Payment      │
-│   (Finance)     │     │   (received)    │
-└─────────────────┘     └─────────────────┘
-         │
-         │ tracks usage
-         ▼
-┌─────────────────┐
-│   TimeEntry     │
-│ (against hours) │
-└─────────────────┘
-         │
-         │ overage?
-         ▼
-┌─────────────────┐
-│ Overage Invoice │
-│  (if exceeded)  │
-└─────────────────┘
+```text
+Agreement / ServiceLevelPolicy / ServiceEntitlement
+  -> ServiceTicket
+  -> WorkOrder
+  -> TimeEntry / Expense / MaterialUsage
+  -> Invoice
 ```
 
----
+Preventive maintenance has its own loop:
 
-### 7. Engineering / BOM Flow
-
-Parts and materials management.
-
-```
-┌─────────────────┐
-│    Project      │
-└────────┬────────┘
-         │
-         │ needs materials
-         ▼
-┌─────────────────┐
-│      BOM        │
-│ (bill of mat'l) │
-└────────┬────────┘
-         │
-         │ contains
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│    BOMItem      │────▶│      Part       │
-│   (qty: 5)      │     │  (1756-L83E)    │
-└─────────────────┘     └────────┬────────┘
-                                 │
-                                 │ sourced from
-                                 ▼
-                        ┌─────────────────┐
-                        │   VendorPart    │
-                        │  (best price)   │
-                        └────────┬────────┘
-                                 │
-                                 ▼
-                        ┌─────────────────┐
-                        │     Vendor      │
-                        │  (Rockwell)     │
-                        └─────────────────┘
+```text
+Asset
+  -> MaintenancePlan
+  -> generated WorkOrder
+  -> record_completion
+  -> next due cycle
 ```
 
----
+## 6. Delivery and Scheduling Flow
 
-### 8. Voice Capture Flow
+Project delivery is centered on a unified execution model.
 
-Quick capture from voice input to actionable items.
-
-```
-┌─────────────────┐
-│   Voice Input   │
-│   (Twilio/Web)  │
-└────────┬────────┘
-         │
-         │ transcribes
-         ▼
-┌─────────────────┐
-│    Capture      │
-│   (Workspace)   │
-└────────┬────────┘
-         │
-         │ AI processes
-         ▼
-┌─────────────────┐
-│   AI Parser     │
-│ (intent detect) │
-└────────┬────────┘
-         │
-    ┌────┴────┬──────────┬──────────┐
-    ▼         ▼          ▼          ▼
-┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐
-│ Task  │ │ Note  │ │Remind │ │ Inbox │
-│(Proj) │ │(Sales)│ │(Wkspc)│ │(Wkspc)│
-└───────┘ └───────┘ └───────┘ └───────┘
+```text
+Project
+  -> WorkItem
+  -> Assignment
+  -> TimeEntry / Expense / MaterialUsage
+  -> Invoice
 ```
 
----
+Important design choice:
+- there is no separate `Phase` resource in the implemented model
+- `WorkItem` is the primary planning/execution unit
 
-## Data Ownership
+## 7. Finance Flow
 
-| Domain | Owns | Referenced By |
-|--------|------|---------------|
-| Management | User, Role, Setting | All domains |
-| HR | Member, Skill, Certification | Projects, Service |
-| Sales | Company, Contact, Opportunity, Proposal, Contract | Projects, Finance, Service, Engineering |
-| Projects | Project, Phase, Task, TimeEntry, Expense | Finance, Service |
-| Finance | Invoice, Payment, Retainer | — |
-| Engineering | Asset, Part, Vendor, BOM, Plant | Sales, Projects, Service |
-| Service | Ticket, WorkOrder, SLA | Projects |
-| Quality | Checklist, Inspection, NCR | Projects, Engineering |
-| Agents | Bid, LeadSource, Agent, Memory | Sales |
-| Workspace | Capture, Inbox, Reminder | All domains (routing) |
+Operational finance is fed by execution and service outcomes rather than managed as an isolated ledger.
+
+```text
+approved TimeEntry / approved Expense
+  -> Invoice
+  -> InvoiceLine
+  -> Payment
+  -> PaymentApplication
+```
+
+The implemented finance model is operational, not ERP-complete:
+- billable time and expense
+- invoice drafting/review
+- payment receipt and application
+- entitlement and service-consumption visibility
+
+## 8. Agent Runtime Flow
+
+Business records and agent runtime records are intentionally separate.
+
+```text
+DiscoveryProgram / ProcurementSource
+  -> AgentDeployment
+  -> AgentRun
+  -> AgentRunOutput
+  -> DiscoveryEvidence / Bid / DiscoveryRecord / Finding / Signal
+```
+
+Use the separation this way:
+- `Agents` for orchestration, runs, outputs, and memory
+- `Commercial`, `Procurement`, `Operations`, `Execution`, `Finance` for durable business state
+
+## 9. Current Cockpit Queues
+
+The home cockpit is built around queue pressure, not a generic dashboard.
+
+Current queues surfaced on `/`:
+- review findings
+- active and due discovery programs
+- open signals
+- active pursuits
+- due-soon maintenance
+- open service tickets
+- open work orders
+- approved unbilled time
+- approved unbilled expenses
+- overdue invoices
+- unapplied payments
+- source/program health and bid-origin review visibility through acquisition
+
+That cockpit is the current operator entry point for the implemented system.

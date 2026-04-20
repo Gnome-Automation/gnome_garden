@@ -146,8 +146,8 @@ defmodule GnomeGarden.Commercial.DiscoveryIdentityResolver do
     end
   end
 
-  @spec target_contact_snapshot(map()) :: map() | nil
-  def target_contact_snapshot(params) do
+  @spec discovery_contact_snapshot(map()) :: map() | nil
+  def discovery_contact_snapshot(params) do
     snapshot =
       %{
         first_name:
@@ -163,8 +163,8 @@ defmodule GnomeGarden.Commercial.DiscoveryIdentityResolver do
     if snapshot == %{}, do: nil, else: snapshot
   end
 
-  @spec target_identity_review(organization_resolution(), person_resolution()) :: map()
-  def target_identity_review(organization_resolution, person_resolution) do
+  @spec discovery_identity_review(organization_resolution(), person_resolution()) :: map()
+  def discovery_identity_review(organization_resolution, person_resolution) do
     %{
       organization: %{
         resolution: organization_resolution.resolution,
@@ -181,16 +181,16 @@ defmodule GnomeGarden.Commercial.DiscoveryIdentityResolver do
     }
   end
 
-  @spec target_review_context(map(), keyword()) :: {:ok, map()} | {:error, term()}
-  def target_review_context(target_account, opts \\ []) do
+  @spec discovery_record_review_context(map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def discovery_record_review_context(discovery_record, opts \\ []) do
     actor = Keyword.get(opts, :actor)
 
-    organization_attrs = %{name: target_account.name, website: target_account.website}
-    organization = Map.get(target_account, :organization)
+    organization_attrs = %{name: discovery_record.name, website: discovery_record.website}
+    organization = Map.get(discovery_record, :organization)
 
     snapshot =
-      metadata_value(target_account.metadata, :contact_snapshot) ||
-        metadata_value(target_account.metadata, "contact_snapshot")
+      metadata_value(discovery_record.metadata, :contact_snapshot) ||
+        metadata_value(discovery_record.metadata, "contact_snapshot")
 
     person_attrs =
       case snapshot do
@@ -212,11 +212,11 @@ defmodule GnomeGarden.Commercial.DiscoveryIdentityResolver do
          {:ok, person_candidates} <- person_candidates(person_attrs, organization, actor: actor) do
       {:ok,
        %{
-         contact_snapshot: target_contact_snapshot(person_attrs),
+         contact_snapshot: discovery_contact_snapshot(person_attrs),
          organization_candidates:
-           Enum.reject(organization_candidates, &(&1.id == target_account.organization_id)),
+           Enum.reject(organization_candidates, &(&1.id == discovery_record.organization_id)),
          person_candidates:
-           Enum.reject(person_candidates, &(&1.id == target_account.contact_person_id))
+           Enum.reject(person_candidates, &(&1.id == discovery_record.contact_person_id))
        }}
     end
   end

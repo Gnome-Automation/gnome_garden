@@ -1,125 +1,41 @@
-# Management Domain
+# Accounts and Access
 
-**CSIA Area:** General Management
-**Module:** `GnomeGarden.Management`
-**Purpose:** Identity, authentication, company settings
+**Implemented Domain:** `GnomeGarden.Accounts`
+**Purpose:** Authentication, user identity, and session-token lifecycle
 
----
-
-## Overview
-
-The Management domain handles user identity, authentication, and company-wide settings. It uses passwordless magic link authentication and provides the foundation for all other domains.
-
----
+This file keeps the old `01-management` slot, but the implemented boundary is `Accounts`, not a broader management/settings domain.
 
 ## Resources
 
-### User
-Authenticated user accounts.
+### `User`
+The authenticated operator identity used across the app.
 
-| Attribute | Type | Required | Description |
-|-----------|------|----------|-------------|
-| id | uuid | auto | Primary key |
-| email | ci_string | yes | Unique email (case-insensitive) |
-| role | atom | yes | Permission level |
-| inserted_at | utc_datetime | auto | Created timestamp |
-| updated_at | utc_datetime | auto | Modified timestamp |
+### `Token`
+Authentication and session token records used by the auth layer.
 
-**Role Values:**
-- `:admin` - Full system access
-- `:user` - Standard user access
-- `:viewer` - Read-only access
+## Current Scope
 
-**Actions:**
-- `read` - List/get users
-- `create` - Register new user
-- `request_magic_link` - Send login email
-- `sign_in_with_magic_link` - Complete authentication
+Implemented today:
+- user accounts
+- magic-link authentication
+- session and token management
+- actor context for Ash actions and LiveViews
 
-### Role
-Permission level definitions (embedded).
+Not implemented as a standalone management domain:
+- company-wide settings resource
+- role catalog resource
+- org-wide admin configuration model
 
-| Value | Access Level |
-|-------|--------------|
-| `:admin` | Full CRUD on all resources |
-| `:user` | CRUD on owned resources |
-| `:viewer` | Read-only access |
+## UI Surface
 
-### Setting
-Company-wide configuration.
+Primary auth routes:
+- `/sign-in`
+- `/register`
+- `/auth/*`
 
-| Attribute | Type | Required | Description |
-|-----------|------|----------|-------------|
-| id | uuid | auto | Primary key |
-| key | string | yes | Setting key |
-| value | string | yes | Setting value |
-| category | atom | yes | Setting category |
+These routes are still driven by AshAuthentication/Phoenix overrides. They are separate from the main cockpit-style operator UI.
 
-**Categories:**
-- `:company` - Company info (name, address)
-- `:billing` - Default billing terms
-- `:notifications` - Alert preferences
-- `:integrations` - API keys, webhooks
+## Notes
 
----
-
-## Authentication Flow
-
-```
-┌────────────────┐
-│  Enter Email   │
-└───────┬────────┘
-        │
-        ▼
-┌────────────────┐
-│ Request Magic  │
-│     Link       │
-└───────┬────────┘
-        │
-        ▼
-┌────────────────┐
-│  Email Sent    │
-└───────┬────────┘
-        │
-        ▼
-┌────────────────┐
-│  Click Link    │
-└───────┬────────┘
-        │
-        ▼
-┌────────────────┐
-│ Session Created│
-└────────────────┘
-```
-
----
-
-## Relationships
-
-| From | To | Type |
-|------|-----|------|
-| User | HR.Member | has_one |
-| User | All domains | owner |
-
----
-
-## UI Routes
-
-| Route | Description |
-|-------|-------------|
-| `/sign-in` | Magic link request |
-| `/auth` | Token validation |
-| `/settings` | Company settings |
-| `/users` | User management (admin) |
-
----
-
-## File Structure
-
-```
-lib/gnome_garden/
-├── management.ex
-└── management/
-    ├── user.ex
-    └── setting.ex
-```
+- The main operator UI assumes a current user actor, but authorization policy is still a future tightening step.
+- Durable business ownership belongs in the business domains, not in `Accounts`.

@@ -1,18 +1,18 @@
 defmodule GnomeGardenWeb.PageController do
   use GnomeGardenWeb, :controller
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Execution
   alias GnomeGarden.Finance
-  alias GnomeGarden.Procurement
 
   def home(conn, _params) do
     actor = conn.assigns[:current_user]
 
-    review_targets = list_review_targets(actor)
-    active_discovery_programs = list_active_discovery_programs(actor)
-    due_discovery_programs = list_due_discovery_programs(actor)
-    open_signals = list_open_signals(actor)
+    review_findings = list_review_findings(actor)
+    acquisition_sources = list_console_sources(actor)
+    acquisition_programs = list_console_programs(actor)
+    queued_signals = list_signal_queue(actor)
     active_pursuits = list_active_pursuits(actor)
 
     due_soon_maintenance_plans =
@@ -24,20 +24,20 @@ defmodule GnomeGardenWeb.PageController do
     unbilled_expenses = list_unbilled_expenses(actor)
     overdue_invoices = list_overdue_invoices(actor)
     unapplied_payments = list_unapplied_payments(actor)
-    review_bids = list_review_bids()
 
     render(conn, :home,
       layout: {GnomeGardenWeb.Layouts, :app},
       page_title: "Operations Cockpit",
       current_user: actor,
       current_path: conn.request_path,
-      active_discovery_program_count: length(active_discovery_programs),
-      due_discovery_program_count: length(due_discovery_programs),
-      due_discovery_programs: Enum.take(due_discovery_programs, 5),
-      review_target_count: length(review_targets),
-      review_targets: Enum.take(review_targets, 5),
-      open_signal_count: length(open_signals),
-      open_signals: Enum.take(open_signals, 5),
+      runnable_source_count: runnable_source_count(acquisition_sources),
+      runnable_sources: acquisition_sources |> runnable_sources() |> Enum.take(5),
+      active_acquisition_program_count: active_program_count(acquisition_programs),
+      active_acquisition_programs: acquisition_programs |> active_programs() |> Enum.take(5),
+      review_finding_count: length(review_findings),
+      review_findings: Enum.take(review_findings, 5),
+      open_signal_count: length(queued_signals),
+      open_signals: Enum.take(queued_signals, 5),
       active_pursuit_count: length(active_pursuits),
       active_pursuits: Enum.take(active_pursuits, 5),
       due_soon_maintenance_count: length(due_soon_maintenance_plans),
@@ -53,55 +53,59 @@ defmodule GnomeGardenWeb.PageController do
       overdue_invoice_count: length(overdue_invoices),
       overdue_invoices: Enum.take(overdue_invoices, 5),
       unapplied_payment_count: length(unapplied_payments),
-      unapplied_payments: Enum.take(unapplied_payments, 5),
-      review_bid_count: length(review_bids)
+      unapplied_payments: Enum.take(unapplied_payments, 5)
     )
   end
 
-  defp list_open_signals(actor) do
+  defp list_console_sources(actor) do
     safe_list(fn ->
-      Commercial.list_open_signals(
-        actor: actor,
-        load: [:status_variant, organization: [], site: []]
-      )
-    end)
-  end
-
-  defp list_review_targets(actor) do
-    safe_list(fn ->
-      Commercial.list_review_target_accounts(
-        actor: actor,
-        load: [:status_variant, :organization, :observation_count, :latest_observed_at]
-      )
-    end)
-  end
-
-  defp list_active_discovery_programs(actor) do
-    safe_list(fn ->
-      Commercial.list_active_discovery_programs(
+      Acquisition.list_console_sources(
         actor: actor,
         load: [
+          :organization,
           :status_variant,
-          :priority_variant,
-          :review_target_count,
-          :run_status_variant,
-          :run_status_label
+          :review_finding_count,
+          :promoted_finding_count,
+          :noise_finding_count,
+          :latest_run_id,
+          :last_run_state,
+          :last_run_state_variant
         ]
       )
     end)
   end
 
-  defp list_due_discovery_programs(actor) do
+  defp list_console_programs(actor) do
     safe_list(fn ->
-      Commercial.list_due_discovery_programs(
+      Acquisition.list_console_programs(
         actor: actor,
         load: [
           :status_variant,
-          :priority_variant,
-          :run_status_variant,
-          :run_status_label,
-          :review_target_count
+          :review_finding_count,
+          :promoted_finding_count,
+          :noise_finding_count,
+          :latest_run_id,
+          :last_run_state,
+          :last_run_state_variant
         ]
+      )
+    end)
+  end
+
+  defp list_signal_queue(actor) do
+    safe_list(fn ->
+      Commercial.list_signal_queue(
+        actor: actor,
+        load: [:status_variant, :procurement_bid, organization: [], site: []]
+      )
+    end)
+  end
+
+  defp list_review_findings(actor) do
+    safe_list(fn ->
+      Acquisition.list_review_findings(
+        actor: actor,
+        load: [:status_variant, :organization, :source, :program]
       )
     end)
   end
@@ -191,10 +195,6 @@ defmodule GnomeGardenWeb.PageController do
     end)
   end
 
-  defp list_review_bids do
-    safe_list(fn -> Procurement.list_bids(query: [filter: [status: :new]]) end)
-  end
-
   defp unapplied_payment?(payment) do
     applied_amount = payment.applied_amount || Decimal.new("0")
 
@@ -202,6 +202,21 @@ defmodule GnomeGardenWeb.PageController do
     |> Decimal.sub(applied_amount)
     |> Decimal.compare(0)
     |> Kernel.==(:gt)
+  end
+
+  defp runnable_source_count(sources), do: sources |> runnable_sources() |> length()
+
+  defp runnable_sources(sources) do
+    Enum.filter(sources, fn source ->
+      is_binary(source.legacy_procurement_source_id) and source.status in [:active, :candidate] and
+        source.enabled
+    end)
+  end
+
+  defp active_program_count(programs), do: programs |> active_programs() |> length()
+
+  defp active_programs(programs) do
+    Enum.filter(programs, &(&1.status == :active))
   end
 
   defp safe_list(fun) do

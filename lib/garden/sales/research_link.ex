@@ -3,7 +3,7 @@ defmodule GnomeGarden.Sales.ResearchLink do
   Join resource linking ResearchRequests to any entity.
 
   Enables a research request to be linked to multiple bids, companies,
-  opportunities, events, leads, or target accounts. Each link carries optional
+  opportunities, events, leads, or discovery records. Each link carries optional
   context explaining the connection.
   """
 
@@ -31,7 +31,7 @@ defmodule GnomeGarden.Sales.ResearchLink do
         :opportunity_id,
         :event_id,
         :lead_id,
-        :target_account_id
+        :discovery_record_id
       ]
     end
   end
@@ -42,6 +42,10 @@ defmodule GnomeGarden.Sales.ResearchLink do
     attribute :context, :string do
       public? true
       description "Why this research is linked to this entity"
+    end
+
+    attribute :discovery_record_id, :uuid do
+      public? true
     end
 
     timestamps()
@@ -73,7 +77,8 @@ defmodule GnomeGarden.Sales.ResearchLink do
       public? true
     end
 
-    belongs_to :target_account, GnomeGarden.Commercial.TargetAccount do
+    belongs_to :discovery_record, GnomeGarden.Commercial.DiscoveryRecord do
+      source_attribute :discovery_record_id
       public? true
     end
   end

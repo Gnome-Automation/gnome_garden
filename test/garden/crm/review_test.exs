@@ -2,7 +2,7 @@ defmodule GnomeGarden.CRM.ReviewTest do
   use GnomeGarden.DataCase, async: true
 
   alias GnomeGarden.CRM.Review
-  alias GnomeGarden.Commercial
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Procurement
 
   test "accept_review_item routes bids into signal and pursuit workflow" do
@@ -22,16 +22,17 @@ defmodule GnomeGarden.CRM.ReviewTest do
                reason: "Strong fit for automation and software delivery"
              })
 
-    assert signal.id == bid.signal_id
+    {:ok, reloaded_bid} = Procurement.get_bid(bid.id)
+    assert signal.id == reloaded_bid.signal_id
     assert signal.status == :converted
     assert pursuit.signal_id == signal.id
-    assert pursuit.organization_id == bid.organization_id
+    assert pursuit.organization_id == reloaded_bid.organization_id
     assert pursuit.pursuit_type == :bid_response
   end
 
-  test "accept_review_item converts target accounts into signals and pursuits" do
-    {:ok, target_account} =
-      Commercial.create_target_account(%{
+  test "accept_review_item converts findings into signals and pursuits" do
+    {:ok, discovery_record} =
+      Acquisition.create_discovery_record(%{
         name: "Blue River Foods",
         website: "https://blueriver.example.com",
         region: "oc",
@@ -41,8 +42,8 @@ defmodule GnomeGarden.CRM.ReviewTest do
       })
 
     {:ok, _observation} =
-      Commercial.create_target_observation(%{
-        target_account_id: target_account.id,
+      Acquisition.create_discovery_evidence(%{
+        discovery_record_id: discovery_record.id,
         observation_type: :expansion,
         source_channel: :news_site,
         external_ref: "review-test:blue-river-foods:expansion",
@@ -53,15 +54,17 @@ defmodule GnomeGarden.CRM.ReviewTest do
         evidence_points: ["expansion", "hiring_controls_engineer"]
       })
 
+    {:ok, finding} = Acquisition.get_finding_by_source_discovery_record(discovery_record.id)
+
     assert {:ok, %{signal: signal, pursuit: pursuit}} =
              Review.accept_review_item(%{
-               target_account_id: target_account.id,
+               finding_id: finding.id,
                reason: "Worth outbound follow-up"
              })
 
-    {:ok, reloaded_target_account} = Commercial.get_target_account(target_account.id)
+    {:ok, reloaded_discovery_record} = Acquisition.get_discovery_record(discovery_record.id)
 
-    assert reloaded_target_account.promoted_signal_id == signal.id
+    assert reloaded_discovery_record.promoted_signal_id == signal.id
     assert signal.status == :converted
     assert pursuit.signal_id == signal.id
     assert pursuit.organization_id == signal.organization_id

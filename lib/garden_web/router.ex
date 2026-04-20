@@ -33,6 +33,16 @@ defmodule GnomeGardenWeb.Router do
       live "/console/agents/deployments/new", Console.AgentDeploymentFormLive
       live "/console/agents/deployments/:id/edit", Console.AgentDeploymentFormLive
       live "/console/agents/runs/:id", Console.AgentRunLive
+      live "/acquisition/findings", Acquisition.FindingLive.Index, :index
+      live "/acquisition/findings/:id", Acquisition.FindingLive.Show, :show
+
+      live "/acquisition/findings/:finding_id/evidence/new",
+           Acquisition.FindingEvidenceLive.Form,
+           :new
+
+      live "/acquisition/evidence/:id/edit", Acquisition.FindingEvidenceLive.Form, :edit
+      live "/acquisition/sources", Acquisition.SourceLive.Index, :index
+      live "/acquisition/programs", Acquisition.ProgramLive.Index, :index
 
       # Operations - Organizations
       live "/operations/organizations", Operations.OrganizationLive.Index, :index
@@ -81,18 +91,6 @@ defmodule GnomeGardenWeb.Router do
       live "/commercial/discovery-programs/new", Commercial.DiscoveryProgramLive.Form, :new
       live "/commercial/discovery-programs/:id", Commercial.DiscoveryProgramLive.Show, :show
       live "/commercial/discovery-programs/:id/edit", Commercial.DiscoveryProgramLive.Form, :edit
-
-      # Commercial - Target Accounts
-      live "/commercial/targets", Commercial.TargetAccountLive.Index, :index
-      live "/commercial/targets/new", Commercial.TargetAccountLive.Form, :new
-      live "/commercial/targets/:id", Commercial.TargetAccountLive.Show, :show
-      live "/commercial/targets/:id/edit", Commercial.TargetAccountLive.Form, :edit
-
-      # Commercial - Target Observations
-      live "/commercial/observations", Commercial.TargetObservationLive.Index, :index
-      live "/commercial/observations/new", Commercial.TargetObservationLive.Form, :new
-      live "/commercial/observations/:id", Commercial.TargetObservationLive.Show, :show
-      live "/commercial/observations/:id/edit", Commercial.TargetObservationLive.Form, :edit
 
       # Commercial - Pursuits
       live "/commercial/pursuits", Commercial.PursuitLive.Index, :index
@@ -185,10 +183,8 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/payment-applications/:id/edit", Finance.PaymentApplicationLive.Form, :edit
 
       # Agents - Sales Discovery
-      live "/procurement/bids", Agents.Sales.BidLive.Index, :index
-      live "/procurement/bids/:id", Agents.Sales.BidLive.Show, :show
       live "/procurement/targeting", Agents.Sales.ProcurementTargetingLive, :index
-      live "/procurement/sources", Agents.Sales.ProcurementSourcesLive
+      live "/procurement/sources", Acquisition.RedirectLive, :sources
     end
   end
 

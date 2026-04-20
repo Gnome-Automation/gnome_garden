@@ -6,8 +6,6 @@ defmodule GnomeGardenWeb.LiveUserAuth do
   import Phoenix.Component
   use GnomeGardenWeb, :verified_routes
 
-  require Ash.Query
-
   def on_mount(:current_user, _params, session, socket) do
     {:cont, AshAuthentication.Phoenix.LiveSession.assign_new_resources(socket, session)}
   end
@@ -54,25 +52,19 @@ defmodule GnomeGardenWeb.LiveUserAuth do
   end
 
   defp load_nav_counts do
-    open_signals =
-      GnomeGarden.Commercial.Signal
-      |> Ash.Query.for_read(:open)
-      |> Ash.count!()
-
-    review_bids =
-      GnomeGarden.Procurement.Bid
-      |> Ash.Query.filter(status == :new)
-      |> Ash.count!()
-
-    review_targets =
-      GnomeGarden.Commercial.TargetAccount
-      |> Ash.Query.for_read(:review_queue)
-      |> Ash.count!()
+    review_findings = count_or_zero(fn -> GnomeGarden.Acquisition.list_review_findings() end)
+    queued_signals = count_or_zero(fn -> GnomeGarden.Commercial.list_signal_queue() end)
 
     %{
-      signals: open_signals,
-      targets: review_targets,
-      bids: review_bids
+      findings: review_findings,
+      signals: queued_signals
     }
+  end
+
+  defp count_or_zero(fun) do
+    case fun.() do
+      {:ok, records} when is_list(records) -> length(records)
+      {:error, _error} -> 0
+    end
   end
 end

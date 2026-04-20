@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
 
   import GnomeGardenWeb.Commercial.Helpers
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
 
   @impl true
@@ -12,7 +13,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
      |> assign(:page_title, "Discovery Programs")
      |> assign(:program_count, 0)
      |> assign(:active_count, 0)
-     |> assign(:review_target_count, 0)
+     |> assign(:review_discovery_record_count, 0)
      |> assign(:pilot_ready_count, 0)
      |> stream(:programs, [], reset: true)
      |> refresh_program_listing()}
@@ -54,8 +55,8 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
           Durable lead-finder definitions for regions, industries, and search motions. Programs own the discovery backlog without confusing it with runtime-only agent state.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/commercial/targets"}>
-            <.icon name="hero-magnifying-glass" class="size-4" /> Targets
+          <.button navigate={~p"/acquisition/findings?family=discovery"}>
+            <.icon name="hero-inbox-stack" class="size-4" /> Discovery Intake
           </.button>
           <.button navigate={~p"/commercial/discovery-programs/new"} variant="primary">
             <.icon name="hero-plus" class="size-4" /> New Program
@@ -78,9 +79,9 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
           accent="emerald"
         />
         <.stat_card
-          title="Review Targets"
-          value={Integer.to_string(@review_target_count)}
-          description="Backlog of targets currently attached to these programs."
+          title="Review Findings"
+          value={Integer.to_string(@review_discovery_record_count)}
+          description="Backlog of acquisition findings currently fed by these programs."
           icon="hero-magnifying-glass"
           accent="sky"
         />
@@ -166,12 +167,12 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
                 </td>
                 <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
                   <div class="space-y-1">
-                    <p>{program.target_account_count} targets</p>
+                    <p>{program.discovery_record_count} discovery records</p>
                     <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {program.review_target_count} waiting review
+                      {program.review_discovery_record_count} waiting review
                     </p>
                     <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {program.observation_count} observations
+                      {program.discovery_evidence_count} evidence items
                     </p>
                   </div>
                 </td>
@@ -210,10 +211,10 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
                     </.button>
                     <.button
                       id={"program-targets-#{program.id}"}
-                      navigate={~p"/commercial/targets?program_id=#{program.id}"}
+                      navigate={discovery_intake_path(program)}
                       class="px-2.5 py-1.5 text-xs"
                     >
-                      <.icon name="hero-magnifying-glass" class="size-4" /> Targets
+                      <.icon name="hero-inbox-stack" class="size-4" /> Intake
                     </.button>
                     <.button
                       navigate={~p"/commercial/discovery-programs/#{program}"}
@@ -242,10 +243,10 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
              :is_due_to_run,
              :run_status_variant,
              :run_status_label,
-             :target_account_count,
-             :review_target_count,
-             :observation_count,
-             :latest_observed_at
+             :discovery_record_count,
+             :review_discovery_record_count,
+             :discovery_evidence_count,
+             :latest_evidence_at
            ]
          ) do
       {:ok, programs} -> programs
@@ -259,7 +260,10 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
     socket
     |> assign(:program_count, length(programs))
     |> assign(:active_count, Enum.count(programs, &(&1.status == :active)))
-    |> assign(:review_target_count, Enum.reduce(programs, 0, &(&1.review_target_count + &2)))
+    |> assign(
+      :review_discovery_record_count,
+      Enum.reduce(programs, 0, &(&1.review_discovery_record_count + &2))
+    )
     |> assign(
       :pilot_ready_count,
       Enum.count(programs, &(&1.status == :active and &1.is_due_to_run))
@@ -274,4 +278,14 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
 
   defp summary_list([], empty_label), do: empty_label
   defp summary_list(values, _empty_label), do: Enum.join(values, ", ")
+
+  defp discovery_intake_path(program) do
+    case Acquisition.get_program_by_legacy_discovery_program(program.id) do
+      {:ok, acquisition_program} ->
+        ~p"/acquisition/findings?family=discovery&program_id=#{acquisition_program.id}"
+
+      _ ->
+        ~p"/acquisition/findings?family=discovery"
+    end
+  end
 end

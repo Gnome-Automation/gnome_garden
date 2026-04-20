@@ -42,10 +42,10 @@ defmodule GnomeGarden.MixProject do
   defp deps do
     [
       # Jido ecosystem (Hex packages)
-      {:jido, "~> 2.1", override: true},
+      {:jido, "~> 2.2", override: true},
       {:jido_ai, "~> 2.0"},
-      {:jido_action, "~> 2.1", override: true},
-      {:jido_signal, "~> 2.0"},
+      {:jido_action, "~> 2.2", override: true},
+      {:jido_signal, "~> 2.1", override: true},
       {:jido_composer, "~> 0.4", override: true},
       {:libgraph, "~> 0.16", override: true},
       {:jido_browser, "~> 2.0"},
@@ -53,7 +53,7 @@ defmodule GnomeGarden.MixProject do
       {:llm_db, "~> 2026.3"},
 
       # Extended Jido ecosystem
-      {:ash_jido, path: "../jido/ash_jido", override: true},
+      {:ash_jido, github: "agentjido/ash_jido", branch: "main", override: true},
       {:jido_shell, github: "agentjido/jido_shell", branch: "main"},
       {:jido_vfs, github: "agentjido/jido_vfs", branch: "main"},
       {:jido_skill, github: "agentjido/jido_skill", branch: "main"},

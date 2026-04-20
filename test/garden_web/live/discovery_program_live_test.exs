@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
 
   test "discovery program routes render", %{conn: conn} do
@@ -18,8 +19,8 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
         watch_channels: ["job_board", "news_site"]
       })
 
-    {:ok, target_account} =
-      Commercial.create_target_account(%{
+    {:ok, discovery_record} =
+      Acquisition.create_discovery_record(%{
         discovery_program_id: discovery_program.id,
         name: "Pulse Packaging",
         website: "https://pulsepackaging.example.com",
@@ -28,9 +29,9 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
         intent_score: 74
       })
 
-    {:ok, _observation} =
-      Commercial.create_target_observation(%{
-        target_account_id: target_account.id,
+    {:ok, _evidence} =
+      Acquisition.create_discovery_evidence(%{
+        discovery_record_id: discovery_record.id,
         discovery_program_id: discovery_program.id,
         observation_type: :hiring,
         source_channel: :job_board,
@@ -40,11 +41,19 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
         summary: "Hiring controls technician for conveyor retrofit"
       })
 
+    {:ok, acquisition_program} =
+      Acquisition.get_program_by_legacy_discovery_program(discovery_program.id)
+
     {:ok, index_view, index_html} = live(conn, ~p"/commercial/discovery-programs")
     assert has_element?(index_view, "#discovery-programs")
     assert index_html =~ discovery_program.name
     assert has_element?(index_view, "#run-program-#{discovery_program.id}")
     assert has_element?(index_view, "#program-targets-#{discovery_program.id}")
+
+    assert has_element?(
+             index_view,
+             ~s(a[href="/acquisition/findings?family=discovery&program_id=#{acquisition_program.id}"])
+           )
 
     index_view
     |> element("#run-program-#{discovery_program.id}")
@@ -60,6 +69,11 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
 
     assert render(show_view) =~ discovery_program.name
     assert has_element?(show_view, "button[phx-click='run_now']")
+
+    assert has_element?(
+             show_view,
+             ~s(a[href="/acquisition/findings?family=discovery&program_id=#{acquisition_program.id}"])
+           )
 
     {:ok, form_view, _form_html} = live(conn, ~p"/commercial/discovery-programs/new")
     assert has_element?(form_view, "#discovery-program-form")

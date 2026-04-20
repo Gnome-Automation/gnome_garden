@@ -1,9 +1,10 @@
 defmodule GnomeGarden.Commercial.DiscoveryProgramTest do
   use GnomeGarden.DataCase, async: true
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
 
-  test "discovery programs aggregate attached targets and observations" do
+  test "discovery programs aggregate attached discovery records and evidence" do
     {:ok, discovery_program} =
       Commercial.create_discovery_program(%{
         name: "OC Food & Beverage Hunt",
@@ -23,8 +24,8 @@ defmodule GnomeGarden.Commercial.DiscoveryProgramTest do
     {:ok, discovery_program} = Commercial.activate_discovery_program(discovery_program)
     assert discovery_program.status == :active
 
-    {:ok, target_account} =
-      Commercial.create_target_account(%{
+    {:ok, discovery_record} =
+      Acquisition.create_discovery_record(%{
         name: "Harbor Beverage Co",
         discovery_program_id: discovery_program.id,
         website: "https://harborbeverage.example.com",
@@ -34,8 +35,8 @@ defmodule GnomeGarden.Commercial.DiscoveryProgramTest do
       })
 
     {:ok, _observation} =
-      Commercial.create_target_observation(%{
-        target_account_id: target_account.id,
+      Acquisition.create_discovery_evidence(%{
+        discovery_record_id: discovery_record.id,
         discovery_program_id: discovery_program.id,
         observation_type: :hiring,
         source_channel: :job_board,
@@ -48,11 +49,11 @@ defmodule GnomeGarden.Commercial.DiscoveryProgramTest do
     {:ok, reloaded_program} =
       Commercial.get_discovery_program(
         discovery_program.id,
-        load: [:target_account_count, :review_target_count, :observation_count]
+        load: [:discovery_record_count, :review_discovery_record_count, :discovery_evidence_count]
       )
 
-    assert reloaded_program.target_account_count == 1
-    assert reloaded_program.review_target_count == 1
-    assert reloaded_program.observation_count == 1
+    assert reloaded_program.discovery_record_count == 1
+    assert reloaded_program.review_discovery_record_count == 1
+    assert reloaded_program.discovery_evidence_count == 1
   end
 end

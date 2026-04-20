@@ -1,199 +1,185 @@
-# Domains Overview (CSIA-Aligned)
+# Domains Overview
 
-## All 10 Domains at a Glance
+This file summarizes the implemented domain map.
 
-| # | Domain | Module | CSIA Area | Resources | Status |
-|---|--------|--------|-----------|-----------|--------|
-| 1 | Management | `GnomeGarden.Management` | General Management | 3 | 🆕 New |
-| 2 | HR | `GnomeGarden.HR` | Human Resources | 3 | 🆕 New |
-| 3 | Finance | `GnomeGarden.Finance` | Financial Management | 4 | 🆕 New |
-| 4 | Projects | `GnomeGarden.Projects` | Project Management | 6 | 🆕 New |
-| 5 | Engineering | `GnomeGarden.Engineering` | System Development | 8 | 🆕 New |
-| 6 | Sales | `GnomeGarden.Sales` | Marketing/Sales | 10 | 🆕 New |
-| 7 | Quality | `GnomeGarden.Quality` | Quality Assurance | 3 | 📋 Phase 2 |
-| 8 | Service | `GnomeGarden.Service` | Customer Service | 4 | 🆕 New |
-| 9 | Agents | `GnomeGarden.Agents` | AI Platform | 6 | ✅ Existing |
-| 10 | Workspace | `GnomeGarden.Workspace` | Personal Productivity | 3 | 🆕 New |
+For exact resource membership, use `docs/llm/generated/resources.json`.
 
-**Total: 50 Resources**
+## Implemented Domains At A Glance
 
----
+| Domain | Module | Resources | Purpose | Notes |
+|---|---|---:|---|---|
+| Accounts | `GnomeGarden.Accounts` | 2 | Authentication and users | Core auth boundary |
+| Operations | `GnomeGarden.Operations` | 7 | Organizations, people, sites, systems, assets | Durable company graph |
+| Acquisition | `GnomeGarden.Acquisition` | 3 | Unified intake sources, programs, findings | Primary intake model |
+| Commercial | `GnomeGarden.Commercial` | 13 | Discovery records, intake, pursuits, proposals, agreements | Primary revenue model |
+| Procurement | `GnomeGarden.Procurement` | 2 | Procurement source and bid intake | Feeds commercial intake |
+| Execution | `GnomeGarden.Execution` | 7 | Projects, service, maintenance, assignments | Delivery and support |
+| Finance | `GnomeGarden.Finance` | 6 | Time, expenses, invoices, payments | Operational finance |
+| Agents | `GnomeGarden.Agents` | 6 | Deployments, runs, outputs, memory | Jido runtime plane |
+| Sales | `GnomeGarden.Sales` | 14 | Legacy compatibility resources | Not the primary UI model |
 
-## Domain Details
+## Resource Map
 
-### 1. Management (General Management)
-**Purpose:** Identity, authentication, company settings
+### Accounts
+- `User`
+- `Token`
 
-| Resource | Description |
-|----------|-------------|
-| User | Authenticated users with magic link |
-| Role | Permission levels (admin, user, viewer) |
-| Setting | Company-wide configuration |
+### Operations
+- `Organization`
+- `Person`
+- `OrganizationAffiliation`
+- `Site`
+- `ManagedSystem`
+- `Asset`
+- `InventoryItem`
 
-### 2. HR (Human Resources)
-**Purpose:** Team management, skills, capacity planning
+### Acquisition
+- `Source`
+- `Program`
+- `Finding`
 
-| Resource | Description |
-|----------|-------------|
-| Member | Team members (extends User) |
-| Skill | Competencies and certifications |
-| Certification | Formal certifications with expiry |
+### Commercial
+- `DiscoveryProgram`
+- `DiscoveryRecord`
+- `DiscoveryEvidence`
+- `Signal`
+- `Pursuit`
+- `Proposal`
+- `ProposalLine`
+- `Agreement`
+- `ChangeOrder`
+- `ChangeOrderLine`
+- `ServiceLevelPolicy`
+- `ServiceEntitlement`
+- `ServiceEntitlementUsage`
 
-### 3. Finance (Financial Management)
-**Purpose:** Billing, payments, recurring revenue
+### Procurement
+- `ProcurementSource`
+- `Bid`
 
-| Resource | Description |
-|----------|-------------|
-| Invoice | Bills to customers |
-| InvoiceLine | Line items on invoices |
-| Payment | Received payments |
-| Retainer | Recurring service agreements |
+### Execution
+- `Project`
+- `WorkItem`
+- `Assignment`
+- `ServiceTicket`
+- `WorkOrder`
+- `MaintenancePlan`
+- `MaterialUsage`
 
-### 4. Projects (Project Management)
-**Purpose:** Project execution, time tracking, expenses
+### Finance
+- `TimeEntry`
+- `Expense`
+- `Invoice`
+- `InvoiceLine`
+- `Payment`
+- `PaymentApplication`
 
-| Resource | Description |
-|----------|-------------|
-| Project | Work containers |
-| Phase | Project milestones |
-| Task | Actionable work items |
-| TimeEntry | Billable time records |
-| Expense | Reimbursable costs |
-| Assignment | Resource allocation |
+### Agents
+- `Agent`
+- `AgentDeployment`
+- `AgentMessage`
+- `AgentRun`
+- `AgentRunOutput`
+- `Memory`
 
-### 5. Engineering (System Development Lifecycle)
-**Purpose:** Assets, BOMs, parts catalog, control templates
+### Sales
+- `Activity`
+- `Address`
+- `Company`
+- `CompanyRelationship`
+- `Contact`
+- `Employment`
+- `Event`
+- `Industry`
+- `Lead`
+- `Note`
+- `Opportunity`
+- `ResearchLink`
+- `ResearchRequest`
+- `Task`
 
-| Resource | Description |
-|----------|-------------|
-| Asset | Customer equipment (PLCs, panels) |
-| Plant | Customer facilities |
-| BOM | Bills of materials |
-| BOMItem | BOM line items |
-| Part | Master parts catalog |
-| Vendor | Suppliers |
-| VendorPart | Vendor-specific pricing |
-| LogicTemplate | Reusable control code |
+## Domain Roles
 
-### 6. Sales (Marketing/Sales)
-**Purpose:** CRM, pipeline, proposals, contracts
+### Accounts
+Provides identity and auth context for the rest of the system.
 
-**CRM (Relationships)**
-| Resource | Description |
-|----------|-------------|
-| Company | Organizations (customers, partners) |
-| Contact | People at companies |
-| Industry | Industry classification |
-| Activity | Interactions and touchpoints |
-| Note | Freeform notes |
+### Operations
+Holds durable real-world entities:
+- companies and partner orgs
+- internal and external people
+- facilities and sites
+- supported systems and assets
 
-**Pipeline**
-| Resource | Description |
-|----------|-------------|
-| Opportunity | Sales pipeline items |
-| Proposal | Formal quotes |
-| ProposalLine | Line items on proposals |
-| Contract | Signed agreements |
-| Service | Service catalog items |
+### Commercial
+Owns the current long-term revenue model:
+- discovery records and evidence
+- formal commercial intake
+- pursuits
+- proposals
+- agreements
+- change orders
+- service entitlements and policies
 
-### 7. Quality (Quality Assurance)
-**Purpose:** Checklists, inspections, non-conformance — *Phase 2*
+### Acquisition
+Owns the current intake review model:
+- source registry
+- program registry
+- unified finding queue
+- operator intake review across procurement and discovery
 
-| Resource | Description |
-|----------|-------------|
-| Checklist | Reusable check templates |
-| Inspection | Completed inspections |
-| NCR | Non-conformance reports |
+### Commercial
+Owns the downstream revenue model:
+- signal inbox
+- pursuits
+- proposals
+- agreements
+- change orders
+- service entitlements and policies
 
-### 8. Service (Customer Service)
-**Purpose:** Support tickets, work orders, SLAs
+### Procurement
+Models structured procurement intake separately from broad outbound discovery.
 
-| Resource | Description |
-|----------|-------------|
-| Ticket | Support requests |
-| TicketComment | Ticket responses |
-| WorkOrder | Field service requests |
-| SLA | Service level agreements |
+### Execution
+Owns the work that gets delivered:
+- scoped projects
+- granular work items
+- scheduling/assignments
+- service tickets
+- work orders
+- maintenance plans
 
-### 9. Agents (AI Platform)
-**Purpose:** AI automation, bid discovery, internal tooling
+### Finance
+Owns the operational billing surface:
+- approved time and expense
+- invoice drafting and review
+- payments and payment application
 
-**Built on Jido framework with 40+ tools and hybrid scanning architecture.**
+### Agents
+Owns runtime orchestration and observability, not durable business state.
 
-| Resource | Description |
-|----------|-------------|
-| Agent | Agent definitions |
-| AgentRun | Execution instances |
-| AgentMessage | Conversation history |
-| Memory | Persistent agent knowledge |
-| LeadSource | Bid discovery sources |
-| Bid | Discovered opportunities |
-
-**Workers:** Base, Coder, Researcher, BidScanner, SmartScanner, etc.
-
-### 10. Workspace (Personal Productivity)
-**Purpose:** Quick capture, inbox, reminders
-
-| Resource | Description |
-|----------|-------------|
-| Capture | Voice/text quick captures |
-| Inbox | Actionable items queue |
-| Reminder | Time-based notifications |
-
----
-
-## Cross-Domain Relationships
-
-```
-┌─────────────┐
-│ Management  │──────────────────────────────────────────┐
-│   (User)    │                                          │
-└──────┬──────┘                                          │
-       │ extends                                         │
-       ▼                                                 │
-┌─────────────┐                                          │
-│     HR      │                                          │
-│  (Member)   │                                          │
-└──────┬──────┘                                          │
-       │                                                 │
-       ▼                                                 │
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐ │
-│   Sales     │────▶│  Projects   │────▶│   Finance   │ │
-│ (CRM+Opps)  │     │ (Delivery)  │     │ (Billing)   │ │
-└──────┬──────┘     └──────┬──────┘     └─────────────┘ │
-       │                   │                             │
-       │                   ▼                             │
-       │            ┌─────────────┐                      │
-       │            │   Service   │                      │
-       │            │  (Support)  │                      │
-       │            └──────┬──────┘                      │
-       │                   │                             │
-       ▼                   ▼                             │
-┌─────────────┐     ┌─────────────┐                      │
-│ Engineering │◀────│   Quality   │                      │
-│(Assets/BOMs)│     │ (Phase 2)   │                      │
-└─────────────┘     └─────────────┘                      │
-       ▲                                                 │
-       │                                                 │
-┌──────┴──────┐     ┌─────────────┐                      │
-│   Agents    │     │  Workspace  │◀─────────────────────┘
-│ (AI/Bids)   │     │  (Capture)  │
-└─────────────┘     └─────────────┘
-```
-
----
+### Sales
+Still implemented, but no longer the primary architecture target. Use it only when maintaining compatibility with older resources and flows.
 
 ## File Locations
 
 | Domain | Domain File | Resources Directory |
-|--------|-------------|---------------------|
-| Management | `lib/gnome_garden/management.ex` | `lib/gnome_garden/management/` |
-| HR | `lib/gnome_garden/hr.ex` | `lib/gnome_garden/hr/` |
-| Finance | `lib/gnome_garden/finance.ex` | `lib/gnome_garden/finance/` |
-| Projects | `lib/gnome_garden/projects.ex` | `lib/gnome_garden/projects/` |
-| Engineering | `lib/gnome_garden/engineering.ex` | `lib/gnome_garden/engineering/` |
-| Sales | `lib/gnome_garden/sales.ex` | `lib/gnome_garden/sales/` |
-| Quality | `lib/gnome_garden/quality.ex` | `lib/gnome_garden/quality/` |
-| Service | `lib/gnome_garden/service.ex` | `lib/gnome_garden/service/` |
-| Agents | `lib/gnome_garden/agents.ex` | `lib/gnome_garden/agents/` |
-| Workspace | `lib/gnome_garden/workspace.ex` | `lib/gnome_garden/workspace/` |
+|---|---|---|
+| Accounts | `lib/garden/accounts.ex` | `lib/garden/accounts/` |
+| Operations | `lib/garden/operations.ex` | `lib/garden/operations/` |
+| Acquisition | `lib/garden/acquisition.ex` | `lib/garden/acquisition/` |
+| Commercial | `lib/garden/commercial.ex` | `lib/garden/commercial/` |
+| Procurement | `lib/garden/procurement.ex` | `lib/garden/procurement/` |
+| Execution | `lib/garden/execution.ex` | `lib/garden/execution/` |
+| Finance | `lib/garden/finance.ex` | `lib/garden/finance/` |
+| Agents | `lib/garden/agents.ex` | `lib/garden/agents/` |
+| Sales | `lib/garden/sales.ex` | `lib/garden/sales/` |
+
+## UI Ownership
+
+The current operator UI is aligned with the non-legacy domains:
+- `Operations` LiveViews under `lib/garden_web/live/operations/`
+- `Commercial` LiveViews under `lib/garden_web/live/commercial/`
+- `Execution` LiveViews under `lib/garden_web/live/execution/`
+- `Finance` LiveViews under `lib/garden_web/live/finance/`
+- `Procurement` views under `lib/garden_web/live/agents/sales/`
+- `Agents` console under `lib/garden_web/live/console/`

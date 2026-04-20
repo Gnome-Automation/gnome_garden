@@ -172,6 +172,7 @@ config :gnome_garden,
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [
     GnomeGarden.Accounts,
+    GnomeGarden.Acquisition,
     GnomeGarden.Agents,
     GnomeGarden.Commercial,
     GnomeGarden.Execution,

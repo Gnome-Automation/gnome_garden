@@ -4,15 +4,40 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
   import GnomeGardenWeb.Operations.Helpers
 
   alias GnomeGarden.Operations
+  alias GnomeGarden.Operations.IdentityMergeReview
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     person = load_person!(id, socket.assigns.current_user)
+    merge_review = load_merge_review!(person, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, person.full_name)
-     |> assign(:person, person)}
+     |> assign(:person, person)
+     |> assign(:merge_review, merge_review)}
+  end
+
+  @impl true
+  def handle_event("merge_person", %{"person_id" => person_id}, socket) do
+    case Operations.merge_person(
+           socket.assigns.person,
+           %{into_person_id: person_id},
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, _merged_person} ->
+        merged_target = load_person!(person_id, socket.assigns.current_user)
+
+        {:noreply,
+         socket
+         |> assign(:page_title, merged_target.full_name)
+         |> assign(:person, merged_target)
+         |> assign(:merge_review, load_merge_review!(merged_target, socket.assigns.current_user))
+         |> put_flash(:info, "Person merged into selected canonical record")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not merge person: #{inspect(error)}")}
+    end
   end
 
   @impl true
@@ -115,6 +140,59 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
       </.section>
 
       <.section
+        :if={@merge_review.candidates != []}
+        title="Duplicate Review"
+        description="Potential canonical people based on shared normalized name, email domain, or linked organizations."
+      >
+        <div id="person-merge-candidates" class="space-y-3">
+          <div
+            :for={candidate <- @merge_review.candidates}
+            class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="space-y-2">
+                <div class="space-y-1">
+                  <.link
+                    navigate={~p"/operations/people/#{candidate.person}"}
+                    class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
+                  >
+                    {candidate.person.full_name}
+                  </.link>
+                  <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                    {candidate.person.email || candidate.person.phone || "No direct contact details"}
+                  </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <.tag
+                    :for={reason <- candidate.match_reasons}
+                    color={merge_reason_tag_color(reason)}
+                  >
+                    {format_merge_reason(reason)}
+                  </.tag>
+                </div>
+                <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                  {candidate.person.organization_count} organizations · {candidate_person_organizations(
+                    candidate.person
+                  )}
+                </p>
+              </div>
+
+              <div class="flex flex-wrap gap-2">
+                <.button
+                  id={"merge-person-#{candidate.person.id}"}
+                  phx-click="merge_person"
+                  phx-value-person_id={candidate.person.id}
+                  variant="primary"
+                >
+                  Merge Into Candidate
+                </.button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </.section>
+
+      <.section
         title="Organizations"
         description="The same person can participate across multiple organizations over time."
       >
@@ -172,4 +250,28 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
       {:error, error} -> raise "failed to load person #{id}: #{inspect(error)}"
     end
   end
+
+  defp load_merge_review!(person, actor) do
+    case IdentityMergeReview.person_review(person, actor: actor) do
+      {:ok, merge_review} -> merge_review
+      {:error, error} -> raise "failed to load person merge review: #{inspect(error)}"
+    end
+  end
+
+  defp candidate_person_organizations(person) do
+    case person.organizations || [] do
+      [] -> "No linked organizations"
+      organizations -> organizations |> Enum.map(& &1.name) |> Enum.join(", ")
+    end
+  end
+
+  defp format_merge_reason(:name_key), do: "Same Normalized Name"
+  defp format_merge_reason(:email_domain), do: "Same Email Domain"
+  defp format_merge_reason(:shared_organization), do: "Shared Organization"
+  defp format_merge_reason(reason), do: format_atom(reason)
+
+  defp merge_reason_tag_color(:name_key), do: :sky
+  defp merge_reason_tag_color(:email_domain), do: :emerald
+  defp merge_reason_tag_color(:shared_organization), do: :amber
+  defp merge_reason_tag_color(_reason), do: :zinc
 end

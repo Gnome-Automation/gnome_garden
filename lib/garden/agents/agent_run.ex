@@ -92,7 +92,7 @@ defmodule GnomeGarden.Agents.AgentRun do
                   :output_count,
                   :procurement_source_output_count,
                   :bid_output_count,
-                  :target_account_output_count
+                  :discovery_finding_output_count
                 ]
               )
     end
@@ -114,7 +114,7 @@ defmodule GnomeGarden.Agents.AgentRun do
                   :output_count,
                   :procurement_source_output_count,
                   :bid_output_count,
-                  :target_account_output_count
+                  :discovery_finding_output_count
                 ]
               )
     end
@@ -131,7 +131,7 @@ defmodule GnomeGarden.Agents.AgentRun do
                   :output_count,
                   :procurement_source_output_count,
                   :bid_output_count,
-                  :target_account_output_count
+                  :discovery_finding_output_count
                 ]
               )
     end
@@ -155,7 +155,7 @@ defmodule GnomeGarden.Agents.AgentRun do
                   :output_count,
                   :procurement_source_output_count,
                   :bid_output_count,
-                  :target_account_output_count
+                  :discovery_finding_output_count
                 ]
               )
     end
@@ -290,9 +290,9 @@ defmodule GnomeGarden.Agents.AgentRun do
       filter expr(output_type == :bid)
     end
 
-    count :target_account_output_count, :outputs do
+    count :discovery_finding_output_count, :outputs do
       public? true
-      filter expr(output_type == :target_account)
+      filter expr(output_type == :finding)
     end
   end
 end

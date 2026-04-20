@@ -43,57 +43,57 @@ defmodule GnomeGarden.Commercial do
         args: [:owner_user_id]
     end
 
-    resource GnomeGarden.Commercial.TargetAccount do
-      define :list_target_accounts, action: :read
-      define :get_target_account, action: :read, get_by: [:id]
+    resource GnomeGarden.Commercial.DiscoveryRecord do
+      define :list_discovery_records, action: :read
+      define :get_discovery_record, action: :read, get_by: [:id]
 
-      define :get_target_account_by_website_domain,
+      define :get_discovery_record_by_website_domain,
         action: :by_website_domain,
         args: [:website_domain]
 
-      define :create_target_account, action: :create
-      define :update_target_account, action: :update
-      define :resolve_target_account_identity, action: :resolve_identity
-      define :review_target_account, action: :start_review
-      define :promote_target_account_to_signal, action: :promote_to_signal
-      define :reject_target_account, action: :reject
-      define :archive_target_account, action: :archive
-      define :reopen_target_account, action: :reopen
-      define :list_review_target_accounts, action: :review_queue
-      define :list_promoted_target_accounts, action: :promoted
-      define :list_rejected_target_accounts, action: :rejected
-      define :list_archived_target_accounts, action: :archived
+      define :create_discovery_record, action: :create
+      define :update_discovery_record, action: :update
+      define :resolve_discovery_record_identity, action: :resolve_identity
+      define :review_discovery_record, action: :start_review
+      define :promote_discovery_record_to_signal, action: :promote_to_signal
+      define :reject_discovery_record, action: :reject
+      define :archive_discovery_record, action: :archive
+      define :reopen_discovery_record, action: :reopen
+      define :list_review_discovery_records, action: :review_queue
+      define :list_promoted_discovery_records, action: :promoted
+      define :list_rejected_discovery_records, action: :rejected
+      define :list_archived_discovery_records, action: :archived
 
-      define :list_target_accounts_for_organization,
+      define :list_discovery_records_for_organization,
         action: :for_organization,
         args: [:organization_id]
 
-      define :list_target_accounts_for_contact_person,
+      define :list_discovery_records_for_contact_person,
         action: :for_contact_person,
         args: [:contact_person_id]
 
-      define :list_target_accounts_for_discovery_program,
+      define :list_discovery_records_for_program,
         action: :for_discovery_program,
         args: [:discovery_program_id]
     end
 
-    resource GnomeGarden.Commercial.TargetObservation do
-      define :list_target_observations, action: :read
-      define :get_target_observation, action: :read, get_by: [:id]
+    resource GnomeGarden.Commercial.DiscoveryEvidence do
+      define :list_discovery_evidence, action: :read
+      define :get_discovery_evidence, action: :read, get_by: [:id]
 
-      define :get_target_observation_by_external_ref,
+      define :get_discovery_evidence_by_external_ref,
         action: :by_external_ref,
         args: [:external_ref]
 
-      define :create_target_observation, action: :create
-      define :update_target_observation, action: :update
-      define :list_recent_target_observations, action: :recent
+      define :create_discovery_evidence, action: :create
+      define :update_discovery_evidence, action: :update
+      define :list_recent_discovery_evidence, action: :recent
 
-      define :list_target_observations_for_target_account,
-        action: :for_target_account,
-        args: [:target_account_id]
+      define :list_discovery_evidence_for_discovery_record,
+        action: :for_discovery_record,
+        args: [:discovery_record_id]
 
-      define :list_target_observations_for_discovery_program,
+      define :list_discovery_evidence_for_program,
         action: :for_discovery_program,
         args: [:discovery_program_id]
     end
@@ -112,7 +112,7 @@ defmodule GnomeGarden.Commercial do
       define :convert_signal, action: :convert
       define :archive_signal, action: :archive
       define :reopen_signal, action: :reopen
-      define :list_open_signals, action: :open
+      define :list_signal_queue, action: :review_queue
     end
 
     resource GnomeGarden.Commercial.Pursuit do
@@ -236,5 +236,32 @@ defmodule GnomeGarden.Commercial do
 
   def launch_discovery_program(program_or_id, opts \\ []) do
     GnomeGarden.Commercial.DiscoveryRunner.launch_program(program_or_id, opts)
+  end
+
+  def discovery_record_review_context(discovery_record_or_id, opts \\ []) do
+    actor = Keyword.get(opts, :actor)
+
+    with {:ok, discovery_record} <-
+           load_discovery_record_for_review_context(discovery_record_or_id, actor) do
+      GnomeGarden.Commercial.DiscoveryIdentityResolver.discovery_record_review_context(
+        discovery_record,
+        actor: actor
+      )
+    end
+  end
+
+  defp load_discovery_record_for_review_context(
+         %GnomeGarden.Commercial.DiscoveryRecord{id: id},
+         actor
+       ),
+       do: load_discovery_record_for_review_context(id, actor)
+
+  defp load_discovery_record_for_review_context(discovery_record_id, actor)
+       when is_binary(discovery_record_id) do
+    get_discovery_record(
+      discovery_record_id,
+      actor: actor,
+      load: [:organization, :contact_person]
+    )
   end
 end

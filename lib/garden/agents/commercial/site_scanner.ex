@@ -12,10 +12,10 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
   - Expansion news from /news, /press pages
 
   Persists contacts into Operations people/affiliations and records
-  hiring/expansion discoveries as Commercial signals for human review.
+  hiring/expansion discoveries as acquisition discovery evidence for human review.
   """
 
-  alias GnomeGarden.Commercial
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial.CompanyProfileContext
   alias GnomeGarden.Commercial.DiscoveryIdentityResolver
   alias GnomeGarden.Commercial.MarketFocus
@@ -37,14 +37,14 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     base_url = extract_base_url(source.url)
     organization_resolution = resolve_organization(source)
     organization = organization_resolution.organization
-    target_account = ensure_target_account!(source, organization_resolution)
-    results = %{contacts: [], observations: [], errors: []}
+    discovery_record = ensure_discovery_record!(source, organization_resolution)
+    results = %{contacts: [], evidence: [], errors: []}
 
     results =
       results
       |> scan_for_contacts(base_url, source, organization)
-      |> scan_for_careers(base_url, source, organization, target_account)
-      |> scan_for_news(base_url, source, organization, target_account)
+      |> scan_for_careers(base_url, source, organization, discovery_record)
+      |> scan_for_news(base_url, source, organization, discovery_record)
 
     Procurement.mark_procurement_source_scanned!(source, %{})
 
@@ -52,7 +52,7 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
      %{
        source: source.name,
        contacts_found: length(results.contacts),
-       observations_found: length(results.observations),
+       evidence_found: length(results.evidence),
        errors: length(results.errors)
      }}
   rescue
@@ -86,15 +86,15 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     end)
   end
 
-  defp scan_for_careers(results, base_url, source, organization, target_account) do
+  defp scan_for_careers(results, base_url, source, organization, discovery_record) do
     Enum.reduce(@career_paths, results, fn path, acc ->
       url = base_url <> path
 
       case try_extract_page(url) do
         {:ok, content} ->
           signals = extract_hiring_signals(content, url)
-          save_hiring_signals(signals, source, organization, target_account)
-          %{acc | observations: acc.observations ++ signals}
+          save_hiring_signals(signals, source, organization, discovery_record)
+          %{acc | evidence: acc.evidence ++ signals}
 
         :not_found ->
           acc
@@ -105,15 +105,15 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     end)
   end
 
-  defp scan_for_news(results, base_url, source, organization, target_account) do
+  defp scan_for_news(results, base_url, source, organization, discovery_record) do
     Enum.reduce(@news_paths, results, fn path, acc ->
       url = base_url <> path
 
       case try_extract_page(url) do
         {:ok, content} ->
           signals = extract_expansion_signals(content, url)
-          save_expansion_signals(signals, source, organization, target_account)
-          %{acc | observations: acc.observations ++ signals}
+          save_expansion_signals(signals, source, organization, discovery_record)
+          %{acc | evidence: acc.evidence ++ signals}
 
         :not_found ->
           acc
@@ -227,14 +227,14 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     end)
   end
 
-  defp save_hiring_signals([], _source, _organization, _target_account), do: :ok
+  defp save_hiring_signals([], _source, _organization, _discovery_record), do: :ok
 
-  defp save_hiring_signals(signals, source, organization, target_account) do
+  defp save_hiring_signals(signals, source, organization, discovery_record) do
     Enum.each(signals, fn signal ->
-      create_observation_if_missing(
+      create_evidence_if_missing(
         source,
         organization,
-        target_account,
+        discovery_record,
         signal,
         "hiring",
         "Hiring signal found on company site"
@@ -242,14 +242,14 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     end)
   end
 
-  defp save_expansion_signals([], _source, _organization, _target_account), do: :ok
+  defp save_expansion_signals([], _source, _organization, _discovery_record), do: :ok
 
-  defp save_expansion_signals(signals, source, organization, target_account) do
+  defp save_expansion_signals(signals, source, organization, discovery_record) do
     Enum.each(signals, fn signal ->
-      create_observation_if_missing(
+      create_evidence_if_missing(
         source,
         organization,
-        target_account,
+        discovery_record,
         signal,
         "expansion",
         "Expansion signal found on company site"
@@ -257,19 +257,19 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     end)
   end
 
-  defp create_observation_if_missing(
+  defp create_evidence_if_missing(
          source,
          organization,
-         target_account,
+         discovery_record,
          signal,
          signal_kind,
          description_prefix
        ) do
     external_ref = "#{source.id}:#{signal_kind}:#{signal.url}"
 
-    Commercial.create_target_observation(
+    Acquisition.create_discovery_evidence(
       %{
-        target_account_id: target_account.id,
+        discovery_record_id: discovery_record.id,
         observation_type: observation_type(signal_kind),
         source_channel: :company_website,
         external_ref: external_ref,
@@ -330,7 +330,7 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     resolution
   end
 
-  defp ensure_target_account!(source, organization_resolution) do
+  defp ensure_discovery_record!(source, organization_resolution) do
     profile_context =
       CompanyProfileContext.resolve(
         profile_key: source.metadata && source.metadata["company_profile_key"],
@@ -371,20 +371,20 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
           intent_signals: target_score.intent_signals
         },
         identity_review:
-          DiscoveryIdentityResolver.target_identity_review(
+          DiscoveryIdentityResolver.discovery_identity_review(
             organization_resolution,
             %{person: nil, resolution: :none, email_domain: nil, name_key: nil, candidates: []}
           )
       }
     }
 
-    {:ok, target_account} =
+    {:ok, discovery_record} =
       case WebIdentity.website_domain(source.url) do
         nil ->
-          Commercial.create_target_account(attrs)
+          Acquisition.create_discovery_record(attrs)
 
         _website_domain ->
-          Commercial.create_target_account(
+          Acquisition.create_discovery_record(
             attrs,
             upsert?: true,
             upsert_identity: :unique_website_domain,
@@ -399,7 +399,7 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
           )
       end
 
-    target_account
+    discovery_record
   end
 
   defp maybe_upsert_affiliation(_person, nil, _source, _has_engineering_context), do: :ok

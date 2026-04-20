@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
 
   import GnomeGardenWeb.Commercial.Helpers
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Agents
   alias GnomeGarden.Commercial
 
@@ -10,13 +11,17 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
   def mount(%{"id" => id}, _session, socket) do
     discovery_program = load_discovery_program!(id, socket.assigns.current_user)
 
+    acquisition_program =
+      load_acquisition_program(discovery_program.id, socket.assigns.current_user)
+
     {:ok,
      socket
      |> assign(:page_title, discovery_program.name)
      |> assign(:discovery_program, discovery_program)
+     |> assign(:acquisition_program, acquisition_program)
+     |> assign(:acquisition_program_id, acquisition_program && acquisition_program.id)
      |> assign(:latest_run, load_latest_run(discovery_program))
-     |> assign(:targets, load_targets(id, socket.assigns.current_user))
-     |> assign(:observations, load_observations(id, socket.assigns.current_user))}
+     |> assign(:findings, load_findings(acquisition_program, socket.assigns.current_user))}
   end
 
   @impl true
@@ -32,14 +37,15 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
         refreshed_program =
           load_discovery_program!(discovery_program.id, socket.assigns.current_user)
 
+        acquisition_program =
+          load_acquisition_program(refreshed_program.id, socket.assigns.current_user)
+
         {:noreply,
          socket
          |> assign(:discovery_program, refreshed_program)
-         |> assign(:targets, load_targets(discovery_program.id, socket.assigns.current_user))
-         |> assign(
-           :observations,
-           load_observations(discovery_program.id, socket.assigns.current_user)
-         )
+         |> assign(:acquisition_program, acquisition_program)
+         |> assign(:acquisition_program_id, acquisition_program && acquisition_program.id)
+         |> assign(:findings, load_findings(acquisition_program, socket.assigns.current_user))
          |> put_flash(:info, "Discovery program updated")}
 
       {:error, error} ->
@@ -56,15 +62,16 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
            actor: socket.assigns.current_user
          ) do
       {:ok, %{program: refreshed_program, run: run}} ->
+        acquisition_program =
+          load_acquisition_program(refreshed_program.id, socket.assigns.current_user)
+
         {:noreply,
          socket
          |> assign(:discovery_program, refreshed_program)
+         |> assign(:acquisition_program, acquisition_program)
+         |> assign(:acquisition_program_id, acquisition_program && acquisition_program.id)
          |> assign(:latest_run, load_latest_run(refreshed_program))
-         |> assign(:targets, load_targets(discovery_program.id, socket.assigns.current_user))
-         |> assign(
-           :observations,
-           load_observations(discovery_program.id, socket.assigns.current_user)
-         )
+         |> assign(:findings, load_findings(acquisition_program, socket.assigns.current_user))
          |> put_flash(:info, "Started discovery run #{short_id(run.id)}.")}
 
       {:error, :active_run_exists} ->
@@ -103,8 +110,11 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
           >
             <.icon name="hero-play" class="size-4" /> Run Discovery
           </.button>
-          <.button navigate={~p"/commercial/observations"}>
-            <.icon name="hero-document-magnifying-glass" class="size-4" /> Observations
+          <.button
+            :if={@acquisition_program_id}
+            navigate={discovery_intake_path(@acquisition_program_id)}
+          >
+            <.icon name="hero-inbox-stack" class="size-4" /> Discovery Intake
           </.button>
           <.button navigate={~p"/commercial/discovery-programs"}>
             <.icon name="hero-arrow-left" class="size-4" /> Back
@@ -163,20 +173,30 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
         <.section title="Program Output">
           <div class="grid gap-5 sm:grid-cols-2">
             <.property_item
-              label="Targets"
-              value={Integer.to_string(@discovery_program.target_account_count)}
+              label="Findings"
+              value={Integer.to_string(acquisition_metric(@acquisition_program, :finding_count))}
             />
             <.property_item
               label="Review Backlog"
-              value={Integer.to_string(@discovery_program.review_target_count)}
+              value={
+                Integer.to_string(acquisition_metric(@acquisition_program, :review_finding_count))
+              }
             />
             <.property_item
-              label="Observations"
-              value={Integer.to_string(@discovery_program.observation_count)}
+              label="Promoted"
+              value={
+                Integer.to_string(acquisition_metric(@acquisition_program, :promoted_finding_count))
+              }
             />
             <.property_item
-              label="Latest Observed"
-              value={format_datetime(@discovery_program.latest_observed_at)}
+              label="Noise"
+              value={
+                Integer.to_string(acquisition_metric(@acquisition_program, :noise_finding_count))
+              }
+            />
+            <.property_item
+              label="Latest Finding"
+              value={format_datetime(@acquisition_program && @acquisition_program.latest_observed_at)}
             />
           </div>
         </.section>
@@ -241,82 +261,61 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
 
       <div class="grid gap-6 lg:grid-cols-2">
         <.section
-          title="Attached Targets"
-          description="These accounts came from this discovery motion and are still in the broad review layer."
+          title="Recent Intake Findings"
+          description="This program now feeds the shared acquisition queue directly. Findings here are the real intake records operators review."
         >
-          <div :if={Enum.empty?(@targets)}>
+          <div :if={Enum.empty?(@findings)}>
             <.empty_state
               icon="hero-magnifying-glass"
-              title="No targets yet"
-              description="Once scanners or operators attach companies to this program, they will appear here."
+              title="No intake findings yet"
+              description="Once this program lands results in acquisition, the newest findings will appear here."
             />
           </div>
 
-          <div :if={!Enum.empty?(@targets)} class="space-y-3">
+          <div :if={!Enum.empty?(@findings)} class="space-y-3">
             <.link
-              :for={target <- @targets}
-              navigate={~p"/commercial/targets/#{target}"}
+              :for={finding <- @findings}
+              navigate={~p"/acquisition/findings/#{finding.id}"}
               class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
             >
               <div class="space-y-1">
-                <p class="font-medium text-zinc-900 dark:text-white">{target.name}</p>
+                <div class="flex flex-wrap gap-2">
+                  <.tag color={:zinc}>{format_atom(finding.finding_type)}</.tag>
+                  <.tag color={:sky}>{format_atom(finding.confidence || :medium)}</.tag>
+                </div>
+                <p class="font-medium text-zinc-900 dark:text-white">{finding.title}</p>
                 <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                  {target.website_domain || "No website domain"}
+                  {finding.summary || "No summary captured yet"}
                 </p>
                 <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                  Intent {target.intent_score} · Fit {target.fit_score}
+                  Intent {finding.intent_score || 0} · Fit {finding.fit_score || 0}
                 </p>
               </div>
-              <.status_badge status={target.status_variant}>
-                {format_atom(target.status)}
+              <.status_badge status={finding.status_variant}>
+                {format_atom(finding.status)}
               </.status_badge>
             </.link>
           </div>
         </.section>
 
         <.section
-          title="Recent Observations"
-          description="Evidence captured against this discovery motion before anything becomes a formal signal."
+          title="Program Path"
+          description="Discovery programs now feed acquisition first, then commercial review, then pursuit."
         >
-          <div :if={Enum.empty?(@observations)}>
-            <.empty_state
-              icon="hero-document-magnifying-glass"
-              title="No observations yet"
-              description="Observation evidence will appear here once scanners attach findings to the program."
-            />
-          </div>
-
-          <div :if={!Enum.empty?(@observations)} class="space-y-3">
-            <div
-              :for={observation <- @observations}
-              class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
-            >
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="space-y-2">
-                  <div class="flex flex-wrap gap-2">
-                    <.tag color={:zinc}>{format_atom(observation.observation_type)}</.tag>
-                    <.tag color={:sky}>{format_atom(observation.source_channel)}</.tag>
-                  </div>
-                  <p class="font-medium text-zinc-900 dark:text-white">{observation.summary}</p>
-                  <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                    {format_datetime(observation.observed_at || observation.inserted_at)}
-                  </p>
-                </div>
-                <.link
-                  :if={observation.source_url}
-                  href={observation.source_url}
-                  target="_blank"
-                  class="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-300"
-                >
-                  Source
-                </.link>
-                <.link
-                  navigate={~p"/commercial/observations/#{observation}"}
-                  class="text-sm font-medium text-sky-600 hover:text-sky-500 dark:text-sky-300"
-                >
-                  Details
-                </.link>
-              </div>
+          <div class="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+            <p class="text-sm text-zinc-600 dark:text-zinc-300">
+              This page is now program context. Operators should work the actual intake in acquisition, not a separate discovery backlog.
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <.button navigate={discovery_intake_path(@acquisition_program_id)} variant="primary">
+                <.icon name="hero-inbox-stack" class="size-4" /> Open Discovery Intake
+              </.button>
+              <.button
+                :if={!Enum.empty?(@findings)}
+                navigate={~p"/acquisition/findings/#{List.first(@findings).id}"}
+              >
+                <.icon name="hero-arrow-top-right-on-square" class="size-4" /> Open Latest Finding
+              </.button>
             </div>
           </div>
         </.section>
@@ -350,11 +349,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
              :priority_variant,
              :is_due_to_run,
              :run_status_variant,
-             :run_status_label,
-             :target_account_count,
-             :review_target_count,
-             :observation_count,
-             :latest_observed_at
+             :run_status_label
            ]
          ) do
       {:ok, program} -> program
@@ -362,21 +357,31 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
     end
   end
 
-  defp load_targets(id, actor) do
-    case Commercial.list_target_accounts_for_discovery_program(
-           id,
+  defp load_acquisition_program(discovery_program_id, actor) do
+    case Acquisition.get_program_by_legacy_discovery_program(
+           discovery_program_id,
            actor: actor,
-           load: [:status_variant]
+           load: [
+             :finding_count,
+             :review_finding_count,
+             :promoted_finding_count,
+             :noise_finding_count,
+             :latest_observed_at
+           ]
          ) do
-      {:ok, targets} -> Enum.take(targets, 8)
-      {:error, error} -> raise "failed to load discovery targets: #{inspect(error)}"
+      {:ok, acquisition_program} -> acquisition_program
+      _ -> nil
     end
   end
 
-  defp load_observations(id, actor) do
-    case Commercial.list_target_observations_for_discovery_program(id, actor: actor) do
-      {:ok, observations} -> Enum.take(observations, 8)
-      {:error, error} -> raise "failed to load discovery observations: #{inspect(error)}"
+  defp load_findings(nil, _actor), do: []
+
+  defp load_findings(acquisition_program, actor) do
+    case Acquisition.list_findings_for_program(acquisition_program.id,
+           actor: actor
+         ) do
+      {:ok, findings} -> Enum.take(findings, 8)
+      {:error, error} -> raise "failed to load acquisition findings: #{inspect(error)}"
     end
   end
 
@@ -398,6 +403,11 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
   defp summary_list([], empty_label), do: empty_label
   defp summary_list(values, _empty_label), do: Enum.join(values, ", ")
 
+  defp discovery_intake_path(nil), do: ~p"/acquisition/findings?family=discovery"
+
+  defp discovery_intake_path(acquisition_program_id),
+    do: ~p"/acquisition/findings?family=discovery&program_id=#{acquisition_program_id}"
+
   defp program_runnable?(%{status: :archived}), do: false
   defp program_runnable?(_program), do: true
 
@@ -411,6 +421,11 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
   defp run_deployment_label(_run), do: "Commercial Target Discovery"
 
   defp short_id(id), do: String.slice(id, 0, 8)
+
+  defp acquisition_metric(nil, _field), do: 0
+
+  defp acquisition_metric(acquisition_program, field),
+    do: Map.get(acquisition_program, field) || 0
 
   defp program_actions(%{status: :draft}) do
     [

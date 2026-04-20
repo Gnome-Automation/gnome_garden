@@ -111,6 +111,8 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :organization_id,
         :status
       ]
+
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     create :create_for_organization do
@@ -132,9 +134,12 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       change set_attribute(:configured_at, &DateTime.utc_now/0)
       change set_attribute(:added_by, :agent)
       change set_attribute(:status, :approved)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :update do
+      require_atomic? false
+
       accept [
         :name,
         :url,
@@ -148,54 +153,70 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :last_scanned_at,
         :status
       ]
+
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :approve do
       description "Approve this source for configuration and scanning"
+      require_atomic? false
       accept []
       change set_attribute(:status, :approved)
       change set_attribute(:enabled, true)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :ignore do
       description "Ignore this source without scanning it"
+      require_atomic? false
       accept []
       change set_attribute(:status, :ignored)
       change set_attribute(:enabled, false)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :block do
       description "Block this source from future scanning"
+      require_atomic? false
       accept []
       change set_attribute(:status, :blocked)
       change set_attribute(:enabled, false)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :reconsider do
       description "Move this source back into the candidate pool"
+      require_atomic? false
       accept []
       change set_attribute(:status, :candidate)
       change set_attribute(:enabled, true)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     # State transitions
 
     update :queue do
       description "Queue source for SmartScanner configuration"
+      require_atomic? false
       accept []
       change transition_state(:pending)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :configure do
       description "Save discovered scraping configuration"
+      require_atomic? false
       accept [:scrape_config]
       change transition_state(:configured)
       change set_attribute(:configured_at, &DateTime.utc_now/0)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :config_fail do
+      require_atomic? false
       accept []
       change transition_state(:config_failed)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :scan do
@@ -204,44 +225,53 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       accept []
       change transition_state(:configured)
 
-      change fn changeset, _ctx ->
+      change fn changeset, ctx ->
         changeset
         |> Ash.Changeset.after_action(fn _changeset, record ->
-          Task.start(fn ->
-            GnomeGarden.Agents.Procurement.ScannerRouter.scan(record)
-          end)
-
-          {:ok, record}
+          case GnomeGarden.Procurement.launch_procurement_source_scan(record, actor: ctx.actor) do
+            {:ok, _result} -> {:ok, record}
+            {:error, error} -> {:error, error}
+          end
         end)
       end
     end
 
     update :scan_fail do
+      require_atomic? false
       accept []
       change transition_state(:scan_failed)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :retry_config do
+      require_atomic? false
       accept []
       change transition_state(:pending)
       change set_attribute(:scrape_config, %{})
       change set_attribute(:configured_at, nil)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :retry_scan do
+      require_atomic? false
       accept []
       change transition_state(:configured)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :set_manual do
+      require_atomic? false
       accept [:scrape_config]
       change transition_state(:manual)
       change set_attribute(:configured_at, &DateTime.utc_now/0)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     update :mark_scanned do
+      require_atomic? false
       accept [:metadata]
       change set_attribute(:last_scanned_at, &DateTime.utc_now/0)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
     # Reads

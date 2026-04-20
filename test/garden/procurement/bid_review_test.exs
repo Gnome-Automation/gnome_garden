@@ -15,6 +15,7 @@ defmodule GnomeGarden.Procurement.BidReviewTest do
 
   test "pass_bid rejects the bid and linked signal" do
     bid = bid_fixture()
+    {:ok, _opened_signal} = BidReview.open_signal(bid)
 
     assert {:ok, rejected_bid} = BidReview.pass_bid(bid, "Not a fit")
     assert rejected_bid.status == :rejected
@@ -53,6 +54,7 @@ defmodule GnomeGarden.Procurement.BidReviewTest do
 
   test "park_bid archives the linked signal and creates research when requested" do
     bid = bid_fixture()
+    {:ok, _opened_signal} = BidReview.open_signal(bid)
 
     assert {:ok, parked_bid} =
              BidReview.park_bid(
@@ -78,6 +80,7 @@ defmodule GnomeGarden.Procurement.BidReviewTest do
 
   test "unpark_bid reopens the linked signal" do
     bid = bid_fixture()
+    {:ok, _opened_signal} = BidReview.open_signal(bid)
     {:ok, parked_bid} = BidReview.park_bid(bid, "Interesting but low priority")
 
     assert {:ok, unparked_bid} = BidReview.unpark_bid(parked_bid)

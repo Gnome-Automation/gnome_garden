@@ -35,11 +35,11 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   @doc """
   Scan a single procurement source using its saved scrape_config.
   """
-  def scan(procurement_source_id) when is_binary(procurement_source_id) do
+  def scan(procurement_source_id, context \\ %{}) when is_binary(procurement_source_id) do
     case Procurement.get_procurement_source(procurement_source_id) do
       {:ok, %{config_status: :configured, scrape_config: config} = source}
       when config != %{} ->
-        do_scan(source)
+        do_scan(source, context)
 
       {:ok, %{config_status: status}} ->
         {:error, "Source not ready for scanning. Status: #{status}. Run discovery first."}
@@ -54,11 +54,12 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   """
   def scan_all_ready(opts \\ []) do
     since_hours = Keyword.get(opts, :since_hours, 24)
+    context = Keyword.get(opts, :context, %{})
     sources = Procurement.list_procurement_sources_ready_for_scan!(since_hours)
 
     results =
       Enum.map(sources, fn source ->
-        case do_scan(source) do
+        case do_scan(source, context) do
           {:ok, result} -> {:ok, source.name, result}
           {:error, reason} -> {:error, source.name, reason}
         end
@@ -71,11 +72,11 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
      }}
   end
 
-  defp do_scan(source) do
+  defp do_scan(source, context) do
     result =
       case source.source_type do
         :planetbids ->
-          case do_browser_scan(source) do
+          case do_browser_scan(source, context) do
             {:ok, _result} = ok ->
               ok
 
@@ -84,14 +85,14 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
                 "Browser scan failed for #{source.name}, falling back to HTTP scanner: #{inspect(browser_reason)}"
               )
 
-              do_planetbids_scan(source)
+              do_planetbids_scan(source, context)
           end
 
         :bidnet ->
-          do_bidnet_scan(source)
+          do_bidnet_scan(source, context)
 
         _other ->
-          do_browser_scan(source)
+          do_browser_scan(source, context)
       end
 
     case result do
@@ -105,7 +106,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     end
   end
 
-  defp do_browser_scan(source) do
+  defp do_browser_scan(source, context) do
     config = source.scrape_config
     listing_url = config["listing_url"] || config[:listing_url]
     profile_context = profile_context_for_source(source)
@@ -122,12 +123,12 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
          {:ok, bids} <- extract_bids(config),
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
-         {:ok, saved} <- save_qualifying_bids(scored, source, listing_url) do
+         {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, enrich_bids(saved))
     end
   end
 
-  defp do_planetbids_scan(source) do
+  defp do_planetbids_scan(source, context) do
     Logger.info("Scanning #{source.name} via PlanetBids HTTP scanner")
     profile_context = profile_context_for_source(source)
 
@@ -142,13 +143,13 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
            ),
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
-         {:ok, saved} <- save_qualifying_bids(scored, source, source.url) do
+         {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
       # Skip detail-page browser enrichment for the HTTP path.
       complete_scan(source, bids, filtered.excluded, scored, saved, 0)
     end
   end
 
-  defp do_bidnet_scan(source) do
+  defp do_bidnet_scan(source, context) do
     Logger.info("Scanning #{source.name} via BidNet HTML scanner")
     profile_context = profile_context_for_source(source)
 
@@ -164,7 +165,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
            ),
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
-         {:ok, saved} <- save_qualifying_bids(scored, source, source.url) do
+         {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, 0)
     end
   end
@@ -281,7 +282,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     )
   end
 
-  defp save_qualifying_bids(scored_bids, source, listing_url) do
+  defp save_qualifying_bids(scored_bids, source, listing_url, context) do
     relevant =
       scored_bids
       |> Enum.filter(fn bid ->
@@ -346,7 +347,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
           procurement_source_id: source.id
         }
 
-        case SaveBid.run(params, %{}) do
+        case SaveBid.run(params, context) do
           {:ok, result} ->
             result
 

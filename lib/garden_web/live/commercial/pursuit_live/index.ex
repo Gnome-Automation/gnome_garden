@@ -29,7 +29,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/signals"}>
-            <.icon name="hero-inbox-stack" class="size-4" /> Signal Inbox
+            <.icon name="hero-inbox-stack" class="size-4" /> Signal Queue
           </.button>
           <.button navigate={~p"/commercial/pursuits/new"} variant="primary">
             <.icon name="hero-plus" class="size-4" /> New Pursuit
@@ -70,11 +70,11 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
           <.empty_state
             icon="hero-arrow-trending-up"
             title="No pursuits yet"
-            description="Create a pursuit directly, or accept a signal in the inbox and convert it into owned pipeline."
+            description="Create a pursuit directly, or accept a signal in the queue and convert it into owned pipeline."
           >
             <:action>
               <.button navigate={~p"/commercial/signals"} variant="primary">
-                Open Signal Inbox
+                Open Signal Queue
               </.button>
             </:action>
           </.empty_state>

@@ -3,6 +3,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
   Bridges commercial discovery programs onto the durable agent deployment/run stack.
   """
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Agents
   alias GnomeGarden.Agents.DeploymentRunner
   alias GnomeGarden.Agents.TemplateCatalog
@@ -91,7 +92,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
              %{
                name: @deployment_name,
                description:
-                 "Launch focused company discovery sweeps that populate target accounts for human review.",
+                 "Launch focused company discovery sweeps that populate acquisition findings for human review.",
                visibility: :shared,
                enabled: true,
                schedule: nil,
@@ -150,11 +151,15 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
       |> Map.put("last_agent_run_state", run.state)
       |> Map.put("last_agent_triggered_by_user_id", actor && actor.id)
 
-    Commercial.update_discovery_program(
-      program,
-      %{last_run_at: DateTime.utc_now(), metadata: metadata},
-      actor: actor
-    )
+    with {:ok, refreshed_program} <-
+           Commercial.update_discovery_program(
+             program,
+             %{last_run_at: DateTime.utc_now(), metadata: metadata},
+             actor: actor
+           ) do
+      _ = Acquisition.sync_program(refreshed_program, actor: actor)
+      {:ok, refreshed_program}
+    end
   end
 
   defp last_agent_run_id(%{metadata: metadata}) when is_map(metadata) do

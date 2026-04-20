@@ -8,8 +8,8 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   - Legacy equipment mentions (old PLCs, outdated HMIs)
   - Industry directory listings in target verticals
 
-  Persists discovered targets into the long-term operating model via
-  `SaveTargetAccount`, creating Operations + Commercial intake records for human
+  Persists discovered companies into the long-term operating model via
+  `SaveDiscoveryFinding`, creating Operations + Commercial intake records for human
   review instead of inventing ad hoc prospect records.
 
   ## Usage
@@ -36,10 +36,10 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   use Jido.AI.Agent,
     name: "target_discovery",
     description:
-      "Discovers companies needing automation/controls work and creates reviewable target accounts",
+      "Discovers companies needing automation/controls work and creates reviewable discovery findings",
     tools: [
       GnomeGarden.Agents.Tools.WebSearch,
-      GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount,
+      GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding,
       GnomeGarden.Agents.Tools.MemoryRemember,
       GnomeGarden.Agents.Tools.MemoryRecall
     ],
@@ -67,8 +67,8 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     3. **Right size** — skip Fortune 500 (too big) and 1-2 person shops (too small). Target 20-500 employees.
     4. **Actually makes/processes something** — we need companies with production/processing, not pure office/software
 
-    ## How To Save Discovery Targets
-    Call **save_target_account** for each qualifying company. ALL of these fields are important:
+    ## How To Save Discovery Findings
+    Call **save_discovery_finding** for each qualifying company. ALL of these fields are important:
 
     REQUIRED:
     - **company_name**: Exact company name
@@ -91,7 +91,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     1. **Search** for companies in the target industry/region
     2. **Research** — do multiple searches to verify the company is real, active, and local
     3. **Verify** — search for "[company name] closed" or "[company name] moved" to check they're still operating locally
-    4. **Save** with rich description and specific signal so it becomes a target account plus observation
+    4. **Save** with rich description and specific signal so it becomes a discovery record plus evidence
     5. Do MORE SEARCHES, not just one — search for the company name, then their industry + location, then hiring signals
 
     ## Rules
@@ -198,7 +198,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     1. Verify they're real and in the target region
     2. Look for signals they need automation help (hiring, expansion, legacy equipment)
     3. Find a contact name and title if possible
-    4. Call **save_target_account** immediately for each qualifying company
+    4. Call **save_discovery_finding** immediately for each qualifying company
 
     Remember each company you save using the memory tool to avoid duplicates.
     Focus on #{region_name} specifically.
@@ -250,16 +250,16 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     #{render_search_terms(discovery_program.search_terms)}
 
     IMPORTANT:
-      - Call **save_target_account** for every qualifying company you find
+      - Call **save_discovery_finding** for every qualifying company you find
       - Always include discovery_program_id: "#{discovery_program.id}"
       - Only save real companies that match this program's scope
-      - Keep the signal specific enough that a human can decide whether to promote the target into the signal inbox
+      - Keep the signal specific enough that a human can decide whether to promote the discovery record into the signal inbox
     """
     |> String.trim()
   end
 
   @doc """
-  Deep research a specific company to determine if they're a good discovery target.
+  Deep research a specific company to determine if it's a good discovery record candidate.
   """
   def research_company(pid, company_name, opts \\ []) do
     company_profile_prompt =
@@ -277,7 +277,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     4. Browse their website if possible
     5. Check if they have manufacturing/processing operations
 
-    If they look like a good target (medium or high confidence), call **save_target_account** with
+    If they look like a good fit (medium or high confidence), call **save_discovery_finding** with
     all the details you found. Include the signal, contact info, and source URL.
     """
 
@@ -308,7 +308,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     1. Note the company name and location
     2. What role are they hiring for?
     3. This is a STRONG signal they need help — they may also need a contractor
-    4. Call **save_target_account** with signal "hiring: [job_title]" and the job posting URL
+    4. Call **save_discovery_finding** with signal "hiring: [job_title]" and the job posting URL
     """
 
     ask_sync(pid, query, Keyword.put_new(opts, :timeout, @default_timeout))
@@ -316,7 +316,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
 
   @doc """
   Run a full sweep across all priority industries and regions.
-  Creates target accounts for every qualifying company found.
+  Creates discovery records for every qualifying company found.
   """
   def full_sweep(pid, opts \\ []) do
     priorities = [
@@ -347,7 +347,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   end
 
   @doc """
-    Parse agent output and create discovery targets from LEAD: formatted lines.
+    Parse agent output and create discovery records from LEAD: formatted lines.
   Call this with the result text from discover/research_company/scan_job_postings.
   """
   def create_targets_from_result(result_text, opts \\ [])
@@ -359,7 +359,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     |> Enum.filter(&String.starts_with?(&1, "LEAD:"))
     |> Enum.map(&parse_lead_line/1)
     |> Enum.reject(&is_nil/1)
-    |> Enum.map(&create_target_account(&1, opts))
+    |> Enum.map(&create_discovery_record(&1, opts))
   end
 
   def create_targets_from_result(_, _opts), do: []
@@ -417,7 +417,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
 
   defp parse_lead_line(_), do: nil
 
-  defp create_target_account(parsed, opts) do
+  defp create_discovery_record(parsed, opts) do
     {first, last} = split_name(parsed.contact_name)
 
     attrs = %{
@@ -434,7 +434,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
       source_url: non_empty(parsed.source_url)
     }
 
-    case GnomeGarden.Agents.Tools.Commercial.SaveTargetAccount.run(attrs, %{}) do
+    case GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding.run(attrs, %{}) do
       {:ok, result} -> {:ok, result}
       {:error, reason} -> {:error, parsed.company_name, reason}
     end
@@ -474,7 +474,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
 
     Use this profile as the canonical operating context for the run.
     Focus on real companies with concrete signals, verify they are active and local enough to matter,
-    and save only reviewable targets with specific evidence.
+    and save only reviewable discovery findings with specific evidence.
     """
     |> String.trim()
   end

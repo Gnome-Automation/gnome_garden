@@ -3,7 +3,7 @@ defmodule GnomeGarden.Agents.AgentRunOutput do
   Durable business outputs produced by an `AgentRun`.
 
   These records bridge runtime history to saved business entities like
-  `ProcurementSource` and `Bid` without forcing the business records themselves to
+  `ProcurementSource`, `Bid`, and acquisition `Finding` without forcing the business records themselves to
   track a single originating run forever.
   """
 
@@ -41,7 +41,7 @@ defmodule GnomeGarden.Agents.AgentRunOutput do
     attribute :output_type, :atom do
       allow_nil? false
       public? true
-      constraints one_of: [:procurement_source, :bid, :target_account]
+      constraints one_of: [:procurement_source, :bid, :finding]
     end
 
     attribute :output_id, :uuid do

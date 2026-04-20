@@ -4,15 +4,40 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
   import GnomeGardenWeb.Operations.Helpers
 
   alias GnomeGarden.Operations
+  alias GnomeGarden.Operations.IdentityMergeReview
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     organization = load_organization!(id, socket.assigns.current_user)
+    merge_review = load_merge_review!(organization, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, organization.name)
-     |> assign(:organization, organization)}
+     |> assign(:organization, organization)
+     |> assign(:merge_review, merge_review)}
+  end
+
+  @impl true
+  def handle_event("merge_organization", %{"organization_id" => organization_id}, socket) do
+    case Operations.merge_organization(
+           socket.assigns.organization,
+           %{into_organization_id: organization_id},
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, _merged_organization} ->
+        merged_target = load_organization!(organization_id, socket.assigns.current_user)
+
+        {:noreply,
+         socket
+         |> assign(:page_title, merged_target.name)
+         |> assign(:organization, merged_target)
+         |> assign(:merge_review, load_merge_review!(merged_target, socket.assigns.current_user))
+         |> put_flash(:info, "Organization merged into selected canonical record")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not merge organization: #{inspect(error)}")}
+    end
   end
 
   @impl true
@@ -107,6 +132,58 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
         <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
           {@organization.notes}
         </p>
+      </.section>
+
+      <.section
+        :if={@merge_review.candidates != []}
+        title="Duplicate Review"
+        description="Potential canonical matches based on shared normalized name or website domain."
+      >
+        <div id="organization-merge-candidates" class="space-y-3">
+          <div
+            :for={candidate <- @merge_review.candidates}
+            class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="space-y-2">
+                <div class="space-y-1">
+                  <.link
+                    navigate={~p"/operations/organizations/#{candidate.organization}"}
+                    class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
+                  >
+                    {candidate.organization.name}
+                  </.link>
+                  <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                    {candidate.organization.website_domain || candidate.organization.primary_region ||
+                      "No domain"}
+                  </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <.tag
+                    :for={reason <- candidate.match_reasons}
+                    color={merge_reason_tag_color(reason)}
+                  >
+                    {format_merge_reason(reason)}
+                  </.tag>
+                </div>
+                <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                  {candidate.organization.people_count} people · {candidate.organization.signal_count} signals · {candidate.organization.pursuit_count} pursuits · {candidate.organization.procurement_source_count} sources
+                </p>
+              </div>
+
+              <div class="flex flex-wrap gap-2">
+                <.button
+                  id={"merge-organization-#{candidate.organization.id}"}
+                  phx-click="merge_organization"
+                  phx-value-organization_id={candidate.organization.id}
+                  variant="primary"
+                >
+                  Merge Into Candidate
+                </.button>
+              </div>
+            </div>
+          </div>
+        </div>
       </.section>
 
       <div class="grid gap-6 xl:grid-cols-2">
@@ -212,7 +289,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
           </div>
           <.link
             :for={source <- @organization.procurement_sources || []}
-            navigate={~p"/procurement/sources?#{[focus: source.id]}"}
+            navigate={~p"/acquisition/sources"}
             class="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <span class="font-medium text-zinc-900 dark:text-white">{source.name}</span>
@@ -249,4 +326,19 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
       {:error, error} -> raise "failed to load organization #{id}: #{inspect(error)}"
     end
   end
+
+  defp load_merge_review!(organization, actor) do
+    case IdentityMergeReview.organization_review(organization, actor: actor) do
+      {:ok, merge_review} -> merge_review
+      {:error, error} -> raise "failed to load organization merge review: #{inspect(error)}"
+    end
+  end
+
+  defp format_merge_reason(:website_domain), do: "Same Website Domain"
+  defp format_merge_reason(:name_key), do: "Same Normalized Name"
+  defp format_merge_reason(reason), do: format_atom(reason)
+
+  defp merge_reason_tag_color(:website_domain), do: :emerald
+  defp merge_reason_tag_color(:name_key), do: :sky
+  defp merge_reason_tag_color(_reason), do: :zinc
 end

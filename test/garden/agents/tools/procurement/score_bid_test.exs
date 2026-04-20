@@ -143,6 +143,29 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScoreBidTest do
     assert score.score_tier == :prospect
     refute score.save_candidate?
     assert score.company_profile_mode == "industrial_core"
+    assert "ambiguous software scope" in score.risk_flags
+    assert "weak technical specificity" in score.risk_flags
+  end
+
+  test "aggregated generic software scope degrades with operator-review watchouts" do
+    assert {:ok, score} =
+             ScoreBid.run(
+               %{
+                 title: "County Permit Workflow and Case Management Portal",
+                 description:
+                   "Implement a custom workflow application, dashboard, reporting portal, and document management system for county department staff.",
+                 agency: "County Administrative Office",
+                 location: "Riverside, CA",
+                 source_type: :bidnet
+               },
+               %{}
+             )
+
+    assert score.score_tier == :prospect
+    assert "ambiguous software scope" in score.risk_flags
+    assert "public agency admin software scope" in score.risk_flags
+    assert "weak technical specificity" in score.risk_flags
+    assert score.recommendation =~ "Recommended next step: keep in review"
   end
 
   test "learned exclude keywords reject CCTV-style bids" do

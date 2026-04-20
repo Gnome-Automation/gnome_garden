@@ -4,7 +4,7 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
 
   Discovery programs describe where Gnome wants agents and operators to look
   for new work. They scope the target industries, regions, search terms, and
-  watch channels that should produce target accounts and observations. The
+  watch channels that should produce discovery records and supporting evidence. The
   program exists independently from the agent runtime so the commercial model
   can answer which discovery motions are active and what they are producing.
   """
@@ -71,9 +71,13 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
         :metadata,
         :owner_user_id
       ]
+
+      change GnomeGarden.Commercial.Changes.SyncAcquisitionProgram
     end
 
     update :update do
+      require_atomic? false
+
       accept [
         :name,
         :description,
@@ -90,31 +94,43 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
         :metadata,
         :owner_user_id
       ]
+
+      change GnomeGarden.Commercial.Changes.SyncAcquisitionProgram
     end
 
     update :activate do
+      require_atomic? false
       accept []
       change transition_state(:active)
+      change GnomeGarden.Commercial.Changes.SyncAcquisitionProgram
     end
 
     update :pause do
+      require_atomic? false
       accept []
       change transition_state(:paused)
+      change GnomeGarden.Commercial.Changes.SyncAcquisitionProgram
     end
 
     update :archive do
+      require_atomic? false
       accept []
       change transition_state(:archived)
+      change GnomeGarden.Commercial.Changes.SyncAcquisitionProgram
     end
 
     update :reopen do
+      require_atomic? false
       accept []
       change transition_state(:draft)
+      change GnomeGarden.Commercial.Changes.SyncAcquisitionProgram
     end
 
     update :mark_ran do
+      require_atomic? false
       accept []
       change set_attribute(:last_run_at, &DateTime.utc_now/0)
+      change GnomeGarden.Commercial.Changes.SyncAcquisitionProgram
     end
 
     read :active do
@@ -128,10 +144,10 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
                   :is_due_to_run,
                   :run_status_variant,
                   :run_status_label,
-                  :target_account_count,
-                  :review_target_count,
-                  :observation_count,
-                  :latest_observed_at
+                  :discovery_record_count,
+                  :review_discovery_record_count,
+                  :discovery_evidence_count,
+                  :latest_evidence_at
                 ]
               )
     end
@@ -150,7 +166,7 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
                   :is_due_to_run,
                   :run_status_variant,
                   :run_status_label,
-                  :review_target_count
+                  :review_discovery_record_count
                 ]
               )
     end
@@ -162,8 +178,8 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
       prepare build(
                 sort: [priority: :desc, inserted_at: :desc],
                 load: [
-                  :target_account_count,
-                  :review_target_count,
+                  :discovery_record_count,
+                  :review_discovery_record_count,
                   :is_due_to_run,
                   :run_status_variant,
                   :run_status_label
@@ -266,12 +282,12 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
       public? true
     end
 
-    has_many :target_accounts, GnomeGarden.Commercial.TargetAccount do
+    has_many :discovery_records, GnomeGarden.Commercial.DiscoveryRecord do
       destination_attribute :discovery_program_id
       public? true
     end
 
-    has_many :target_observations, GnomeGarden.Commercial.TargetObservation do
+    has_many :discovery_evidence, GnomeGarden.Commercial.DiscoveryEvidence do
       destination_attribute :discovery_program_id
       public? true
     end
@@ -333,20 +349,20 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
   end
 
   aggregates do
-    count :target_account_count, :target_accounts do
+    count :discovery_record_count, :discovery_records do
       public? true
     end
 
-    count :review_target_count, :target_accounts do
+    count :review_discovery_record_count, :discovery_records do
       filter expr(status in [:new, :reviewing])
       public? true
     end
 
-    count :observation_count, :target_observations do
+    count :discovery_evidence_count, :discovery_evidence do
       public? true
     end
 
-    first :latest_observed_at, :target_observations, :observed_at do
+    first :latest_evidence_at, :discovery_evidence, :observed_at do
       sort observed_at: :desc
       public? true
     end

@@ -50,6 +50,44 @@ defmodule GnomeGardenWeb.OperationsLiveTest do
     assert render(view) =~ person.first_name
   end
 
+  test "organization show surfaces duplicate merge candidates and merges into canonical record",
+       %{
+         conn: conn
+       } do
+    {:ok, canonical_organization} =
+      Operations.create_organization(%{
+        name: "North Coast Packaging",
+        organization_kind: :business,
+        status: :prospect,
+        relationship_roles: ["prospect"],
+        website: "https://northcoastpackaging.com"
+      })
+
+    {:ok, duplicate_organization} =
+      Operations.create_organization(%{
+        name: "North Coast Packaging, Inc.",
+        organization_kind: :business,
+        status: :active,
+        relationship_roles: ["customer"]
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/operations/organizations/#{duplicate_organization}")
+
+    assert has_element?(view, "#organization-merge-candidates")
+    assert render(view) =~ "Same Normalized Name"
+    assert has_element?(view, "#merge-organization-#{canonical_organization.id}")
+
+    view
+    |> element("#merge-organization-#{canonical_organization.id}")
+    |> render_click()
+
+    assert render(view) =~ canonical_organization.name
+
+    assert {:ok, merged_duplicate} = Operations.get_organization(duplicate_organization.id)
+    assert merged_duplicate.merged_into_id == canonical_organization.id
+    assert merged_duplicate.status == :archived
+  end
+
   test "people index renders durable external contacts", %{conn: conn} do
     {:ok, person} =
       Operations.create_person(%{
@@ -95,6 +133,65 @@ defmodule GnomeGardenWeb.OperationsLiveTest do
 
     assert has_element?(view, "#person-organizations")
     assert render(view) =~ organization.name
+  end
+
+  test "person show surfaces duplicate merge candidates and merges into canonical record", %{
+    conn: conn
+  } do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "North Coast Packaging",
+        organization_kind: :business,
+        status: :active,
+        relationship_roles: ["prospect"]
+      })
+
+    {:ok, canonical_person} =
+      Operations.create_person(%{
+        first_name: "Maya",
+        last_name: "Lopez",
+        email: "maya@northcoastpackaging.com"
+      })
+
+    {:ok, duplicate_person} =
+      Operations.create_person(%{
+        first_name: "Maya",
+        last_name: "Lopez",
+        phone: "555-0100"
+      })
+
+    {:ok, _canonical_affiliation} =
+      Operations.create_organization_affiliation(%{
+        organization_id: organization.id,
+        person_id: canonical_person.id,
+        title: "Controls Engineer",
+        status: :active
+      })
+
+    {:ok, _duplicate_affiliation} =
+      Operations.create_organization_affiliation(%{
+        organization_id: organization.id,
+        person_id: duplicate_person.id,
+        title: "Controls Engineer",
+        status: :active
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/operations/people/#{duplicate_person}")
+
+    assert has_element?(view, "#person-merge-candidates")
+    assert render(view) =~ "Same Normalized Name"
+    assert render(view) =~ "Shared Organization"
+    assert has_element?(view, "#merge-person-#{canonical_person.id}")
+
+    view
+    |> element("#merge-person-#{canonical_person.id}")
+    |> render_click()
+
+    assert render(view) =~ canonical_person.first_name
+
+    assert {:ok, merged_duplicate} = Operations.get_person(duplicate_person.id)
+    assert merged_duplicate.merged_into_id == canonical_person.id
+    assert merged_duplicate.status == :archived
   end
 
   test "operations forms render", %{conn: conn} do

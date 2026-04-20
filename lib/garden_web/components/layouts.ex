@@ -94,35 +94,49 @@ defmodule GnomeGardenWeb.Layouts do
 
       <%!-- Main content area --%>
       <div id="main-content" class="transition-all duration-200 lg:pl-72">
-        <%!-- Mobile top bar --%>
-        <div class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm dark:border-white/10 dark:bg-zinc-900 sm:gap-x-6 sm:px-6 lg:hidden">
-          <button
-            type="button"
-            class="-m-2.5 p-2.5 text-gray-700 dark:text-gray-200"
-            phx-click={show_mobile_sidebar()}
-          >
-            <span class="sr-only">Open sidebar</span>
-            <.icon name="hero-bars-3" class="size-6" />
-          </button>
+        <%!-- App top bar --%>
+        <div class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur dark:border-white/10 dark:bg-zinc-900/95">
+          <div class="px-2 sm:px-3 lg:px-4">
+            <div class="flex min-h-14 flex-wrap items-center justify-between gap-2 py-2">
+              <div class="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  class="-m-2 shrink-0 p-2 text-gray-700 dark:text-gray-200 lg:hidden"
+                  phx-click={show_mobile_sidebar()}
+                >
+                  <span class="sr-only">Open sidebar</span>
+                  <.icon name="hero-bars-3" class="size-5" />
+                </button>
 
-          <div class="h-6 w-px bg-gray-200 dark:bg-white/10" />
+                <div
+                  :if={workspace_nav?(@current_path)}
+                  class="flex min-w-0 flex-1 flex-wrap items-center gap-3"
+                >
+                  <.section_context current_path={@current_path} page_title={@page_title} />
+                  <.section_subnav
+                    current_path={@current_path}
+                    nav_counts={assigns[:nav_counts] || %{}}
+                  />
+                </div>
+              </div>
 
-          <div class="flex flex-1 items-center gap-x-4">
-            <h1 class="text-sm font-semibold text-gray-900 dark:text-white">
-              {@page_title || "Dashboard"}
-            </h1>
+              <div class="flex shrink-0 items-center gap-1.5">
+                <.theme_toggle />
+                <.header_account_controls current_user={@current_user} />
+              </div>
+            </div>
           </div>
-
-          <.theme_toggle />
         </div>
 
         <%!-- Page content --%>
-        <main class="px-4 py-8 sm:px-6 lg:px-8">
+        <main class="px-2 py-3 pb-20 sm:px-3 sm:py-4 lg:px-4 lg:pb-6">
           {@inner_content}
         </main>
 
         <.flash_group flash={@flash} />
       </div>
+
+      <.mobile_primary_nav current_path={@current_path} nav_counts={assigns[:nav_counts] || %{}} />
     </div>
     """
   end
@@ -143,7 +157,7 @@ defmodule GnomeGardenWeb.Layouts do
   @doc """
   Profile dropdown in the header.
   """
-  attr :current_user, :map, default: nil
+  attr :current_user, :any, default: nil
   attr :current_scope, :map, default: nil
 
   def profile_dropdown(assigns) do
@@ -152,50 +166,99 @@ defmodule GnomeGardenWeb.Layouts do
       <div
         tabindex="0"
         role="button"
-        class="flex size-8 items-center justify-center rounded-full bg-zinc-900/5 ring-1 ring-zinc-900/10 transition hover:bg-zinc-900/10 dark:bg-white/5 dark:ring-white/10 dark:hover:bg-white/10"
+        class="btn btn-ghost h-auto min-h-0 rounded-full border border-zinc-200 bg-white px-2 py-1 shadow-sm hover:border-emerald-300 hover:bg-emerald-50 dark:border-white/10 dark:bg-zinc-900 dark:hover:bg-white/[0.06]"
       >
-        <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+        <span class="flex size-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-semibold text-white">
           <%= if @current_user do %>
             {String.first(@current_user.email || "U") |> String.upcase()}
           <% else %>
             ?
           <% end %>
         </span>
+        <span class="hidden max-w-40 truncate text-sm font-medium text-zinc-700 dark:text-zinc-200 sm:block">
+          {account_label(@current_user)}
+        </span>
+        <.icon name="hero-chevron-down" class="hidden size-4 text-zinc-400 sm:block" />
       </div>
       <div
         tabindex="0"
-        class="dropdown-content z-50 mt-2 w-48 rounded-xl bg-white p-2 shadow-lg ring-1 ring-zinc-900/10 dark:bg-zinc-800 dark:ring-white/10"
+        class="dropdown-content z-50 mt-3 w-64 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl ring-1 ring-zinc-900/5 dark:border-white/10 dark:bg-zinc-800 dark:ring-white/10"
       >
         <%= if @current_user do %>
-          <div class="px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400 truncate">
-            {@current_user.email}
+          <div class="rounded-xl bg-zinc-50 px-3 py-3 dark:bg-white/[0.04]">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+              Signed In
+            </p>
+            <div class="mt-1 truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">
+              {account_label(@current_user)}
+            </div>
+            <div class="truncate text-xs text-zinc-500 dark:text-zinc-400">
+              {@current_user.email}
+            </div>
           </div>
-          <div class="h-px bg-zinc-900/10 dark:bg-white/10 my-1" />
+          <div class="my-2 h-px bg-zinc-900/10 dark:bg-white/10" />
           <.link
             href={~p"/sign-out"}
             method="delete"
-            class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-600 transition hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white"
+            class="btn btn-ghost justify-start rounded-xl px-3 text-sm text-zinc-700 hover:bg-rose-50 hover:text-rose-700 dark:text-zinc-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
           >
-            <.icon name="hero-arrow-right-on-rectangle" class="size-4" /> Log out
+            <.icon name="hero-arrow-right-on-rectangle" class="size-4" /> Sign out
           </.link>
         <% else %>
+          <div class="rounded-xl bg-zinc-50 px-3 py-3 dark:bg-white/[0.04]">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+              Account
+            </p>
+            <p class="mt-1 text-sm text-zinc-700 dark:text-zinc-200">
+              Sign in to work the operator queues.
+            </p>
+          </div>
+          <div class="my-2 h-px bg-zinc-900/10 dark:bg-white/10" />
           <.link
             href={~p"/sign-in"}
-            class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-600 transition hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white"
+            class="btn btn-ghost justify-start rounded-xl px-3 text-sm text-zinc-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-zinc-300 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
           >
-            <.icon name="hero-arrow-left-on-rectangle" class="size-4" /> Log in
-          </.link>
-          <.link
-            href={~p"/register"}
-            class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-600 transition hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white"
-          >
-            <.icon name="hero-user-plus" class="size-4" /> Register
+            <.icon name="hero-arrow-left-on-rectangle" class="size-4" /> Sign in
           </.link>
         <% end %>
       </div>
     </div>
     """
   end
+
+  attr :current_user, :any, default: nil
+
+  def header_account_controls(assigns) do
+    ~H"""
+    <.profile_dropdown current_user={@current_user} />
+    """
+  end
+
+  defp account_label(nil), do: "Guest"
+
+  defp account_label(user) do
+    user.email
+    |> to_string()
+    |> String.split("@")
+    |> List.first()
+  end
+
+  defp workspace_nav?(path) when is_binary(path) do
+    Enum.any?(
+      [
+        "/procurement",
+        "/commercial",
+        "/operations",
+        "/execution",
+        "/finance",
+        "/console",
+        "/agent"
+      ],
+      &String.starts_with?(path, &1)
+    )
+  end
+
+  defp workspace_nav?(_path), do: false
 
   @doc """
   Shows the flash group with standard titles and content.

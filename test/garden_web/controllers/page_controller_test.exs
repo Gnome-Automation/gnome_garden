@@ -4,6 +4,7 @@ defmodule GnomeGardenWeb.PageControllerTest do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Execution
   alias GnomeGarden.Operations
+  alias GnomeGarden.Procurement
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
@@ -43,7 +44,7 @@ defmodule GnomeGardenWeb.PageControllerTest do
     assert response =~ maintenance_plan.name
   end
 
-  test "GET / surfaces discovery programs that are due to run", %{conn: conn} do
+  test "GET / surfaces active acquisition programs", %{conn: conn} do
     {:ok, discovery_program} =
       Commercial.create_discovery_program(%{
         name: "Due Discovery #{System.unique_integer([:positive])}",
@@ -57,7 +58,45 @@ defmodule GnomeGardenWeb.PageControllerTest do
     conn = get(conn, ~p"/")
     response = html_response(conn, 200)
 
-    assert response =~ "Due Discovery"
+    assert response =~ "Programs"
+    assert response =~ discovery_program.name
+  end
+
+  test "GET / surfaces acquisition sources and active programs in the intake flow", %{conn: conn} do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Regional Water Bid Portal",
+        url: "https://example.com/procurement/regional-water-bids",
+        source_type: :utility,
+        portal_id: "regional-water-bids",
+        region: :ca,
+        priority: :high,
+        status: :approved
+      })
+
+    {:ok, _source} =
+      Procurement.configure_procurement_source(
+        source,
+        %{scrape_config: %{"provider" => "bidnet_direct"}},
+        actor: nil
+      )
+
+    {:ok, discovery_program} =
+      Commercial.create_discovery_program(%{
+        name: "Industrial Accounts West",
+        target_regions: ["oc"],
+        target_industries: ["manufacturing"]
+      })
+
+    {:ok, _discovery_program} = Commercial.activate_discovery_program(discovery_program)
+
+    conn = get(conn, ~p"/")
+    response = html_response(conn, 200)
+
+    assert response =~ "Runnable Sources"
+    assert response =~ "Active Programs"
+    assert response =~ "Acquisition Flow"
+    assert response =~ source.name
     assert response =~ discovery_program.name
   end
 end

@@ -97,7 +97,7 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
         name: "Commercial Target Discovery",
         template: "target_discovery",
         description:
-          "Launch focused company discovery sweeps that populate target accounts for human review.",
+          "Launch focused company discovery sweeps that populate acquisition findings for human review.",
         visibility: :shared,
         enabled: true,
         schedule: nil,

@@ -10,6 +10,8 @@ defmodule GnomeGarden.Procurement do
     otp_app: :gnome_garden,
     extensions: [AshAdmin.Domain]
 
+  alias GnomeGarden.Procurement.ScanRunner
+
   admin do
     show? true
   end
@@ -70,5 +72,9 @@ defmodule GnomeGarden.Procurement do
       define :park_bid, action: :park
       define :unpark_bid, action: :unpark
     end
+  end
+
+  def launch_procurement_source_scan(source_or_id, opts \\ []) do
+    ScanRunner.launch_source_scan(source_or_id, opts)
   end
 end

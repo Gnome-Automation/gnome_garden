@@ -2,7 +2,7 @@ defmodule GnomeGarden.Commercial.Signal do
   @moduledoc """
   Raw business signal that may justify commercial follow-up.
 
-  Signals capture bids, inbound requests, discovered target accounts,
+  Signals capture bids, inbound requests, promoted discovery findings,
   referrals, renewal cues, or service-driven expansion opportunities before
   Gnome commits to a formal pursuit.
   """
@@ -141,8 +141,11 @@ defmodule GnomeGarden.Commercial.Signal do
       change transition_state(:new)
     end
 
-    read :open do
+    read :review_queue do
       filter expr(status in [:new, :reviewing, :accepted])
+
+      filter expr(signal_type != :bid_notice or status == :accepted)
+
       prepare build(sort: [observed_at: :desc, inserted_at: :desc], load: [:organization, :site])
     end
 

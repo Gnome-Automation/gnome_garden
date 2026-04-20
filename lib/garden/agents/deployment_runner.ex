@@ -19,11 +19,12 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   def launch_manual_run(deployment_id, opts \\ []) do
     actor = Keyword.get(opts, :actor)
     task_override = Keyword.get(opts, :task)
+    metadata = Keyword.get(opts, :metadata, %{})
 
     with {:ok, deployment} <- fetch_deployment(deployment_id, actor),
          :ok <- ensure_enabled(deployment),
          {:ok, template} <- Templates.get(deployment.agent.template),
-         {:ok, run} <- create_run(deployment, actor, task_override, :manual) do
+         {:ok, run} <- create_run(deployment, actor, task_override, :manual, metadata: metadata) do
       start_runtime(run, deployment, template, actor)
     end
   end
@@ -121,19 +122,22 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
     end
   end
 
-  defp create_run(deployment, actor, task_override, run_kind, opts \\ []) do
+  defp create_run(deployment, actor, task_override, run_kind, opts) do
     schedule_slot = Keyword.get(opts, :schedule_slot)
+    extra_metadata = Keyword.get(opts, :metadata, %{})
 
-    metadata = %{
-      deployment_name: deployment.name,
-      deployment_visibility: deployment.visibility,
-      schedule: deployment.schedule,
-      schedule_slot: schedule_slot,
-      template: deployment.agent.template,
-      config: deployment.config,
-      source_scope: deployment.source_scope,
-      memory_namespace: deployment.memory_namespace
-    }
+    metadata =
+      %{
+        deployment_name: deployment.name,
+        deployment_visibility: deployment.visibility,
+        schedule: deployment.schedule,
+        schedule_slot: schedule_slot,
+        template: deployment.agent.template,
+        config: deployment.config,
+        source_scope: deployment.source_scope,
+        memory_namespace: deployment.memory_namespace
+      }
+      |> Map.merge(Map.new(extra_metadata))
 
     Agents.create_agent_run(
       %{
@@ -152,6 +156,14 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   defp start_runtime(run, deployment, template, actor) do
     runtime_instance_id = run.id
 
+    if function_exported?(template.module, :execute_run, 1) do
+      start_direct_runtime(run, deployment, template, actor, runtime_instance_id)
+    else
+      start_ai_runtime(run, deployment, template, actor, runtime_instance_id)
+    end
+  end
+
+  defp start_ai_runtime(run, deployment, template, actor, runtime_instance_id) do
     case GnomeGarden.Jido.start_agent(template.module, id: runtime_instance_id) do
       {:ok, pid} ->
         AgentTracker.register(runtime_instance_id, pid, deployment.agent.template, run.task)
@@ -193,6 +205,46 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
     end
   end
 
+  defp start_direct_runtime(run, deployment, template, actor, runtime_instance_id) do
+    with {:ok, started_run} <-
+           Ash.update(
+             run,
+             %{runtime_instance_id: runtime_instance_id},
+             action: :start,
+             actor: actor
+           ),
+         :ok <-
+           persist_message(%{
+             agent_run_id: started_run.id,
+             role: :user,
+             content: started_run.task,
+             metadata: %{
+               deployment_name: deployment.name,
+               template: deployment.agent.template,
+               run_kind: started_run.run_kind,
+               schedule_slot: started_run.schedule_slot,
+               requested_by_user_id: actor && actor.id
+             }
+           }),
+         {:ok, pid} <-
+           Task.start(fn ->
+             execute_direct_run(
+               started_run,
+               deployment,
+               template.module,
+               actor,
+               runtime_instance_id
+             )
+           end) do
+      AgentTracker.register(runtime_instance_id, pid, deployment.agent.template, run.task)
+      {:ok, started_run}
+    else
+      {:error, error} ->
+        AgentTracker.mark_complete(runtime_instance_id, :error, inspect(error))
+        fail_pending_run(run, error, actor)
+    end
+  end
+
   defp execute_run(run, deployment, template, pid, actor) do
     task = run.task
     runtime_instance_id = run.runtime_instance_id || run.id
@@ -204,6 +256,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
           task,
           timeout: timeout_for(deployment),
           tool_context: %{
+            agent_run_id: run.id,
             actor_id: actor && actor.id,
             actor_email: actor && actor.email,
             deployment_id: deployment.id,
@@ -232,6 +285,33 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
         handle_failure(run, runtime_instance_id, {kind, reason}, actor)
     after
       _ = stop_runtime(runtime_instance_id)
+    end
+  end
+
+  defp execute_direct_run(run, deployment, module, actor, runtime_instance_id) do
+    try do
+      result =
+        module.execute_run(%{
+          run: run,
+          deployment: deployment,
+          actor: actor,
+          timeout_ms: timeout_for(deployment),
+          tool_context: runtime_tool_context(run, deployment, actor, runtime_instance_id)
+        })
+
+      case result do
+        {:ok, response} ->
+          handle_success(run, runtime_instance_id, response, actor)
+
+        {:error, reason} ->
+          handle_failure(run, runtime_instance_id, reason, actor)
+      end
+    rescue
+      exception ->
+        handle_failure(run, runtime_instance_id, exception, actor)
+    catch
+      kind, reason ->
+        handle_failure(run, runtime_instance_id, {kind, reason}, actor)
     end
   end
 
@@ -343,8 +423,12 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
   defp persist_message(attrs) do
     case Agents.create_agent_message(attrs) do
-      {:ok, _message} -> :ok
-      {:error, error} -> Logger.warning("Failed to persist agent message: #{inspect(error)}")
+      {:ok, _message} ->
+        :ok
+
+      {:error, error} ->
+        Logger.warning("Failed to persist agent message: #{inspect(error)}")
+        {:error, error}
     end
   end
 
@@ -370,6 +454,22 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
        do: timeout_ms
 
   defp timeout_for(_deployment), do: @default_timeout_ms
+
+  defp runtime_tool_context(run, deployment, actor, runtime_instance_id) do
+    %{
+      agent_run_id: run.id,
+      actor_id: actor && actor.id,
+      actor_email: actor && actor.email,
+      deployment_id: deployment.id,
+      deployment_name: deployment.name,
+      run_id: run.id,
+      runtime_instance_id: runtime_instance_id,
+      memory_namespace: deployment.memory_namespace,
+      source_scope: deployment.source_scope,
+      deployment_config: deployment.config,
+      project_dir: File.cwd!()
+    }
+  end
 
   defp default_task_for(%{agent: %{template: "source_discovery"}} = deployment) do
     """
@@ -413,7 +513,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
     Goal:
     Find real companies that fit Gnome's automation, controls, service, or
-    industrial software profile and save them as reviewable target accounts.
+    industrial software profile and save them as reviewable discovery findings.
 
     Source scope:
     #{inspect(deployment.source_scope, pretty: true, limit: :infinity)}

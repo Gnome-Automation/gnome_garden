@@ -8,6 +8,7 @@ defmodule GnomeGarden.Operations.Changes.MergeOrganization do
 
   use Ash.Resource.Change
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Execution
   alias GnomeGarden.Operations
@@ -43,7 +44,7 @@ defmodule GnomeGarden.Operations.Changes.MergeOrganization do
                  Operations.get_organization(into_organization_id, actor: context.actor),
                :ok <- ensure_target_mergeable(target),
                {:ok, _target} <- merge_target_organization(target, source, context.actor),
-               {:ok, :ok} <- reassign_target_accounts(source.id, target.id, context.actor),
+               {:ok, :ok} <- reassign_discovery_records(source.id, target.id, context.actor),
                {:ok, :ok} <- reassign_signals(source.id, target.id, context.actor),
                {:ok, :ok} <- reassign_pursuits(source.id, target.id, context.actor),
                {:ok, :ok} <- reassign_procurement_sources(source.id, target.id, context.actor),
@@ -94,13 +95,13 @@ defmodule GnomeGarden.Operations.Changes.MergeOrganization do
     end
   end
 
-  defp reassign_target_accounts(source_id, target_id, actor) do
+  defp reassign_discovery_records(source_id, target_id, actor) do
     reassign_collection(
       fn ->
-        Commercial.list_target_accounts_for_organization(source_id, actor: actor)
+        Acquisition.list_discovery_records_for_organization(source_id, actor: actor)
       end,
-      fn target_account ->
-        Commercial.update_target_account(target_account, %{organization_id: target_id},
+      fn discovery_record ->
+        Acquisition.update_discovery_record(discovery_record, %{organization_id: target_id},
           actor: actor
         )
       end

@@ -1,100 +1,110 @@
 # GnomeGarden Platform Documentation
 
-**Vertical SaaS for Controls Integrators: CRM + PSA + Service + Engineering + AI**
+This directory is the human-facing overview of the current platform.
 
-## What is GnomeGarden?
+For implemented architecture, the authoritative sources are:
+- `docs/llm/index.md`
+- `docs/llm/generated/resources.json`
+- `config/config.exs` under `config :gnome_garden, :ash_domains`
 
-GnomeGarden is a comprehensive business platform designed specifically for building controls integrators. It combines customer relationship management, professional services automation, service management, and specialized engineering tools into a single, AI-powered system.
+Treat the docs in this `documentation/` tree as explanatory. They should match the implemented model, but the generated machine map remains the source of truth.
 
-The domain structure is aligned with [CSIA Best Practices](https://controlsys.org/) — the industry standard for control system integration business management.
+## What GnomeGarden Is
 
-## Tech Stack
+GnomeGarden is an operating system for an automation and software delivery company.
 
-- **Backend:** Elixir, Phoenix, Ash Framework
-- **Database:** PostgreSQL
-- **Frontend:** Phoenix LiveView, DaisyUI, Tailwind CSS
-- **AI:** Jido Agent Framework, LLM Integration
-- **Jobs:** Oban
+The current platform is organized around four primary business slices:
+- `Operations`: organizations, people, sites, managed systems, assets, inventory
+- `Acquisition`: unified intake sources, programs, and findings
+- `Commercial`: discovery, intake, pursuits, proposals, agreements, change orders
+- `Execution`: projects, work items, assignments, service tickets, work orders, maintenance
+- `Finance`: operational billing, payments, and billing-adjacent controls
 
-## Quick Start
+Supporting domains:
+- `Procurement`: procurement-source and bid intake
+- `Agents`: Jido-based runtime, deployments, runs, memories, and outputs
+- `Accounts`: authentication and users
+- `Sales`: legacy compatibility resources that still exist in the codebase but are no longer the primary operating model
 
-```bash
-# Install dependencies
-mix deps.get
+## Current Operating Model
 
-# Setup database
-mix ash.setup
+The implemented long-term flow is:
 
-# Start server
-iex -S mix phx.server
+```text
+DiscoveryProgram / ProcurementSource
+  -> Acquisition Program / Source
+  -> DiscoveryEvidence / DiscoveryRecord / Bid
+  -> Finding
+  -> Signal
+  -> Pursuit
+  -> Proposal
+  -> Agreement
+  -> Project / ServiceTicket / WorkOrder
+  -> TimeEntry / Expense / Invoice
+  -> Payment / PaymentApplication
 ```
 
-## Domain Map (CSIA-Aligned)
+Important distinctions:
+- Broad web and procurement intake now converge through `Acquisition.Finding`
+- Discovery-specific evidence and records are modeled as `DiscoveryEvidence` and `DiscoveryRecord`
+- Commercial intake is staged through `Signal`
+- Human-owned revenue work begins at `Pursuit`
+- Delivery lives in `Execution`
+- Physical and digital systems are modeled through `Site`, `ManagedSystem`, and `Asset`
 
-| # | Domain | CSIA Area | Purpose | Resources |
-|---|--------|-----------|---------|-----------|
-| 1 | [Management](domains/01-management.md) | General Management | Identity, auth, settings | 3 |
-| 2 | [HR](domains/02-hr.md) | Human Resources | Team, skills, capacity | 3 |
-| 3 | [Finance](domains/03-finance.md) | Financial Management | Invoices, payments, retainers | 4 |
-| 4 | [Projects](domains/04-projects.md) | Project Management | Projects, tasks, time, expenses | 6 |
-| 5 | [Engineering](domains/05-engineering.md) | System Development | Assets, BOMs, parts, vendors | 8 |
-| 6 | [Sales](domains/06-sales.md) | Marketing/Sales | CRM, pipeline, contracts | 10 |
-| 7 | [Quality](domains/07-quality.md) | Quality Assurance | Checklists, inspections | 3 |
-| 8 | [Service](domains/08-service.md) | Customer Service | Tickets, work orders, SLAs | 4 |
-| 9 | [Agents](domains/09-agents.md) | AI Platform | Bid scanning, automation | 6 |
-| 10 | [Workspace](domains/10-workspace.md) | Personal Productivity | Capture, inbox, reminders | 3 |
+## Implemented Domains
 
-**Total: 50 resources across 10 domains**
+| Domain | Module | Resources | Role |
+|---|---|---:|---|
+| Accounts | `GnomeGarden.Accounts` | 2 | Users and auth tokens |
+| Operations | `GnomeGarden.Operations` | 7 | Durable company, person, site, system, and asset records |
+| Acquisition | `GnomeGarden.Acquisition` | 3 | Unified intake sources, programs, and findings |
+| Commercial | `GnomeGarden.Commercial` | 13 | Discovery records, intake, pipeline, agreements, entitlements |
+| Procurement | `GnomeGarden.Procurement` | 2 | Procurement sources and bids |
+| Execution | `GnomeGarden.Execution` | 7 | Projects, service, maintenance, scheduling, material usage |
+| Finance | `GnomeGarden.Finance` | 6 | Time, expense, invoice, payment workflows |
+| Agents | `GnomeGarden.Agents` | 6 | Jido runtime, deployments, runs, outputs, memory |
+| Sales | `GnomeGarden.Sales` | 14 | Legacy compatibility model |
+
+## UI Shape
+
+The app is now cockpit-first and domain-first.
+
+Primary operator surfaces:
+- `/` -> Operations cockpit
+- `/operations/*`
+- `/commercial/*`
+- `/execution/*`
+- `/finance/*`
+- `/acquisition/*`
+- `/console/agents*`
+
+The old CRM UI has been removed from the main operator flow.
 
 ## Documentation Structure
 
-```
+```text
 documentation/
-├── README.md                    # This file
+├── README.md
 ├── architecture/
-│   ├── overview.md              # System diagram, tech stack
-│   ├── domains.md               # All 10 domains at a glance
-│   └── data-flow.md             # How data moves between domains
+│   ├── overview.md
+│   ├── domains.md
+│   └── data-flow.md
 ├── domains/
-│   ├── 01-management.md         # General Management
-│   ├── 02-hr.md                 # Human Resources
-│   ├── 03-finance.md            # Financial Management
-│   ├── 04-projects.md           # Project Management
-│   ├── 05-engineering.md        # System Development
-│   ├── 06-sales.md              # Marketing/Sales (CRM + Pipeline)
-│   ├── 07-quality.md            # Quality Assurance
-│   ├── 08-service.md            # Customer Service
-│   ├── 09-agents.md             # AI Platform
-│   └── 10-workspace.md          # Personal Productivity
+│   ├── 01-management.md
+│   ├── 02-hr.md
+│   ├── 03-finance.md
+│   ├── 04-projects.md
+│   ├── 05-engineering.md
+│   ├── 06-sales.md
+│   ├── 07-quality.md
+│   ├── 08-service.md
+│   ├── 09-agents.md
+│   └── 10-workspace.md
 └── ui/
-    ├── layout.md                # Mobile-first structure
-    ├── navigation.md            # Routes + menus
-    └── components.md            # DaisyUI patterns
+    ├── layout.md
+    ├── navigation.md
+    └── components.md
 ```
 
-## Key Workflows
-
-### Lead to Cash
-```
-Agents (Bid) → Sales (Opportunity → Proposal → Contract) → Projects → Finance (Invoice)
-```
-
-### Service Flow
-```
-Service (Ticket/WorkOrder) → Projects (Task) → Finance (Invoice)
-```
-
-### Voice Capture
-```
-Workspace (Capture) → AI Processing → Sales/Projects/Service
-```
-
-## Admin Access
-
-- **Admin Dashboard:** `/admin`
-- **Job Queue:** `/oban`
-
-## References
-
-- [CSIA Best Practices Manual](https://controlsys.org/) - Industry standard for SI business management
-- [Gnome Automation Company Docs](https://github.com/Gnome-Automation/gnome-company) - Business operations
+The numbered domain files are retained for continuity, but several now describe how the implemented platform maps onto the old domain naming rather than reflecting a one-to-one Ash domain.

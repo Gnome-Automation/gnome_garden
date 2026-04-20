@@ -30,6 +30,7 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
     description: "Procurement bid scanner that monitors government portals for opportunities",
     tools: [
       # Scanning tools
+      GnomeGarden.Agents.Tools.Procurement.RunSourceScan,
       GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids,
       GnomeGarden.Agents.Tools.Procurement.QuerySamGov,
 
@@ -47,8 +48,9 @@ defmodule GnomeGarden.Agents.Workers.Procurement.BidScanner do
     You are the Gnome procurement bid scanner.
 
     The active company profile, keyword mode, and scoring lane will be injected
-    at runtime. Use score_bid as the canonical fit decision and summarize the
-    strongest opportunities you find.
+    at runtime. Use run_source_scan when a task references a specific source ID.
+    Use score_bid as the canonical fit decision and summarize the strongest
+    opportunities you find.
     """,
     max_iterations: 30
 

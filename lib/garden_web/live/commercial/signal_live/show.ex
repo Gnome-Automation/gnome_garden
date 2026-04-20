@@ -3,15 +3,18 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
 
   import GnomeGardenWeb.Commercial.Helpers
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     signal = load_signal!(id, socket.assigns.current_user)
+    finding_id = load_finding_id(signal.id)
 
     {:ok,
      socket
      |> assign(:page_title, signal.title)
+     |> assign(:finding_id, finding_id)
      |> assign(:signal, signal)}
   end
 
@@ -49,6 +52,12 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
         <:actions>
           <.button navigate={~p"/commercial/signals"}>
             <.icon name="hero-arrow-left" class="size-4" /> Back
+          </.button>
+          <.button
+            :if={@finding_id}
+            navigate={~p"/acquisition/findings/#{@finding_id}"}
+          >
+            <.icon name="hero-inbox-stack" class="size-4" /> Open Intake Finding
           </.button>
           <.button
             :if={can_create_pursuit?(@signal)}
@@ -112,6 +121,130 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
           </div>
         </.section>
       </div>
+
+      <.section
+        :if={@signal.procurement_bid}
+        title="Procurement Provenance"
+        description="This signal came from the procurement console and should retain a clear link back to the raw bid intake record."
+      >
+        <div class="grid gap-5 sm:grid-cols-2">
+          <.property_item label="Bid Title" value={@signal.procurement_bid.title} />
+          <.property_item label="Bid Status" value={format_atom(@signal.procurement_bid.status)} />
+          <.property_item label="Agency" value={@signal.procurement_bid.agency || "-"} />
+          <.property_item
+            label="Bid Due"
+            value={format_datetime(@signal.procurement_bid.due_at)}
+          />
+          <.property_item
+            label="Score Tier"
+            value={format_score_tier(@signal.procurement_bid.score_tier)}
+          />
+          <.property_item
+            label="Source Confidence"
+            value={format_source_confidence(@signal.procurement_bid.score_source_confidence)}
+          />
+        </div>
+
+        <div
+          :if={
+            @signal.procurement_bid.score_recommendation ||
+              @signal.procurement_bid.score_risk_flags != []
+          }
+          class="mt-4 space-y-4"
+        >
+          <div
+            :if={@signal.procurement_bid.score_recommendation}
+            class="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-4 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100"
+          >
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+              Procurement Recommendation
+            </p>
+            <p class="mt-2 leading-6">{@signal.procurement_bid.score_recommendation}</p>
+          </div>
+
+          <div :if={@signal.procurement_bid.score_risk_flags != []}>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+              Procurement Watchouts
+            </p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <span
+                :for={flag <- @signal.procurement_bid.score_risk_flags}
+                class="badge badge-outline badge-sm border-amber-300 bg-white/70 text-amber-700 dark:border-amber-400/30 dark:bg-white/[0.03] dark:text-amber-200"
+              >
+                {flag}
+              </span>
+            </div>
+          </div>
+        </div>
+      </.section>
+
+      <.section
+        :if={discovery_signal?(@signal, @finding_id)}
+        title="Discovery Provenance"
+        description="This signal came from a promoted discovery record and should retain the fit, intent, and watchouts that justified promotion."
+      >
+        <div class="grid gap-5 sm:grid-cols-2">
+          <.property_item
+            label="Discovery Program"
+            value={metadata_value(@signal.metadata, :discovery_program_name) || "-"}
+          />
+          <.property_item
+            label="Intake Finding"
+            value={@finding_id || "-"}
+          />
+          <.property_item
+            label="Fit Score"
+            value={to_string(metadata_value(@signal.metadata, :fit_score) || "-")}
+          />
+          <.property_item
+            label="Intent Score"
+            value={to_string(metadata_value(@signal.metadata, :intent_score) || "-")}
+          />
+        </div>
+
+        <div
+          :if={
+            metadata_value(@signal.metadata, :latest_evidence_summary) ||
+              discovery_watchouts(@signal) != []
+          }
+          class="mt-4 space-y-4"
+        >
+          <div
+            :if={metadata_value(@signal.metadata, :latest_evidence_summary)}
+            class="rounded-2xl border border-sky-200 bg-sky-50/70 px-4 py-4 text-sm text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100"
+          >
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-300">
+              Discovery Summary
+            </p>
+            <p class="mt-2 leading-6">
+              {metadata_value(@signal.metadata, :latest_evidence_summary)}
+            </p>
+          </div>
+
+          <div :if={discovery_watchouts(@signal) != []}>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+              Discovery Watchouts
+            </p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <span
+                :for={flag <- discovery_watchouts(@signal)}
+                class="badge badge-outline badge-sm border-amber-300 bg-white/70 text-amber-700 dark:border-amber-400/30 dark:bg-white/[0.03] dark:text-amber-200"
+              >
+                {flag}
+              </span>
+            </div>
+          </div>
+
+          <div :if={discovery_feedback(@signal)}>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+              Discovery Review Feedback
+            </p>
+            <p class="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+              {format_discovery_feedback(discovery_feedback(@signal))}
+            </p>
+          </div>
+        </div>
+      </.section>
 
       <.section :if={@signal.description} title="Description">
         <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -182,6 +315,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
              :site,
              :managed_system,
              :status_variant,
+             :procurement_bid,
              pursuits: [:stage_variant]
            ]
          ) do
@@ -190,8 +324,73 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
     end
   end
 
+  defp load_finding_id(signal_id) do
+    case Acquisition.get_finding_by_signal(signal_id) do
+      {:ok, finding} -> finding.id
+      _ -> nil
+    end
+  end
+
   defp can_create_pursuit?(signal),
     do: signal.status == :accepted and Enum.empty?(signal.pursuits || [])
+
+  defp format_score_tier(nil), do: "-"
+
+  defp format_score_tier(tier) do
+    tier
+    |> to_string()
+    |> String.upcase()
+  end
+
+  defp format_source_confidence(nil), do: "-"
+
+  defp format_source_confidence(confidence) do
+    confidence
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
+
+  defp discovery_signal?(signal, finding_id) do
+    signal.source_channel == :agent_discovery and not is_nil(finding_id)
+  end
+
+  defp discovery_watchouts(signal) do
+    signal.metadata
+    |> metadata_value(:market_focus)
+    |> case do
+      market_focus when is_map(market_focus) ->
+        metadata_value(market_focus, :risk_flags) |> List.wrap()
+
+      _ ->
+        []
+    end
+  end
+
+  defp discovery_feedback(signal) do
+    metadata_value(signal.metadata, :discovery_feedback)
+  end
+
+  defp format_discovery_feedback(nil), do: "-"
+
+  defp format_discovery_feedback(feedback) when is_map(feedback) do
+    reason = metadata_value(feedback, :reason)
+    reason_code = metadata_value(feedback, :reason_code)
+    feedback_scope = metadata_value(feedback, :feedback_scope)
+
+    [
+      reason_code,
+      reason,
+      feedback_scope && "(#{String.replace(to_string(feedback_scope), "_", " ")})"
+    ]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join(" ")
+  end
+
+  defp metadata_value(metadata, key) when is_map(metadata),
+    do: Map.get(metadata, key) || Map.get(metadata, to_string(key))
+
+  defp metadata_value(_metadata, _key), do: nil
 
   defp signal_actions(%{status: :new}) do
     [

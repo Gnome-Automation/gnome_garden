@@ -770,6 +770,131 @@ Use `on_mount {GnomeGardenWeb.LiveUserAuth, :live_user_required}` for protected 
 - **Never** use `@apply`
 - Write custom Tailwind classes, avoid daisyUI (design your own)
 
+## UI Consistency Guidelines
+
+Build for all screen sizes by default. Do not treat desktop as the primary layout and
+"let mobile collapse later." Every shared component, page shell, form, table, card, and
+action row should be intentionally designed for:
+
+- mobile first
+- tablet
+- desktop
+- dark and light themes
+
+### Design System Approach
+
+- Prefer the repo's shared UI components first:
+  - `GnomeGardenWeb.Components.WorkspaceUI`
+  - `GnomeGardenWeb.Components.Protocol`
+  - `GnomeGardenWeb.CoreComponents`
+- If a pattern appears more than twice, extract or extend a shared component instead of
+  rebuilding it ad hoc in LiveViews.
+- Keep the app feeling like one operator system. Do not introduce page-specific visual
+  styles that break the shared shell, spacing rhythm, or card language.
+- Prefer Tailwind utilities as the default implementation tool. Use daisyUI classes only
+  for lightweight primitives where they clearly reduce noise, such as dropdowns or simple
+  button shells in the global navbar. Do not let daisyUI become a second design system.
+
+### Responsive Layout Rules
+
+- Start with the smallest screen first, then scale up with `sm:`, `md:`, `lg:`, and `xl:`.
+- Avoid desktop-only rows that merely wrap on mobile. If content becomes cramped, switch
+  layout direction on smaller screens with explicit `flex-col` or stacked blocks.
+- Shared cards and action blocks should usually use:
+  - compact spacing on mobile
+  - larger spacing on desktop
+  - smaller icons and type on mobile
+  - larger visual treatments only from `sm:` upward
+- Do not assume long labels, breadcrumbs, tab sets, or filter bars fit in one row on
+  mobile. Make them scroll horizontally, stack, or simplify.
+- For app-shell navigation:
+  - desktop may use sidebar plus top shell
+  - mobile must have a deliberate navigation model, not just a squeezed desktop nav
+  - top-level nav controls must remain tappable and uncluttered on narrow screens
+
+### Theme and Visual Consistency
+
+- Every new UI must be legible in both light and dark mode.
+- When adding surfaces, borders, badges, or muted text, provide both light and dark
+  variants in the same component instead of leaving one mode visually unfinished.
+- Reuse the existing color logic already present in shared components before adding new
+  one-off color combinations.
+- Keep status, intent, and severity colors consistent across screens. Do not remap the
+  same meaning to different colors in different pages.
+
+### Headers and Page Shell
+
+- The global app navbar should contain shell-level controls only:
+  - navigation access
+  - section navigation / context when appropriate
+  - theme toggle
+  - profile/avatar menu
+- The page title belongs in the page header, not duplicated in the global navbar.
+- Prefer `WorkspaceUI.page_header/1` for major screen headers so the app keeps one header
+  language across list, detail, and form views.
+- Detail-page breadcrumb/back context should be consistent across sections and should come
+  from shared shell or shared page components, not one-off inline links on every page.
+
+### Forms
+
+- Use one consistent form rhythm:
+  - page header
+  - one or more `form_section` or `section` blocks
+  - actions at the bottom of the form
+- Keep labels, help text, validation messages, and field spacing consistent.
+- On mobile:
+  - fields should stack vertically
+  - multi-column forms should collapse to one column unless there is a strong reason not to
+  - submit/cancel controls should remain easy to tap without horizontal crowding
+- Avoid placing destructive or primary form actions in scattered locations. The main form
+  action area should be obvious and predictable.
+
+### CRUD Button Placement
+
+- Use consistent action placement across create, edit, show, and index screens.
+- For index/list pages:
+  - primary create action goes in the page header actions area
+  - filters/secondary actions stay in section headers or local toolbars
+- For show/detail pages:
+  - primary record actions live in the page header or the first prominent action row
+  - destructive actions should be visually secondary and separated from the primary action
+- For create/edit forms:
+  - `Cancel` on the left or earlier in the action group
+  - primary `Save` / `Create` / `Update` on the right or last in DOM order
+  - destructive actions should not sit beside the primary submit unless the flow truly
+    requires it
+- Keep naming explicit:
+  - `Create X` for new records
+  - `Save Changes` or `Update X` for edits
+  - avoid vague labels like `Submit` unless the domain language specifically needs it
+
+### Tables, Cards, and Dense Operator Screens
+
+- Do not force wide data tables onto mobile without an alternate presentation.
+- For narrow screens, prefer one of:
+  - stacked cards
+  - horizontally scrollable table containers
+  - reduced column sets with key actions preserved
+- Stat cards, action cards, and queue cards must use compact mobile spacing and should not
+  assume large icon blocks or oversized desktop typography.
+- When building operator consoles, prioritize:
+  - scanability
+  - clear primary actions
+  - visible status/state
+  - low-friction mobile tap targets
+
+### Uniformity Expectations
+
+- Before creating a new layout pattern, check for an existing shared component that should
+  be extended instead.
+- If you touch one shared component for responsiveness or visual consistency, consider
+  whether sibling shared components should be aligned in the same pass.
+- Do not ship a screen that looks polished on desktop but broken, crowded, or accidental on
+  mobile.
+- When making UI changes, verify both:
+  - visual consistency with existing shared components
+  - responsive behavior at small and large widths
+
 ## Development Workflow
 
 1. **I run the server** - Don't start/stop Phoenix

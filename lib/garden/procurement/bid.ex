@@ -89,70 +89,94 @@ defmodule GnomeGarden.Procurement.Bid do
       ]
 
       change set_attribute(:discovered_at, &DateTime.utc_now/0)
-      change {GnomeGarden.Procurement.Changes.CreateSignalForBid, []}
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :update do
+      require_atomic? false
       accept [:description, :bid_type, :due_at, :notes, :metadata, :owner_id, :organization_id]
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :link_signal do
+      require_atomic? false
       accept []
       argument :signal_id, :uuid, allow_nil?: false
       change set_attribute(:signal_id, arg(:signal_id))
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :link_organization do
+      require_atomic? false
       accept []
       argument :organization_id, :uuid, allow_nil?: false
       change set_attribute(:organization_id, arg(:organization_id))
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     # -- State transitions --
 
     update :start_review do
+      require_atomic? false
       accept []
       change transition_state(:reviewing)
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :pursue do
+      require_atomic? false
       accept []
       change transition_state(:pursuing)
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :submit do
+      require_atomic? false
       accept []
       change transition_state(:submitted)
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :mark_won do
+      require_atomic? false
       accept []
       change transition_state(:won)
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :mark_lost do
+      require_atomic? false
       accept [:notes]
       change transition_state(:lost)
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :reject do
+      require_atomic? false
       accept [:notes]
       change transition_state(:rejected)
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :park do
+      require_atomic? false
       accept [:notes]
       change transition_state(:parked)
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :unpark do
+      require_atomic? false
       accept []
       change transition_state(:new)
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :expire do
+      require_atomic? false
       accept []
       change transition_state(:expired)
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :score do
@@ -193,6 +217,8 @@ defmodule GnomeGarden.Procurement.Bid do
         |> Ash.Changeset.change_attribute(:score_total, total)
         |> Ash.Changeset.change_attribute(:score_tier, tier)
       end
+
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     # -- Reads --

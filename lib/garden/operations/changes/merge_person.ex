@@ -5,7 +5,7 @@ defmodule GnomeGarden.Operations.Changes.MergePerson do
 
   use Ash.Resource.Change
 
-  alias GnomeGarden.Commercial
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Execution
   alias GnomeGarden.Operations
 
@@ -38,7 +38,7 @@ defmodule GnomeGarden.Operations.Changes.MergePerson do
           with {:ok, target} <- Operations.get_person(into_person_id, actor: context.actor),
                :ok <- ensure_target_mergeable(target),
                {:ok, _target} <- merge_target_person(target, source, context.actor),
-               {:ok, :ok} <- reassign_target_accounts(source.id, target.id, context.actor),
+               {:ok, :ok} <- reassign_discovery_records(source.id, target.id, context.actor),
                {:ok, :ok} <- reassign_service_tickets(source.id, target.id, context.actor),
                {:ok, :ok} <- migrate_affiliations(source.id, target.id, context.actor) do
             changeset
@@ -87,13 +87,13 @@ defmodule GnomeGarden.Operations.Changes.MergePerson do
     end
   end
 
-  defp reassign_target_accounts(source_id, target_id, actor) do
+  defp reassign_discovery_records(source_id, target_id, actor) do
     reassign_collection(
       fn ->
-        Commercial.list_target_accounts_for_contact_person(source_id, actor: actor)
+        Acquisition.list_discovery_records_for_contact_person(source_id, actor: actor)
       end,
-      fn target_account ->
-        Commercial.update_target_account(target_account, %{contact_person_id: target_id},
+      fn discovery_record ->
+        Acquisition.update_discovery_record(discovery_record, %{contact_person_id: target_id},
           actor: actor
         )
       end

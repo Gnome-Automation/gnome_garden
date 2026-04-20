@@ -88,10 +88,10 @@ defmodule GnomeGardenWeb.Agents.Sales.ProcurementTargetingLive do
           Review what the bid queue has learned, add manual suppressions, and remove bad exclusions before they distort discovery.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/procurement/bids"}>
-            <.icon name="hero-document-text" class="size-4" /> Bids
+          <.button navigate={~p"/acquisition/findings?family=procurement"}>
+            <.icon name="hero-inbox-stack" class="size-4" /> Procurement Intake
           </.button>
-          <.button navigate={~p"/procurement/sources"}>
+          <.button navigate={~p"/acquisition/sources"}>
             <.icon name="hero-globe-alt" class="size-4" /> Sources
           </.button>
         </:actions>

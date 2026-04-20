@@ -9,13 +9,13 @@ defmodule GnomeGarden.Agents.Procurement.ScannerRouter do
 
   require Logger
 
-  def scan(%ProcurementSource{} = source) do
+  def scan(%ProcurementSource{} = source, context \\ %{}) do
     strategy = ProcurementSource.scanner_strategy(source.source_type)
     Logger.info("[ScannerRouter] #{source.name} → #{strategy}")
 
     case strategy do
       :deterministic ->
-        ListingScanner.scan(source.id)
+        ListingScanner.scan(source.id, context)
 
       :company ->
         SiteScanner.scan(source)

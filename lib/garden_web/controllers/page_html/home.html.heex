@@ -2,34 +2,34 @@
   <.page_header eyebrow="Cockpit">
     Operations Cockpit
     <:subtitle>
-      One live view of commercial intake, execution pressure, finance exceptions, and agent-fed queues.
+      One live view of acquisition intake, commercial conversion, execution pressure, and finance exceptions across the company hub.
     </:subtitle>
   </.page_header>
 
   <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
     <.stat_card
-      title="Review Targets"
-      value={Integer.to_string(@review_target_count)}
-      description="Broad discovery candidates still waiting on human promotion into the formal signal inbox."
-      icon="hero-magnifying-glass"
+      title="Acquisition Queue"
+      value={Integer.to_string(@review_finding_count)}
+      description="Unified procurement and discovery intake waiting on an explicit operator decision."
+      icon="hero-inbox-stack"
       accent="emerald"
     />
     <.stat_card
-      title="Active Programs"
-      value={Integer.to_string(@active_discovery_program_count)}
-      description="Discovery motions currently driving broad lead-finder work."
+      title="Runnable Sources"
+      value={Integer.to_string(@runnable_source_count)}
+      description="Acquisition sources that can launch scanning right now."
       icon="hero-radar"
       accent="sky"
     />
     <.stat_card
-      title="Due Discovery"
-      value={Integer.to_string(@due_discovery_program_count)}
-      description="Active discovery programs that should launch now based on cadence."
+      title="Active Programs"
+      value={Integer.to_string(@active_acquisition_program_count)}
+      description="Acquisition programs currently driving procurement, discovery, or future research lanes."
       icon="hero-bolt"
       accent="amber"
     />
     <.stat_card
-      title="Open Signals"
+      title="Signal Queue"
       value={Integer.to_string(@open_signal_count)}
       description="Raw commercial intake still waiting on a real pursue-or-pass decision."
       icon="hero-inbox-stack"
@@ -64,13 +64,6 @@
       accent="sky"
     />
     <.stat_card
-      title="Review Bids"
-      value={Integer.to_string(@review_bid_count)}
-      description="Fresh procurement notices discovered by agents before they are worked into the signal inbox."
-      icon="hero-document-magnifying-glass"
-      accent="emerald"
-    />
-    <.stat_card
       title="Approved Time"
       value={Integer.to_string(@unbilled_time_entry_count)}
       description="Labor already approved but not yet rolled into billing."
@@ -102,51 +95,53 @@
 
   <div class="grid gap-6 xl:grid-cols-2">
     <.section
-      title="Commercial Queue"
-      description="What needs attention before it either becomes a real project or gets parked."
+      title="Acquisition Flow"
+      description="The intake spine: source coverage, active programs, unified findings, and the commercial handoff."
     >
-      <div class="grid gap-4 lg:grid-cols-4">
+      <div class="grid gap-4 xl:grid-cols-5">
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Due Discovery</p>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Sources</p>
               <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                Active programs that should be running right now.
+                Runnable scan targets in the acquisition registry.
               </p>
             </div>
-            <.button navigate={~p"/commercial/discovery-programs"} class="px-2.5 py-1.5 text-xs">
-              View Programs
+            <.button navigate={~p"/acquisition/sources"} class="px-2.5 py-1.5 text-xs">
+              Open Sources
             </.button>
           </div>
 
-          <div :if={Enum.empty?(@due_discovery_programs)}>
+          <div :if={Enum.empty?(@runnable_sources)}>
             <.empty_state
-              icon="hero-bolt"
-              title="No programs due"
-              description="The current discovery cadence is on track."
+              icon="hero-globe-alt"
+              title="No runnable sources"
+              description="There are no acquisition sources ready to launch right now."
             />
           </div>
 
           <.link
-            :for={program <- @due_discovery_programs}
-            navigate={~p"/commercial/discovery-programs/#{program}"}
+            :for={source <- @runnable_sources}
+            navigate={
+              ~p"/acquisition/findings?family=#{source.source_family}&source_id=#{source.id}"
+            }
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{program.name}</p>
+              <p class="font-medium text-zinc-900 dark:text-white">{source.name}</p>
               <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                {program.review_target_count} targets waiting review
+                {source.review_finding_count} review · {source.promoted_finding_count} promoted · {source.noise_finding_count} noise
               </p>
               <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                Every {program.cadence_hours}h · {format_datetime(program.last_run_at)}
+                Last run {format_datetime(source.last_run_at)}
               </p>
             </div>
             <div class="space-y-2 text-right">
-              <.status_badge status={program.run_status_variant}>
-                {program.run_status_label}
+              <.status_badge status={source.status_variant}>
+                {format_atom(source.status)}
               </.status_badge>
-              <.status_badge status={program.priority_variant}>
-                {format_atom(program.priority)}
+              <.status_badge :if={source.last_run_state} status={source.last_run_state_variant}>
+                {format_atom(source.last_run_state)}
               </.status_badge>
             </div>
           </.link>
@@ -155,43 +150,90 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Targets</p>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Programs</p>
               <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                Broad discovery waiting on human review.
+                Active acquisition programs driving ongoing lead-finding work.
               </p>
             </div>
-            <.button navigate={~p"/commercial/targets"} class="px-2.5 py-1.5 text-xs">
-              Open Targets
+            <.button navigate={~p"/acquisition/programs"} class="px-2.5 py-1.5 text-xs">
+              Open Programs
             </.button>
           </div>
 
-          <div :if={Enum.empty?(@review_targets)}>
+          <div :if={Enum.empty?(@active_acquisition_programs)}>
             <.empty_state
-              icon="hero-magnifying-glass"
-              title="No review targets"
-              description="The broad discovery queue is currently clear."
+              icon="hero-radar"
+              title="No active programs"
+              description="There are no active acquisition programs in rotation right now."
             />
           </div>
 
           <.link
-            :for={target <- @review_targets}
-            navigate={~p"/commercial/targets/#{target}"}
+            :for={program <- @active_acquisition_programs}
+            navigate={
+              ~p"/acquisition/findings?family=#{program.program_family}&program_id=#{program.id}"
+            }
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{target.name}</p>
+              <p class="font-medium text-zinc-900 dark:text-white">{program.name}</p>
               <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                {(target.organization && target.organization.name) || target.website_domain ||
-                  "No organization linked"}
+                {program.review_finding_count} review · {program.promoted_finding_count} promoted · {program.noise_finding_count} noise
               </p>
               <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                {target.observation_count} observations · {format_datetime(
-                  target.latest_observed_at
-                )}
+                Last run {format_datetime(program.last_run_at)}
               </p>
             </div>
-            <.status_badge status={target.status_variant}>
-              {format_atom(target.status)}
+            <div class="space-y-2 text-right">
+              <.status_badge status={program.status_variant}>
+                {format_atom(program.status)}
+              </.status_badge>
+              <.status_badge :if={program.last_run_state} status={program.last_run_state_variant}>
+                {format_atom(program.last_run_state)}
+              </.status_badge>
+            </div>
+          </.link>
+        </div>
+
+        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Intake</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                Unified procurement and discovery findings waiting on operator review.
+              </p>
+            </div>
+            <.button navigate={~p"/acquisition/findings"} class="px-2.5 py-1.5 text-xs">
+              Open Intake
+            </.button>
+          </div>
+
+          <div :if={Enum.empty?(@review_findings)}>
+            <.empty_state
+              icon="hero-inbox-stack"
+              title="No intake findings"
+              description="Procurement and discovery intake are currently clear."
+            />
+          </div>
+
+          <.link
+            :for={finding <- @review_findings}
+            navigate={~p"/acquisition/findings/#{finding}"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-zinc-900 dark:text-white">{finding.title}</p>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                {(finding.organization && finding.organization.name) ||
+                  (finding.source && finding.source.name) ||
+                  (finding.program && finding.program.name) || "Direct intake"}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                {format_datetime(finding.observed_at || finding.inserted_at)}
+              </p>
+            </div>
+            <.status_badge status={finding.status_variant}>
+              {format_atom(finding.status)}
             </.status_badge>
           </.link>
         </div>
@@ -201,11 +243,11 @@
             <div>
               <p class="text-sm font-semibold text-zinc-900 dark:text-white">Signals</p>
               <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                Raw intake awaiting a decision.
+                Accepted intake already handed into commercial review.
               </p>
             </div>
             <.button navigate={~p"/commercial/signals"} class="px-2.5 py-1.5 text-xs">
-              Open Inbox
+              Open Signals
             </.button>
           </div>
 
@@ -213,7 +255,7 @@
             <.empty_state
               icon="hero-inbox-stack"
               title="No open signals"
-              description="The commercial inbox is currently clear."
+              description="The commercial review queue is currently clear."
             />
           </div>
 
@@ -613,20 +655,26 @@
         <.action_card
           navigate={~p"/commercial/discovery-programs"}
           title="Discovery Programs"
-          description="Define the discovery motions that should keep feeding target accounts."
+          description="Define the discovery motions that should keep feeding the unified intake queue."
           icon="hero-radar"
         />
         <.action_card
-          navigate={~p"/commercial/targets"}
-          title="Target Accounts"
-          description="Review broad discovery before it becomes formal commercial intake."
+          navigate={~p"/acquisition/findings?family=discovery"}
+          title="Discovery Intake"
+          description="Work discovery findings in the shared acquisition queue instead of a separate target inbox."
           icon="hero-magnifying-glass"
         />
         <.action_card
           navigate={~p"/commercial/signals"}
-          title="Signal Inbox"
+          title="Signal Queue"
           description="Review raw market intake and decide what deserves energy."
           icon="hero-inbox-stack"
+        />
+        <.action_card
+          navigate={~p"/acquisition/findings?family=procurement"}
+          title="Procurement Intake"
+          description="Review procurement findings in the unified queue instead of a separate bid console."
+          icon="hero-document-magnifying-glass"
         />
         <.action_card
           navigate={~p"/commercial/pursuits"}
@@ -659,10 +707,10 @@
           icon="hero-receipt-percent"
         />
         <.action_card
-          navigate={~p"/procurement/bids"}
-          title="Procurement Bids"
-          description="Review raw bid notices still upstream of commercial signals."
-          icon="hero-document-magnifying-glass"
+          navigate={~p"/acquisition/sources"}
+          title="Acquisition Sources"
+          description="Manage the source registry feeding procurement, discovery, and future agent-led intake."
+          icon="hero-globe-alt"
         />
         <.action_card
           navigate={~p"/console/agents"}

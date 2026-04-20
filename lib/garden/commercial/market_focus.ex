@@ -413,6 +413,7 @@ defmodule GnomeGarden.Commercial.MarketFocus do
   def assess_bid(attrs) when is_map(attrs) do
     profile_context = CompanyProfileContext.resolve(attrs)
     text = bid_text(attrs)
+    source_confidence = source_confidence(attrs[:source_type])
     controller_matches = keyword_matches(text, @controller_terms)
     operations_software_matches = keyword_matches(text, @operations_software_terms)
     operations_context_matches = keyword_matches(text, @operations_context_terms)
@@ -456,6 +457,33 @@ defmodule GnomeGarden.Commercial.MarketFocus do
 
     cancelled? = contains_any?(text, ["cancelled", "canceled"])
 
+    weak_technical_specificity? =
+      weak_technical_specificity?(
+        controller_matches,
+        tier1_matches,
+        tier2_matches,
+        tier3_matches,
+        operations_software_matches
+      )
+
+    ambiguous_software_scope? =
+      ambiguous_software_scope?(
+        operations_software_matches,
+        controller_matches,
+        operations_context_matches,
+        high_industry_matches,
+        good_industry_matches,
+        broad_software?
+      )
+
+    public_sector_admin_scope? =
+      public_sector_admin_scope?(
+        text,
+        operations_software_matches,
+        controller_matches,
+        operations_context_matches
+      )
+
     risk_flags =
       []
       |> add_flag(staff_aug_matches != [], "staff augmentation")
@@ -463,8 +491,12 @@ defmodule GnomeGarden.Commercial.MarketFocus do
       |> add_flag(enterprise_it_matches != [], "generic enterprise IT scope")
       |> add_flag(commodity_matches != [], "commodity trade / public works scope")
       |> add_flag(design_only_matches != [], "design-only / stamped deliverables")
+      |> add_flag(weak_technical_specificity?, "weak technical specificity")
+      |> add_flag(ambiguous_software_scope?, "ambiguous software scope")
+      |> add_flag(public_sector_admin_scope?, "public agency admin software scope")
       |> add_flag(profile_exclude_matches != [], "profile-mode excluded keywords")
-      |> add_flag(source_confidence(attrs[:source_type]) == :aggregated, "aggregator source")
+      |> add_flag(source_confidence == :aggregated, "aggregator source")
+      |> add_flag(source_confidence == :unknown, "low source confidence")
 
     rejected? =
       cancelled? or
@@ -503,7 +535,10 @@ defmodule GnomeGarden.Commercial.MarketFocus do
         controller_matches,
         operations_software_fit?,
         design_only_matches,
-        staff_aug_matches
+        staff_aug_matches,
+        source_confidence,
+        weak_technical_specificity?,
+        ambiguous_software_scope?
       )
 
     total =
@@ -569,11 +604,11 @@ defmodule GnomeGarden.Commercial.MarketFocus do
             enterprise_it_matches ++
             profile_exclude_matches
         ),
-      recommendation: bid_recommendation(tier, total, icp_matches, risk_flags),
+      recommendation: bid_recommendation(tier, total, icp_matches, risk_flags, source_confidence),
       risk_flags: risk_flags,
       icp_matches: icp_matches,
       save_candidate?: save_candidate?,
-      source_confidence: source_confidence(attrs[:source_type]),
+      source_confidence: source_confidence,
       company_profile_mode: profile_context.company_profile_mode,
       company_profile_key: profile_context.company_profile_key
     }
@@ -894,7 +929,10 @@ defmodule GnomeGarden.Commercial.MarketFocus do
          _controller_matches,
          _operations_software_fit?,
          _design_only_matches,
-         staff_aug_matches
+         staff_aug_matches,
+         _source_confidence,
+         _weak_technical_specificity?,
+         _ambiguous_software_scope?
        )
        when staff_aug_matches != [],
        do: 0
@@ -904,35 +942,49 @@ defmodule GnomeGarden.Commercial.MarketFocus do
          controller_matches,
          operations_software_fit?,
          design_only_matches,
-         _staff_aug_matches
+         _staff_aug_matches,
+         source_confidence,
+         weak_technical_specificity?,
+         ambiguous_software_scope?
        ) do
     text = bid_text(attrs)
 
-    cond do
-      controller_matches != [] and
-          contains_any?(text, @active_buying_terms ++ @expansion_signal_terms) ->
-        5
+    base_score =
+      cond do
+        controller_matches != [] and
+            contains_any?(text, @active_buying_terms ++ @expansion_signal_terms) ->
+          5
 
-      operations_software_fit? and
-          contains_any?(text, @active_buying_terms ++ @expansion_signal_terms) ->
-        5
+        operations_software_fit? and
+            contains_any?(text, @active_buying_terms ++ @expansion_signal_terms) ->
+          5
 
-      contains_any?(text, [
-        "on-call",
-        "support",
-        "maintenance",
-        "integration",
-        "replacement",
-        "upgrade"
-      ]) ->
-        4
+        contains_any?(text, [
+          "on-call",
+          "support",
+          "maintenance",
+          "integration",
+          "replacement",
+          "upgrade"
+        ]) ->
+          4
 
-      design_only_matches != [] ->
-        1
+        design_only_matches != [] ->
+          1
 
-      true ->
-        3
-    end
+        true ->
+          3
+      end
+
+    source_modifier =
+      bid_source_modifier(
+        source_confidence,
+        controller_matches,
+        weak_technical_specificity?,
+        ambiguous_software_scope?
+      )
+
+    clamp(base_score + source_modifier, 0, 5)
   end
 
   defp target_industry_score(
@@ -1046,11 +1098,11 @@ defmodule GnomeGarden.Commercial.MarketFocus do
 
   defp target_size_score(_employee_count), do: 8
 
-  defp bid_recommendation(:rejected, _score, _icp_matches, risk_flags) do
+  defp bid_recommendation(:rejected, _score, _icp_matches, risk_flags, _source_confidence) do
     "Reject - #{Enum.join(risk_flags, ", ")}"
   end
 
-  defp bid_recommendation(tier, score, icp_matches, risk_flags) do
+  defp bid_recommendation(tier, score, icp_matches, risk_flags, source_confidence) do
     headline =
       case tier do
         :hot -> "HOT"
@@ -1070,7 +1122,112 @@ defmodule GnomeGarden.Commercial.MarketFocus do
         flags -> Enum.join(flags, ", ")
       end
 
-    "#{headline} (#{score}/100) - #{fit_summary}; #{risk_summary}."
+    next_step = recommendation_next_step(tier, risk_flags, source_confidence)
+
+    "#{headline} (#{score}/100) - #{fit_summary}; #{risk_summary}. #{next_step}"
+  end
+
+  defp weak_technical_specificity?(
+         controller_matches,
+         tier1_matches,
+         tier2_matches,
+         tier3_matches,
+         operations_software_matches
+       ) do
+    controller_matches == [] and tier1_matches == [] and tier2_matches == [] and
+      (operations_software_matches != [] or tier3_matches != [])
+  end
+
+  defp ambiguous_software_scope?(
+         operations_software_matches,
+         controller_matches,
+         operations_context_matches,
+         high_industry_matches,
+         good_industry_matches,
+         broad_software?
+       ) do
+    operations_software_matches != [] and controller_matches == [] and
+      operations_context_matches == [] and
+      high_industry_matches == [] and good_industry_matches == [] and not broad_software?
+  end
+
+  defp public_sector_admin_scope?(
+         text,
+         operations_software_matches,
+         controller_matches,
+         operations_context_matches
+       ) do
+    operations_software_matches != [] and controller_matches == [] and
+      operations_context_matches == [] and
+      contains_any?(text, ["city", "county", "district", "authority", "department", "agency"])
+  end
+
+  defp bid_source_modifier(
+         :direct,
+         _controller_matches,
+         _weak_technical_specificity?,
+         _ambiguous_software_scope?
+       ),
+       do: 1
+
+  defp bid_source_modifier(
+         :aggregated,
+         controller_matches,
+         weak_technical_specificity?,
+         ambiguous_software_scope?
+       ) do
+    cond do
+      controller_matches != [] -> 0
+      weak_technical_specificity? or ambiguous_software_scope? -> -2
+      true -> -1
+    end
+  end
+
+  defp bid_source_modifier(
+         :unknown,
+         controller_matches,
+         weak_technical_specificity?,
+         ambiguous_software_scope?
+       ) do
+    cond do
+      controller_matches != [] -> 0
+      weak_technical_specificity? or ambiguous_software_scope? -> -2
+      true -> -1
+    end
+  end
+
+  defp bid_source_modifier(
+         _source_confidence,
+         _controller_matches,
+         _weak_technical_specificity?,
+         _ambiguous_software_scope?
+       ),
+       do: 0
+
+  defp recommendation_next_step(tier, risk_flags, source_confidence) do
+    cond do
+      tier == :hot and risk_flags == [] and source_confidence == :direct ->
+        "Recommended next step: create pursuit."
+
+      tier == :hot and risk_flags == [] ->
+        "Recommended next step: review signal and validate quickly."
+
+      tier == :hot ->
+        "Recommended next step: operator review before promotion."
+
+      tier == :warm and
+          Enum.any?(
+            risk_flags,
+            &(&1 in ["weak technical specificity", "ambiguous software scope"])
+          ) ->
+        "Recommended next step: validate fit before creating downstream work."
+
+      tier == :warm ->
+        "Recommended next step: review signal if the scope reads clean."
+
+      true ->
+        "Recommended next step: keep in review unless stronger fit signals appear."
+    end
   end
 
   defp normalize(nil), do: nil

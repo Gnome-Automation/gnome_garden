@@ -1,11 +1,11 @@
 defmodule GnomeGarden.Procurement.BidSignalCreationTest do
   use GnomeGarden.DataCase, async: true
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
-  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
-  test "creating a bid also creates and links a commercial signal" do
+  test "creating a bid creates an acquisition finding instead of auto-creating a signal" do
     {:ok, bid} =
       Procurement.create_bid(%{
         title: "Anaheim utilities SCADA refresh",
@@ -29,40 +29,36 @@ defmodule GnomeGarden.Procurement.BidSignalCreationTest do
         score_source_confidence: :aggregated
       })
 
-    assert bid.signal_id
-    assert bid.organization_id
-    assert bid.signal
+    refute bid.signal_id
+    refute bid.organization_id
 
-    {:ok, signal} =
-      Commercial.get_signal(
-        bid.signal_id,
-        load: [:procurement_bid]
+    {:ok, finding} =
+      Acquisition.get_finding_by_external_ref(
+        "procurement_bid:#{bid.id}",
+        load: [:source_bid]
       )
 
-    {:ok, organization} = Operations.get_organization(signal.organization_id)
+    assert finding.title == bid.title
+    assert finding.summary == bid.description
+    assert finding.finding_family == :procurement
+    assert finding.finding_type == :bid_notice
+    assert finding.status == :new
+    assert finding.source_bid.id == bid.id
+    assert metadata_value(finding.metadata, :agency) == "City of Anaheim"
+    assert metadata_value(finding.metadata, :score_tier) == "warm"
+    assert metadata_value(finding.metadata, :score_recommendation) =~ "WARM (72/100)"
 
-    assert bid.organization_id == organization.id
-    assert signal.title == bid.title
-    assert signal.description == bid.description
-    assert signal.signal_type == :bid_notice
-    assert signal.source_channel == :procurement_portal
-    assert signal.source_url == bid.url
-    assert signal.external_ref == bid.external_id
-    assert signal.procurement_bid.id == bid.id
-    assert organization.name == "City of Anaheim"
-    assert organization.primary_region == "oc"
-    assert metadata_value(signal.metadata, :procurement_bid_id) == bid.id
-    assert metadata_value(signal.metadata, :agency) == "City of Anaheim"
-    assert metadata_value(signal.metadata, :score_tier) == "warm"
-    assert metadata_value(signal.metadata, :score_recommendation) =~ "WARM (72/100)"
-
-    assert metadata_value(signal.metadata, :score_icp_matches) == [
+    assert metadata_value(finding.metadata, :score_icp_matches) == [
              "controller-facing integration",
              "core geography"
            ]
 
-    assert metadata_value(signal.metadata, :score_company_profile_mode) ==
+    assert metadata_value(finding.metadata, :score_company_profile_mode) ==
              "industrial_plus_software"
+
+    assert {:ok, signal} = Commercial.create_signal_from_bid(bid.id)
+    assert signal.signal_type == :bid_notice
+    assert signal.source_channel == :procurement_portal
   end
 
   defp metadata_value(metadata, key) do

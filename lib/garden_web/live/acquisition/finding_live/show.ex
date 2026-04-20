@@ -1,0 +1,1281 @@
+defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
+  use GnomeGardenWeb, :live_view
+
+  import GnomeGardenWeb.Commercial.Helpers, only: [format_atom: 1, format_datetime: 1]
+
+  alias GnomeGarden.Acquisition
+  alias GnomeGarden.Commercial.DiscoveryFeedback
+  alias GnomeGarden.Operations
+  alias GnomeGarden.Procurement.TargetingFeedback
+
+  @impl true
+  def mount(%{"id" => id}, _session, socket) do
+    finding = load_finding!(id, socket.assigns.current_user)
+
+    {:ok,
+     socket
+     |> assign(:page_title, finding.title)
+     |> assign(:action_dialog, nil)
+     |> assign_finding_context(finding)}
+  end
+
+  @impl true
+  def handle_event("transition", %{"action" => "start_review"}, socket) do
+    with {:ok, _finding} <-
+           Acquisition.start_review_for_finding(
+             socket.assigns.finding.id,
+             actor: socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> refresh_finding()
+       |> put_flash(:info, "Finding moved into review")}
+    else
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not start review: #{inspect(error)}")}
+    end
+  end
+
+  def handle_event("transition", %{"action" => "accept"}, socket) do
+    with {:ok, _finding} <-
+           Acquisition.accept_finding_review(
+             socket.assigns.finding.id,
+             actor: socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> refresh_finding()
+       |> put_flash(:info, "Marked finding as accepted")}
+    else
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not accept finding: #{inspect(error)}")}
+    end
+  end
+
+  def handle_event("transition", %{"action" => "promote"}, socket) do
+    case Acquisition.promote_finding_to_signal(
+           socket.assigns.finding.id,
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, %{finding: finding}} when not is_nil(finding.signal_id) ->
+        {:noreply,
+         socket
+         |> refresh_finding()
+         |> put_flash(:info, "Promoted finding into commercial review")
+         |> push_navigate(to: ~p"/commercial/signals/#{finding.signal_id}")}
+
+      {:ok, _result} ->
+        {:noreply, socket |> refresh_finding() |> put_flash(:info, "Promoted finding")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not promote finding: #{inspect(error)}")}
+    end
+  end
+
+  def handle_event("transition", %{"action" => "reopen"}, socket) do
+    with {:ok, _finding} <-
+           Acquisition.reopen_finding_review(
+             socket.assigns.finding.id,
+             actor: socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> refresh_finding()
+       |> put_flash(:info, "Reopened finding")}
+    else
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not reopen finding: #{inspect(error)}")}
+    end
+  end
+
+  def handle_event("open_dialog", %{"action" => action}, socket) do
+    case parse_dialog_action(action) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Unknown acquisition action")}
+
+      dialog_action ->
+        {:noreply,
+         assign(
+           socket,
+           :action_dialog,
+           build_action_dialog(socket.assigns.finding, dialog_action)
+         )}
+    end
+  end
+
+  def handle_event("close_dialog", _, socket) do
+    {:noreply, assign(socket, :action_dialog, nil)}
+  end
+
+  def handle_event("submit_reject", params, socket) do
+    case Acquisition.reject_finding_review(
+           socket.assigns.finding.id,
+           params,
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, _finding} ->
+        {:noreply,
+         socket
+         |> assign(:action_dialog, nil)
+         |> refresh_finding()
+         |> put_flash(:info, "Rejected finding")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not reject finding: #{inspect(error)}")}
+    end
+  end
+
+  def handle_event("submit_suppress", params, socket) do
+    case Acquisition.suppress_finding_review(
+           socket.assigns.finding.id,
+           params,
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, _finding} ->
+        {:noreply,
+         socket
+         |> assign(:action_dialog, nil)
+         |> refresh_finding()
+         |> put_flash(:info, "Suppressed finding")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not suppress finding: #{inspect(error)}")}
+    end
+  end
+
+  def handle_event("submit_park", params, socket) do
+    case Acquisition.park_finding_review(
+           socket.assigns.finding.id,
+           params,
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, _finding} ->
+        {:noreply,
+         socket
+         |> assign(:action_dialog, nil)
+         |> refresh_finding()
+         |> put_flash(:info, "Parked finding")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not park finding: #{inspect(error)}")}
+    end
+  end
+
+  def handle_event("resolve_identity", params, socket) do
+    with %{source_discovery_record: discovery_record} when not is_nil(discovery_record) <-
+           socket.assigns.finding,
+         attrs when attrs != %{} <- identity_attrs_from_params(params),
+         {:ok, _updated_discovery_record} <-
+           Acquisition.resolve_discovery_record_identity(
+             discovery_record,
+             attrs,
+             actor: socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> refresh_finding()
+       |> put_flash(:info, "Discovery record identity updated")}
+    else
+      %{source_discovery_record: nil} ->
+        {:noreply, put_flash(socket, :error, "No discovery record linked to this finding")}
+
+      %{} ->
+        {:noreply, put_flash(socket, :error, "Select a candidate before resolving identity")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not resolve identity: #{inspect(error)}")}
+    end
+  end
+
+  def handle_event("merge_organization", %{"organization_id" => organization_id}, socket) do
+    case socket.assigns.finding.source_discovery_record do
+      %{organization: nil} ->
+        {:noreply, put_flash(socket, :error, "No linked organization to merge")}
+
+      %{organization: source_organization} ->
+        case Operations.merge_organization(
+               source_organization,
+               %{into_organization_id: organization_id},
+               actor: socket.assigns.current_user
+             ) do
+          {:ok, _merged_organization} ->
+            {:noreply,
+             socket
+             |> refresh_finding()
+             |> put_flash(:info, "Linked organization merged into selected candidate")}
+
+          {:error, error} ->
+            {:noreply,
+             put_flash(socket, :error, "Could not merge organization: #{inspect(error)}")}
+        end
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "No discovery record linked to this finding")}
+    end
+  end
+
+  def handle_event("merge_person", %{"person_id" => person_id}, socket) do
+    case socket.assigns.finding.source_discovery_record do
+      %{contact_person: nil} ->
+        {:noreply, put_flash(socket, :error, "No linked person to merge")}
+
+      %{contact_person: source_person} ->
+        case Operations.merge_person(
+               source_person,
+               %{into_person_id: person_id},
+               actor: socket.assigns.current_user
+             ) do
+          {:ok, _merged_person} ->
+            {:noreply,
+             socket
+             |> refresh_finding()
+             |> put_flash(:info, "Linked person merged into selected candidate")}
+
+          {:error, error} ->
+            {:noreply, put_flash(socket, :error, "Could not merge person: #{inspect(error)}")}
+        end
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "No discovery record linked to this finding")}
+    end
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <.page class="pb-8">
+      <.page_header eyebrow="Acquisition">
+        {@finding.title}
+        <:subtitle>
+          Unified intake record with provenance back to its source lane, origin record, and downstream signal.
+        </:subtitle>
+        <:actions>
+          <.button navigate={~p"/acquisition/findings"}>
+            <.icon name="hero-inbox-stack" class="size-4" /> Back To Queue
+          </.button>
+          <.button
+            :if={@finding.source_discovery_record_id}
+            navigate={~p"/acquisition/findings/#{@finding.id}/evidence/new"}
+          >
+            <.icon name="hero-plus" class="size-4" /> Add Evidence
+          </.button>
+          <.button
+            :if={@finding.source}
+            navigate={
+              ~p"/acquisition/findings?family=#{@finding.finding_family}&source_id=#{@finding.source_id}"
+            }
+          >
+            <.icon name="hero-globe-alt" class="size-4" /> Source Queue
+          </.button>
+          <.button
+            :if={@finding.program}
+            navigate={
+              ~p"/acquisition/findings?family=#{@finding.finding_family}&program_id=#{@finding.program_id}"
+            }
+          >
+            <.icon name="hero-radar" class="size-4" /> Program Queue
+          </.button>
+        </:actions>
+      </.page_header>
+
+      <div class="grid gap-4 md:grid-cols-4">
+        <.stat_card
+          title="Family"
+          value={@finding.finding_family |> to_string() |> String.capitalize()}
+          description="Which intake lane produced this finding."
+          icon="hero-squares-2x2"
+        />
+        <.stat_card
+          title="Type"
+          value={
+            @finding.finding_type
+            |> to_string()
+            |> String.replace("_", " ")
+            |> String.capitalize()
+          }
+          description="What sort of lead or work signal this record represents."
+          icon="hero-tag"
+          accent="sky"
+        />
+        <.stat_card
+          title="Fit"
+          value={Integer.to_string(@finding.fit_score || 0)}
+          description="Qualification score retained from the intake lane."
+          icon="hero-adjustments-horizontal"
+          accent="emerald"
+        />
+        <.stat_card
+          title="Intent"
+          value={Integer.to_string(@finding.intent_score || 0)}
+          description="Urgency or intent score when the lane provides one."
+          icon="hero-bolt"
+          accent="amber"
+        />
+      </div>
+
+      <.section
+        title="Review Actions"
+        description="Work the intake record here, then move into downstream commercial review only when it is qualified."
+        compact
+      >
+        <div class="flex flex-wrap gap-2">
+          <.button
+            :if={@finding.status == :new}
+            id="finding-show-start-review"
+            phx-click="transition"
+            phx-value-action="start_review"
+          >
+            <.icon name="hero-eye" class="size-4" /> Start Review
+          </.button>
+          <.button
+            :if={@finding.status in [:new, :reviewing]}
+            id="finding-show-accept"
+            phx-click="transition"
+            phx-value-action="accept"
+          >
+            <.icon name="hero-check" class="size-4" /> Accept
+          </.button>
+          <.button
+            :if={@finding.status in [:new, :reviewing, :accepted] and is_nil(@finding.signal_id)}
+            id="finding-show-promote"
+            phx-click="transition"
+            phx-value-action="promote"
+            variant="primary"
+          >
+            <.icon name="hero-arrow-up-right" class="size-4" /> Promote To Signal
+          </.button>
+          <.button
+            :if={@finding.status in [:new, :reviewing, :accepted]}
+            id="finding-show-reject"
+            phx-click="open_dialog"
+            phx-value-action="reject"
+          >
+            <.icon name="hero-x-mark" class="size-4" /> Reject
+          </.button>
+          <.button
+            :if={@finding.status in [:new, :reviewing, :accepted]}
+            id="finding-show-suppress"
+            phx-click="open_dialog"
+            phx-value-action="suppress"
+          >
+            <.icon name="hero-no-symbol" class="size-4" /> Suppress
+          </.button>
+          <.button
+            :if={@finding.status in [:new, :reviewing, :accepted]}
+            id="finding-show-park"
+            phx-click="open_dialog"
+            phx-value-action="park"
+          >
+            <.icon name="hero-pause-circle" class="size-4" /> Park
+          </.button>
+          <.button
+            :if={show_reopen?(@finding)}
+            id="finding-show-reopen"
+            phx-click="transition"
+            phx-value-action="reopen"
+          >
+            <.icon name="hero-arrow-path" class="size-4" /> Reopen
+          </.button>
+        </div>
+      </.section>
+
+      <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <.section title="Summary" description="What this finding is and why it surfaced.">
+          <div class="space-y-4">
+            <div class="flex flex-wrap gap-2">
+              <.status_badge status={@finding.status_variant}>
+                {@finding.status |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+              </.status_badge>
+              <span :if={@finding.confidence} class={confidence_badge(@finding.confidence)}>
+                {@finding.confidence |> to_string() |> String.capitalize()} confidence
+              </span>
+            </div>
+
+            <p class="text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+              {@finding.summary || "No summary captured yet."}
+            </p>
+
+            <div
+              :if={@finding.recommendation}
+              class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
+            >
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+                Recommendation
+              </p>
+              <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-200">
+                {@finding.recommendation}
+              </p>
+            </div>
+
+            <div
+              :if={@finding.watchouts != []}
+              class="rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-4 dark:border-amber-400/20 dark:bg-amber-400/10"
+            >
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-200">
+                Watchouts
+              </p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <span
+                  :for={watchout <- @finding.watchouts}
+                  class="badge badge-outline badge-sm border-amber-300 bg-white/80 text-amber-700 dark:border-amber-400/30 dark:bg-transparent dark:text-amber-200"
+                >
+                  {watchout}
+                </span>
+              </div>
+            </div>
+          </div>
+        </.section>
+
+        <.section
+          title="Provenance"
+          description="Where this finding came from and what it is linked to."
+        >
+          <div class="space-y-4">
+            <.provenance_item label="Observed">
+              {format_datetime(@finding.observed_at || @finding.inserted_at)}
+            </.provenance_item>
+            <.provenance_item label="Source">
+              {if @finding.source, do: @finding.source.name, else: "Direct agent intake"}
+            </.provenance_item>
+            <.provenance_item label="Program">
+              {if @finding.program, do: @finding.program.name, else: "No program linked"}
+            </.provenance_item>
+            <.provenance_item label="Organization">
+              {if @finding.organization,
+                do: @finding.organization.name,
+                else: "No organization linked"}
+            </.provenance_item>
+            <.provenance_item label="Source URL">
+              <a
+                :if={@finding.source_url}
+                href={@finding.source_url}
+                class="text-emerald-700 hover:text-emerald-600 dark:text-emerald-300"
+              >
+                {@finding.source_url}
+              </a>
+              <span :if={is_nil(@finding.source_url)}>No URL captured</span>
+            </.provenance_item>
+
+            <div class="flex flex-wrap gap-2 pt-2">
+              <.link
+                :if={@finding.source_id}
+                navigate={
+                  ~p"/acquisition/findings?family=#{@finding.finding_family}&source_id=#{@finding.source_id}"
+                }
+                class="btn btn-sm btn-ghost"
+              >
+                Open Source Queue
+              </.link>
+              <.link
+                :if={@finding.program_id}
+                navigate={
+                  ~p"/acquisition/findings?family=#{@finding.finding_family}&program_id=#{@finding.program_id}"
+                }
+                class="btn btn-sm btn-ghost"
+              >
+                Open Program Queue
+              </.link>
+              <.link
+                :if={@finding.signal_id}
+                navigate={~p"/commercial/signals/#{@finding.signal_id}"}
+                class="btn btn-sm btn-ghost"
+              >
+                Open Signal
+              </.link>
+              <.link
+                :if={@finding.agent_run_id}
+                navigate={~p"/console/agents/runs/#{@finding.agent_run_id}"}
+                class="btn btn-sm btn-ghost"
+              >
+                Open Agent Run
+              </.link>
+            </div>
+          </div>
+        </.section>
+      </div>
+
+      <div
+        :if={@finding.source_discovery_record}
+        class="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]"
+      >
+        <.section
+          title="Discovery Context"
+          description="Discovery-origin findings keep their discovery record context here so no separate legacy detail page is needed."
+        >
+          <div class="grid gap-5 sm:grid-cols-2">
+            <.property_item
+              label="Website"
+              value={@finding.source_discovery_record.website || "-"}
+            />
+            <.property_item
+              label="Domain"
+              value={@finding.source_discovery_record.website_domain || "-"}
+            />
+            <.property_item
+              label="Discovery Program"
+              value={
+                (@finding.source_discovery_record.discovery_program &&
+                   @finding.source_discovery_record.discovery_program.name) || "-"
+              }
+            />
+            <.property_item
+              label="Linked Organization"
+              value={
+                (@finding.source_discovery_record.organization &&
+                   @finding.source_discovery_record.organization.name) || "-"
+              }
+            />
+            <.property_item
+              label="Contact Person"
+              value={
+                (@finding.source_discovery_record.contact_person &&
+                   @finding.source_discovery_record.contact_person.full_name) || "-"
+              }
+            />
+            <.property_item
+              label="Evidence Count"
+              value={
+                Integer.to_string(@finding.source_discovery_record.discovery_evidence_count || 0)
+              }
+            />
+            <.property_item
+              label="Latest Observed"
+              value={format_datetime(@finding.source_discovery_record.latest_evidence_at)}
+            />
+            <.property_item
+              label="Discovery Record Status"
+              value={format_atom(@finding.source_discovery_record.status)}
+              badge={@finding.source_discovery_record.status_variant}
+            />
+          </div>
+
+          <div
+            :if={
+              discovery_record_icp_matches(@finding.source_discovery_record) != [] or
+                discovery_record_risk_flags(@finding.source_discovery_record) != []
+            }
+            class="mt-5 grid gap-4 sm:grid-cols-2"
+          >
+            <div
+              :if={discovery_record_icp_matches(@finding.source_discovery_record) != []}
+              id="finding-show-discovery-icp"
+            >
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                Why It Fits
+              </p>
+              <div class="mt-2 flex flex-wrap gap-1">
+                <span
+                  :for={match <- discovery_record_icp_matches(@finding.source_discovery_record)}
+                  class="badge badge-success badge-sm"
+                >
+                  {match}
+                </span>
+              </div>
+            </div>
+
+            <div
+              :if={discovery_record_risk_flags(@finding.source_discovery_record) != []}
+              id="finding-show-discovery-risks"
+            >
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                Watchouts
+              </p>
+              <div class="mt-2 flex flex-wrap gap-1">
+                <span
+                  :for={flag <- discovery_record_risk_flags(@finding.source_discovery_record)}
+                  class="badge badge-outline badge-sm border-amber-300 bg-white/70 text-amber-700 dark:border-amber-400/30 dark:bg-white/[0.03] dark:text-amber-200"
+                >
+                  {flag}
+                </span>
+              </div>
+            </div>
+          </div>
+        </.section>
+
+        <.section
+          :if={show_identity_review?(@finding.source_discovery_record, @discovery_identity_review)}
+          title="Identity Review"
+          description="Resolve the canonical organization and person here before this finding becomes owned commercial work."
+        >
+          <div class="grid gap-6">
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                  Organization
+                </p>
+                <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
+                  <%= if @finding.source_discovery_record.organization do %>
+                    <div class="flex items-center justify-between gap-3">
+                      <div class="space-y-1">
+                        <.link
+                          navigate={
+                            ~p"/operations/organizations/#{@finding.source_discovery_record.organization}"
+                          }
+                          class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
+                        >
+                          {@finding.source_discovery_record.organization.name}
+                        </.link>
+                        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                          {@finding.source_discovery_record.organization.website_domain ||
+                            @finding.source_discovery_record.organization.primary_region ||
+                            "Linked organization"}
+                        </p>
+                      </div>
+                      <.status_badge status={
+                        @finding.source_discovery_record.organization.status_variant
+                      }>
+                        {format_atom(@finding.source_discovery_record.organization.status)}
+                      </.status_badge>
+                    </div>
+                  <% else %>
+                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                      No durable organization linked yet.
+                    </p>
+                  <% end %>
+                </div>
+              </div>
+
+              <div
+                :if={
+                  @discovery_identity_review &&
+                    @discovery_identity_review.organization_candidates != []
+                }
+                class="space-y-3"
+              >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                  Candidate Organizations
+                </p>
+                <div
+                  :for={organization <- @discovery_identity_review.organization_candidates}
+                  class="rounded-2xl border border-zinc-200 px-4 py-4 dark:border-white/10"
+                >
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="space-y-1">
+                      <.link
+                        navigate={~p"/operations/organizations/#{organization}"}
+                        class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
+                      >
+                        {organization.name}
+                      </.link>
+                      <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                        {organization.website_domain || organization.primary_region || "No domain"}
+                      </p>
+                      <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                        {organization.people_count} people · {organization.signal_count} signals
+                      </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <.button
+                        id={"finding-use-organization-#{organization.id}"}
+                        phx-click="resolve_identity"
+                        phx-value-organization_id={organization.id}
+                        variant="primary"
+                      >
+                        Use Organization
+                      </.button>
+                      <.button
+                        :if={
+                          @finding.source_discovery_record.organization &&
+                            @finding.source_discovery_record.organization.id != organization.id
+                        }
+                        id={"finding-merge-linked-organization-#{organization.id}"}
+                        phx-click="merge_organization"
+                        phx-value-organization_id={organization.id}
+                      >
+                        Merge Linked Org
+                      </.button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                  Contact Person
+                </p>
+                <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
+                  <%= if @finding.source_discovery_record.contact_person do %>
+                    <div class="flex items-center justify-between gap-3">
+                      <div class="space-y-1">
+                        <.link
+                          navigate={
+                            ~p"/operations/people/#{@finding.source_discovery_record.contact_person}"
+                          }
+                          class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
+                        >
+                          {@finding.source_discovery_record.contact_person.full_name}
+                        </.link>
+                        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                          {@finding.source_discovery_record.contact_person.email ||
+                            @finding.source_discovery_record.contact_person.phone ||
+                            "No direct contact details"}
+                        </p>
+                      </div>
+                      <.status_badge status={
+                        @finding.source_discovery_record.contact_person.status_variant
+                      }>
+                        {format_atom(@finding.source_discovery_record.contact_person.status)}
+                      </.status_badge>
+                    </div>
+                  <% else %>
+                    <div class="space-y-1">
+                      <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                        No durable contact linked yet.
+                      </p>
+                      <p
+                        :if={
+                          @discovery_identity_review && @discovery_identity_review.contact_snapshot
+                        }
+                        class="text-sm text-zinc-600 dark:text-zinc-300"
+                      >
+                        {format_contact_snapshot(@discovery_identity_review.contact_snapshot)}
+                      </p>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+
+              <div
+                :if={@discovery_identity_review && @discovery_identity_review.person_candidates != []}
+                class="space-y-3"
+              >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                  Candidate People
+                </p>
+                <div
+                  :for={person <- @discovery_identity_review.person_candidates}
+                  class="rounded-2xl border border-zinc-200 px-4 py-4 dark:border-white/10"
+                >
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="space-y-1">
+                      <.link
+                        navigate={~p"/operations/people/#{person}"}
+                        class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
+                      >
+                        {person.full_name}
+                      </.link>
+                      <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                        {person.email || person.phone || "No direct contact details"}
+                      </p>
+                      <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                        {candidate_person_organizations(person)}
+                      </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <.button
+                        id={"finding-use-person-#{person.id}"}
+                        phx-click="resolve_identity"
+                        phx-value-contact_person_id={person.id}
+                        variant="primary"
+                      >
+                        Use Person
+                      </.button>
+                      <.button
+                        :if={
+                          @finding.source_discovery_record.contact_person &&
+                            @finding.source_discovery_record.contact_person.id != person.id
+                        }
+                        id={"finding-merge-linked-person-#{person.id}"}
+                        phx-click="merge_person"
+                        phx-value-person_id={person.id}
+                      >
+                        Merge Linked Person
+                      </.button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </.section>
+      </div>
+
+      <.section
+        :if={@finding.source_discovery_record && discovery_feedback(@finding.source_discovery_record)}
+        title="Discovery Feedback"
+        description="Rejected discovery stays explainable and continues teaching the shared targeting model."
+      >
+        <div class="grid gap-5 sm:grid-cols-2">
+          <.property_item
+            label="Disposition"
+            value={format_feedback_reason(discovery_feedback(@finding.source_discovery_record))}
+          />
+          <.property_item
+            label="Feedback Scope"
+            value={
+              format_feedback_scope(
+                discovery_feedback(@finding.source_discovery_record)["feedback_scope"]
+              )
+            }
+          />
+          <.property_item
+            label="Learned Terms"
+            value={
+              render_feedback_terms(
+                discovery_feedback(@finding.source_discovery_record)["exclude_terms"]
+              )
+            }
+          />
+          <.property_item
+            label="Category"
+            value={
+              format_feedback_scope(
+                discovery_feedback(@finding.source_discovery_record)["source_feedback_category"]
+              )
+            }
+          />
+        </div>
+      </.section>
+
+      <.section
+        :if={@finding.source_discovery_record}
+        title="Evidence"
+        description="Raw discovery evidence stays attached to the finding so promotion remains explainable."
+      >
+        <div :if={Enum.empty?(@discovery_evidence)}>
+          <.empty_state
+            icon="hero-document-magnifying-glass"
+            title="No evidence yet"
+            description="Discovery runs and operators can still attach evidence before or after review."
+          />
+        </div>
+
+        <div :if={!Enum.empty?(@discovery_evidence)} class="space-y-3">
+          <div
+            :for={evidence <- @discovery_evidence}
+            class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="space-y-2">
+                <div class="flex flex-wrap gap-2">
+                  <.tag color={:zinc}>{format_atom(evidence.observation_type)}</.tag>
+                  <.tag color={:sky}>{format_atom(evidence.source_channel)}</.tag>
+                  <.status_badge status={evidence.confidence_variant}>
+                    Confidence {evidence.confidence_score}
+                  </.status_badge>
+                </div>
+                <p class="font-medium text-zinc-900 dark:text-white">{evidence.summary}</p>
+                <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                  {format_datetime(evidence.observed_at || evidence.inserted_at)}
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <.link
+                  :if={evidence.source_url}
+                  href={evidence.source_url}
+                  target="_blank"
+                  class="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-300"
+                >
+                  Source
+                </.link>
+                <.link
+                  navigate={~p"/acquisition/evidence/#{evidence.id}/edit"}
+                  class="text-sm font-medium text-sky-600 hover:text-sky-500 dark:text-sky-300"
+                >
+                  Edit
+                </.link>
+              </div>
+            </div>
+
+            <p
+              :if={evidence.raw_excerpt}
+              class="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300"
+            >
+              {evidence.raw_excerpt}
+            </p>
+
+            <div :if={evidence.evidence_points != []} class="mt-3 flex flex-wrap gap-2">
+              <span
+                :for={point <- evidence.evidence_points}
+                class="badge badge-outline badge-sm border-zinc-200 bg-white/80 text-zinc-700 dark:border-white/10 dark:bg-transparent dark:text-zinc-300"
+              >
+                {point}
+              </span>
+            </div>
+          </div>
+        </div>
+      </.section>
+
+      <dialog
+        :if={@action_dialog && @action_dialog.type in [:reject, :suppress]}
+        id="finding-show-review-dialog"
+        class="modal"
+        phx-hook="ShowModal"
+      >
+        <div class="modal-box">
+          <h3 class="mb-2 text-lg font-bold">{dialog_heading(@action_dialog)}</h3>
+          <p class="mb-4 text-sm text-zinc-500">{@action_dialog.title}</p>
+          <form
+            id={"finding-show-#{@action_dialog.type}-form"}
+            phx-submit={"submit_#{@action_dialog.type}"}
+          >
+            <div class="space-y-3">
+              <.input
+                name="reason_code"
+                value={dialog_default_reason_code(@action_dialog)}
+                label="Disposition code"
+                type="select"
+                prompt={dialog_reason_prompt(@action_dialog)}
+                options={dialog_reason_options(@action_dialog)}
+              />
+              <.input
+                name="reason"
+                value=""
+                label="Operator note (optional)"
+                type="text"
+                placeholder="Add specific context for this intake decision"
+              />
+              <.input
+                name="feedback_scope"
+                value={dialog_default_feedback_scope(@action_dialog)}
+                label="Teach the search/profile (optional)"
+                type="select"
+                prompt={dialog_feedback_prompt(@action_dialog)}
+                options={dialog_feedback_scope_options(@action_dialog)}
+              />
+              <.input
+                name="exclude_terms"
+                value={@action_dialog.suggested_terms}
+                label="Keywords to suppress next time"
+                type="text"
+                placeholder="e.g. cctv, municipal ERP, generic admin software"
+              />
+            </div>
+            <div class="modal-action">
+              <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>
+              <.button type="submit" variant="primary" phx-disable-with="Saving...">
+                {dialog_submit_label(@action_dialog)}
+              </.button>
+            </div>
+          </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+          <button phx-click="close_dialog">close</button>
+        </form>
+      </dialog>
+
+      <dialog
+        :if={@action_dialog && @action_dialog.type == :park}
+        id="finding-show-park-dialog"
+        class="modal"
+        phx-hook="ShowModal"
+      >
+        <div class="modal-box">
+          <h3 class="mb-2 text-lg font-bold">Park this finding?</h3>
+          <p class="mb-4 text-sm text-zinc-500">{@action_dialog.title}</p>
+          <form id="finding-show-park-form" phx-submit="submit_park">
+            <div class="space-y-3">
+              <.input
+                name="reason"
+                value=""
+                label="Why are we parking this?"
+                type="text"
+                placeholder="e.g. Keep watching, timing is not right yet"
+              />
+              <.input
+                :if={@action_dialog.family == :procurement}
+                name="research"
+                value=""
+                label="Research needed (optional)"
+                type="textarea"
+                placeholder="Capture any follow-up research or capability work needed before this returns."
+              />
+            </div>
+            <div class="modal-action">
+              <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>
+              <.button type="submit" variant="primary" phx-disable-with="Parking...">
+                Park Finding
+              </.button>
+            </div>
+          </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+          <button phx-click="close_dialog">close</button>
+        </form>
+      </dialog>
+    </.page>
+    """
+  end
+
+  attr :label, :string, required: true
+  slot :inner_block, required: true
+
+  defp provenance_item(assigns) do
+    ~H"""
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+        {@label}
+      </p>
+      <div class="mt-1 text-sm text-zinc-700 dark:text-zinc-200">
+        {render_slot(@inner_block)}
+      </div>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :value, :string, required: true
+  attr :badge, :atom, default: nil
+
+  defp property_item(assigns) do
+    ~H"""
+    <div class="space-y-1">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+        {@label}
+      </p>
+      <p :if={is_nil(@badge)} class="text-sm font-medium text-zinc-900 dark:text-white">
+        {@value}
+      </p>
+      <.status_badge :if={@badge} status={@badge}>{@value}</.status_badge>
+    </div>
+    """
+  end
+
+  defp load_finding!(id, actor) do
+    Acquisition.get_finding!(
+      id,
+      actor: actor,
+      load: [
+        :status_variant,
+        :source,
+        :program,
+        :agent_run,
+        :organization,
+        :person,
+        :signal,
+        :source_bid,
+        source_discovery_record: [
+          :discovery_program,
+          :promoted_signal,
+          :status_variant,
+          :discovery_evidence_count,
+          :latest_evidence_at,
+          :latest_evidence_summary,
+          organization: [:status_variant],
+          contact_person: [:status_variant]
+        ]
+      ]
+    )
+  end
+
+  defp confidence_badge(:high), do: "badge badge-success badge-sm"
+  defp confidence_badge(:medium), do: "badge badge-warning badge-sm"
+  defp confidence_badge(:low), do: "badge badge-ghost badge-sm"
+  defp confidence_badge(_), do: "badge badge-ghost badge-sm"
+
+  defp refresh_finding(socket) do
+    assign_finding_context(
+      socket,
+      load_finding!(socket.assigns.finding.id, socket.assigns.current_user)
+    )
+  end
+
+  defp assign_finding_context(socket, finding) do
+    assign(socket,
+      finding: finding,
+      discovery_identity_review:
+        load_discovery_identity_review(finding, socket.assigns.current_user),
+      discovery_evidence: load_discovery_evidence(finding, socket.assigns.current_user)
+    )
+  end
+
+  defp load_discovery_identity_review(%{source_discovery_record: nil}, _actor), do: nil
+
+  defp load_discovery_identity_review(%{source_discovery_record: discovery_record}, actor) do
+    case Acquisition.get_discovery_identity_review(discovery_record, actor: actor) do
+      {:ok, identity_review} -> identity_review
+      {:error, error} -> raise "failed to load discovery identity review: #{inspect(error)}"
+    end
+  end
+
+  defp load_discovery_evidence(%{source_discovery_record: nil}, _actor), do: []
+
+  defp load_discovery_evidence(%{source_discovery_record_id: target_id}, actor)
+       when is_binary(target_id) do
+    case Acquisition.list_discovery_evidence_for_discovery_record(
+           target_id,
+           actor: actor,
+           load: [:confidence_variant]
+         ) do
+      {:ok, evidence} -> evidence
+      {:error, error} -> raise "failed to load discovery evidence: #{inspect(error)}"
+    end
+  end
+
+  defp identity_attrs_from_params(params) do
+    %{}
+    |> maybe_put_identity_attr(:organization_id, Map.get(params, "organization_id"))
+    |> maybe_put_identity_attr(:contact_person_id, Map.get(params, "contact_person_id"))
+  end
+
+  defp maybe_put_identity_attr(attrs, _key, nil), do: attrs
+  defp maybe_put_identity_attr(attrs, _key, ""), do: attrs
+  defp maybe_put_identity_attr(attrs, key, value), do: Map.put(attrs, key, value)
+
+  defp parse_dialog_action("reject"), do: :reject
+  defp parse_dialog_action("suppress"), do: :suppress
+  defp parse_dialog_action("park"), do: :park
+  defp parse_dialog_action(_), do: nil
+
+  defp build_action_dialog(finding, type) do
+    %{
+      type: type,
+      family: finding.finding_family,
+      title: finding.title,
+      suggested_terms: suggested_terms_for_finding(finding)
+    }
+  end
+
+  defp suggested_terms_for_finding(%{finding_family: :procurement, source_bid: bid})
+       when not is_nil(bid),
+       do: TargetingFeedback.suggested_exclude_terms_csv(bid)
+
+  defp suggested_terms_for_finding(%{
+         finding_family: :discovery,
+         source_discovery_record: discovery_record
+       })
+       when not is_nil(discovery_record) do
+    [discovery_record.industry, discovery_record.website_domain]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join(", ")
+  end
+
+  defp suggested_terms_for_finding(_finding), do: ""
+
+  defp show_identity_review?(_discovery_record, nil), do: false
+
+  defp show_identity_review?(discovery_record, identity_review) do
+    not is_nil(discovery_record.contact_person_id) or
+      not is_nil(discovery_record.organization_id) or
+      not is_nil(identity_review.contact_snapshot) or
+      identity_review.organization_candidates != [] or
+      identity_review.person_candidates != []
+  end
+
+  defp show_reopen?(%{status: :parked}), do: true
+
+  defp show_reopen?(%{status: :rejected, source_discovery_record_id: target_id})
+       when is_binary(target_id), do: true
+
+  defp show_reopen?(%{status: :suppressed, source_discovery_record_id: target_id})
+       when is_binary(target_id), do: true
+
+  defp show_reopen?(_finding), do: false
+
+  defp dialog_heading(%{type: :reject}), do: "Reject this finding?"
+  defp dialog_heading(%{type: :suppress}), do: "Suppress this finding?"
+
+  defp dialog_submit_label(%{type: :reject}), do: "Confirm Reject"
+  defp dialog_submit_label(%{type: :suppress}), do: "Confirm Suppress"
+
+  defp dialog_reason_prompt(%{type: :reject}), do: "Select a disposition..."
+  defp dialog_reason_prompt(%{type: :suppress}), do: "Select a suppression reason..."
+
+  defp dialog_feedback_prompt(%{type: :reject}), do: "Just reject this finding"
+  defp dialog_feedback_prompt(%{type: :suppress}), do: "Just suppress this finding"
+
+  defp dialog_default_reason_code(%{type: :suppress, family: family})
+       when family in [:procurement, :discovery],
+       do: "source_noise_or_misclassified"
+
+  defp dialog_default_reason_code(_dialog), do: nil
+
+  defp dialog_default_feedback_scope(%{type: :suppress}), do: "source"
+  defp dialog_default_feedback_scope(_dialog), do: nil
+
+  defp dialog_reason_options(%{family: :procurement}),
+    do: TargetingFeedback.pass_reason_options()
+
+  defp dialog_reason_options(%{family: :discovery}),
+    do: DiscoveryFeedback.reject_reason_options()
+
+  defp dialog_reason_options(_dialog), do: []
+
+  defp dialog_feedback_scope_options(%{family: family})
+       when family in [:procurement, :discovery] do
+    [
+      {"Out of scope for us", "out_of_scope"},
+      {"Not targeting this type right now", "not_targeting_right_now"},
+      {"This source is noisy", "source"}
+    ]
+  end
+
+  defp dialog_feedback_scope_options(_dialog), do: []
+
+  defp format_contact_snapshot(snapshot) do
+    [metadata_value(snapshot, :first_name), metadata_value(snapshot, :last_name)]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join(" ")
+    |> case do
+      "" ->
+        metadata_value(snapshot, :email) || metadata_value(snapshot, :phone) || "Contact snapshot"
+
+      name ->
+        [name, metadata_value(snapshot, :title), metadata_value(snapshot, :email)]
+        |> Enum.reject(&(&1 in [nil, ""]))
+        |> Enum.join(" · ")
+    end
+  end
+
+  defp candidate_person_organizations(person) do
+    case person.organizations || [] do
+      [] -> "No linked organizations"
+      organizations -> organizations |> Enum.map(& &1.name) |> Enum.join(", ")
+    end
+  end
+
+  defp discovery_feedback(discovery_record) do
+    metadata = Map.get(discovery_record, :metadata) || %{}
+    metadata["discovery_feedback"]
+  end
+
+  defp discovery_record_market_focus(discovery_record) do
+    metadata = Map.get(discovery_record, :metadata) || %{}
+    Map.get(metadata, "market_focus", %{})
+  end
+
+  defp discovery_record_icp_matches(discovery_record) do
+    discovery_record
+    |> discovery_record_market_focus()
+    |> Map.get("icp_matches", [])
+    |> List.wrap()
+  end
+
+  defp discovery_record_risk_flags(discovery_record) do
+    discovery_record
+    |> discovery_record_market_focus()
+    |> Map.get("risk_flags", [])
+    |> List.wrap()
+  end
+
+  defp format_feedback_scope(nil), do: "-"
+
+  defp format_feedback_scope(scope) do
+    scope
+    |> to_string()
+    |> String.replace("_", " ")
+  end
+
+  defp render_feedback_terms(nil), do: "-"
+  defp render_feedback_terms([]), do: "-"
+  defp render_feedback_terms(terms), do: Enum.join(List.wrap(terms), ", ")
+
+  defp format_feedback_reason(nil), do: "-"
+
+  defp format_feedback_reason(feedback) when is_map(feedback) do
+    reason_code = Map.get(feedback, "reason_code")
+    reason = metadata_value(feedback, :reason)
+    label = DiscoveryFeedback.reject_reason_label(reason_code)
+
+    if reason in [nil, "", label], do: label, else: "#{label} - #{reason}"
+  end
+
+  defp format_feedback_reason(feedback), do: to_string(feedback)
+
+  defp metadata_value(metadata, key) when is_map(metadata),
+    do: Map.get(metadata, key) || Map.get(metadata, to_string(key))
+
+  defp metadata_value(_metadata, _key), do: nil
+end

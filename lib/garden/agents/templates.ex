@@ -56,6 +56,12 @@ defmodule GnomeGarden.Agents.Templates do
       model: :fast,
       max_iterations: 30
     },
+    "procurement_source_scan" => %{
+      module: GnomeGarden.Agents.Workers.Procurement.SourceScan,
+      description: "Runs a deterministic procurement scan for a single source",
+      model: :fast,
+      max_iterations: 1
+    },
     "source_discovery" => %{
       module: GnomeGarden.Agents.Workers.Procurement.SourceDiscovery,
       description: "Discovers new procurement portals to monitor",
@@ -70,7 +76,7 @@ defmodule GnomeGarden.Agents.Templates do
     },
     "target_discovery" => %{
       module: GnomeGarden.Agents.Workers.Commercial.TargetDiscovery,
-      description: "Discovers target companies and saves reviewable target accounts",
+      description: "Discovers target companies and saves reviewable discovery findings",
       model: :fast,
       max_iterations: 30
     }

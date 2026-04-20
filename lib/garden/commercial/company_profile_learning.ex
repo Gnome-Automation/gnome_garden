@@ -72,6 +72,26 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
     )
   end
 
+  @spec feedback_source_summary(keyword()) :: {:ok, map()} | {:error, term()}
+  def feedback_source_summary(opts \\ []) do
+    with {:ok, snapshot} <- mode_snapshot(opts) do
+      source_counts =
+        snapshot.feedback_history
+        |> Enum.map(&feedback_source_bucket/1)
+        |> Enum.frequencies()
+
+      {:ok,
+       %{
+         mode: snapshot.mode,
+         total_feedback: length(snapshot.feedback_history),
+         procurement_count: Map.get(source_counts, :procurement, 0),
+         discovery_count: Map.get(source_counts, :discovery, 0),
+         manual_count: Map.get(source_counts, :manual, 0),
+         other_count: Map.get(source_counts, :other, 0)
+       }}
+    end
+  end
+
   @spec remove_learned_exclude(keyword()) :: {:ok, map()} | {:error, term()}
   def remove_learned_exclude(opts) do
     with {:ok, profile} <- load_profile(Keyword.get(opts, :company_profile_key)),
@@ -224,6 +244,16 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
     |> List.wrap()
     |> Enum.filter(&(Map.get(&1, "company_profile_mode") == mode))
     |> Enum.reverse()
+  end
+
+  defp feedback_source_bucket(entry) do
+    case Map.get(entry, "source_type") do
+      "bid" -> :procurement
+      "discovery_record" -> :discovery
+      "manual" -> :manual
+      nil -> :other
+      _ -> :other
+    end
   end
 
   defp normalize_terms(values) do

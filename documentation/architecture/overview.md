@@ -1,145 +1,148 @@
 # Architecture Overview
 
-## System Diagram
+## System Shape
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         GnomeGarden Platform (CSIA-Aligned)                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│  │  Management  │  │      HR      │  │   Finance    │  │   Projects   │    │
-│  │              │  │              │  │              │  │              │    │
-│  │ User, Role   │  │ Member,Skill │  │Invoice,Pay   │  │ Task, Time   │    │
-│  │ Setting      │  │ Cert         │  │Retainer      │  │ Expense      │    │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘    │
-│         │                 │                 │                 │            │
-│  ┌──────┴─────────────────┴─────────────────┴─────────────────┴───────┐    │
-│  │                        PostgreSQL Database                          │    │
-│  └──────┬─────────────────┬─────────────────┬─────────────────┬───────┘    │
-│         │                 │                 │                 │            │
-│  ┌──────┴───────┐  ┌──────┴───────┐  ┌──────┴───────┐  ┌──────┴───────┐    │
-│  │    Sales     │  │ Engineering  │  │   Service    │  │   Quality    │    │
-│  │              │  │              │  │              │  │              │    │
-│  │ CRM,Pipeline │  │ Asset,Part   │  │ Ticket,WO    │  │ Checklist    │    │
-│  │ Contract     │  │ BOM,Vendor   │  │ SLA          │  │ (Phase 2)    │    │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
-│                                                                              │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                     Agents + Workspace                                │   │
-│  │                                                                       │   │
-│  │    Bid Scanning, AI Automation, Voice Capture, Personal Productivity │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+GnomeGarden is a Phoenix + Ash + Jido platform with a cockpit-style operator UI.
+
+At a high level:
+
+```text
+Accounts
+  -> who can use the system
+
+Operations
+  -> who the company works with and what it supports
+
+Acquisition
+  -> what has been found and still needs review
+
+Commercial
+  -> what has been discovered, reviewed, and pursued
+
+Procurement
+  -> procurement-source and bid intake
+
+Execution
+  -> how work is delivered and serviced
+
+Finance
+  -> how approved work turns into invoices and payments
+
+Agents
+  -> how discovery and runtime automation are launched and observed
 ```
 
-## CSIA Alignment
+## High-Level Model
 
-GnomeGarden domains map directly to [CSIA Best Practices](https://controlsys.org/) management areas:
+```text
+                 +----------------------+
+                 |       Accounts       |
+                 |    User / Token      |
+                 +----------+-----------+
+                            |
+                            v
++----------------+   +-------------+   +------------+   +----------------+
+|  Procurement   |-->| Acquisition |-->| Commercial |-->|   Execution    |
+| Source / Bid   |   | Source/Prog |   | Intake+Rev |   | Delivery+Svc   |
++--------+-------+   |   /Finding  |   +------+-----+   +--------+-------+
+         |           +------+------+          |                  |
+         |                  |                 v                  v
+         |                  |         +-------+------+   +------+--------+
+         +----------------->+-------->|  Operations  |<--|    Finance    |
+                                      | Orgs/Sites/  |   | Billing/Pay   |
+                                      | Systems/Asst |   |               |
+                                      +-------+------+   +------+--------+
+                                              ^                  ^
+                                              |                  |
+                                              +--------+---------+
+                                                       |
+                                                       v
+                                                   +---+---+
+                                                   | Agents |
+                                                   | Jido   |
+                                                   +-------+
+```
 
-| CSIA Area | GnomeGarden Domain | Key Focus |
-|-----------|-----------------|-----------|
-| General Management | Management | Users, roles, company settings |
-| Human Resources | HR | Team, skills, capacity |
-| Financial Management | Finance | Billing, payments, cash flow |
-| Project Management | Projects | Delivery, time tracking |
-| System Development Lifecycle | Engineering | Assets, BOMs, parts |
-| Marketing/Sales | Sales | CRM, pipeline, contracts |
-| Quality Assurance | Quality | Checklists, inspections |
-| Customer Service | Service | Support, work orders |
+## Implemented Design Principles
 
-## Tech Stack
+1. `Ash` resources and actions are the business source of truth.
+2. `docs/llm/generated/resources.json` is the authoritative machine-readable model map.
+3. Intake is staged, not trusted:
+   - raw discovery evidence -> `DiscoveryEvidence`
+   - reviewed discovery record -> `DiscoveryRecord`
+   - unified operator intake -> `Finding`
+   - formal intake -> `Signal`
+   - owned pipeline -> `Pursuit`
+4. Physical and digital work share the same commercial and execution backbone.
+5. Lifecycle-heavy records use `AshStateMachine` rather than ad hoc status handling.
+6. The UI is operator-first:
+   - cockpit for queue pressure
+   - consistent `index/show/form` LiveView surfaces
+   - shared workspace components instead of one-off layouts
+
+## Current Tech Stack
 
 ### Backend
-| Technology | Purpose |
-|------------|---------|
-| **Elixir 1.19** | Functional programming language |
-| **Phoenix 1.7** | Web framework |
-| **Ash 3.x** | Resource-oriented domain modeling |
-| **AshPostgres** | PostgreSQL data layer |
-| **AshAuthentication** | Magic link authentication |
-| **AshStateMachine** | State machine support |
-| **AshAdmin** | Auto-generated admin panel |
-| **Oban** | Background job processing |
+- Elixir
+- Phoenix
+- Phoenix LiveView
+- Ash
+- AshPostgres
+- AshAuthentication
+- AshStateMachine
+- AshOban
+- PostgreSQL
+- Oban
+
+### Agent Runtime
+- Jido
+- ReqLLM
+- Jido Browser
+- Brave-backed search for the current `WebSearch` tool path
 
 ### Frontend
-| Technology | Purpose |
-|------------|---------|
-| **Phoenix LiveView** | Real-time, server-rendered UI |
-| **DaisyUI** | Component library |
-| **Tailwind CSS** | Utility-first styling |
-| **Alpine.js** | Client-side interactivity |
+- Phoenix components
+- Shared Tailwind-based workspace shell
+- Tailwind CSS v4
+- Protocol-inspired UI primitives in `lib/garden_web/components/protocol.ex`
 
-### AI Platform
-| Technology | Purpose |
-|------------|---------|
-| **Jido** | Agent orchestration framework |
-| **ReqLLM** | LLM API integration |
-| **Jido.Browser** | Browser automation (bid scanning) |
+The main operator UI is no longer DaisyUI-driven. DaisyUI remains only in authentication override paths where the generated auth flow still uses those components.
 
-### Infrastructure
-| Technology | Purpose |
-|------------|---------|
-| **PostgreSQL** | Primary database |
-| **Oban** | Job queue with persistence |
+## Current Product Surfaces
 
-## Domain Relationships
+### Cockpit
+- `/`
+- Aggregates the queues that matter now:
+  - due discovery
+  - review findings
+  - open signals
+  - active pursuits
+  - due maintenance
+  - service/work execution pressure
+  - billing exceptions
 
-```
-Management ←────────────────────────────────────────────────────────────┐
-    │                                                                   │
-    │ extends                                                           │
-    ▼                                                                   │
-   HR ──────────────────────────────────────┐                          │
-    │                                       │                          │
-    │ staff                                 │                          │
-    ▼                                       ▼                          │
- Sales ──────────────► Projects ──────────► Finance                    │
-    │                      │                   │                       │
-    │ customers            │ work              │                       │
-    ▼                      ▼                   │                       │
-Service ◄─────────── Engineering              │                        │
-    │                      │                   │                       │
-    │                      │ quality           │                       │
-    ▼                      ▼                   │                       │
-Quality ◄──────────────────┘                   │                       │
-                                               │                       │
-Agents ──────────────────────────────────────►│                       │
-    │                                          │                       │
-    │ bids → opportunities                     │                       │
-    └──────────────────────────────────────────┘                       │
-                                                                       │
-Workspace ◄────────────────────────────────────────────────────────────┘
-    │
-    │ routes to all domains
-    └──────────────────────────────────────────────────────────────────
-```
+### Domain Workspaces
+- `/operations/*`
+- `/commercial/*`
+- `/execution/*`
+- `/finance/*`
+- `/procurement/*`
 
-## External Integrations
+### Agent Console
+- `/console/agents`
+- `/console/agents/runs/:id`
+- `/agent`
 
-### Current
-- **PlanetBids** - Bid scraping and discovery
-- **LLM Providers** - AI inference (Claude, OpenAI)
+## Legacy Boundary
 
-### Planned
-- **QuickBooks** - Accounting sync (Finance)
-- **Twilio** - Voice capture (Workspace)
-- **CAD Systems** - BOM import (Engineering)
-- **Email/Calendar** - Activity sync (Sales)
+`GnomeGarden.Sales` still exists in the implemented model, but it is now a compatibility layer rather than the main operator path.
 
-## Security Model
+The long-term business model is centered on:
+- `Operations`
+- `Commercial`
+- `Execution`
+- `Finance`
+- `Procurement`
+- `Agents`
 
-- **Magic Link Authentication** - Passwordless login via email
-- **Token-based API Access** - For integrations
-- **Role-based Permissions** - Admin, User, Viewer
-- **Tenant Isolation** - Multi-tenant ready (future)
-
-## Key Design Principles
-
-1. **CSIA-Aligned** - Domains match industry best practices
-2. **Resource-Oriented** - Ash resources are the source of truth
-3. **Event-Driven** - State machines for complex workflows
-4. **AI-Native** - Agents deeply integrated, not bolted on
-5. **Mobile-First** - DaisyUI responsive design
-6. **Recurring Revenue Focus** - Retainers as first-class citizens
+When the human docs and the generated machine map disagree, prefer the generated machine map and the Ash modules.

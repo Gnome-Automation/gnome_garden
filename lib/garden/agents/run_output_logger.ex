@@ -38,8 +38,40 @@ defmodule GnomeGarden.Agents.RunOutputLogger do
   end
 
   defp run_id_from(context) when is_map(context) do
-    get_in(context, [:tool_context, :run_id]) || Map.get(context, :run_id)
+    context
+    |> candidate_run_ids()
+    |> Enum.find(&persisted_run_id?/1)
   end
 
   defp run_id_from(_context), do: nil
+
+  defp candidate_run_ids(context) do
+    [
+      nested_value(context, [:tool_context, :agent_run_id]),
+      nested_value(context, [:tool_context, :runtime_instance_id]),
+      nested_value(context, [:tool_context, :run_id]),
+      nested_value(context, [:agent_run_id]),
+      nested_value(context, [:runtime_instance_id]),
+      nested_value(context, [:run_id])
+    ]
+    |> Enum.filter(&is_binary/1)
+    |> Enum.uniq()
+  end
+
+  defp persisted_run_id?(run_id) when is_binary(run_id) do
+    match?({:ok, _run}, Agents.get_agent_run(run_id))
+  end
+
+  defp persisted_run_id?(_run_id), do: false
+
+  defp nested_value(map, [key]) when is_map(map) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp nested_value(map, [key | rest]) when is_map(map) do
+    case nested_value(map, [key]) do
+      %{} = nested -> nested_value(nested, rest)
+      _ -> nil
+    end
+  end
 end

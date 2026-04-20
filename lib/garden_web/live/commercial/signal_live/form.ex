@@ -28,7 +28,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/signals"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to inbox
+            <.icon name="hero-arrow-left" class="size-4" /> Back to queue
           </.button>
         </:actions>
       </.page_header>
