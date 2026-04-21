@@ -84,10 +84,12 @@ defmodule GnomeGarden.Acquisition.Program do
                   :review_finding_count,
                   :promoted_finding_count,
                   :noise_finding_count,
+                  :runnable,
+                  :health_status,
+                  :health_variant,
+                  :health_note,
                   :status_variant,
-                  :latest_run_id,
-                  :last_run_state,
-                  :last_run_state_variant
+                  :latest_run_id
                 ]
               )
     end
@@ -171,6 +173,35 @@ defmodule GnomeGarden.Acquisition.Program do
   end
 
   calculations do
+    calculate :runnable,
+              :boolean,
+              expr(status == :active and not is_nil(legacy_discovery_program_id))
+
+    calculate :health_status,
+              :atom,
+              {GnomeGarden.Calculations.AcquisitionProgramHealth, return: :status}
+
+    calculate :health_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :health_status,
+               mapping: [
+                 healthy: :success,
+                 running: :info,
+                 noisy: :warning,
+                 stale: :warning,
+                 cancelled: :warning,
+                 paused: :default,
+                 idle: :default,
+                 failing: :error,
+                 archived: :default
+               ],
+               default: :default}
+
+    calculate :health_note,
+              :string,
+              {GnomeGarden.Calculations.AcquisitionProgramHealth, return: :note}
+
     calculate :status_variant,
               :atom,
               {GnomeGarden.Calculations.EnumVariant,

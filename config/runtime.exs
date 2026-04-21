@@ -40,6 +40,26 @@ if brave_api_key = System.get_env("BRAVE_API_KEY") do
     brave_api_key: brave_api_key
 end
 
+if garage_access_key = System.get_env("GARAGE_ACCESS_KEY") do
+  garage_secret_key =
+    System.get_env("GARAGE_SECRET_KEY") ||
+      raise "Missing environment variable `GARAGE_SECRET_KEY` for acquisition document storage."
+
+  config :gnome_garden, GnomeGarden.Acquisition.Document,
+    storage: [
+      service:
+        {AshStorage.Service.S3,
+         [
+           bucket: System.get_env("GARAGE_BUCKET", "gnome-garden-acquisition"),
+           region: System.get_env("GARAGE_REGION", "garage"),
+           endpoint_url: System.get_env("GARAGE_ENDPOINT_URL", "http://127.0.0.1:3900"),
+           access_key_id: garage_access_key,
+           secret_access_key: garage_secret_key,
+           prefix: System.get_env("GARAGE_PREFIX", "acquisition/")
+         ]}
+    ]
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

@@ -36,8 +36,15 @@ defmodule GnomeGarden.DataCase do
   Sets up the sandbox based on the test tags.
   """
   def setup_sandbox(tags) do
+    reset_test_storage()
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(GnomeGarden.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+  end
+
+  defp reset_test_storage do
+    if Code.ensure_loaded?(AshStorage.Service.Test) do
+      AshStorage.Service.Test.reset!()
+    end
   end
 
   @doc """

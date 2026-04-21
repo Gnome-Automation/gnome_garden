@@ -43,6 +43,14 @@ defmodule GnomeGarden.Procurement.BidSignalCreationTest do
     assert finding.finding_family == :procurement
     assert finding.finding_type == :bid_notice
     assert finding.status == :new
+    assert finding.due_at == bid.due_at
+    assert finding.due_note == "Procurement deadline"
+    assert finding.location == "Anaheim, CA"
+    assert finding.location_note == "Oc"
+    assert finding.work_summary == "Controller-facing Integration"
+    assert finding.work_type == "Bid notice"
+    assert finding.score_tier == :warm
+    assert finding.score_note == "Aggregated confidence"
     assert finding.source_bid.id == bid.id
     assert metadata_value(finding.metadata, :agency) == "City of Anaheim"
     assert metadata_value(finding.metadata, :score_tier) == "warm"

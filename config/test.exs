@@ -31,6 +31,9 @@ config :gnome_garden, GnomeGardenWeb.Endpoint,
 # In test we don't send emails
 config :gnome_garden, GnomeGarden.Mailer, adapter: Swoosh.Adapters.Test
 
+config :gnome_garden, GnomeGarden.Acquisition.Document,
+  storage: [service: {AshStorage.Service.Test, []}]
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

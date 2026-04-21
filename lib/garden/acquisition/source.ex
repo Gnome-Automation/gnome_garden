@@ -89,10 +89,12 @@ defmodule GnomeGarden.Acquisition.Source do
                   :review_finding_count,
                   :promoted_finding_count,
                   :noise_finding_count,
+                  :runnable,
+                  :health_status,
+                  :health_variant,
+                  :health_note,
                   :status_variant,
-                  :latest_run_id,
-                  :last_run_state,
-                  :last_run_state_variant
+                  :latest_run_id
                 ]
               )
     end
@@ -185,6 +187,41 @@ defmodule GnomeGarden.Acquisition.Source do
   end
 
   calculations do
+    calculate :runnable,
+              :boolean,
+              expr(
+                enabled == true and status in [:active, :candidate] and
+                  not is_nil(legacy_procurement_source_id)
+              )
+
+    calculate :health_status,
+              :atom,
+              {GnomeGarden.Calculations.AcquisitionSourceHealth, return: :status}
+
+    calculate :health_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :health_status,
+               mapping: [
+                 healthy: :success,
+                 running: :info,
+                 noisy: :warning,
+                 stale: :warning,
+                 cancelled: :warning,
+                 paused: :default,
+                 disabled: :default,
+                 manual: :default,
+                 idle: :default,
+                 blocked: :error,
+                 failing: :error,
+                 archived: :default
+               ],
+               default: :default}
+
+    calculate :health_note,
+              :string,
+              {GnomeGarden.Calculations.AcquisitionSourceHealth, return: :note}
+
     calculate :status_variant,
               :atom,
               {GnomeGarden.Calculations.EnumVariant,

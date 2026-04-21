@@ -4,6 +4,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   import GnomeGardenWeb.Commercial.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.PromotionRules
   alias GnomeGarden.Commercial.DiscoveryFeedback
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement.TargetingFeedback
@@ -32,23 +33,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
        |> put_flash(:info, "Finding moved into review")}
     else
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, "Could not start review: #{inspect(error)}")}
-    end
-  end
-
-  def handle_event("transition", %{"action" => "accept"}, socket) do
-    with {:ok, _finding} <-
-           Acquisition.accept_finding_review(
-             socket.assigns.finding.id,
-             actor: socket.assigns.current_user
-           ) do
-      {:noreply,
-       socket
-       |> refresh_finding()
-       |> put_flash(:info, "Marked finding as accepted")}
-    else
-      {:error, error} ->
-        {:noreply, put_flash(socket, :error, "Could not accept finding: #{inspect(error)}")}
+        {:noreply, put_flash(socket, :error, "Could not start review: #{format_error(error)}")}
     end
   end
 
@@ -68,7 +53,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         {:noreply, socket |> refresh_finding() |> put_flash(:info, "Promoted finding")}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, "Could not promote finding: #{inspect(error)}")}
+        {:noreply, put_flash(socket, :error, "Could not promote finding: #{format_error(error)}")}
     end
   end
 
@@ -105,6 +90,24 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   def handle_event("close_dialog", _, socket) do
     {:noreply, assign(socket, :action_dialog, nil)}
+  end
+
+  def handle_event("submit_accept", params, socket) do
+    case Acquisition.accept_finding_review(
+           socket.assigns.finding.id,
+           params,
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, _finding} ->
+        {:noreply,
+         socket
+         |> assign(:action_dialog, nil)
+         |> refresh_finding()
+         |> put_flash(:info, "Marked finding as accepted")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not accept finding: #{format_error(error)}")}
+    end
   end
 
   def handle_event("submit_reject", params, socket) do
@@ -158,6 +161,25 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not park finding: #{inspect(error)}")}
+    end
+  end
+
+  def handle_event("remove_document", %{"id" => id}, socket) do
+    with {:ok, finding_document} <-
+           Acquisition.get_finding_document(id, actor: socket.assigns.current_user),
+         :ok <-
+           Acquisition.delete_finding_document(
+             finding_document,
+             actor: socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> refresh_finding()
+       |> put_flash(:info, "Removed linked document")}
+    else
+      {:error, error} ->
+        {:noreply,
+         put_flash(socket, :error, "Could not remove linked document: #{format_error(error)}")}
     end
   end
 
@@ -253,6 +275,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           <.button navigate={~p"/acquisition/findings"}>
             <.icon name="hero-inbox-stack" class="size-4" /> Back To Queue
           </.button>
+          <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"}>
+            <.icon name="hero-paper-clip" class="size-4" /> Add Document
+          </.button>
           <.button
             :if={@finding.source_discovery_record_id}
             navigate={~p"/acquisition/findings/#{@finding.id}/evidence/new"}
@@ -328,15 +353,24 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             <.icon name="hero-eye" class="size-4" /> Start Review
           </.button>
           <.button
-            :if={@finding.status in [:new, :reviewing]}
+            :if={@finding.status == :reviewing and @finding.acceptance_ready}
             id="finding-show-accept"
-            phx-click="transition"
+            phx-click="open_dialog"
             phx-value-action="accept"
           >
             <.icon name="hero-check" class="size-4" /> Accept
           </.button>
           <.button
-            :if={@finding.status in [:new, :reviewing, :accepted] and is_nil(@finding.signal_id)}
+            :if={prep_action_path(@finding)}
+            id="finding-show-prep-action"
+            navigate={prep_action_path(@finding)}
+          >
+            <.icon name="hero-paper-clip" class="size-4" /> {prep_action_label(@finding)}
+          </.button>
+          <.button
+            :if={
+              @finding.status == :accepted and @finding.promotion_ready and is_nil(@finding.signal_id)
+            }
             id="finding-show-promote"
             phx-click="transition"
             phx-value-action="promote"
@@ -345,7 +379,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             <.icon name="hero-arrow-up-right" class="size-4" /> Promote To Signal
           </.button>
           <.button
-            :if={@finding.status in [:new, :reviewing, :accepted]}
+            :if={@finding.status in [:reviewing, :accepted]}
             id="finding-show-reject"
             phx-click="open_dialog"
             phx-value-action="reject"
@@ -353,7 +387,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             <.icon name="hero-x-mark" class="size-4" /> Reject
           </.button>
           <.button
-            :if={@finding.status in [:new, :reviewing, :accepted]}
+            :if={@finding.status in [:reviewing, :accepted]}
             id="finding-show-suppress"
             phx-click="open_dialog"
             phx-value-action="suppress"
@@ -361,7 +395,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             <.icon name="hero-no-symbol" class="size-4" /> Suppress
           </.button>
           <.button
-            :if={@finding.status in [:new, :reviewing, :accepted]}
+            :if={@finding.status in [:reviewing, :accepted]}
             id="finding-show-park"
             phx-click="open_dialog"
             phx-value-action="park"
@@ -376,6 +410,40 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           >
             <.icon name="hero-arrow-path" class="size-4" /> Reopen
           </.button>
+        </div>
+        <div
+          :if={@finding.status == :reviewing and not @finding.acceptance_ready}
+          class="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-4 dark:border-amber-400/20 dark:bg-amber-400/10"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-200">
+            Acceptance Prep
+          </p>
+          <p class="mt-2 text-sm text-amber-800 dark:text-amber-100">
+            Clear these blockers before accepting the finding into the refined intake set.
+          </p>
+          <ul class="mt-3 space-y-2 text-sm text-amber-900 dark:text-amber-50">
+            <li :for={blocker <- @finding.acceptance_blockers} class="flex gap-2">
+              <span class="mt-0.5 text-amber-600 dark:text-amber-300">•</span>
+              <span>{blocker}</span>
+            </li>
+          </ul>
+        </div>
+        <div
+          :if={@finding.status == :accepted and not @finding.promotion_ready}
+          class="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-4 dark:border-amber-400/20 dark:bg-amber-400/10"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-200">
+            Promotion Prep
+          </p>
+          <p class="mt-2 text-sm text-amber-800 dark:text-amber-100">
+            Promotion stays manual. Clear these blockers before handing the finding into commercial review.
+          </p>
+          <ul class="mt-3 space-y-2 text-sm text-amber-900 dark:text-amber-50">
+            <li :for={blocker <- @finding.promotion_blockers} class="flex gap-2">
+              <span class="mt-0.5 text-amber-600 dark:text-amber-300">•</span>
+              <span>{blocker}</span>
+            </li>
+          </ul>
         </div>
       </.section>
 
@@ -493,6 +561,92 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           </div>
         </.section>
       </div>
+
+      <.section
+        title="Linked Documents"
+        description="Durable intake files linked to this finding before it crosses into downstream commercial work."
+      >
+        <div
+          :if={Enum.empty?(@finding_documents)}
+          class="rounded-2xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300"
+        >
+          No documents linked yet.
+        </div>
+
+        <div :if={!Enum.empty?(@finding_documents)} class="space-y-3">
+          <div
+            :for={finding_document <- @finding_documents}
+            class="rounded-2xl border border-zinc-200 bg-white/80 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
+          >
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="text-sm font-semibold text-zinc-900 dark:text-white">
+                    {finding_document.document.title}
+                  </p>
+                  <span class="badge badge-outline badge-sm">
+                    {format_atom(finding_document.document_role)}
+                  </span>
+                  <span class="badge badge-outline badge-sm">
+                    {format_atom(finding_document.document.document_type)}
+                  </span>
+                  <span
+                    :if={substantive_procurement_document?(finding_document)}
+                    class="badge badge-success badge-sm"
+                  >
+                    Counts for promotion
+                  </span>
+                  <span
+                    :if={
+                      @finding.finding_family == :procurement and
+                        not substantive_procurement_document?(finding_document)
+                    }
+                    class="badge badge-ghost badge-sm"
+                  >
+                    Reference only
+                  </span>
+                </div>
+                <p
+                  :if={finding_document.document.summary}
+                  class="text-sm text-zinc-600 dark:text-zinc-300"
+                >
+                  {finding_document.document.summary}
+                </p>
+                <p :if={finding_document.notes} class="text-sm text-zinc-600 dark:text-zinc-300">
+                  {finding_document.notes}
+                </p>
+              </div>
+
+              <div class="flex flex-wrap gap-2">
+                <.link
+                  :if={finding_document.document.file_url}
+                  href={finding_document.document.file_url}
+                  target="_blank"
+                  class="btn btn-sm btn-ghost"
+                >
+                  Open File
+                </.link>
+                <.link
+                  :if={finding_document.document.source_url}
+                  href={finding_document.document.source_url}
+                  target="_blank"
+                  class="btn btn-sm btn-ghost"
+                >
+                  Open Source
+                </.link>
+                <.button
+                  id={"finding-document-remove-#{finding_document.id}"}
+                  phx-click="remove_document"
+                  phx-value-id={finding_document.id}
+                  class="btn btn-sm btn-ghost text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-200"
+                >
+                  Remove Link
+                </.button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </.section>
 
       <div
         :if={@finding.source_discovery_record}
@@ -898,8 +1052,61 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         </div>
       </.section>
 
+      <.section
+        title="Review History"
+        description="Why operators advanced, rejected, suppressed, parked, reopened, or promoted this finding."
+      >
+        <div :if={Enum.empty?(@review_decisions)}>
+          <.empty_state
+            icon="hero-chat-bubble-left-right"
+            title="No review history yet"
+            description="Decision history will appear here as the finding moves through intake review."
+          />
+        </div>
+
+        <div :if={!Enum.empty?(@review_decisions)} class="space-y-3">
+          <div
+            :for={decision <- @review_decisions}
+            class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <.tag color={decision_tag_color(decision.decision)}>
+                    {format_review_decision(decision.decision)}
+                  </.tag>
+                  <span class="text-xs text-zinc-400 dark:text-zinc-500">
+                    {format_datetime(decision.recorded_at || decision.inserted_at)}
+                  </span>
+                </div>
+                <p :if={decision.reason} class="text-sm text-zinc-700 dark:text-zinc-200">
+                  {decision.reason}
+                </p>
+                <div class="flex flex-wrap gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span :if={decision.reason_code}>
+                    Code: {format_feedback_scope(decision.reason_code)}
+                  </span>
+                  <span :if={decision.feedback_scope}>
+                    Scope: {format_feedback_scope(decision.feedback_scope)}
+                  </span>
+                  <span :if={decision.exclude_terms != []}>
+                    Terms: {Enum.join(decision.exclude_terms, ", ")}
+                  </span>
+                  <span :if={decision.metadata["research"]}>
+                    Research: {decision.metadata["research"]}
+                  </span>
+                </div>
+              </div>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                {review_actor_name(decision)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </.section>
+
       <dialog
-        :if={@action_dialog && @action_dialog.type in [:reject, :suppress]}
+        :if={@action_dialog && @action_dialog.type in [:accept, :reject, :suppress]}
         id="finding-show-review-dialog"
         class="modal"
         phx-hook="ShowModal"
@@ -913,6 +1120,16 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           >
             <div class="space-y-3">
               <.input
+                :if={@action_dialog.type == :accept}
+                name="reason"
+                value=""
+                label="Why are we accepting this finding?"
+                type="textarea"
+                placeholder="Explain why this intake is worth keeping and refining."
+                required
+              />
+              <.input
+                :if={@action_dialog.type in [:reject, :suppress]}
                 name="reason_code"
                 value={dialog_default_reason_code(@action_dialog)}
                 label="Disposition code"
@@ -921,6 +1138,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                 options={dialog_reason_options(@action_dialog)}
               />
               <.input
+                :if={@action_dialog.type in [:reject, :suppress]}
                 name="reason"
                 value=""
                 label="Operator note (optional)"
@@ -928,6 +1146,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                 placeholder="Add specific context for this intake decision"
               />
               <.input
+                :if={@action_dialog.type in [:reject, :suppress]}
                 name="feedback_scope"
                 value={dialog_default_feedback_scope(@action_dialog)}
                 label="Teach the search/profile (optional)"
@@ -936,6 +1155,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                 options={dialog_feedback_scope_options(@action_dialog)}
               />
               <.input
+                :if={@action_dialog.type in [:reject, :suppress]}
                 name="exclude_terms"
                 value={@action_dialog.suggested_terms}
                 label="Keywords to suppress next time"
@@ -1033,12 +1253,45 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     """
   end
 
+  defp prep_action_path(%{
+         status: status,
+         signal_id: nil,
+         finding_family: :procurement,
+         id: id
+       })
+       when status in [:reviewing, :accepted],
+       do: "/acquisition/findings/#{id}/documents/new"
+
+  defp prep_action_path(%{
+         status: status,
+         signal_id: nil,
+         finding_family: :discovery,
+         id: id
+       })
+       when status in [:reviewing, :accepted],
+       do: "/acquisition/findings/#{id}/evidence/new"
+
+  defp prep_action_path(_finding), do: nil
+
+  defp prep_action_label(%{finding_family: :procurement}), do: "Add Document"
+  defp prep_action_label(%{finding_family: :discovery}), do: "Add Evidence"
+  defp prep_action_label(_finding), do: "Add Prep"
+
+  defp substantive_procurement_document?(%{document: %{document_type: document_type}}),
+    do: PromotionRules.substantive_procurement_document_type?(document_type)
+
+  defp substantive_procurement_document?(_finding_document), do: false
+
   defp load_finding!(id, actor) do
     Acquisition.get_finding!(
       id,
       actor: actor,
       load: [
         :status_variant,
+        :acceptance_ready,
+        :acceptance_blockers,
+        :promotion_ready,
+        :promotion_blockers,
         :source,
         :program,
         :agent_run,
@@ -1060,6 +1313,15 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     )
   end
 
+  defp format_error(%{errors: [error | _]}) do
+    Exception.message(error)
+  rescue
+    _ -> inspect(error)
+  end
+
+  defp format_error(error) when is_binary(error), do: error
+  defp format_error(error), do: inspect(error)
+
   defp confidence_badge(:high), do: "badge badge-success badge-sm"
   defp confidence_badge(:medium), do: "badge badge-warning badge-sm"
   defp confidence_badge(:low), do: "badge badge-ghost badge-sm"
@@ -1075,6 +1337,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp assign_finding_context(socket, finding) do
     assign(socket,
       finding: finding,
+      finding_documents: load_finding_documents(finding, socket.assigns.current_user),
+      review_decisions: load_review_decisions(finding, socket.assigns.current_user),
       discovery_identity_review:
         load_discovery_identity_review(finding, socket.assigns.current_user),
       discovery_evidence: load_discovery_evidence(finding, socket.assigns.current_user)
@@ -1104,6 +1368,27 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     end
   end
 
+  defp load_finding_documents(%{id: finding_id}, actor) do
+    case Acquisition.list_finding_documents_for_finding(finding_id, actor: actor) do
+      {:ok, finding_documents} -> finding_documents
+      {:error, error} -> raise "failed to load finding documents: #{inspect(error)}"
+    end
+  end
+
+  defp load_review_decisions(%{id: finding_id}, actor) do
+    opts =
+      [actor: actor]
+      |> maybe_put_load_actor(actor)
+
+    case Acquisition.list_finding_review_decisions_for_finding(finding_id, opts) do
+      {:ok, decisions} -> decisions
+      {:error, error} -> raise "failed to load finding review decisions: #{inspect(error)}"
+    end
+  end
+
+  defp maybe_put_load_actor(opts, nil), do: opts
+  defp maybe_put_load_actor(opts, _actor), do: Keyword.put(opts, :load, [:actor_user])
+
   defp identity_attrs_from_params(params) do
     %{}
     |> maybe_put_identity_attr(:organization_id, Map.get(params, "organization_id"))
@@ -1114,6 +1399,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp maybe_put_identity_attr(attrs, _key, ""), do: attrs
   defp maybe_put_identity_attr(attrs, key, value), do: Map.put(attrs, key, value)
 
+  defp parse_dialog_action("accept"), do: :accept
   defp parse_dialog_action("reject"), do: :reject
   defp parse_dialog_action("suppress"), do: :suppress
   defp parse_dialog_action("park"), do: :park
@@ -1164,17 +1450,23 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   defp show_reopen?(_finding), do: false
 
+  defp dialog_heading(%{type: :accept}), do: "Accept this finding?"
   defp dialog_heading(%{type: :reject}), do: "Reject this finding?"
   defp dialog_heading(%{type: :suppress}), do: "Suppress this finding?"
 
+  defp dialog_submit_label(%{type: :accept}), do: "Confirm Accept"
   defp dialog_submit_label(%{type: :reject}), do: "Confirm Reject"
   defp dialog_submit_label(%{type: :suppress}), do: "Confirm Suppress"
 
+  defp dialog_reason_prompt(%{type: :accept}), do: nil
   defp dialog_reason_prompt(%{type: :reject}), do: "Select a disposition..."
   defp dialog_reason_prompt(%{type: :suppress}), do: "Select a suppression reason..."
 
+  defp dialog_feedback_prompt(%{type: :accept}), do: nil
   defp dialog_feedback_prompt(%{type: :reject}), do: "Just reject this finding"
   defp dialog_feedback_prompt(%{type: :suppress}), do: "Just suppress this finding"
+
+  defp dialog_default_reason_code(%{type: :accept}), do: nil
 
   defp dialog_default_reason_code(%{type: :suppress, family: family})
        when family in [:procurement, :discovery],
@@ -1185,6 +1477,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp dialog_default_feedback_scope(%{type: :suppress}), do: "source"
   defp dialog_default_feedback_scope(_dialog), do: nil
 
+  defp dialog_reason_options(%{type: :accept}), do: []
+
   defp dialog_reason_options(%{family: :procurement}),
     do: TargetingFeedback.pass_reason_options()
 
@@ -1192,6 +1486,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     do: DiscoveryFeedback.reject_reason_options()
 
   defp dialog_reason_options(_dialog), do: []
+
+  defp dialog_feedback_scope_options(%{type: :accept}), do: []
 
   defp dialog_feedback_scope_options(%{family: family})
        when family in [:procurement, :discovery] do
@@ -1273,6 +1569,28 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   end
 
   defp format_feedback_reason(feedback), do: to_string(feedback)
+
+  defp format_review_decision(decision) do
+    decision
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
+
+  defp decision_tag_color(:accepted), do: :emerald
+  defp decision_tag_color(:promoted), do: :sky
+  defp decision_tag_color(:started_review), do: :zinc
+  defp decision_tag_color(:reopened), do: :sky
+  defp decision_tag_color(:parked), do: :amber
+  defp decision_tag_color(:suppressed), do: :amber
+  defp decision_tag_color(:rejected), do: :rose
+  defp decision_tag_color(_decision), do: :zinc
+
+  defp review_actor_name(%{actor_user: %{full_name: full_name}}) when is_binary(full_name),
+    do: full_name
+
+  defp review_actor_name(%{actor_user: %{email: email}}) when is_binary(email), do: email
+  defp review_actor_name(_decision), do: "System"
 
   defp metadata_value(metadata, key) when is_map(metadata),
     do: Map.get(metadata, key) || Map.get(metadata, to_string(key))

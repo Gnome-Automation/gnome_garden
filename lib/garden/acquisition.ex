@@ -20,6 +20,25 @@ defmodule GnomeGarden.Acquisition do
   end
 
   resources do
+    resource GnomeGarden.Acquisition.DocumentBlob
+    resource GnomeGarden.Acquisition.DocumentAttachment
+
+    resource GnomeGarden.Acquisition.Document do
+      define :list_documents, action: :read
+      define :get_document, action: :read, get_by: [:id]
+      define :create_document, action: :create
+      define :update_document, action: :update
+    end
+
+    resource GnomeGarden.Acquisition.FindingDocument do
+      define :list_finding_documents, action: :read
+      define :list_finding_documents_for_finding, action: :for_finding, args: [:finding_id]
+      define :get_finding_document, action: :read, get_by: [:id]
+      define :create_finding_document, action: :create
+      define :update_finding_document, action: :update
+      define :delete_finding_document, action: :destroy
+    end
+
     resource GnomeGarden.Acquisition.Source do
       define :list_sources, action: :read
       define :list_console_sources, action: :console
@@ -64,13 +83,17 @@ defmodule GnomeGarden.Acquisition do
 
       define :create_finding, action: :create
       define :update_finding, action: :update
-      define :review_finding, action: :start_review
-      define :accept_finding, action: :accept
-      define :reject_finding, action: :reject
-      define :suppress_finding, action: :suppress
-      define :park_finding, action: :park
-      define :reopen_finding, action: :reopen
-      define :promote_finding, action: :promote
+    end
+
+    resource GnomeGarden.Acquisition.FindingReviewDecision do
+      define :list_finding_review_decisions, action: :read
+
+      define :list_finding_review_decisions_for_finding,
+        action: :for_finding,
+        args: [:finding_id]
+
+      define :record_finding_review_decision, action: :record
+      define :get_finding_review_decision, action: :read, get_by: [:id]
     end
   end
 
@@ -222,7 +245,11 @@ defmodule GnomeGarden.Acquisition do
   def start_review_for_finding(finding_or_id, opts \\ []),
     do: Review.start_review(finding_or_id, opts)
 
-  def accept_finding_review(finding_or_id, opts \\ []), do: Review.accept(finding_or_id, opts)
+  def accept_finding_review(finding_or_id, opts) when is_list(opts),
+    do: Review.accept(finding_or_id, %{}, opts)
+
+  def accept_finding_review(finding_or_id, feedback \\ %{}, opts \\ []),
+    do: Review.accept(finding_or_id, feedback, opts)
 
   def reject_finding_review(finding_or_id, feedback \\ %{}, opts \\ []),
     do: Review.reject(finding_or_id, feedback, opts)

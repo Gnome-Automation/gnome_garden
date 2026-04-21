@@ -189,6 +189,51 @@ relationships do
 end
 ```
 
+### AshStorage and Shared Documents
+
+When using `ash_storage`, remember that the extension itself only gives you
+one host resource to one file or one host resource to many files. If the same
+file needs to apply to multiple parent records, or the parent-to-file link has
+its own metadata, model that explicitly in Ash instead of trying to force it
+into the attachment primitive.
+
+- Use a dedicated document/file resource for the reusable file metadata.
+- Put `ash_storage` on the resource that actually owns the blob/attachment
+  behavior.
+- If parent-specific metadata exists, add a join resource for the relationship
+  (for example `FindingDocument`, `ParentRecordDocument`, etc.).
+- Keep relationship-specific fields like `is_primary`, `effective_on`, `notes`,
+  `document_role`, or `required_for_promotion` on the join resource, not on the
+  blob itself.
+- If you need convenience access from parent to shared document, use Ash
+  `through` relationships instead of duplicating file state.
+
+Use the right `through` feature for the job:
+
+- `many_to_many ... through: JoinResource` is the writable pattern for a real
+  many-to-many relationship with join metadata.
+- `has_many` / `has_one ... through: [:join_relationship, :destination]` is a
+  read-only shortcut path for loading/filtering the final related records.
+- Do not confuse these two `through` features. They solve different problems.
+
+Practical `ash_storage` guidance:
+
+- Standard setup is:
+  - one blob resource
+  - one attachment resource
+  - one or more host resources with `has_one_attached` / `has_many_attached`
+- For shared attachments across multiple resource types, the attachment
+  resource can declare multiple `belongs_to_resource` entries.
+- For fully polymorphic attachments, omit `belongs_to_resource` and use the
+  generic attachment pattern.
+- Prefer direct uploads for large files using
+  `AshStorage.Operations.prepare_direct_upload/3` plus
+  `AshStorage.Changes.AttachBlob`.
+- For simpler create/update flows, use `AshStorage.Changes.HandleFileArgument`
+  with `Ash.Type.File`.
+- In tests, switch the resource service to `AshStorage.Service.Test` and reset
+  it between tests.
+
 ### Calculations and Aggregates
 
 ```elixir

@@ -55,7 +55,9 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert render(view) =~ "Anaheim, CA"
     assert render(view) =~ "Open Finding"
     assert has_element?(view, "#finding-start-review-#{bid_finding.id}")
-    assert has_element?(view, "#finding-promote-#{target_finding.id}")
+    assert has_element?(view, "#finding-start-review-#{target_finding.id}")
+    refute has_element?(view, "#finding-accept-#{bid_finding.id}")
+    refute has_element?(view, "#finding-promote-#{target_finding.id}")
   end
 
   test "promoting a procurement finding opens the commercial signal", %{conn: conn} do
@@ -67,6 +69,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
         description: "Historian refresh and reporting work.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
+        due_at: ~U[2026-05-18 17:00:00Z],
         region: :oc,
         score_total: 79,
         score_tier: :hot,
@@ -74,7 +77,22 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       })
 
     {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _document} = create_linked_document!(finding)
     {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
+
+    view
+    |> element("#finding-start-review-#{finding.id}")
+    |> render_click()
+
+    view
+    |> element("#finding-accept-#{finding.id}")
+    |> render_click()
+
+    view
+    |> form("#finding-accept-form", %{
+      "reason" => "Qualified controls retrofit with a concrete deadline."
+    })
+    |> render_submit()
 
     view
     |> element("#finding-promote-#{finding.id}")
@@ -82,6 +100,80 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
 
     {:ok, refreshed_bid} = Procurement.get_bid(bid.id)
     assert refreshed_bid.signal_id
+  end
+
+  test "accepted procurement findings surface a document upload path when promotion is blocked",
+       %{conn: conn} do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Document Gate Retrofit",
+        url: "https://example.com/bids/document-gate-retrofit-acquisition",
+        external_id: "DOCUMENT-GATE-ACQ",
+        description: "Controls retrofit that needs a durable intake packet.",
+        agency: "Regional Utility",
+        location: "Anaheim, CA",
+        due_at: ~U[2026-05-22 17:00:00Z],
+        region: :oc,
+        score_total: 81,
+        score_tier: :hot,
+        score_recommendation: "Promote once packet is attached"
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
+
+    view
+    |> element("#finding-start-review-#{finding.id}")
+    |> render_click()
+
+    view
+    |> element("#finding-accept-#{finding.id}")
+    |> render_click()
+
+    view
+    |> form("#finding-accept-form", %{
+      "reason" => "Qualified controls scope with a real deadline."
+    })
+    |> render_submit()
+
+    assert has_element?(view, "#finding-prep-#{finding.id}")
+
+    assert render(view) =~
+             "Attach a substantive procurement packet (solicitation, scope, pricing, or addendum) before promotion."
+
+    refute has_element?(view, "#finding-promote-#{finding.id}")
+  end
+
+  test "reviewing discovery findings show acceptance blockers until evidence exists", %{
+    conn: conn
+  } do
+    {:ok, program} =
+      Commercial.create_discovery_program(%{
+        name: "Discovery Gate Program",
+        target_regions: ["oc"],
+        target_industries: ["food_bev"]
+      })
+
+    {:ok, discovery_record} =
+      Acquisition.create_discovery_record(%{
+        discovery_program_id: program.id,
+        name: "Discovery Gate Foods",
+        website: "https://discovery-gate-foods.example.com",
+        fit_score: 77,
+        intent_score: 83,
+        notes: "Needs evidence before promotion."
+      })
+
+    {:ok, finding} =
+      Acquisition.get_finding_by_external_ref("discovery_record:#{discovery_record.id}")
+
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
+
+    refute has_element?(view, "#finding-accept-#{finding.id}")
+    refute has_element?(view, "#finding-promote-#{finding.id}")
+    assert render(view) =~ "Add at least one piece of discovery evidence before accepting."
   end
 
   test "suppressing a procurement finding removes noisy intake from the review queue", %{
@@ -105,6 +197,10 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
 
     view
+    |> element("#finding-start-review-#{finding.id}")
+    |> render_click()
+
+    view
     |> element("#finding-suppress-#{finding.id}")
     |> render_click()
 
@@ -120,6 +216,9 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     {:ok, suppressed_finding} = Acquisition.get_finding(finding.id)
     assert suppressed_finding.status == :suppressed
     refute has_element?(view, "#finding-suppress-#{finding.id}")
+
+    {:ok, suppressed_view, _html} = live(conn, ~p"/acquisition/findings?queue=suppressed")
+    assert render(suppressed_view) =~ "Noisy procurement intake"
   end
 
   test "parking and reopening a discovery finding keeps discovery watch items in acquisition", %{
@@ -145,6 +244,10 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       Acquisition.get_finding_by_external_ref("discovery_record:#{discovery_record.id}")
 
     {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
+
+    view
+    |> element("#finding-start-review-#{finding.id}")
+    |> render_click()
 
     view
     |> element("#finding-park-#{finding.id}")
@@ -315,6 +418,13 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
     {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
 
+    assert has_element?(view, "#finding-show-start-review")
+    refute has_element?(view, "#finding-show-reject")
+
+    view
+    |> element("#finding-show-start-review")
+    |> render_click()
+
     assert has_element?(view, "#finding-show-reject")
 
     view
@@ -334,5 +444,38 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
 
     {:ok, suppressed_finding} = Acquisition.get_finding(finding.id)
     assert suppressed_finding.status == :suppressed
+    assert render(view) =~ "Review History"
+    assert render(view) =~ "Administrative software noise"
+  end
+
+  defp create_linked_document!(finding) do
+    upload = document_upload_fixture()
+
+    Acquisition.create_document(%{
+      title: "Bid packet",
+      summary: "Durable procurement packet linked from the acquisition queue.",
+      document_type: :solicitation,
+      source_url: finding.source_url,
+      file: upload,
+      finding_documents: [
+        %{
+          finding_id: finding.id,
+          document_role: :solicitation,
+          notes: "Ready for commercial handoff."
+        }
+      ]
+    })
+  end
+
+  defp document_upload_fixture do
+    path = Path.join(System.tmp_dir!(), "#{Ecto.UUID.generate()}-bid-packet.pdf")
+    File.write!(path, "bid packet")
+    on_exit(fn -> File.rm(path) end)
+
+    %Plug.Upload{
+      path: path,
+      filename: "bid-packet.pdf",
+      content_type: "application/pdf"
+    }
   end
 end

@@ -37,4 +37,25 @@ defmodule GnomeGardenWeb.AcquisitionProgramLiveTest do
     assert render(view) =~ "1"
     refute render(view) =~ "Legacy Discovery Programs"
   end
+
+  test "program registry hides launch when a program is not runnable", %{conn: conn} do
+    {:ok, program} =
+      Commercial.create_discovery_program(%{
+        name: "Paused Program",
+        target_regions: ["oc"],
+        target_industries: ["food_bev"]
+      })
+
+    {:ok, active_program} = Commercial.activate_discovery_program(program)
+
+    {:ok, acquisition_program} =
+      Acquisition.get_program_by_external_ref("discovery_program:#{active_program.id}")
+
+    {:ok, _program} = Acquisition.update_program(acquisition_program, %{status: :paused})
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/programs")
+
+    refute has_element?(view, "#launch-program-#{acquisition_program.id}")
+    assert render(view) =~ "Paused"
+  end
 end

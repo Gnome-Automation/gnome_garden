@@ -44,7 +44,7 @@ defmodule GnomeGardenWeb.PageControllerTest do
     assert response =~ maintenance_plan.name
   end
 
-  test "GET / surfaces active acquisition programs", %{conn: conn} do
+  test "GET / surfaces runnable acquisition programs", %{conn: conn} do
     {:ok, discovery_program} =
       Commercial.create_discovery_program(%{
         name: "Due Discovery #{System.unique_integer([:positive])}",
@@ -58,7 +58,7 @@ defmodule GnomeGardenWeb.PageControllerTest do
     conn = get(conn, ~p"/")
     response = html_response(conn, 200)
 
-    assert response =~ "Programs"
+    assert response =~ "Runnable Programs"
     assert response =~ discovery_program.name
   end
 
@@ -94,7 +94,7 @@ defmodule GnomeGardenWeb.PageControllerTest do
     response = html_response(conn, 200)
 
     assert response =~ "Runnable Sources"
-    assert response =~ "Active Programs"
+    assert response =~ "Runnable Programs"
     assert response =~ "Acquisition Flow"
     assert response =~ source.name
     assert response =~ discovery_program.name

@@ -18,7 +18,16 @@ defmodule GnomeGarden.Acquisition.Projector do
     :finding_family,
     :finding_type,
     :status,
+    :due_at,
+    :due_note,
+    :location,
+    :location_note,
+    :work_summary,
+    :work_type,
+    :work_note,
     :fit_score,
+    :score_tier,
+    :score_note,
     :intent_score,
     :confidence,
     :recommendation,
@@ -204,8 +213,10 @@ defmodule GnomeGarden.Acquisition.Projector do
       |> procurement_source_for_bid(actor)
       |> maybe_ensure_source(actor)
 
+    existing_finding = existing_finding_for_bid(bid.id, actor)
+
     Acquisition.create_finding(
-      bid_finding_attrs(bid, source_id),
+      bid_finding_attrs(bid, source_id, existing_finding),
       actor: actor,
       upsert?: true,
       upsert_identity: :unique_external_ref,
@@ -255,8 +266,10 @@ defmodule GnomeGarden.Acquisition.Projector do
       |> discovery_program_for_discovery_record(actor)
       |> maybe_ensure_program(actor)
 
+    existing_finding = existing_finding_for_discovery_record(discovery_record.id, actor)
+
     Acquisition.create_finding(
-      discovery_record_finding_attrs(discovery_record, program_id),
+      discovery_record_finding_attrs(discovery_record, program_id, existing_finding),
       actor: actor,
       upsert?: true,
       upsert_identity: :unique_source_discovery_record,
@@ -327,7 +340,8 @@ defmodule GnomeGarden.Acquisition.Projector do
           target_regions: discovery_program.target_regions,
           target_industries: discovery_program.target_industries,
           search_terms: discovery_program.search_terms,
-          watch_channels: discovery_program.watch_channels
+          watch_channels: discovery_program.watch_channels,
+          cadence_hours: discovery_program.cadence_hours
         },
         metadata: %{
           legacy_status: discovery_program.status,
@@ -355,7 +369,7 @@ defmodule GnomeGarden.Acquisition.Projector do
     end
   end
 
-  defp bid_finding_attrs(%Bid{} = bid, source_id) do
+  defp bid_finding_attrs(%Bid{} = bid, source_id, existing_finding) do
     %{
       external_ref: "procurement_bid:#{bid.id}",
       title: bid.title,
@@ -363,8 +377,17 @@ defmodule GnomeGarden.Acquisition.Projector do
       source_url: bid.url,
       finding_family: :procurement,
       finding_type: :bid_notice,
-      status: bid_finding_status(bid),
+      status: preserved_acquisition_status(bid_finding_status(bid), existing_finding),
+      due_at: bid.due_at,
+      due_note: bid_due_note(bid),
+      location: bid.location,
+      location_note: humanize_optional_token(bid.region),
+      work_summary: bid_work_summary(bid),
+      work_type: humanize_optional_token(bid.bid_type) || "Bid notice",
+      work_note: bid.agency || first_watchout(bid.score_risk_flags),
       fit_score: bid.score_total,
+      score_tier: bid.score_tier || derive_score_tier(bid.score_total),
+      score_note: procurement_score_note(bid),
       intent_score: nil,
       confidence: bid_confidence(bid.score_source_confidence),
       recommendation: bid.score_recommendation,
@@ -401,7 +424,11 @@ defmodule GnomeGarden.Acquisition.Projector do
     }
   end
 
-  defp discovery_record_finding_attrs(%DiscoveryRecord{} = discovery_record, program_id) do
+  defp discovery_record_finding_attrs(
+         %DiscoveryRecord{} = discovery_record,
+         program_id,
+         existing_finding
+       ) do
     market_focus = metadata_value(discovery_record.metadata, "market_focus")
 
     %{
@@ -411,8 +438,21 @@ defmodule GnomeGarden.Acquisition.Projector do
       source_url: discovery_record.website,
       finding_family: :discovery,
       finding_type: discovery_finding_type(discovery_record),
-      status: discovery_record_finding_status(discovery_record),
+      status:
+        preserved_acquisition_status(
+          discovery_record_finding_status(discovery_record),
+          existing_finding
+        ),
+      due_at: nil,
+      due_note: nil,
+      location: discovery_record.location,
+      location_note: blank_to_nil(discovery_record.region),
+      work_summary: discovery_work_summary(discovery_record),
+      work_type: humanize_optional_token(discovery_record.size_bucket),
+      work_note: nil,
       fit_score: discovery_record.fit_score,
+      score_tier: derive_score_tier(discovery_record.fit_score),
+      score_note: discovery_score_note(discovery_record),
       intent_score: discovery_record.intent_score,
       confidence: discovery_record_confidence(discovery_record),
       recommendation: discovery_recommendation(discovery_record),
@@ -467,6 +507,12 @@ defmodule GnomeGarden.Acquisition.Projector do
   defp acquisition_program_status(:active), do: :active
   defp acquisition_program_status(:archived), do: :archived
   defp acquisition_program_status(_), do: :paused
+
+  defp preserved_acquisition_status(projected_status, %{status: :accepted})
+       when projected_status in [:new, :reviewing],
+       do: :accepted
+
+  defp preserved_acquisition_status(projected_status, _existing_finding), do: projected_status
 
   defp bid_finding_status(%{signal_id: signal_id}) when is_binary(signal_id), do: :promoted
   defp bid_finding_status(%{status: :reviewing}), do: :reviewing
@@ -568,6 +614,44 @@ defmodule GnomeGarden.Acquisition.Projector do
 
   defp discovery_recommendation(_discovery_record), do: "Reject and teach"
 
+  defp bid_due_note(%{due_at: %DateTime{}}), do: "Procurement deadline"
+  defp bid_due_note(_bid), do: nil
+
+  defp bid_work_summary(%{score_icp_matches: [match | _]}) when is_binary(match),
+    do: humanize_token(match)
+
+  defp bid_work_summary(_bid), do: "Bid notice"
+
+  defp procurement_score_note(%{score_source_confidence: confidence})
+       when confidence in [:direct, :aggregated, :unknown] do
+    confidence
+    |> Atom.to_string()
+    |> String.capitalize()
+    |> Kernel.<>(" confidence")
+  end
+
+  defp procurement_score_note(_bid), do: nil
+
+  defp discovery_work_summary(%{industry: industry}) when is_binary(industry) and industry != "",
+    do: industry
+
+  defp discovery_work_summary(discovery_record) do
+    discovery_record
+    |> discovery_finding_type()
+    |> Atom.to_string()
+    |> humanize_token()
+  end
+
+  defp discovery_score_note(%{intent_score: intent_score}) when is_integer(intent_score),
+    do: "Intent #{intent_score}"
+
+  defp discovery_score_note(_discovery_record), do: nil
+
+  defp derive_score_tier(score) when is_integer(score) and score >= 75, do: :hot
+  defp derive_score_tier(score) when is_integer(score) and score >= 50, do: :warm
+  defp derive_score_tier(score) when is_integer(score), do: :prospect
+  defp derive_score_tier(_score), do: nil
+
   defp procurement_source_for_bid(%{procurement_source: %ProcurementSource{} = source}, _actor),
     do: source
 
@@ -655,8 +739,44 @@ defmodule GnomeGarden.Acquisition.Projector do
     |> Kernel.==("not_ready_yet")
   end
 
+  defp existing_finding_for_bid(bid_id, actor) do
+    case Acquisition.get_finding_by_source_bid(bid_id, actor: actor) do
+      {:ok, finding} -> finding
+      _ -> nil
+    end
+  end
+
+  defp existing_finding_for_discovery_record(discovery_record_id, actor) do
+    case Acquisition.get_finding_by_source_discovery_record(discovery_record_id, actor: actor) do
+      {:ok, finding} -> finding
+      _ -> nil
+    end
+  end
+
   defp loaded_value(%Ash.NotLoaded{}), do: nil
   defp loaded_value(value), do: value
+
+  defp blank_to_nil(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  defp blank_to_nil(value), do: value
+
+  defp first_watchout([watchout | _]) when is_binary(watchout), do: "Watchout: #{watchout}"
+  defp first_watchout(_watchouts), do: nil
+
+  defp humanize_optional_token(nil), do: nil
+  defp humanize_optional_token(value), do: value |> to_string() |> humanize_token()
+
+  defp humanize_token(value) when is_binary(value) do
+    value
+    |> String.replace("_", " ")
+    |> String.split()
+    |> Enum.map_join(" ", &String.capitalize/1)
+  end
 
   defp metadata_value(nil, _key), do: nil
 

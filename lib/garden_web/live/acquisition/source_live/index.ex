@@ -1,7 +1,7 @@
 defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   use GnomeGardenWeb, :live_view
 
-  import GnomeGardenWeb.Commercial.Helpers, only: [format_datetime: 1]
+  import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Procurement
@@ -12,7 +12,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
      socket
      |> assign(:page_title, "Acquisition Sources")
      |> assign(:sources_empty?, true)
-     |> assign(:source_counts, %{total: 0, active: 0, blocked: 0, runnable: 0})
+     |> assign(:source_counts, %{total: 0, healthy: 0, attention: 0, runnable: 0})
      |> stream(:sources, [], reset: true)
      |> refresh_sources()}
   end
@@ -67,16 +67,16 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           icon="hero-globe-alt"
         />
         <.stat_card
-          title="Active"
-          value={Integer.to_string(@source_counts.active)}
-          description="Sources currently enabled for work-finding."
+          title="Healthy"
+          value={Integer.to_string(@source_counts.healthy)}
+          description="Sources running cleanly or already in flight."
           icon="hero-play-circle"
           accent="emerald"
         />
         <.stat_card
-          title="Blocked"
-          value={Integer.to_string(@source_counts.blocked)}
-          description="Sources that need repair before they should run again."
+          title="Attention"
+          value={Integer.to_string(@source_counts.attention)}
+          description="Sources that are stale, failing, noisy, or blocked."
           icon="hero-shield-exclamation"
           accent="rose"
         />
@@ -158,11 +158,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                 <td class="px-5 py-4 align-top">
                   <div class="space-y-2">
                     <.status_badge status={source.status_variant}>
-                      {source.status |> to_string() |> String.capitalize()}
+                      {format_atom(source.status)}
                     </.status_badge>
-                    <.status_badge :if={source.last_run_state} status={source.last_run_state_variant}>
-                      {source.last_run_state |> to_string() |> String.capitalize()}
+                    <.status_badge status={source.health_variant}>
+                      {format_atom(source.health_status)}
                     </.status_badge>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                      {source.health_note}
+                    </p>
                     <p class="text-xs text-zinc-500 dark:text-zinc-400">
                       Last run {format_datetime(source.last_run_at)}
                     </p>
@@ -190,9 +193,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                       Open Queue
                     </.link>
                     <.button
-                      :if={
-                        is_binary(source.legacy_procurement_source_id) and source.status != :blocked
-                      }
+                      :if={source.runnable}
                       id={"launch-source-#{source.id}"}
                       phx-click="launch_run"
                       phx-value-id={source.id}
@@ -231,14 +232,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp source_counts(sources) do
     %{
       total: length(sources),
-      active: Enum.count(sources, &(&1.status == :active)),
-      blocked: Enum.count(sources, &(&1.status == :blocked)),
-      runnable:
+      healthy: Enum.count(sources, &(&1.health_status in [:healthy, :running])),
+      attention:
         Enum.count(
           sources,
-          &(is_binary(&1.legacy_procurement_source_id) and &1.status in [:active, :candidate] and
-              &1.enabled)
-        )
+          &(&1.health_status in [:blocked, :failing, :stale, :noisy, :cancelled])
+        ),
+      runnable: Enum.count(sources, & &1.runnable)
     }
   end
 end

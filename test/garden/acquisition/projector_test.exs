@@ -58,4 +58,38 @@ defmodule GnomeGarden.Acquisition.ProjectorTest do
     assert {:ok, [_ | _]} = Acquisition.list_console_programs()
     assert {:ok, [_ | _]} = Acquisition.list_review_findings()
   end
+
+  test "discovery record projection snapshots queue-facing fields on finding" do
+    {:ok, program} =
+      Commercial.create_discovery_program(%{
+        name: "Packaging Watch",
+        target_regions: ["oc"],
+        target_industries: ["packaging"]
+      })
+
+    {:ok, discovery_record} =
+      Acquisition.create_discovery_record(%{
+        discovery_program_id: program.id,
+        name: "North Coast Packaging",
+        website: "https://northcoastpackaging.example.com",
+        location: "Irvine, CA",
+        region: "Orange County",
+        industry: "Packaging",
+        size_bucket: :medium,
+        fit_score: 78,
+        intent_score: 83
+      })
+
+    assert {:ok, finding} =
+             Acquisition.get_finding_by_external_ref("discovery_record:#{discovery_record.id}")
+
+    assert finding.due_at == nil
+    assert finding.location == "Irvine, CA"
+    assert finding.location_note == "Orange County"
+    assert finding.work_summary == "Packaging"
+    assert finding.work_type == "Medium"
+    assert finding.work_note == nil
+    assert finding.score_tier == :hot
+    assert finding.score_note == "Intent 83"
+  end
 end

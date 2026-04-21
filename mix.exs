@@ -74,6 +74,8 @@ defmodule GnomeGarden.MixProject do
       {:ash_ai, "~> 0.5"},
       {:tidewave, "~> 0.5", only: [:dev]},
       {:live_debugger, "~> 0.7", only: [:dev]},
+      {:ash_storage, github: "ash-project/ash_storage", branch: "main"},
+      {:req_s3, "~> 0.2"},
       {:ash_state_machine, "~> 0.2"},
       {:oban_web, "~> 2.0"},
       {:ash_oban, "~> 0.7"},

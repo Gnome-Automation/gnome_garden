@@ -32,8 +32,8 @@ defmodule GnomeGardenWeb.PageController do
       current_path: conn.request_path,
       runnable_source_count: runnable_source_count(acquisition_sources),
       runnable_sources: acquisition_sources |> runnable_sources() |> Enum.take(5),
-      active_acquisition_program_count: active_program_count(acquisition_programs),
-      active_acquisition_programs: acquisition_programs |> active_programs() |> Enum.take(5),
+      runnable_program_count: runnable_program_count(acquisition_programs),
+      runnable_programs: acquisition_programs |> runnable_programs() |> Enum.take(5),
       review_finding_count: length(review_findings),
       review_findings: Enum.take(review_findings, 5),
       open_signal_count: length(queued_signals),
@@ -63,13 +63,15 @@ defmodule GnomeGardenWeb.PageController do
         actor: actor,
         load: [
           :organization,
+          :runnable,
+          :health_status,
+          :health_variant,
+          :health_note,
           :status_variant,
           :review_finding_count,
           :promoted_finding_count,
           :noise_finding_count,
-          :latest_run_id,
-          :last_run_state,
-          :last_run_state_variant
+          :latest_run_id
         ]
       )
     end)
@@ -80,13 +82,15 @@ defmodule GnomeGardenWeb.PageController do
       Acquisition.list_console_programs(
         actor: actor,
         load: [
+          :runnable,
+          :health_status,
+          :health_variant,
+          :health_note,
           :status_variant,
           :review_finding_count,
           :promoted_finding_count,
           :noise_finding_count,
-          :latest_run_id,
-          :last_run_state,
-          :last_run_state_variant
+          :latest_run_id
         ]
       )
     end)
@@ -206,18 +210,11 @@ defmodule GnomeGardenWeb.PageController do
 
   defp runnable_source_count(sources), do: sources |> runnable_sources() |> length()
 
-  defp runnable_sources(sources) do
-    Enum.filter(sources, fn source ->
-      is_binary(source.legacy_procurement_source_id) and source.status in [:active, :candidate] and
-        source.enabled
-    end)
-  end
+  defp runnable_sources(sources), do: Enum.filter(sources, & &1.runnable)
 
-  defp active_program_count(programs), do: programs |> active_programs() |> length()
+  defp runnable_program_count(programs), do: programs |> runnable_programs() |> length()
 
-  defp active_programs(programs) do
-    Enum.filter(programs, &(&1.status == :active))
-  end
+  defp runnable_programs(programs), do: Enum.filter(programs, & &1.runnable)
 
   defp safe_list(fun) do
     case fun.() do

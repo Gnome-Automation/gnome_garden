@@ -20,7 +20,11 @@ defmodule GnomeGarden.Acquisition.Finding do
       :finding_family,
       :finding_type,
       :status,
+      :due_at,
+      :location,
+      :work_summary,
       :fit_score,
+      :score_tier,
       :intent_score,
       :confidence
     ]
@@ -55,16 +59,16 @@ defmodule GnomeGarden.Acquisition.Finding do
 
     transitions do
       transition :start_review, from: [:new], to: :reviewing
-      transition :accept, from: [:new, :reviewing, :parked], to: :accepted
-      transition :reject, from: [:new, :reviewing, :accepted, :parked], to: :rejected
+      transition :accept, from: [:reviewing], to: :accepted
+      transition :reject, from: [:reviewing, :accepted, :parked], to: :rejected
 
       transition :suppress,
-        from: [:new, :reviewing, :accepted, :parked, :rejected],
+        from: [:reviewing, :accepted, :parked, :rejected],
         to: :suppressed
 
-      transition :park, from: [:new, :reviewing, :accepted, :rejected], to: :parked
+      transition :park, from: [:reviewing, :accepted, :rejected], to: :parked
       transition :reopen, from: [:rejected, :suppressed, :parked], to: :new
-      transition :promote, from: [:accepted, :reviewing, :new], to: :promoted
+      transition :promote, from: [:accepted], to: :promoted
     end
   end
 
@@ -82,7 +86,16 @@ defmodule GnomeGarden.Acquisition.Finding do
         :finding_family,
         :finding_type,
         :status,
+        :due_at,
+        :due_note,
+        :location,
+        :location_note,
+        :work_summary,
+        :work_type,
+        :work_note,
         :fit_score,
+        :score_tier,
+        :score_note,
         :intent_score,
         :confidence,
         :recommendation,
@@ -110,7 +123,16 @@ defmodule GnomeGarden.Acquisition.Finding do
         :finding_family,
         :finding_type,
         :status,
+        :due_at,
+        :due_note,
+        :location,
+        :location_note,
+        :work_summary,
+        :work_type,
+        :work_note,
         :fit_score,
+        :score_tier,
+        :score_note,
         :intent_score,
         :confidence,
         :recommendation,
@@ -131,42 +153,53 @@ defmodule GnomeGarden.Acquisition.Finding do
     end
 
     update :start_review do
+      public? false
       accept []
       change transition_state(:reviewing)
       change set_attribute(:reviewed_at, &DateTime.utc_now/0)
     end
 
     update :accept do
+      public? false
+      require_atomic? false
       accept []
+      change {GnomeGarden.Acquisition.Changes.RequireAcceptanceReady, []}
       change transition_state(:accepted)
       change set_attribute(:reviewed_at, &DateTime.utc_now/0)
     end
 
     update :reject do
+      public? false
       accept []
       change transition_state(:rejected)
       change set_attribute(:reviewed_at, &DateTime.utc_now/0)
     end
 
     update :suppress do
+      public? false
       accept []
       change transition_state(:suppressed)
       change set_attribute(:reviewed_at, &DateTime.utc_now/0)
     end
 
     update :park do
+      public? false
       accept []
       change transition_state(:parked)
       change set_attribute(:reviewed_at, &DateTime.utc_now/0)
     end
 
     update :reopen do
+      public? false
       accept []
       change transition_state(:new)
     end
 
     update :promote do
+      public? false
+      require_atomic? false
       accept [:signal_id]
+      change {GnomeGarden.Acquisition.Changes.RequirePromotionReady, []}
       change transition_state(:promoted)
       change set_attribute(:promoted_at, &DateTime.utc_now/0)
       change set_attribute(:reviewed_at, &DateTime.utc_now/0)
@@ -184,12 +217,19 @@ defmodule GnomeGarden.Acquisition.Finding do
                 ],
                 load: [
                   :status_variant,
+                  :score_tier_variant,
+                  :due_status_label,
+                  :acceptance_ready,
+                  :acceptance_blockers,
+                  :latest_review_decision,
+                  :latest_review_reason,
+                  :latest_review_decision_at,
+                  :promotion_ready,
+                  :promotion_blockers,
                   :source,
                   :program,
                   :organization,
-                  :signal,
-                  :source_bid,
-                  :source_discovery_record
+                  :signal
                 ]
               )
     end
@@ -202,11 +242,18 @@ defmodule GnomeGarden.Acquisition.Finding do
                 sort: [observed_at: :desc, inserted_at: :desc],
                 load: [
                   :status_variant,
+                  :score_tier_variant,
+                  :due_status_label,
+                  :acceptance_ready,
+                  :acceptance_blockers,
+                  :latest_review_decision,
+                  :latest_review_reason,
+                  :latest_review_decision_at,
+                  :promotion_ready,
+                  :promotion_blockers,
                   :organization,
                   :signal,
-                  :source,
-                  :source_bid,
-                  :source_discovery_record
+                  :source
                 ]
               )
     end
@@ -218,27 +265,68 @@ defmodule GnomeGarden.Acquisition.Finding do
                 sort: [promoted_at: :desc, reviewed_at: :desc, updated_at: :desc],
                 load: [
                   :status_variant,
+                  :score_tier_variant,
+                  :due_status_label,
+                  :latest_review_decision,
+                  :latest_review_reason,
+                  :latest_review_decision_at,
+                  :promotion_ready,
+                  :promotion_blockers,
                   :signal,
-                  :organization,
-                  :source_bid,
-                  :source_discovery_record
+                  :organization
                 ]
               )
     end
 
     read :rejected do
       filter expr(status == :rejected)
-      prepare build(sort: [updated_at: :desc], load: [:status_variant, :organization])
+
+      prepare build(
+                sort: [updated_at: :desc],
+                load: [
+                  :status_variant,
+                  :score_tier_variant,
+                  :due_status_label,
+                  :latest_review_decision,
+                  :latest_review_reason,
+                  :latest_review_decision_at,
+                  :organization
+                ]
+              )
     end
 
     read :suppressed do
       filter expr(status == :suppressed)
-      prepare build(sort: [updated_at: :desc], load: [:status_variant, :organization])
+
+      prepare build(
+                sort: [updated_at: :desc],
+                load: [
+                  :status_variant,
+                  :score_tier_variant,
+                  :due_status_label,
+                  :latest_review_decision,
+                  :latest_review_reason,
+                  :latest_review_decision_at,
+                  :organization
+                ]
+              )
     end
 
     read :parked do
       filter expr(status == :parked)
-      prepare build(sort: [updated_at: :desc], load: [:status_variant, :organization])
+
+      prepare build(
+                sort: [updated_at: :desc],
+                load: [
+                  :status_variant,
+                  :score_tier_variant,
+                  :due_status_label,
+                  :latest_review_decision,
+                  :latest_review_reason,
+                  :latest_review_decision_at,
+                  :organization
+                ]
+              )
     end
 
     read :by_external_ref do
@@ -340,9 +428,46 @@ defmodule GnomeGarden.Acquisition.Finding do
                   ]
     end
 
+    attribute :due_at, :utc_datetime do
+      public? true
+    end
+
+    attribute :due_note, :string do
+      public? true
+    end
+
+    attribute :location, :string do
+      public? true
+    end
+
+    attribute :location_note, :string do
+      public? true
+    end
+
+    attribute :work_summary, :string do
+      public? true
+    end
+
+    attribute :work_type, :string do
+      public? true
+    end
+
+    attribute :work_note, :string do
+      public? true
+    end
+
     attribute :fit_score, :integer do
       public? true
       constraints min: 0, max: 100
+    end
+
+    attribute :score_tier, :atom do
+      public? true
+      constraints one_of: [:hot, :warm, :prospect]
+    end
+
+    attribute :score_note, :string do
+      public? true
     end
 
     attribute :intent_score, :integer do
@@ -423,6 +548,23 @@ defmodule GnomeGarden.Acquisition.Finding do
       source_attribute :source_discovery_record_id
       public? true
     end
+
+    has_many :review_decisions, GnomeGarden.Acquisition.FindingReviewDecision do
+      destination_attribute :finding_id
+      public? true
+    end
+
+    has_many :finding_documents, GnomeGarden.Acquisition.FindingDocument do
+      destination_attribute :finding_id
+      public? true
+    end
+
+    many_to_many :documents, GnomeGarden.Acquisition.Document do
+      through GnomeGarden.Acquisition.FindingDocument
+      source_attribute_on_join_resource :finding_id
+      destination_attribute_on_join_resource :document_id
+      public? true
+    end
   end
 
   calculations do
@@ -440,6 +582,75 @@ defmodule GnomeGarden.Acquisition.Finding do
                  promoted: :success
                ],
                default: :default}
+
+    calculate :score_tier_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :score_tier,
+               mapping: [
+                 hot: :error,
+                 warm: :warning,
+                 prospect: :info
+               ],
+               default: :default}
+
+    calculate :due_status_label,
+              :string,
+              expr(
+                cond do
+                  is_nil(due_at) -> nil
+                  due_at < ^DateTime.utc_now() -> "Past due"
+                  not is_nil(due_note) -> due_note
+                  true -> "Upcoming"
+                end
+              )
+
+    calculate :acceptance_ready,
+              :boolean,
+              {GnomeGarden.Calculations.AcquisitionAcceptanceReadiness, return: :ready}
+
+    calculate :acceptance_blockers,
+              {:array, :string},
+              {GnomeGarden.Calculations.AcquisitionAcceptanceReadiness, return: :blockers}
+
+    calculate :promotion_ready,
+              :boolean,
+              {GnomeGarden.Calculations.AcquisitionPromotionReadiness, return: :ready}
+
+    calculate :promotion_blockers,
+              {:array, :string},
+              {GnomeGarden.Calculations.AcquisitionPromotionReadiness, return: :blockers}
+  end
+
+  aggregates do
+    count :review_decision_count, :review_decisions do
+      public? true
+    end
+
+    count :document_count, :finding_documents do
+      public? true
+    end
+
+    count :promotion_document_count, :documents do
+      filter expr(document_type in [:solicitation, :scope, :pricing, :addendum])
+
+      public? true
+    end
+
+    first :latest_review_decision, :review_decisions, :decision do
+      sort recorded_at: :desc
+      public? true
+    end
+
+    first :latest_review_reason, :review_decisions, :reason do
+      sort recorded_at: :desc
+      public? true
+    end
+
+    first :latest_review_decision_at, :review_decisions, :recorded_at do
+      sort recorded_at: :desc
+      public? true
+    end
   end
 
   identities do

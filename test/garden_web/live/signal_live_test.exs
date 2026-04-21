@@ -7,7 +7,9 @@ defmodule GnomeGardenWeb.SignalLiveTest do
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Procurement
 
-  test "signal queue hides raw procurement-created signals until accepted", %{conn: conn} do
+  test "signal queue shows promoted procurement findings without signal pre-acceptance", %{
+    conn: conn
+  } do
     {:ok, bid} =
       Procurement.create_bid(%{
         title: "Anaheim SCADA integration support services",
@@ -21,6 +23,16 @@ defmodule GnomeGardenWeb.SignalLiveTest do
         due_at: ~U[2026-05-10 23:59:00Z]
       })
 
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:ok, _finding} =
+             Acquisition.accept_finding_review(finding.id, %{
+               reason: "Qualified plant-floor controls scope with a real buyer."
+             })
+
+    assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
+
     {:ok, signal} =
       Commercial.create_signal(%{
         title: "Referral from existing controls client",
@@ -32,11 +44,12 @@ defmodule GnomeGardenWeb.SignalLiveTest do
 
     {:ok, view, _html} = live(conn, ~p"/commercial/signals")
 
-    refute render(view) =~ bid.title
+    assert render(view) =~ bid.title
     assert render(view) =~ signal.title
+    assert has_element?(view, ~s(a[href="/acquisition/findings/#{promoted_finding.id}"]))
   end
 
-  test "signal queue shows accepted procurement signals with provenance", %{conn: conn} do
+  test "signal queue shows promoted procurement signals with provenance", %{conn: conn} do
     {:ok, bid} =
       Procurement.create_bid(%{
         title: "OC water district controls modernization",
@@ -55,9 +68,15 @@ defmodule GnomeGardenWeb.SignalLiveTest do
           "WARM (61/100) - controller-facing integration; aggregator source. Recommended next step: open signal if the scope reads clean."
       })
 
-    {:ok, signal} = Commercial.create_signal_from_bid(bid.id)
-    {:ok, _accepted_signal} = Commercial.accept_signal(signal)
-    {:ok, finding} = Acquisition.get_finding_by_signal(signal.id)
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:ok, _finding} =
+             Acquisition.accept_finding_review(finding.id, %{
+               reason: "The procurement scope is clean enough for signal review."
+             })
+
+    assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
 
     {:ok, view, _html} = live(conn, ~p"/commercial/signals")
 
@@ -66,7 +85,7 @@ defmodule GnomeGardenWeb.SignalLiveTest do
     assert render(view) =~ "WARM"
     assert render(view) =~ "Aggregated"
     assert render(view) =~ "Watchout: aggregator source"
-    assert has_element?(view, ~s(a[href="/acquisition/findings/#{finding.id}"]))
+    assert has_element?(view, ~s(a[href="/acquisition/findings/#{promoted_finding.id}"]))
   end
 
   test "signal detail retains procurement scoring context", %{conn: conn} do
@@ -89,8 +108,16 @@ defmodule GnomeGardenWeb.SignalLiveTest do
           "HOT (82/100) - controller-facing integration, core geography; aggregator source. Recommended next step: operator review before promotion."
       })
 
-    {:ok, signal} = Commercial.create_signal_from_bid(bid.id)
-    {:ok, signal} = Commercial.accept_signal(signal)
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:ok, _finding} =
+             Acquisition.accept_finding_review(finding.id, %{
+               reason: "This belongs in commercial review with procurement provenance intact."
+             })
+
+    assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
+    {:ok, signal} = Commercial.get_signal(promoted_finding.signal_id)
 
     {:ok, view, _html} = live(conn, ~p"/commercial/signals/#{signal}")
 

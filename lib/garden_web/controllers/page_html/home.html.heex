@@ -22,9 +22,9 @@
       accent="sky"
     />
     <.stat_card
-      title="Active Programs"
-      value={Integer.to_string(@active_acquisition_program_count)}
-      description="Acquisition programs currently driving procurement, discovery, or future research lanes."
+      title="Runnable Programs"
+      value={Integer.to_string(@runnable_program_count)}
+      description="Acquisition programs that can launch right now."
       icon="hero-bolt"
       accent="amber"
     />
@@ -133,6 +133,9 @@
                 {source.review_finding_count} review · {source.promoted_finding_count} promoted · {source.noise_finding_count} noise
               </p>
               <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                {source.health_note}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
                 Last run {format_datetime(source.last_run_at)}
               </p>
             </div>
@@ -140,8 +143,8 @@
               <.status_badge status={source.status_variant}>
                 {format_atom(source.status)}
               </.status_badge>
-              <.status_badge :if={source.last_run_state} status={source.last_run_state_variant}>
-                {format_atom(source.last_run_state)}
+              <.status_badge status={source.health_variant}>
+                {format_atom(source.health_status)}
               </.status_badge>
             </div>
           </.link>
@@ -152,7 +155,7 @@
             <div>
               <p class="text-sm font-semibold text-zinc-900 dark:text-white">Programs</p>
               <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                Active acquisition programs driving ongoing lead-finding work.
+                Acquisition programs that can launch ongoing lead-finding work right now.
               </p>
             </div>
             <.button navigate={~p"/acquisition/programs"} class="px-2.5 py-1.5 text-xs">
@@ -160,16 +163,16 @@
             </.button>
           </div>
 
-          <div :if={Enum.empty?(@active_acquisition_programs)}>
+          <div :if={Enum.empty?(@runnable_programs)}>
             <.empty_state
               icon="hero-radar"
-              title="No active programs"
-              description="There are no active acquisition programs in rotation right now."
+              title="No runnable programs"
+              description="There are no acquisition programs ready to launch right now."
             />
           </div>
 
           <.link
-            :for={program <- @active_acquisition_programs}
+            :for={program <- @runnable_programs}
             navigate={
               ~p"/acquisition/findings?family=#{program.program_family}&program_id=#{program.id}"
             }
@@ -181,6 +184,9 @@
                 {program.review_finding_count} review · {program.promoted_finding_count} promoted · {program.noise_finding_count} noise
               </p>
               <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                {program.health_note}
+              </p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500">
                 Last run {format_datetime(program.last_run_at)}
               </p>
             </div>
@@ -188,8 +194,8 @@
               <.status_badge status={program.status_variant}>
                 {format_atom(program.status)}
               </.status_badge>
-              <.status_badge :if={program.last_run_state} status={program.last_run_state_variant}>
-                {format_atom(program.last_run_state)}
+              <.status_badge status={program.health_variant}>
+                {format_atom(program.health_status)}
               </.status_badge>
             </div>
           </.link>

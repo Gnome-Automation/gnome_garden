@@ -1,7 +1,7 @@
 defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
   use GnomeGardenWeb, :live_view
 
-  import GnomeGardenWeb.Commercial.Helpers, only: [format_datetime: 1]
+  import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
@@ -12,7 +12,7 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
      socket
      |> assign(:page_title, "Acquisition Programs")
      |> assign(:programs_empty?, true)
-     |> assign(:program_counts, %{total: 0, active: 0, paused: 0, runnable: 0})
+     |> assign(:program_counts, %{total: 0, healthy: 0, attention: 0, runnable: 0})
      |> stream(:programs, [], reset: true)
      |> refresh_programs()}
   end
@@ -65,16 +65,16 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
           icon="hero-radar"
         />
         <.stat_card
-          title="Active"
-          value={Integer.to_string(@program_counts.active)}
-          description="Programs currently intended to produce work."
+          title="Healthy"
+          value={Integer.to_string(@program_counts.healthy)}
+          description="Programs running cleanly or already in flight."
           icon="hero-play-circle"
           accent="emerald"
         />
         <.stat_card
-          title="Paused"
-          value={Integer.to_string(@program_counts.paused)}
-          description="Programs currently held out of rotation."
+          title="Attention"
+          value={Integer.to_string(@program_counts.attention)}
+          description="Programs that are stale, failing, or noisy."
           icon="hero-pause-circle"
           accent="amber"
         />
@@ -158,14 +158,14 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
                 <td class="px-5 py-4 align-top">
                   <div class="space-y-2">
                     <.status_badge status={program.status_variant}>
-                      {program.status |> to_string() |> String.capitalize()}
+                      {format_atom(program.status)}
                     </.status_badge>
-                    <.status_badge
-                      :if={program.last_run_state}
-                      status={program.last_run_state_variant}
-                    >
-                      {program.last_run_state |> to_string() |> String.capitalize()}
+                    <.status_badge status={program.health_variant}>
+                      {format_atom(program.health_status)}
                     </.status_badge>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                      {program.health_note}
+                    </p>
                     <p class="text-xs text-zinc-500 dark:text-zinc-400">
                       Last run {format_datetime(program.last_run_at)}
                     </p>
@@ -190,9 +190,7 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
                       Open Queue
                     </.link>
                     <.button
-                      :if={
-                        is_binary(program.legacy_discovery_program_id) and program.status == :active
-                      }
+                      :if={program.runnable}
                       id={"launch-program-#{program.id}"}
                       phx-click="launch_run"
                       phx-value-id={program.id}
@@ -231,13 +229,13 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
   defp program_counts(programs) do
     %{
       total: length(programs),
-      active: Enum.count(programs, &(&1.status == :active)),
-      paused: Enum.count(programs, &(&1.status == :paused)),
-      runnable:
+      healthy: Enum.count(programs, &(&1.health_status in [:healthy, :running])),
+      attention:
         Enum.count(
           programs,
-          &(is_binary(&1.legacy_discovery_program_id) and &1.status == :active)
-        )
+          &(&1.health_status in [:failing, :stale, :noisy, :cancelled])
+        ),
+      runnable: Enum.count(programs, & &1.runnable)
     }
   end
 end

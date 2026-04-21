@@ -45,4 +45,27 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert render(view) =~ "1"
     refute render(view) =~ "Legacy Procurement Sources"
   end
+
+  test "source registry hides launch when a source is not runnable", %{conn: conn} do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Paused Mechanical Portal",
+        url: "https://example.com/bidnet/paused-mechanical",
+        source_type: :bidnet,
+        portal_id: "paused-mechanical",
+        region: :ca,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
+
+    {:ok, _source} = Acquisition.update_source(acquisition_source, %{enabled: false})
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources")
+
+    refute has_element?(view, "#launch-source-#{acquisition_source.id}")
+    assert render(view) =~ "Disabled"
+  end
 end

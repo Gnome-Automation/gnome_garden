@@ -6,6 +6,8 @@ defmodule GnomeGardenWeb.Router do
 
   import AshAuthentication.Plug.Helpers
 
+  forward "/storage", AshStorage.Plug.DiskServe, root: "priv/storage"
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -38,6 +40,10 @@ defmodule GnomeGardenWeb.Router do
 
       live "/acquisition/findings/:finding_id/evidence/new",
            Acquisition.FindingEvidenceLive.Form,
+           :new
+
+      live "/acquisition/findings/:finding_id/documents/new",
+           Acquisition.FindingDocumentLive.Form,
            :new
 
       live "/acquisition/evidence/:id/edit", Acquisition.FindingEvidenceLive.Form, :edit

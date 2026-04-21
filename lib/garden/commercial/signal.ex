@@ -144,8 +144,6 @@ defmodule GnomeGarden.Commercial.Signal do
     read :review_queue do
       filter expr(status in [:new, :reviewing, :accepted])
 
-      filter expr(signal_type != :bid_notice or status == :accepted)
-
       prepare build(sort: [observed_at: :desc, inserted_at: :desc], load: [:organization, :site])
     end
 
