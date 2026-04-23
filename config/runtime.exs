@@ -28,6 +28,13 @@ end
 config :gnome_garden, GnomeGardenWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Mercury Bank API configuration
+if mercury_api_key = System.get_env("MERCURY_API_KEY") do
+  config :gnome_garden,
+    mercury_api_key: mercury_api_key,
+    mercury_sandbox: System.get_env("MERCURY_SANDBOX", "true") == "true"
+end
+
 # Z.AI (Zhipu AI) API configuration for GLM models
 if zai_api_key = System.get_env("ZAI_API_KEY") do
   config :gnome_garden,
