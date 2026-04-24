@@ -43,4 +43,53 @@ defmodule GnomeGarden.Providers.MercuryTest do
       assert req.options[:mercury_sandbox] == false
     end
   end
+
+  describe "mercury_put_base_url step" do
+    setup do
+      Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
+      on_exit(fn -> Application.delete_env(:gnome_garden, :mercury_api_key) end)
+    end
+
+    test "uses sandbox URL when mercury_sandbox: true" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert conn.host == "backend-sandbox.mercury.com"
+        Req.Test.json(conn, %{"accounts" => [], "page" => %{}})
+      end)
+
+      assert {:ok, _} = Mercury.list_accounts(mercury_sandbox: true, plug: {Req.Test, __MODULE__})
+    end
+
+    test "uses production URL when mercury_sandbox: false" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert conn.host == "api.mercury.com"
+        Req.Test.json(conn, %{"accounts" => [], "page" => %{}})
+      end)
+
+      assert {:ok, _} = Mercury.list_accounts(mercury_sandbox: false, plug: {Req.Test, __MODULE__})
+    end
+
+    test "defaults to sandbox when no option and no app config" do
+      Application.delete_env(:gnome_garden, :mercury_sandbox)
+
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert conn.host == "backend-sandbox.mercury.com"
+        Req.Test.json(conn, %{"accounts" => [], "page" => %{}})
+      end)
+
+      assert {:ok, _} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+    end
+
+    test "reads sandbox flag from app config when not passed as option" do
+      Application.put_env(:gnome_garden, :mercury_sandbox, false)
+
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert conn.host == "api.mercury.com"
+        Req.Test.json(conn, %{"accounts" => [], "page" => %{}})
+      end)
+
+      assert {:ok, _} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+
+      Application.delete_env(:gnome_garden, :mercury_sandbox)
+    end
+  end
 end
