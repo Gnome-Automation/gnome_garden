@@ -35,7 +35,7 @@ defmodule GnomeGarden.Providers.Mercury do
   """
 
   @production_url "https://api.mercury.com/api/v1"
-  @sandbox_url "https://sandbox.mercury.com/api/v1"
+  @sandbox_url "https://backend-sandbox.mercury.com/api/v1"
 
   # ---------------------------------------------------------------------------
   # Accounts
