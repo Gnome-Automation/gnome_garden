@@ -66,8 +66,10 @@ with other plugins.
    - Production: `https://api.mercury.com/api/v1`
 4. Sets it via `Req.merge(request, base_url: url)`
 
-Req's built-in `put_base_url` step then merges this with path-only URLs like
-`"/accounts"` before the request fires.
+Req's built-in `put_base_url` step (included in every `Req.new()` pipeline by
+default) then merges this with path-only URLs like `"/accounts"` before the
+request fires. This step depends on the client being created via `Req.new()` —
+direct `%Req.Request{}` construction without `Req.new()` would skip `put_base_url`.
 
 ### Request Step: `mercury_put_auth`
 
@@ -81,18 +83,42 @@ This step runs after `mercury_put_base_url`.
 
 ### Response Step: `mercury_handle_errors`
 
-Runs after every response. Pattern-matches on HTTP status:
+Runs after every response. Pattern-matches on HTTP status and returns
+`{request, response}` with a modified body — the required Req response step
+return shape.
 
-| Status | Result |
-|--------|--------|
-| 200–299 | Pass through untouched |
-| 401 | Tag body as `{:error, :unauthorized}` |
-| 404 | Tag body as `{:error, :not_found}` |
-| 429 | Tag body as `{:error, :rate_limited}` |
-| other 4xx/5xx | Tag body as `{:error, {status, message}}` where `message` is extracted from Mercury's `{"errors": {"message": "..."}}` JSON shape |
+| Status | Body set to |
+|--------|-------------|
+| 200–299 | Untouched (pass through) |
+| 401 | `{:error, :unauthorized}` |
+| 404 | `{:error, :not_found}` |
+| 429 | `{:error, :rate_limited}` |
+| other 4xx/5xx | `{:error, {status, message}}` where `message` is extracted from Mercury's `{"errors": {"message": "..."}}` JSON shape |
+
+Req's built-in `decode_body` step (included in `Req.new()` by default) auto-decodes
+`application/json` responses before this step runs, so `response.body` is already
+a decoded map when `mercury_handle_errors` receives it.
+
+Return shape for error cases:
+
+```elixir
+{request, %{response | body: {:error, :not_found}}}
+```
 
 The step does not raise — it normalizes. The public API's `unwrap/1` reads the
 tagged body and converts to `{:ok, body}` / `{:error, reason}` at the boundary.
+
+**Note on `raise_for_status`:** Req's `raise_for_status` option is intentionally
+not used. It is disabled by default in `Req.new()` and must not be enabled, as
+the response step's body-tagging approach is incompatible with it. Callers must
+not pass `raise_for_status: true` when using this client.
+
+**Note on 429 and retry:** `retry: :transient` retries on network-level transport
+errors, not on HTTP error bodies. Because 429 is normalized into the response body
+(rather than raised as an exception), Req's retry logic does not see it as
+retryable. 429 rate limits are returned as `{:error, :rate_limited}` and callers
+are responsible for backing off. This is an accepted limitation — adding
+rate-limit-aware retry is out of scope for this rewrite.
 
 ### `new_client/1` (private)
 
@@ -104,9 +130,12 @@ end
 ```
 
 - `receive_timeout: 15_000` — 15 second timeout, same as current
-- `retry: :transient` — Req automatically retries safe requests (GET/HEAD) on
-  transient errors (connection refused, timeout) with exponential backoff (1s, 2s,
-  4s), up to 3 retries. This is new behaviour — the current module has no retry.
+- `retry: :transient` — Req retries on transport-level errors (connection refused,
+  timeout) with exponential backoff (1s, 2s, 4s), up to 3 retries. By default Req
+  skips retry for non-idempotent methods (POST) — the current public API is
+  GET-only so this is not a concern now, but any future write operations added to
+  this module will not be auto-retried. HTTP-level errors (4xx/5xx) are not retried
+  (see 429 note above).
 
 ### Public API
 
@@ -122,8 +151,13 @@ get_transaction(account_id, transaction_id, opts \\ [])
 ```
 
 `list_transactions/2` splits opts into two groups via `Keyword.split/2`:
-- **Query params**: `:limit`, `:offset`, `:status`, `:start`, `:end`, `:search`
+- **Query params**: `:limit`, `:offset`, `:status`, `:start_date`, `:end_date`, `:search`
 - **Client opts**: everything else (`:mercury_api_key`, `:mercury_sandbox`)
+
+Note: `:end` is a reserved word in Elixir and cannot be used as a bare keyword
+list key. The opts use `:start_date` and `:end_date` instead, which are then
+translated to Mercury's `start` and `end` query param names before the request
+fires.
 
 All functions return `{:ok, body}` or `{:error, reason}`. Return shape is
 unchanged from the current implementation.
@@ -133,8 +167,8 @@ unchanged from the current implementation.
 Converts Req responses to the `{:ok, body}` / `{:error, reason}` contract:
 
 ```elixir
-defp unwrap({:ok, %{body: {:error, _} = err}}), do: err
-defp unwrap({:ok, %{body: body}}), do: {:ok, body}
+defp unwrap({:ok, %Req.Response{body: {:error, _} = err}}), do: err
+defp unwrap({:ok, %Req.Response{body: body}}), do: {:ok, body}
 defp unwrap({:error, exception}), do: {:error, exception}
 ```
 
