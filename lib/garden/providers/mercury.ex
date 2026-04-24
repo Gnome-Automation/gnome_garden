@@ -153,11 +153,17 @@ defmodule GnomeGarden.Providers.Mercury do
   end
 
   defp put_auth(request) do
-    api_key =
+    raw_key =
       Map.get(request.options, :mercury_api_key) ||
-        Application.get_env(:gnome_garden, :mercury_api_key) ||
+        Application.get_env(:gnome_garden, :mercury_api_key)
+
+    api_key =
+      if is_binary(raw_key) and raw_key != "" do
+        raw_key
+      else
         raise "Missing Mercury API key. Set MERCURY_API_KEY in your environment " <>
               "or configure :mercury_api_key in application config."
+      end
 
     Req.merge(request, auth: {:bearer, api_key})
   end

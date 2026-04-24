@@ -132,5 +132,11 @@ defmodule GnomeGarden.Providers.MercuryTest do
         Mercury.list_accounts(plug: {Req.Test, __MODULE__})
       end
     end
+
+    test "raises when API key is an empty string" do
+      assert_raise RuntimeError, ~r/Missing Mercury API key/, fn ->
+        Mercury.list_accounts(mercury_api_key: "", plug: {Req.Test, __MODULE__})
+      end
+    end
   end
 end
