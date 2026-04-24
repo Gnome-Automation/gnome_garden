@@ -81,6 +81,7 @@ defmodule GnomeGarden.Providers.MercuryTest do
 
     test "reads sandbox flag from app config when not passed as option" do
       Application.put_env(:gnome_garden, :mercury_sandbox, false)
+      on_exit(fn -> Application.delete_env(:gnome_garden, :mercury_sandbox) end)
 
       Req.Test.stub(__MODULE__, fn conn ->
         assert conn.host == "api.mercury.com"
@@ -88,8 +89,6 @@ defmodule GnomeGarden.Providers.MercuryTest do
       end)
 
       assert {:ok, _} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
-
-      Application.delete_env(:gnome_garden, :mercury_sandbox)
     end
   end
 end
