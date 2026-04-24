@@ -169,7 +169,7 @@ defmodule GnomeGarden.Providers.Mercury do
   end
 
   # ---------------------------------------------------------------------------
-  # Private — response step (stub — filled in Task 4)
+  # Private — response step
   # ---------------------------------------------------------------------------
 
   defp handle_errors({request, %Req.Response{status: status} = response})
