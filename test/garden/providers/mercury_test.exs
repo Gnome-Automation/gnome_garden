@@ -91,4 +91,46 @@ defmodule GnomeGarden.Providers.MercuryTest do
       assert {:ok, _} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
     end
   end
+
+  describe "mercury_put_auth step" do
+    setup do
+      Application.put_env(:gnome_garden, :mercury_sandbox, true)
+      on_exit(fn ->
+        Application.delete_env(:gnome_garden, :mercury_sandbox)
+        Application.delete_env(:gnome_garden, :mercury_api_key)
+      end)
+    end
+
+    test "sets Authorization: Bearer header from :mercury_api_key option" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert Plug.Conn.get_req_header(conn, "authorization") == ["Bearer secret-token:from-opt"]
+        Req.Test.json(conn, %{"accounts" => [], "page" => %{}})
+      end)
+
+      assert {:ok, _} =
+               Mercury.list_accounts(
+                 mercury_api_key: "secret-token:from-opt",
+                 plug: {Req.Test, __MODULE__}
+               )
+    end
+
+    test "falls back to app config when :mercury_api_key option not given" do
+      Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:from-config")
+
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert Plug.Conn.get_req_header(conn, "authorization") == ["Bearer secret-token:from-config"]
+        Req.Test.json(conn, %{"accounts" => [], "page" => %{}})
+      end)
+
+      assert {:ok, _} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+    end
+
+    test "raises with a clear message when no key is available anywhere" do
+      Application.delete_env(:gnome_garden, :mercury_api_key)
+
+      assert_raise RuntimeError, ~r/Missing Mercury API key/, fn ->
+        Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+      end
+    end
+  end
 end
