@@ -68,12 +68,12 @@ defmodule GnomeGarden.Providers.MercuryTest do
   describe "attach/2" do
     test "registers :mercury_api_key as a valid option" do
       req = Req.new() |> Mercury.attach()
-      assert :mercury_api_key in req.options.registered_options
+      assert :mercury_api_key in req.registered_options
     end
 
     test "registers :mercury_sandbox as a valid option" do
       req = Req.new() |> Mercury.attach()
-      assert :mercury_sandbox in req.options.registered_options
+      assert :mercury_sandbox in req.registered_options
     end
 
     test "adds mercury_put_base_url as a request step" do
@@ -587,6 +587,16 @@ describe "mercury_handle_errors response step + unwrap" do
 
     assert {:error, {503, "HTTP 503"}} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
   end
+
+  test "handles non-map (plain text) error body without crashing" do
+    Req.Test.stub(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_content_type("text/plain")
+      |> Plug.Conn.send_resp(500, "Internal Server Error")
+    end)
+
+    assert {:error, {500, "HTTP 500"}} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+  end
 end
 ```
 
@@ -622,7 +632,7 @@ end
 
 defp handle_errors({request, %Req.Response{status: status, body: body} = response})
      when status >= 400 do
-  message = get_in(body, ["errors", "message"]) || "HTTP #{status}"
+  message = (is_map(body) && get_in(body, ["errors", "message"])) || "HTTP #{status}"
   {request, %{response | body: {:error, {status, message}}}}
 end
 
