@@ -152,7 +152,15 @@ defmodule GnomeGarden.Providers.Mercury do
     Req.merge(request, base_url: base_url)
   end
 
-  defp put_auth(request), do: request
+  defp put_auth(request) do
+    api_key =
+      Map.get(request.options, :mercury_api_key) ||
+        Application.get_env(:gnome_garden, :mercury_api_key) ||
+        raise "Missing Mercury API key. Set MERCURY_API_KEY in your environment " <>
+              "or configure :mercury_api_key in application config."
+
+    Req.merge(request, auth: {:bearer, api_key})
+  end
 
   # ---------------------------------------------------------------------------
   # Private — response step (stub — filled in Task 4)
