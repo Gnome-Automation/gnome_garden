@@ -140,7 +140,17 @@ defmodule GnomeGarden.Providers.Mercury do
   # Private — request steps (stubs — filled in Tasks 2 & 3)
   # ---------------------------------------------------------------------------
 
-  defp put_base_url(request), do: request
+  defp put_base_url(request) do
+    sandbox? =
+      Map.get(
+        request.options,
+        :mercury_sandbox,
+        Application.get_env(:gnome_garden, :mercury_sandbox, true)
+      )
+
+    base_url = if sandbox?, do: @sandbox_url, else: @production_url
+    Req.merge(request, base_url: base_url)
+  end
 
   defp put_auth(request), do: request
 
