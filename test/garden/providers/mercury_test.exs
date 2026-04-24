@@ -155,7 +155,7 @@ defmodule GnomeGarden.Providers.MercuryTest do
         Req.Test.json(conn, %{"accounts" => [%{"id" => "abc"}], "page" => %{}})
       end)
 
-      assert {:ok, %{"accounts" => [%{"id" => "abc"}]}} =
+      assert {:ok, %{"accounts" => [%{"id" => "abc"}], "page" => %{}}} =
                Mercury.list_accounts(plug: {Req.Test, __MODULE__})
     end
 
