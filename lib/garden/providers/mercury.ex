@@ -172,12 +172,36 @@ defmodule GnomeGarden.Providers.Mercury do
   # Private — response step (stub — filled in Task 4)
   # ---------------------------------------------------------------------------
 
+  defp handle_errors({request, %Req.Response{status: status} = response})
+       when status in 200..299 do
+    {request, response}
+  end
+
+  defp handle_errors({request, %Req.Response{status: 401} = response}) do
+    {request, %{response | body: {:error, :unauthorized}}}
+  end
+
+  defp handle_errors({request, %Req.Response{status: 404} = response}) do
+    {request, %{response | body: {:error, :not_found}}}
+  end
+
+  defp handle_errors({request, %Req.Response{status: 429} = response}) do
+    {request, %{response | body: {:error, :rate_limited}}}
+  end
+
+  defp handle_errors({request, %Req.Response{status: status, body: body} = response})
+       when status >= 400 do
+    message = (is_map(body) && get_in(body, ["errors", "message"])) || "HTTP #{status}"
+    {request, %{response | body: {:error, {status, message}}}}
+  end
+
   defp handle_errors({request, response}), do: {request, response}
 
   # ---------------------------------------------------------------------------
-  # Private — response unwrapper (stub — filled in Task 4)
+  # Private — response unwrapper
   # ---------------------------------------------------------------------------
 
+  defp unwrap({:ok, %Req.Response{body: {:error, _} = err}}), do: err
   defp unwrap({:ok, %Req.Response{body: body}}), do: {:ok, body}
   defp unwrap({:error, exception}), do: {:error, exception}
 

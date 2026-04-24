@@ -139,4 +139,86 @@ defmodule GnomeGarden.Providers.MercuryTest do
       end
     end
   end
+
+  describe "mercury_handle_errors response step + unwrap" do
+    setup do
+      Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
+      Application.put_env(:gnome_garden, :mercury_sandbox, true)
+      on_exit(fn ->
+        Application.delete_env(:gnome_garden, :mercury_api_key)
+        Application.delete_env(:gnome_garden, :mercury_sandbox)
+      end)
+    end
+
+    test "returns {:ok, body} on 200" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        Req.Test.json(conn, %{"accounts" => [%{"id" => "abc"}], "page" => %{}})
+      end)
+
+      assert {:ok, %{"accounts" => [%{"id" => "abc"}]}} =
+               Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+    end
+
+    test "returns {:error, :unauthorized} on 401" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        conn
+        |> Plug.Conn.put_status(401)
+        |> Req.Test.json(%{"errors" => %{"errorCode" => "unauthorized", "message" => "Bad token"}})
+      end)
+
+      assert {:error, :unauthorized} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+    end
+
+    test "returns {:error, :not_found} on 404" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        conn
+        |> Plug.Conn.put_status(404)
+        |> Req.Test.json(%{"errors" => %{"message" => "Not found"}})
+      end)
+
+      assert {:error, :not_found} =
+               Mercury.get_account("nonexistent", plug: {Req.Test, __MODULE__})
+    end
+
+    test "returns {:error, :rate_limited} on 429" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        conn
+        |> Plug.Conn.put_status(429)
+        |> Req.Test.json(%{"errors" => %{"message" => "Too many requests"}})
+      end)
+
+      assert {:error, :rate_limited} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+    end
+
+    test "extracts Mercury error message on other 4xx/5xx" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        conn
+        |> Plug.Conn.put_status(500)
+        |> Req.Test.json(%{"errors" => %{"errorCode" => "serverError", "message" => "Something broke"}})
+      end)
+
+      assert {:error, {500, "Something broke"}} =
+               Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+    end
+
+    test "falls back to 'HTTP <status>' when no Mercury error message present" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        conn
+        |> Plug.Conn.put_status(503)
+        |> Req.Test.json(%{})
+      end)
+
+      assert {:error, {503, "HTTP 503"}} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+    end
+
+    test "handles non-map (plain text) error body without crashing" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/plain")
+        |> Plug.Conn.send_resp(500, "Internal Server Error")
+      end)
+
+      assert {:error, {500, "HTTP 500"}} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+    end
+  end
 end
