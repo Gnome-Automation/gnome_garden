@@ -1,56 +1,94 @@
 defmodule GnomeGarden.Providers.Mercury do
   @moduledoc """
-  Mercury Bank API client.
-
-  Supports both sandbox and production environments, controlled by the
-  `MERCURY_SANDBOX` environment variable.
+  Mercury Bank API client — implemented as a Req plugin.
 
   ## Configuration
 
-      # Sandbox (for development/testing)
-      MERCURY_API_KEY=your-sandbox-token
-      MERCURY_SANDBOX=true
+      # In .env / runtime.exs:
+      MERCURY_API_KEY=secret-token:your-token-here
+      MERCURY_SANDBOX=true   # true = sandbox, false = production
 
-      # Production
-      MERCURY_API_KEY=your-production-token
-      MERCURY_SANDBOX=false
+  ## Direct plugin usage
 
-  ## Examples
+      req = Req.new() |> GnomeGarden.Providers.Mercury.attach()
+      Req.get!(req, url: "/accounts")
 
-      # List all accounts
-      {:ok, accounts} = GnomeGarden.Providers.Mercury.list_accounts()
+  ## Convenience API
 
-      # Get a specific account
-      {:ok, account} = GnomeGarden.Providers.Mercury.get_account("account-id")
+      {:ok, accounts} = Mercury.list_accounts()
+      {:ok, account}  = Mercury.get_account("account-id")
+      {:ok, txns}     = Mercury.list_transactions("account-id")
+      {:ok, txns}     = Mercury.list_transactions("account-id",
+                          limit: 10, status: "sent", start_date: "2026-01-01")
+      {:ok, txn}      = Mercury.get_transaction("account-id", "txn-id")
 
-      # List transactions for an account
-      {:ok, txns} = GnomeGarden.Providers.Mercury.list_transactions("account-id")
+  ## Per-call override (useful in tests)
 
-      # List transactions with filters
-      {:ok, txns} = GnomeGarden.Providers.Mercury.list_transactions("account-id",
-        limit: 10,
-        offset: 0,
-        status: "sent"
-      )
+      Mercury.list_accounts(mercury_sandbox: false)
+      Mercury.list_accounts(plug: {Req.Test, MyStub})
   """
 
   @production_url "https://api.mercury.com/api/v1"
   @sandbox_url "https://backend-sandbox.mercury.com/api/v1"
+
+  @query_param_names %{
+    limit: "limit",
+    offset: "offset",
+    status: "status",
+    start_date: "start",
+    end_date: "end",
+    search: "search"
+  }
+
+  # ---------------------------------------------------------------------------
+  # Plugin entry point
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Attaches the Mercury plugin to a `%Req.Request{}`.
+
+  Prepends two request steps (`mercury_put_base_url`, `mercury_put_auth`) and
+  appends one response step (`mercury_handle_errors`). Registers
+  `:mercury_api_key` and `:mercury_sandbox` as valid options.
+
+  ## Options
+
+    * `:mercury_api_key` - API token. Falls back to
+      `Application.get_env(:gnome_garden, :mercury_api_key)`.
+    * `:mercury_sandbox` - Boolean. Falls back to
+      `Application.get_env(:gnome_garden, :mercury_sandbox, true)`.
+    * Any valid `Req` option (e.g. `:plug` for test stubs).
+
+  **Important:** Do not pass `raise_for_status: true` — it is incompatible
+  with this plugin's error-normalisation approach.
+  """
+  def attach(request, opts \\ []) do
+    request
+    |> Req.Request.register_options([:mercury_api_key, :mercury_sandbox])
+    |> Req.Request.prepend_request_steps([
+      mercury_put_base_url: &put_base_url/1,
+      mercury_put_auth: &put_auth/1
+    ])
+    |> Req.Request.append_response_steps(mercury_handle_errors: &handle_errors/1)
+    |> Req.merge(opts)
+  end
 
   # ---------------------------------------------------------------------------
   # Accounts
   # ---------------------------------------------------------------------------
 
   @doc "List all Mercury accounts."
-  def list_accounts do
-    get("/accounts")
-    |> handle_response()
+  def list_accounts(opts \\ []) do
+    new_client(opts)
+    |> Req.get(url: "/accounts")
+    |> unwrap()
   end
 
   @doc "Get a single Mercury account by ID."
-  def get_account(account_id) do
-    get("/accounts/#{account_id}")
-    |> handle_response()
+  def get_account(account_id, opts \\ []) do
+    new_client(opts)
+    |> Req.get(url: "/accounts/#{account_id}")
+    |> unwrap()
   end
 
   # ---------------------------------------------------------------------------
@@ -60,73 +98,75 @@ defmodule GnomeGarden.Providers.Mercury do
   @doc """
   List transactions for an account.
 
-  ## Options
+  ## Query param options
 
-    - `:limit` - number of results to return (default: 500)
-    - `:offset` - pagination offset (default: 0)
-    - `:status` - filter by status: "pending", "sent", "cancelled", "failed"
-    - `:start` - start date (ISO 8601 string, e.g. "2026-01-01")
-    - `:end` - end date (ISO 8601 string, e.g. "2026-12-31")
-    - `:search` - search string
+    * `:limit` - number of results (default 500 server-side)
+    * `:offset` - pagination offset (default 0)
+    * `:status` - "pending" | "sent" | "cancelled" | "failed"
+    * `:start_date` - ISO 8601 date string e.g. "2026-01-01" (sent as `start`)
+    * `:end_date` - ISO 8601 date string e.g. "2026-12-31" (sent as `end`)
+    * `:search` - free-text search
+
+  ## Client override options
+
+    * `:mercury_api_key`, `:mercury_sandbox`, `:plug`
   """
   def list_transactions(account_id, opts \\ []) do
-    params = Map.new(opts)
+    {query_opts, client_opts} = Keyword.split(opts, Map.keys(@query_param_names))
+    params = build_params(query_opts)
 
-    get("/accounts/#{account_id}/transactions", params: params)
-    |> handle_response()
+    new_client(client_opts)
+    |> Req.get(url: "/accounts/#{account_id}/transactions", params: params)
+    |> unwrap()
   end
 
   @doc "Get a single transaction by ID."
-  def get_transaction(account_id, transaction_id) do
-    get("/accounts/#{account_id}/transactions/#{transaction_id}")
-    |> handle_response()
+  def get_transaction(account_id, transaction_id, opts \\ []) do
+    new_client(opts)
+    |> Req.get(url: "/accounts/#{account_id}/transactions/#{transaction_id}")
+    |> unwrap()
   end
 
   # ---------------------------------------------------------------------------
-  # Internal helpers
+  # Private — client builder
   # ---------------------------------------------------------------------------
 
-  defp get(path, opts \\ []) do
-    Req.get(base_url() <> path, Keyword.merge(default_opts(), opts))
+  defp new_client(opts) do
+    Req.new(receive_timeout: 15_000, retry: :transient)
+    |> attach(opts)
   end
 
-  defp default_opts do
-    [
-      headers: [{"Authorization", "Bearer #{api_key()}"}],
-      receive_timeout: 15_000
-    ]
-  end
+  # ---------------------------------------------------------------------------
+  # Private — request steps (stubs — filled in Tasks 2 & 3)
+  # ---------------------------------------------------------------------------
 
-  defp handle_response({:ok, %{status: status, body: body}}) when status in 200..299 do
-    {:ok, body}
-  end
+  defp put_base_url(request), do: request
 
-  defp handle_response({:ok, %{status: 401}}) do
-    {:error, :unauthorized}
-  end
+  defp put_auth(request), do: request
 
-  defp handle_response({:ok, %{status: 404}}) do
-    {:error, :not_found}
-  end
+  # ---------------------------------------------------------------------------
+  # Private — response step (stub — filled in Task 4)
+  # ---------------------------------------------------------------------------
 
-  defp handle_response({:ok, %{status: status, body: body}}) do
-    {:error, {status, body}}
-  end
+  defp handle_errors({request, response}), do: {request, response}
 
-  defp handle_response({:error, reason}) do
-    {:error, reason}
-  end
+  # ---------------------------------------------------------------------------
+  # Private — response unwrapper (stub — filled in Task 4)
+  # ---------------------------------------------------------------------------
 
-  defp base_url do
-    if sandbox?(), do: @sandbox_url, else: @production_url
-  end
+  defp unwrap({:ok, %Req.Response{body: body}}), do: {:ok, body}
+  defp unwrap({:error, exception}), do: {:error, exception}
 
-  defp sandbox? do
-    Application.get_env(:gnome_garden, :mercury_sandbox, true)
-  end
+  # ---------------------------------------------------------------------------
+  # Private — query param helpers
+  # ---------------------------------------------------------------------------
 
-  defp api_key do
-    Application.get_env(:gnome_garden, :mercury_api_key) ||
-      raise "Missing Mercury API key. Set MERCURY_API_KEY environment variable."
+  defp build_params(opts) do
+    Enum.reduce(opts, %{}, fn {key, value}, acc ->
+      case Map.get(@query_param_names, key) do
+        nil -> acc
+        param_name -> Map.put(acc, param_name, value)
+      end
+    end)
   end
 end
