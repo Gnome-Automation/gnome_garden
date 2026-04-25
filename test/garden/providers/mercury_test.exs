@@ -221,4 +221,149 @@ defmodule GnomeGarden.Providers.MercuryTest do
       assert {:error, {500, "HTTP 500"}} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
     end
   end
+
+  describe "list_accounts/1" do
+    setup do
+      Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
+      Application.put_env(:gnome_garden, :mercury_sandbox, true)
+      on_exit(fn ->
+        Application.delete_env(:gnome_garden, :mercury_api_key)
+        Application.delete_env(:gnome_garden, :mercury_sandbox)
+      end)
+    end
+
+    test "calls GET /api/v1/accounts" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert conn.method == "GET"
+        assert conn.request_path == "/api/v1/accounts"
+        Req.Test.json(conn, %{"accounts" => [], "page" => %{}})
+      end)
+
+      assert {:ok, %{"accounts" => []}} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
+    end
+  end
+
+  describe "get_account/2" do
+    setup do
+      Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
+      Application.put_env(:gnome_garden, :mercury_sandbox, true)
+      on_exit(fn ->
+        Application.delete_env(:gnome_garden, :mercury_api_key)
+        Application.delete_env(:gnome_garden, :mercury_sandbox)
+      end)
+    end
+
+    test "calls GET /api/v1/accounts/:id" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert conn.request_path == "/api/v1/accounts/acc-123"
+        Req.Test.json(conn, %{"id" => "acc-123", "name" => "Mercury Checking"})
+      end)
+
+      assert {:ok, %{"id" => "acc-123"}} =
+               Mercury.get_account("acc-123", plug: {Req.Test, __MODULE__})
+    end
+  end
+
+  describe "list_transactions/2" do
+    setup do
+      Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
+      Application.put_env(:gnome_garden, :mercury_sandbox, true)
+      on_exit(fn ->
+        Application.delete_env(:gnome_garden, :mercury_api_key)
+        Application.delete_env(:gnome_garden, :mercury_sandbox)
+      end)
+    end
+
+    test "calls GET /api/v1/accounts/:id/transactions" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert conn.request_path == "/api/v1/accounts/acc-1/transactions"
+        Req.Test.json(conn, %{"transactions" => [], "total" => 0})
+      end)
+
+      assert {:ok, _} = Mercury.list_transactions("acc-1", plug: {Req.Test, __MODULE__})
+    end
+
+    test "translates :start_date to 'start' query param" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        params = URI.decode_query(conn.query_string)
+        assert params["start"] == "2026-01-01"
+        refute Map.has_key?(params, "start_date")
+        Req.Test.json(conn, %{"transactions" => [], "total" => 0})
+      end)
+
+      Mercury.list_transactions("acc-1",
+        start_date: "2026-01-01",
+        plug: {Req.Test, __MODULE__}
+      )
+    end
+
+    test "translates :end_date to 'end' query param" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        params = URI.decode_query(conn.query_string)
+        assert params["end"] == "2026-12-31"
+        refute Map.has_key?(params, "end_date")
+        Req.Test.json(conn, %{"transactions" => [], "total" => 0})
+      end)
+
+      Mercury.list_transactions("acc-1",
+        end_date: "2026-12-31",
+        plug: {Req.Test, __MODULE__}
+      )
+    end
+
+    test "passes :limit, :offset, :status, :search as query params" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        params = URI.decode_query(conn.query_string)
+        assert params["limit"] == "10"
+        assert params["offset"] == "0"
+        assert params["status"] == "sent"
+        assert params["search"] == "ACME"
+        Req.Test.json(conn, %{"transactions" => [], "total" => 0})
+      end)
+
+      Mercury.list_transactions("acc-1",
+        limit: 10,
+        offset: 0,
+        status: "sent",
+        search: "ACME",
+        plug: {Req.Test, __MODULE__}
+      )
+    end
+
+    test "does not pass client opts as query params" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        params = URI.decode_query(conn.query_string)
+        refute Map.has_key?(params, "mercury_api_key")
+        refute Map.has_key?(params, "mercury_sandbox")
+        Req.Test.json(conn, %{"transactions" => [], "total" => 0})
+      end)
+
+      Mercury.list_transactions("acc-1",
+        mercury_sandbox: true,
+        mercury_api_key: "secret-token:test",
+        plug: {Req.Test, __MODULE__}
+      )
+    end
+  end
+
+  describe "get_transaction/3" do
+    setup do
+      Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
+      Application.put_env(:gnome_garden, :mercury_sandbox, true)
+      on_exit(fn ->
+        Application.delete_env(:gnome_garden, :mercury_api_key)
+        Application.delete_env(:gnome_garden, :mercury_sandbox)
+      end)
+    end
+
+    test "calls GET /api/v1/accounts/:account_id/transactions/:txn_id" do
+      Req.Test.stub(__MODULE__, fn conn ->
+        assert conn.request_path == "/api/v1/accounts/acc-1/transactions/txn-99"
+        Req.Test.json(conn, %{"id" => "txn-99", "amount" => 500.0})
+      end)
+
+      assert {:ok, %{"id" => "txn-99"}} =
+               Mercury.get_transaction("acc-1", "txn-99", plug: {Req.Test, __MODULE__})
+    end
+  end
 end
