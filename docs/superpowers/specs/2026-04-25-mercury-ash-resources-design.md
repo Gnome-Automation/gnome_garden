@@ -39,6 +39,8 @@ GnomeGarden.Mercury (domain)
 
 The Mercury domain is separate from `GnomeGarden.Finance` — bank data has different provenance and lifecycle from billing records. The `PaymentMatch` resource bridges the two domains.
 
+All resources include `AshAdmin.Resource` and the domain includes `AshAdmin.Domain`, following the same pattern as every other domain in the codebase.
+
 ## Resources
 
 ### Mercury.Account
@@ -140,7 +142,7 @@ Junction table linking a Mercury transaction to one or more `Finance.Payment` re
 |---|---|---|---|
 | `id` | `:uuid` | PK, not null | Internal Ash-generated UUID |
 | `match_source` | `:atom` | not null | `:auto` / `:manual` |
-| `matched_at` | `:utc_datetime_usec` | not null | When the match was created |
+| `matched_at` | `:utc_datetime_usec` | not null, default `DateTime.utc_now()` set by `:create` action | When the match was created |
 | `inserted_at` | `:utc_datetime_usec` | not null | |
 | `updated_at` | `:utc_datetime_usec` | not null | |
 
@@ -167,7 +169,7 @@ define :delete_payment_match, action: :destroy
 
 ## Migration
 
-Single migration file creates all three tables in dependency order: `mercury_accounts` first, then `mercury_transactions` (FK → accounts), then `mercury_payment_matches` (FK → transactions and finance_payments).
+Migrations are generated using `mix ash_postgres.generate_migrations` after the resource files are created — the same workflow used for all existing migrations in this codebase. Do not hand-write migration SQL. After running the generator, inspect the output to confirm all three tables are created in a single file in dependency order: `mercury_accounts` first, then `mercury_transactions` (FK → accounts), then `mercury_payment_matches` (FK → transactions and `finance_payments`).
 
 Foreign key naming convention follows the existing codebase pattern:
 `{table}_{column}_fkey`
