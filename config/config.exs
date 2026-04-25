@@ -171,6 +171,7 @@ config :gnome_garden,
   ecto_repos: [GnomeGarden.Repo],
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [
+    GnomeGarden.Mercury,
     GnomeGarden.Accounts,
     GnomeGarden.Acquisition,
     GnomeGarden.Agents,
