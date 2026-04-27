@@ -5,7 +5,10 @@
 **Files:**
 - `lib/garden_web/controllers/mercury_webhook_controller.ex`
 - `lib/garden_web/controllers/mercury_webhook_json.ex`
-- `lib/garden_web/router.ex` (modify)
+- `lib/garden_web/cache_body_reader.ex` (new — raw body caching for signature verification)
+- `lib/garden/mercury/payment_matcher_worker.ex` (new — stub Oban worker)
+- `lib/garden_web/endpoint.ex` (modify — add body_reader option to Plug.Parsers)
+- `lib/garden_web/router.ex` (modify — add webhooks scope)
 - `config/runtime.exs` (modify)
 - `config/config.exs` (modify)
 - `.env.example` (modify)
@@ -55,9 +58,19 @@ Verification steps:
 4. Compute `HMAC-SHA256(MERCURY_WEBHOOK_SECRET, signed_string)` — hex-encoded
 5. Compare with `v1` using a constant-time comparison — reject with 401 if mismatch
 
-**Raw body requirement:** Phoenix's `Plug.Parsers` consumes the request body before the controller sees it. A `:cache_raw_body` plug must cache the raw body into `conn.assigns[:raw_body]` before parsing, scoped only to the webhook route so it does not affect the rest of the app.
+**Raw body requirement:** Phoenix's `Plug.Parsers` runs at the endpoint level (`lib/garden_web/endpoint.ex`) before the router — pipeline plugs cannot intercept it. Instead, add a `body_reader` option to the existing `Plug.Parsers` call in the endpoint:
 
-The webhook secret is read from `Application.fetch_env!(:gnome_garden, :mercury_webhook_secret)` set in `runtime.exs` from `MERCURY_WEBHOOK_SECRET`.
+```elixir
+plug Plug.Parsers,
+  parsers: [:urlencoded, :multipart, :json],
+  pass: ["*/*"],
+  body_reader: {GnomeGardenWeb.CacheBodyReader, :read_body, []},
+  json_decoder: Phoenix.json_library()
+```
+
+`CacheBodyReader` is a small module in `lib/garden_web/cache_body_reader.ex` that reads the body, stores it in `conn.assigns[:raw_body]`, and returns the body to `Plug.Parsers` for normal parsing. This applies to all routes but only the webhook controller reads `raw_body`.
+
+The webhook secret is read from `Application.get_env(:gnome_garden, :mercury_webhook_secret)` set in `runtime.exs` from `MERCURY_WEBHOOK_SECRET`.
 
 ## Event Handling
 
@@ -71,7 +84,9 @@ The webhook secret is read from `Application.fetch_env!(:gnome_garden, :mercury_
 ### `transaction.updated`
 
 1. Look up `Mercury.Transaction` by `mercury_id` (payload `id` field) — return 422 if not found
-2. Call `Mercury.update_mercury_transaction(txn, %{...})` with updatable fields: `status`, `bank_description`, `external_memo`, `note`, `details`, `currency_exchange_info`, `reason_for_failure`, `dashboard_link`, `posted_date`, `failed_at`
+2. Call `Mercury.update_mercury_transaction(txn, %{...})` with updatable fields: `status`, `bank_description`, `note`, `details`, `currency_exchange_info`, `reason_for_failure`, `dashboard_link`, `posted_date`, `failed_at`
+
+   Note: `external_memo` is intentionally excluded — it is not in the Transaction resource's update action `accept` list (Mercury does not update memos on existing transactions). Do not add it to the update call.
 3. Return 200
 
 ### `balance.updated`
@@ -103,15 +118,21 @@ end
 
 The actual matching logic is out of scope for this feature and implemented separately.
 
-## Router Changes
+## Router and Endpoint Changes
 
-Add a `:webhooks` pipeline that:
-- Accepts JSON
-- Caches the raw body via a `:cache_raw_body` plug (before `Plug.Parsers`)
-- Does NOT include auth plugs (Mercury sends no user token)
+### `lib/garden_web/endpoint.ex`
 
-Add route inside a new scope:
-```
+Add `body_reader` to the existing `Plug.Parsers` call (see Signature Verification section above).
+
+### `lib/garden_web/router.ex`
+
+Add a `:webhooks` pipeline (JSON accept, no auth plugs) and a new scope:
+
+```elixir
+pipeline :webhooks do
+  plug :accepts, ["json"]
+end
+
 scope "/webhooks" do
   pipe_through :webhooks
   post "/mercury", MercuryWebhookController, :receive
@@ -128,10 +149,16 @@ queues: [default: 10, lead_scanning: 2, mercury: 10]
 
 ### `runtime.exs` — add webhook secret
 
+Follow the existing conditional pattern in `runtime.exs` for Mercury API keys — only raise in production if the variable is missing:
+
 ```elixir
-config :gnome_garden,
-  mercury_webhook_secret: System.fetch_env!("MERCURY_WEBHOOK_SECRET")
+if config_env() == :prod do
+  config :gnome_garden,
+    mercury_webhook_secret: System.fetch_env!("MERCURY_WEBHOOK_SECRET")
+end
 ```
+
+For dev/test, set `MERCURY_WEBHOOK_SECRET` in `.env` or use `Application.put_env` in test setup (see Testing section). The controller reads it via `Application.get_env(:gnome_garden, :mercury_webhook_secret)`.
 
 ### `.env.example`
 
@@ -141,7 +168,7 @@ MERCURY_WEBHOOK_SECRET=your-webhook-secret-here
 
 ## Testing
 
-Tests use `GnomeGardenWeb.ConnCase` with Oban's test helpers (`assert_enqueued`). Payloads are signed with a test secret configured in `config/test.exs`.
+Tests use `GnomeGardenWeb.ConnCase` with Oban's test helpers (`assert_enqueued`). The webhook secret for tests is set via `Application.put_env(:gnome_garden, :mercury_webhook_secret, "test-secret")` in each test's setup block (with `on_exit` cleanup), following the same pattern as `mercury_test.exs`. No `config/test.exs` change is needed.
 
 | Test | Expected |
 |---|---|
