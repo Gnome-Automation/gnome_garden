@@ -860,6 +860,8 @@ defmodule GnomeGarden.Mercury.PaymentMatch do
     create :create do
       primary? true
       accept [:match_source, :mercury_transaction_id, :finance_payment_id]
+      # :mercury_transaction_id and :finance_payment_id are FK attributes generated
+      # by belongs_to — they must be listed in accept to be passed directly on create.
       change set_attribute(:matched_at, &DateTime.utc_now/0)
     end
   end
