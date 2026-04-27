@@ -83,8 +83,8 @@ LAYER 5 — Invoicing Pipeline (automated billing)
 - [x] Config in `runtime.exs` + `.env.example`
 - [x] Sandbox API confirmed working (`https://backend-sandbox.mercury.com/api/v1`)
 - [x] Rewrite provider as proper Req plugin (ReqMercury pattern)
-- [ ] Ash resource: `Mercury.Account` + migration
-- [ ] Ash resource: `Mercury.Transaction` + migration
+- [x] Ash resource: `Mercury.Account` + migration
+- [x] Ash resource: `Mercury.Transaction` + migration
 - [ ] Webhook receiver endpoint (`/webhooks/mercury`)
 - [ ] Oban job: `MercuryPaymentMatcher`
 - [ ] Oban job: `MercuryInvoiceScheduler`
