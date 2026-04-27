@@ -135,5 +135,9 @@ defmodule GnomeGarden.Mercury.Transaction do
       allow_nil? false
       public? true
     end
+
+    has_many :payment_matches, GnomeGarden.Mercury.PaymentMatch do
+      public? true
+    end
   end
 end

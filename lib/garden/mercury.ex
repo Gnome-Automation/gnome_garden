@@ -31,5 +31,12 @@ defmodule GnomeGarden.Mercury do
       define :create_mercury_transaction, action: :create
       define :update_mercury_transaction, action: :update
     end
+
+    resource GnomeGarden.Mercury.PaymentMatch do
+      define :list_payment_matches, action: :read
+      define :get_payment_match, action: :read, get_by: [:id]
+      define :create_payment_match, action: :create
+      define :delete_payment_match, action: :destroy, default_options: [return_destroyed?: true]
+    end
   end
 end
