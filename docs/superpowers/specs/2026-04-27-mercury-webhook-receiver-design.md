@@ -68,7 +68,7 @@ plug Plug.Parsers,
   json_decoder: Phoenix.json_library()
 ```
 
-`CacheBodyReader` is a small module in `lib/garden_web/cache_body_reader.ex` that reads the body, stores it in `conn.assigns[:raw_body]`, and returns the body to `Plug.Parsers` for normal parsing. This applies to all routes but only the webhook controller reads `raw_body`.
+`CacheBodyReader` is a small module in `lib/garden_web/cache_body_reader.ex` that reads the body, stores it in `conn.assigns[:raw_body]`, and returns `{:ok, body, conn}` to `Plug.Parsers` for normal parsing. This applies to all routes but only the webhook controller reads `raw_body`.
 
 The webhook secret is read from `Application.get_env(:gnome_garden, :mercury_webhook_secret)` set in `runtime.exs` from `MERCURY_WEBHOOK_SECRET`.
 
@@ -76,8 +76,8 @@ The webhook secret is read from `Application.get_env(:gnome_garden, :mercury_web
 
 ### `transaction.created`
 
-1. Look up `Mercury.Account` by `accountId` from payload — return 422 if not found
-2. Call `Mercury.create_mercury_transaction(%{...})` mapping all payload fields to resource attributes
+1. Look up `Mercury.Account` by `accountId` from payload using `Mercury.get_mercury_account_by_mercury_id(payload["accountId"])` — return 422 if not found
+2. Call `Mercury.create_mercury_transaction(%{...})` mapping all payload fields to resource attributes, passing `account_id: account.id`
 3. Enqueue `GnomeGarden.Mercury.PaymentMatcherWorker` in the `mercury` queue with `%{"transaction_id" => transaction.id}`
 4. Return 200
 
@@ -86,7 +86,7 @@ The webhook secret is read from `Application.get_env(:gnome_garden, :mercury_web
 1. Look up `Mercury.Transaction` by `mercury_id` (payload `id` field) — return 422 if not found
 2. Call `Mercury.update_mercury_transaction(txn, %{...})` with updatable fields: `status`, `bank_description`, `note`, `details`, `currency_exchange_info`, `reason_for_failure`, `dashboard_link`, `posted_date`, `failed_at`
 
-   Note: `external_memo` is intentionally excluded — it is not in the Transaction resource's update action `accept` list (Mercury does not update memos on existing transactions). Do not add it to the update call.
+   Note: `external_memo` is intentionally excluded — Mercury's `transaction.updated` webhook payload does not include `externalMemo`, so there is nothing to map. Do not add it to the update call.
 3. Return 200
 
 ### `balance.updated`
@@ -133,7 +133,7 @@ pipeline :webhooks do
   plug :accepts, ["json"]
 end
 
-scope "/webhooks" do
+scope "/webhooks", GnomeGardenWeb do
   pipe_through :webhooks
   post "/mercury", MercuryWebhookController, :receive
 end
@@ -184,6 +184,8 @@ Tests use `GnomeGardenWeb.ConnCase` with Oban's test helpers (`assert_enqueued`)
 | `balance.updated` — account not found | 422 |
 
 Test helper `sign_payload/2` builds a valid `Mercury-Signature` header from a secret and raw body so tests don't repeat HMAC logic.
+
+Oban test assertions require `use Oban.Testing, repo: GnomeGarden.Repo` in the test module (or in `ConnCase` if shared). Without it, `assert_enqueued` is not available.
 
 ## What Does Not Change
 
