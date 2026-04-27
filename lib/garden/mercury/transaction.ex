@@ -137,6 +137,7 @@ defmodule GnomeGarden.Mercury.Transaction do
     end
 
     has_many :payment_matches, GnomeGarden.Mercury.PaymentMatch do
+      destination_attribute :mercury_transaction_id
       public? true
     end
   end
