@@ -99,7 +99,7 @@ defmodule GnomeGarden.Mercury.TransactionTest do
   test "match_confidence can be set via update", %{account: account} do
     {:ok, txn} = GnomeGarden.Mercury.create_mercury_transaction(%{
       account_id: account.id,
-      mercury_id: "txn-conf-001",
+      mercury_id: "txn-conf-#{System.unique_integer([:positive])}",
       amount: Decimal.new("500.00"),
       kind: :wire,
       status: :sent,
