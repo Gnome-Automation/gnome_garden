@@ -24,6 +24,10 @@ defmodule GnomeGardenWeb.Router do
     plug :set_actor, :user
   end
 
+  pipeline :webhooks do
+    plug :accepts, ["json"]
+  end
+
   scope "/", GnomeGardenWeb do
     pipe_through :browser
 
@@ -234,6 +238,11 @@ defmodule GnomeGardenWeb.Router do
         Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI
       ]
     )
+  end
+
+  scope "/webhooks", GnomeGardenWeb do
+    pipe_through :webhooks
+    post "/mercury", MercuryWebhookController, :receive
   end
 
   # Other scopes may use custom stacks.

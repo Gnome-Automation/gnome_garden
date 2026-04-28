@@ -35,6 +35,11 @@ if mercury_api_key = System.get_env("MERCURY_API_KEY") do
     mercury_sandbox: System.get_env("MERCURY_SANDBOX", "true") == "true"
 end
 
+if mercury_webhook_secret = System.get_env("MERCURY_WEBHOOK_SECRET") do
+  config :gnome_garden,
+    mercury_webhook_secret: mercury_webhook_secret
+end
+
 # Z.AI (Zhipu AI) API configuration for GLM models
 if zai_api_key = System.get_env("ZAI_API_KEY") do
   config :gnome_garden,
