@@ -123,7 +123,7 @@ draft → issued → partial → paid
 
 The incoming Mercury transaction identifies the paying client via `Mercury.Transaction.counterparty_name` (the name on the wire/ACH) — **not** via `Mercury.Account`, which is GnomeGarden's own receiving account.
 
-Client matching: compare `counterparty_name` against `Sales.Company.bank_counterparty_name` — a new nullable string field on the existing `Sales.Company` resource. Set once per client (manually or on first confirmed match). On first occurrence with no `bank_counterparty_name` set, the matcher falls back to fuzzy comparison against `Sales.Company.name`.
+Client matching: compare `counterparty_name` against `Mercury.ClientBankAlias.counterparty_name_fragment` — a lookup table mapping known wire/ACH counterparty name fragments to `Sales.Company` records. One company can have multiple aliases (e.g., `"ACME CORP"`, `"ACME CORPORATION"`, `"ACME FEDERAL"`). Populated automatically on first confirmed match or manually via AshAdmin. On first occurrence with no alias, falls back to fuzzy comparison against `Sales.Company.name`.
 
 ### Matching Algorithm
 
@@ -265,6 +265,35 @@ This powers the AshAdmin unmatched transactions view.
 
 ---
 
+## New: Mercury.ClientBankAlias
+
+**File:** `lib/garden/mercury/client_bank_alias.ex`
+**Table:** `mercury_client_bank_aliases`
+
+Maps known wire/ACH counterparty name fragments to `Sales.Company` records. Enables reliable client identification even when the same company pays from different entities or with slightly varying name formats.
+
+| Attribute | Type | Notes |
+|---|---|---|
+| `id` | `:uuid` | PK |
+| `counterparty_name_fragment` | `:string` | not null — the name as it appears in Mercury |
+| `company_id` | `:uuid` | FK → `sales_companies`, not null |
+| `inserted_at` | `:utc_datetime_usec` | not null |
+| `updated_at` | `:utc_datetime_usec` | not null |
+
+**Identity:** unique on `[:counterparty_name_fragment]` — same fragment cannot map to two companies.
+
+**Actions:** `:read`, `:create`, `:destroy`
+
+**Domain shortcuts (in `lib/garden/mercury.ex`):**
+```elixir
+define :list_client_bank_aliases, action: :read
+define :get_client_bank_alias_by_fragment, action: :read, get_by: [:counterparty_name_fragment]
+define :create_client_bank_alias, action: :create
+define :delete_client_bank_alias, action: :destroy
+```
+
+---
+
 ## Underpayment Tolerance
 
 Wire/ACH transfers sometimes arrive $0.50–$1.00 short due to intermediary bank fees. Add to application config:
@@ -303,7 +332,7 @@ All three new workers/resources surface automatically via existing `AshAdmin.Res
 | Create | `test/garden/mercury/payment_matcher_worker_test.exs` |
 | Create | `test/garden/mercury/invoice_scheduler_worker_test.exs` |
 | Create | `test/garden/finance/invoice_partial_test.exs` — new state machine transitions |
-| Modify | `lib/garden/sales/company.ex` — add `bank_counterparty_name` nullable string attribute |
+| Create | `lib/garden/mercury/client_bank_alias.ex` — maps counterparty_name_fragment → Sales.Company; multiple aliases per company supported |
 
 ---
 
