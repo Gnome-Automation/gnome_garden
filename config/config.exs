@@ -108,7 +108,7 @@ config :jido_ai,
 config :gnome_garden, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
-  queues: [default: 10, lead_scanning: 2],
+  queues: [default: 10, lead_scanning: 2, mercury: 10],
   repo: GnomeGarden.Repo,
   plugins: [
     {Oban.Plugins.Cron,
