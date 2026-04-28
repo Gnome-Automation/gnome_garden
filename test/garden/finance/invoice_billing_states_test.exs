@@ -50,9 +50,8 @@ defmodule GnomeGarden.Finance.InvoiceBillingStatesTest do
     assert written_off.status == :write_off
   end
 
-  test "cannot void a partial invoice" do
-    # void is only allowed from :draft and :issued, not :partial
-    # enforced by state machine — no explicit test needed beyond config
-    assert true
+  test "cannot void a partial invoice", %{invoice: invoice} do
+    {:ok, partial} = Finance.partial_invoice(invoice, balance_amount: Decimal.new("400.00"))
+    assert {:error, _} = Finance.void_invoice(partial)
   end
 end
