@@ -18,6 +18,13 @@ defmodule GnomeGardenWeb.MercuryWebhookController do
     end
   end
 
+  def receive(conn, _payload) do
+    Logger.warning("MercuryWebhookController: received payload without 'type' field")
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: "missing event type"})
+  end
+
   defp handle_event(conn, "transaction.created", payload) do
     with {:ok, account} <- Mercury.get_mercury_account_by_mercury_id(payload["accountId"]),
          {:ok, txn} <-
@@ -72,7 +79,8 @@ defmodule GnomeGardenWeb.MercuryWebhookController do
          {:ok, timestamp, v1} <- parse_signature_header(header),
          :ok <- check_timestamp(timestamp),
          raw_body = Map.get(conn.assigns, :raw_body, ""),
-         secret = Application.get_env(:gnome_garden, :mercury_webhook_secret, ""),
+         secret when is_binary(secret) and secret != "" <-
+           Application.get_env(:gnome_garden, :mercury_webhook_secret),
          expected = compute_hmac(secret, timestamp, raw_body),
          true <- Plug.Crypto.secure_compare(expected, v1) do
       :ok

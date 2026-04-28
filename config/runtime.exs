@@ -40,6 +40,15 @@ if mercury_webhook_secret = System.get_env("MERCURY_WEBHOOK_SECRET") do
     mercury_webhook_secret: mercury_webhook_secret
 end
 
+if config_env() == :prod do
+  unless System.get_env("MERCURY_WEBHOOK_SECRET") do
+    raise """
+    environment variable MERCURY_WEBHOOK_SECRET is missing.
+    Set it in your production environment before starting the server.
+    """
+  end
+end
+
 # Z.AI (Zhipu AI) API configuration for GLM models
 if zai_api_key = System.get_env("ZAI_API_KEY") do
   config :gnome_garden,
