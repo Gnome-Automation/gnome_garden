@@ -123,7 +123,7 @@ draft → issued → partial → paid
 
 The incoming Mercury transaction identifies the paying client via `Mercury.Transaction.counterparty_name` (the name on the wire/ACH) — **not** via `Mercury.Account`, which is GnomeGarden's own receiving account.
 
-Client matching: compare `counterparty_name` against a `Finance.Client` name (or alias). A `ClientBankAlias` lookup table maps known `counterparty_name` fragments → `Finance.Client` records, populated from the first confirmed match (auto or manual). On first occurrence, the matcher falls back to fuzzy name comparison.
+Client matching: compare `counterparty_name` against `Sales.Company.bank_counterparty_name` — a new nullable string field on the existing `Sales.Company` resource. Set once per client (manually or on first confirmed match). On first occurrence with no `bank_counterparty_name` set, the matcher falls back to fuzzy comparison against `Sales.Company.name`.
 
 ### Matching Algorithm
 
@@ -303,8 +303,7 @@ All three new workers/resources surface automatically via existing `AshAdmin.Res
 | Create | `test/garden/mercury/payment_matcher_worker_test.exs` |
 | Create | `test/garden/mercury/invoice_scheduler_worker_test.exs` |
 | Create | `test/garden/finance/invoice_partial_test.exs` — new state machine transitions |
-| Create | `lib/garden/finance/client_bank_alias.ex` — maps counterparty_name → Finance.Client |
-| Modify | `priv/repo/migrations/...` — add `finance_client_bank_aliases` table |
+| Modify | `lib/garden/sales/company.ex` — add `bank_counterparty_name` nullable string attribute |
 
 ---
 
