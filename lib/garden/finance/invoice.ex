@@ -46,9 +46,11 @@ defmodule GnomeGarden.Finance.Invoice do
 
     transitions do
       transition :issue, from: :draft, to: :issued
-      transition :mark_paid, from: :issued, to: :paid
+      transition :partial, from: [:issued, :partial], to: :partial
+      transition :mark_paid, from: [:issued, :partial], to: :paid
       transition :void, from: [:draft, :issued], to: :void
       transition :reopen, from: [:void, :paid], to: :draft
+      transition :write_off, from: [:issued, :partial], to: :write_off
     end
   end
 
@@ -122,6 +124,17 @@ defmodule GnomeGarden.Finance.Invoice do
       change set_attribute(:balance_amount, Decimal.new("0"))
     end
 
+    update :partial do
+      accept [:balance_amount]
+      change transition_state(:partial)
+    end
+
+    update :write_off do
+      accept []
+      change transition_state(:write_off)
+      change set_attribute(:balance_amount, Decimal.new("0"))
+    end
+
     update :void do
       accept []
       change transition_state(:void)
@@ -135,7 +148,7 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     read :open do
-      filter expr(status == :issued)
+      filter expr(status in [:issued, :partial])
 
       prepare build(
                 sort: [due_on: :asc, inserted_at: :desc],
@@ -182,8 +195,10 @@ defmodule GnomeGarden.Finance.Invoice do
       constraints one_of: [
                     :draft,
                     :issued,
+                    :partial,
                     :paid,
-                    :void
+                    :void,
+                    :write_off
                   ]
     end
 
@@ -263,8 +278,10 @@ defmodule GnomeGarden.Finance.Invoice do
                mapping: [
                  draft: :default,
                  issued: :warning,
+                 partial: :warning,
                  paid: :success,
-                 void: :error
+                 void: :error,
+                 write_off: :error
                ],
                default: :default}
   end

@@ -59,6 +59,8 @@ defmodule GnomeGarden.Finance do
       define :update_invoice, action: :update
       define :issue_invoice, action: :issue
       define :pay_invoice, action: :mark_paid
+      define :partial_invoice, action: :partial
+      define :write_off_invoice, action: :write_off
       define :void_invoice, action: :void
       define :reopen_invoice, action: :reopen
       define :list_open_invoices, action: :open
