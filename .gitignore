@@ -51,3 +51,4 @@ jido/
 
 # Claude Code local cache
 .claude/
+.superpowers/
