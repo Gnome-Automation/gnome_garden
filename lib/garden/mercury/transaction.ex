@@ -14,7 +14,7 @@ defmodule GnomeGarden.Mercury.Transaction do
   """
 
   admin do
-    table_columns [:id, :mercury_id, :amount, :kind, :status, :counterparty_name, :occurred_at]
+    table_columns [:id, :mercury_id, :amount, :kind, :status, :counterparty_name, :match_confidence, :occurred_at]
   end
 
   postgres do
@@ -71,7 +71,8 @@ defmodule GnomeGarden.Mercury.Transaction do
         :dashboard_link,
         :posted_date,
         :failed_at,
-        :company_id
+        :company_id,
+        :match_confidence
       ]
     end
   end
@@ -122,6 +123,11 @@ defmodule GnomeGarden.Mercury.Transaction do
     end
 
     attribute :company_id, :uuid, public?: true
+
+    attribute :match_confidence, :atom do
+      public? true
+      constraints one_of: [:exact, :probable, :possible, :unmatched]
+    end
 
     timestamps()
   end

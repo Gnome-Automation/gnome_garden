@@ -95,4 +95,20 @@ defmodule GnomeGarden.Mercury.TransactionTest do
     {:ok, updated} = Mercury.update_mercury_transaction(txn, %{status: :sent})
     assert updated.status == :sent
   end
+
+  test "match_confidence can be set via update", %{account: account} do
+    {:ok, txn} = GnomeGarden.Mercury.create_mercury_transaction(%{
+      account_id: account.id,
+      mercury_id: "txn-conf-001",
+      amount: Decimal.new("500.00"),
+      kind: :wire,
+      status: :sent,
+      occurred_at: DateTime.utc_now()
+    })
+
+    assert is_nil(txn.match_confidence)
+
+    {:ok, updated} = GnomeGarden.Mercury.update_mercury_transaction(txn, %{match_confidence: :unmatched})
+    assert updated.match_confidence == :unmatched
+  end
 end
