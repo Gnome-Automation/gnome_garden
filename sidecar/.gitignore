@@ -1,0 +1,5 @@
+node_modules/
+findings.json
+discoveries/
+seen.json
+package-lock.json

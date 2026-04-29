@@ -1,0 +1,3282 @@
+[
+  {
+    "name": "Irvine / IRWD PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/47688/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "City of Irvine",
+      "IRWD"
+    ]
+  },
+  {
+    "name": "OC San / Huntington Beach PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/14058/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "OC San",
+      "City of Huntington Beach"
+    ]
+  },
+  {
+    "name": "Anaheim PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/14424/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "City of Anaheim"
+    ]
+  },
+  {
+    "name": "Santa Ana PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/44601/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Santa Ana"
+    ]
+  },
+  {
+    "name": "Costa Mesa PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/22078/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Costa Mesa"
+    ]
+  },
+  {
+    "name": "Garden Grove PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/15118/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Garden Grove"
+    ]
+  },
+  {
+    "name": "Santa Margarita Water District PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/52147/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Santa Margarita Water District"
+    ]
+  },
+  {
+    "name": "Mesa Water District PlanetBids",
+    "url": "https://pbsystem.planetbids.com/portal/63291/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Mesa Water District"
+    ]
+  },
+  {
+    "name": "Moulton Niguel Water District PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/39389/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Moulton Niguel Water District"
+    ]
+  },
+  {
+    "name": "El Toro Water District PlanetBids",
+    "url": "https://pbsystem.planetbids.com/portal/48006/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "El Toro Water District"
+    ]
+  },
+  {
+    "name": "Newport Beach PlanetBids",
+    "url": "https://pbsystem.planetbids.com/portal/22078/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Newport Beach"
+    ]
+  },
+  {
+    "name": "Orange Unified School District PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/15578/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Orange Unified School District"
+    ]
+  },
+  {
+    "name": "County of Orange CPO",
+    "url": "https://cpo.oc.gov/open-bids-county-contracts-portal",
+    "type": "custom",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "County of Orange",
+      "OC Public Works",
+      "OC Facilities"
+    ]
+  },
+  {
+    "name": "Corona PlanetBids",
+    "url": "https://pbsystem.planetbids.com/portal/39497/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Corona"
+    ]
+  },
+  {
+    "name": "San Bernardino PlanetBids",
+    "url": "https://pbsystem.planetbids.com/portal/19236/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of San Bernardino"
+    ]
+  },
+  {
+    "name": "Riverside PlanetBids",
+    "url": "https://pbsystem.planetbids.com/portal/39475/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Riverside"
+    ]
+  },
+  {
+    "name": "Ontario PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/11434/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Ontario"
+    ]
+  },
+  {
+    "name": "Temecula PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/14837/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Temecula"
+    ]
+  },
+  {
+    "name": "Rancho Cucamonga PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/14433/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Rancho Cucamonga"
+    ]
+  },
+  {
+    "name": "Fontana PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/14391/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Fontana"
+    ]
+  },
+  {
+    "name": "Eastern Municipal Water District",
+    "url": "https://www.emwd.org/work-us/vendors/bidsrfps",
+    "type": "utility",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "Eastern Municipal Water District"
+    ]
+  },
+  {
+    "name": "Western Municipal Water District",
+    "url": "https://westernwaterca.gov/Bids.aspx",
+    "type": "utility",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "Western Municipal Water District",
+      "WRCRWA"
+    ]
+  },
+  {
+    "name": "Cucamonga Valley Water District",
+    "url": "https://cvwdwater.com/494/Purchasing",
+    "type": "utility",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "Cucamonga Valley Water District"
+    ]
+  },
+  {
+    "name": "San Bernardino County ePro",
+    "url": "https://epro.sbcounty.gov/bso/",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "County of San Bernardino"
+    ]
+  },
+  {
+    "name": "Riverside County PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/riversidecounty,ca/buyer/public/home",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "County of Riverside"
+    ]
+  },
+  {
+    "name": "Moreno Valley OpenGov",
+    "url": "https://procurement.opengov.com/portal/morenovalley",
+    "type": "opengov",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Moreno Valley"
+    ]
+  },
+  {
+    "name": "Torrance PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/47426/bo/bo-search",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Torrance"
+    ]
+  },
+  {
+    "name": "Long Beach PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/15810/bo/bo-search",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Long Beach"
+    ]
+  },
+  {
+    "name": "Long Beach Buys (Buyspeed)",
+    "url": "https://longbeachbuys.buyspeed.com/bso/",
+    "type": "custom",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Long Beach"
+    ]
+  },
+  {
+    "name": "Burbank PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/14210/bo/bo-search",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Burbank"
+    ]
+  },
+  {
+    "name": "Carson PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/32461/bo/bo-search",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Carson"
+    ]
+  },
+  {
+    "name": "Palmdale PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/23532/bo/bo-search",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Palmdale"
+    ]
+  },
+  {
+    "name": "Pasadena OpenGov",
+    "url": "https://procurement.opengov.com/portal/pasadena",
+    "type": "opengov",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Pasadena"
+    ]
+  },
+  {
+    "name": "Burbank-Glendale-Pasadena Airport Authority PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/21910/portal-home",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "Burbank-Glendale-Pasadena Airport Authority",
+      "Hollywood Burbank Airport"
+    ]
+  },
+  {
+    "name": "LA County Solicitations",
+    "url": "https://camisvr.co.la.ca.us/lacobids/",
+    "type": "custom",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "Los Angeles County"
+    ]
+  },
+  {
+    "name": "LA County DPW Contracts",
+    "url": "https://dpw.lacounty.gov/contracts/Opportunities.aspx",
+    "type": "custom",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "LA County Department of Public Works"
+    ]
+  },
+  {
+    "name": "LA County Sanitation Districts",
+    "url": "https://www.lacsd.org/opportunities/bids-purchasing",
+    "type": "utility",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "Los Angeles County Sanitation Districts"
+    ]
+  },
+  {
+    "name": "Port of Long Beach",
+    "url": "https://polb.com/business/business-opportunities/",
+    "type": "custom",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "Port of Long Beach"
+    ]
+  },
+  {
+    "name": "Port of Los Angeles",
+    "url": "https://portoflosangeles.org/business/contracting-opportunities",
+    "type": "custom",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "Port of Los Angeles"
+    ]
+  },
+  {
+    "name": "Carlsbad PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/27970/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of Carlsbad",
+      "Carlsbad Municipal Water District"
+    ]
+  },
+  {
+    "name": "Chula Vista PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/15381/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of Chula Vista"
+    ]
+  },
+  {
+    "name": "San Marcos PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/39481/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of San Marcos"
+    ]
+  },
+  {
+    "name": "National City PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/24103/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of National City"
+    ]
+  },
+  {
+    "name": "Oceanside USD PlanetBids",
+    "url": "https://pbsystem.planetbids.com/portal/62973/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "Oceanside Unified School District"
+    ]
+  },
+  {
+    "name": "Vista OpenGov",
+    "url": "https://procurement.opengov.com/portal/cityofvista",
+    "type": "opengov",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of Vista"
+    ]
+  },
+  {
+    "name": "San Diego County Water Authority BidNet",
+    "url": "https://www.bidnetdirect.com/california/sandiegocountywaterauthority",
+    "type": "bidnet",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "San Diego County Water Authority"
+    ]
+  },
+  {
+    "name": "Golden State Water Company PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/24450/bo/bo-search",
+    "type": "planetbids",
+    "region": "socal",
+    "priority": "high",
+    "agencies": [
+      "Golden State Water Company"
+    ]
+  },
+  {
+    "name": "County of Orange OpenGov",
+    "url": "https://procurement.opengov.com/portal/ocgov",
+    "type": "opengov",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "County of Orange",
+      "OC Public Works"
+    ]
+  },
+  {
+    "name": "Tustin OpenGov",
+    "url": "https://procurement.opengov.com/portal/tustin",
+    "type": "opengov",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Tustin"
+    ]
+  },
+  {
+    "name": "Lake Forest OpenGov",
+    "url": "https://procurement.opengov.com/portal/lakeforestca",
+    "type": "opengov",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Lake Forest"
+    ]
+  },
+  {
+    "name": "Fullerton OpenGov",
+    "url": "https://procurement.opengov.com/portal/cityoffullerton",
+    "type": "opengov",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Fullerton"
+    ]
+  },
+  {
+    "name": "Orange County Water District",
+    "url": "https://www.ocwd.com/working-with-us/rfp-contracts/",
+    "type": "utility",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Orange County Water District"
+    ],
+    "notes": "Updated URL (was /doing-business-with-ocwd/ which 404'd). RFP/Contracts page is active."
+  },
+  {
+    "name": "Inland Empire Utilities Agency",
+    "url": "https://www.ieua.org/doing-business-with-us/",
+    "type": "utility",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "Inland Empire Utilities Agency"
+    ]
+  },
+  {
+    "name": "LADWP Current Bids",
+    "url": "https://www.ladwp.com/doing-business-with-ladwp/procurement-contracts/current-bids",
+    "type": "utility",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "LADWP"
+    ]
+  },
+  {
+    "name": "Metropolitan Water District",
+    "url": "https://www.mwdh2o.com/doing-business-with-mwd/",
+    "type": "utility",
+    "region": "socal",
+    "priority": "medium",
+    "agencies": [
+      "Metropolitan Water District"
+    ]
+  },
+  {
+    "name": "Ventura River Water District",
+    "url": "https://www.vrwd.ca.gov/doing-business",
+    "type": "utility",
+    "region": "socal",
+    "priority": "high",
+    "agencies": [
+      "Ventura River Water District"
+    ]
+  },
+  {
+    "name": "California Water Boards Contracts",
+    "url": "https://www.waterboards.ca.gov/resources/contracts/",
+    "type": "utility",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": [
+      "California Water Boards"
+    ]
+  },
+  {
+    "name": "Caltrans CCOP District 12 (Orange County)",
+    "url": "https://ccop.dot.ca.gov/onestopshop/12",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Caltrans District 12"
+    ]
+  },
+  {
+    "name": "BidNet Direct - SCADA",
+    "url": "https://www.bidnetdirect.com/california/solicitations/open-bids?selectedContent=AGGREGATE&keywords=scada",
+    "type": "bidnet",
+    "region": "ca",
+    "priority": "high",
+    "agencies": []
+  },
+  {
+    "name": "BidNet Direct - PLC",
+    "url": "https://www.bidnetdirect.com/california/solicitations/open-bids?selectedContent=AGGREGATE&keywords=plc",
+    "type": "bidnet",
+    "region": "ca",
+    "priority": "high",
+    "agencies": []
+  },
+  {
+    "name": "BidNet Direct - Controls",
+    "url": "https://www.bidnetdirect.com/california/solicitations/open-bids?selectedContent=AGGREGATE&keywords=controls",
+    "type": "bidnet",
+    "region": "ca",
+    "priority": "high",
+    "agencies": []
+  },
+  {
+    "name": "BidNet Direct - Automation",
+    "url": "https://www.bidnetdirect.com/california/solicitations/open-bids?selectedContent=AGGREGATE&keywords=automation",
+    "type": "bidnet",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": []
+  },
+  {
+    "name": "BidNet Direct - Instrumentation",
+    "url": "https://www.bidnetdirect.com/california/solicitations/open-bids?selectedContent=AGGREGATE&keywords=instrumentation",
+    "type": "bidnet",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": []
+  },
+  {
+    "name": "San Bernardino Municipal Water Department",
+    "url": "https://www.sbmwd.org/bids",
+    "type": "utility",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "San Bernardino Municipal Water Department"
+    ],
+    "notes": "Active SCADA modernization RFP (2025-P2), Allen-Bradley PLCs, 10-15 year program"
+  },
+  {
+    "name": "West Valley Water District",
+    "url": "https://www.wvwd.org",
+    "type": "utility",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "West Valley Water District"
+    ],
+    "notes": "Active filtration facility expansion with new PLC room + SCADA control room"
+  },
+  {
+    "name": "Buena Park PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/39485/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Buena Park"
+    ]
+  },
+  {
+    "name": "Cypress PlanetBids",
+    "url": "https://pbsystem.planetbids.com/portal/55147/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Cypress"
+    ]
+  },
+  {
+    "name": "Fountain Valley PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/25002/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Fountain Valley"
+    ]
+  },
+  {
+    "name": "Seal Beach PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/39491/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Seal Beach"
+    ]
+  },
+  {
+    "name": "Stanton PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/14434/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Stanton"
+    ]
+  },
+  {
+    "name": "La Habra PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/56603/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of La Habra"
+    ]
+  },
+  {
+    "name": "Placentia PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/54600/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Placentia"
+    ]
+  },
+  {
+    "name": "South Coast Water District PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/19768/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "South Coast Water District"
+    ]
+  },
+  {
+    "name": "Yorba Linda Water District",
+    "url": "https://www.ylwd.com/category/projects/",
+    "type": "utility",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Yorba Linda Water District"
+    ]
+  },
+  {
+    "name": "MWDOC RFPs/RFQs",
+    "url": "https://www.mwdoc.com/rfps-rfqs/",
+    "type": "utility",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Municipal Water District of Orange County"
+    ]
+  },
+  {
+    "name": "Redlands PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/24639/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Redlands"
+    ]
+  },
+  {
+    "name": "Upland PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/66713/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Upland"
+    ]
+  },
+  {
+    "name": "Murrieta PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/17992/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Murrieta"
+    ]
+  },
+  {
+    "name": "Chino PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/26384/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Chino"
+    ]
+  },
+  {
+    "name": "Rialto PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/28159/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Rialto"
+    ]
+  },
+  {
+    "name": "Rancho California Water District",
+    "url": "https://www.ranchowater.com/157/Purchasing",
+    "type": "utility",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "Rancho California Water District"
+    ]
+  },
+  {
+    "name": "Jurupa Community Services District",
+    "url": "https://www.jcsd.us/business/",
+    "type": "utility",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "Jurupa Community Services District"
+    ]
+  },
+  {
+    "name": "Lancaster PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/42566/bo/bo-search",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Lancaster"
+    ]
+  },
+  {
+    "name": "West Covina PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/39468/bo/bo-search",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of West Covina"
+    ]
+  },
+  {
+    "name": "Pomona PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/24662/bo/bo-search",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Pomona"
+    ]
+  },
+  {
+    "name": "Glendale RFP/Bid Portal",
+    "url": "https://www.glendaleca.gov/government/departments/finance/purchasing/rfp-rfq-bid-page",
+    "type": "custom",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Glendale",
+      "Glendale Water and Power"
+    ]
+  },
+  {
+    "name": "Olivenhain Municipal Water District PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/66222/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "Olivenhain Municipal Water District"
+    ]
+  },
+  {
+    "name": "Vallecitos Water District PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/50139/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "Vallecitos Water District"
+    ]
+  },
+  {
+    "name": "San Elijo JPA PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/33529/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "San Elijo Joint Powers Authority"
+    ]
+  },
+  {
+    "name": "Sweetwater Authority PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/69501/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "Sweetwater Authority"
+    ],
+    "notes": "Posted RFQ for on-call SCADA system services (2026)"
+  },
+  {
+    "name": "San Diego County BuyNet",
+    "url": "https://buynet.sdcounty.ca.gov/",
+    "type": "custom",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "County of San Diego",
+      "San Diego County DPW"
+    ]
+  },
+  {
+    "name": "Fallbrook Public Utility District",
+    "url": "https://www.fpud.com/rfps-bids",
+    "type": "utility",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "Fallbrook Public Utility District"
+    ]
+  },
+  {
+    "name": "California DWR Procurement",
+    "url": "https://water.ca.gov/Work-With-Us/Procurement",
+    "type": "custom",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": [
+      "Department of Water Resources"
+    ]
+  },
+  {
+    "name": "Caltrans CCOP District 7 (Los Angeles)",
+    "url": "https://ccop.dot.ca.gov/onestopshop/7",
+    "type": "custom",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "Caltrans District 7"
+    ]
+  },
+  {
+    "name": "Caltrans CCOP District 8 (Inland Empire)",
+    "url": "https://ccop.dot.ca.gov/onestopshop/8",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "Caltrans District 8"
+    ]
+  },
+  {
+    "name": "Caltrans CCOP District 11 (San Diego)",
+    "url": "https://ccop.dot.ca.gov/onestopshop/11",
+    "type": "custom",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "Caltrans District 11"
+    ]
+  },
+  {
+    "name": "ThomasNet",
+    "url": "https://www.thomasnet.com",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:thomasnet.com {industry} {region}",
+    "notes": "500K+ manufacturers, search by category + location"
+  },
+  {
+    "name": "MFG.com",
+    "url": "https://www.mfg.com",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:mfg.com {industry} California",
+    "notes": "RFQ marketplace"
+  },
+  {
+    "name": "IndustryNet",
+    "url": "https://www.industrynet.com",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:industrynet.com {industry} California",
+    "notes": "Manufacturer directory"
+  },
+  {
+    "name": "Made in California",
+    "url": "https://www.made-in-california.com",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:made-in-california.com {industry}",
+    "notes": "CA-specific manufacturers"
+  },
+  {
+    "name": "Brewers Association",
+    "url": "https://www.brewersassociation.org/directories/breweries/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:brewersassociation.org California brewery",
+    "notes": "US brewery directory"
+  },
+  {
+    "name": "CA Craft Brewers",
+    "url": "https://www.californiacraftbeer.com/breweries/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "California craft brewery {region} production",
+    "notes": "CA breweries"
+  },
+  {
+    "name": "SQF Certified Sites",
+    "url": "https://www.sqfi.com/certified-sites/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:sqfi.com California certified",
+    "notes": "SQF = food safety compliance = budget for automation"
+  },
+  {
+    "name": "Food Engineering Top 100",
+    "url": "https://www.foodengineeringmag.com/food-beverage-top-100",
+    "type": "directories",
+    "priority": "medium",
+    "search": "food engineering top 100 California",
+    "notes": "Largest food companies"
+  },
+  {
+    "name": "BioSpace",
+    "url": "https://www.biospace.com/employer-directory",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:biospace.com California biotech employer",
+    "notes": "Biotech employer directory"
+  },
+  {
+    "name": "CLSA Directory",
+    "url": "https://califesciences.org/membership-directory/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:califesciences.org member directory",
+    "notes": "CA life sciences"
+  },
+  {
+    "name": "BIOCOM",
+    "url": "https://www.biocom.org/member-directory/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:biocom.org member Southern California",
+    "notes": "SoCal biotech association"
+  },
+  {
+    "name": "PMMI Members",
+    "url": "https://www.pmmi.org/find-a-member",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:pmmi.org California member",
+    "notes": "Packaging machinery manufacturers"
+  },
+  {
+    "name": "CPA Members",
+    "url": "https://www.contractpackaging.org/members/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:contractpackaging.org California member",
+    "notes": "Contract packagers"
+  },
+  {
+    "name": "MHI Directory",
+    "url": "https://www.mhi.org/membership/directory",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:mhi.org California member",
+    "notes": "Material handling / warehouse automation"
+  },
+  {
+    "name": "IWLA Directory",
+    "url": "https://www.iwla.com/membership/member-directory",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:iwla.com California member",
+    "notes": "3PL / warehouse operators"
+  },
+  {
+    "name": "ACWA Members",
+    "url": "https://www.acwa.com/members/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:acwa.com member Southern California",
+    "notes": "CA water agencies — push to sources.json if good"
+  },
+  {
+    "name": "Plastics Industry Assoc",
+    "url": "https://www.plasticsindustry.org/directory",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:plasticsindustry.org California",
+    "notes": "Plastics processors"
+  },
+  {
+    "name": "Plastics News",
+    "url": "https://www.plasticsnews.com",
+    "type": "directories",
+    "priority": "medium",
+    "search": "plastics news California processor top",
+    "notes": "Top processors list"
+  },
+  {
+    "name": "Import Yeti",
+    "url": "https://www.importyeti.com",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:importyeti.com {company_name}",
+    "notes": "Find what companies manufacture/import — verify they actually make things"
+  },
+  {
+    "name": "Indeed",
+    "url": "",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:indeed.com \"controls engineer\" OR \"PLC programmer\" OR \"automation engineer\" OR \"SCADA engineer\" \"{region}\"",
+    "notes": "Primary job board — check each region"
+  },
+  {
+    "name": "LinkedIn Jobs",
+    "url": "",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:linkedin.com/jobs \"controls engineer\" OR \"PLC programmer\" \"{region}\" California",
+    "notes": "Professional jobs"
+  },
+  {
+    "name": "ZipRecruiter",
+    "url": "",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:ziprecruiter.com \"controls engineer\" OR \"PLC\" OR \"automation\" \"{region}\" California",
+    "notes": "Aggregates boards"
+  },
+  {
+    "name": "Glassdoor",
+    "url": "",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:glassdoor.com \"controls engineer\" OR \"automation engineer\" \"{region}\" California",
+    "notes": "Company reviews + jobs"
+  },
+  {
+    "name": "CSIA Job Board",
+    "url": "https://jobs.controlsys.org",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:controlsys.org California job",
+    "notes": "System integrator jobs"
+  },
+  {
+    "name": "ISA Jobs",
+    "url": "https://jobs.isa.org",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:jobs.isa.org California",
+    "notes": "Instrumentation/automation jobs"
+  },
+  {
+    "name": "Automation.com Jobs",
+    "url": "https://www.automation.com/en-us/jobs",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:automation.com/en-us/jobs California",
+    "notes": "Automation industry jobs"
+  },
+  {
+    "name": "Control Engineering Jobs",
+    "url": "https://www.controleng.com/careers",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:controleng.com California career job",
+    "notes": "Controls industry careers"
+  },
+  {
+    "name": "Rockwell PartnerNetwork",
+    "url": "https://www.rockwellautomation.com/en-us/company/partnernetwork.html",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "rockwell partnernetwork California integrator",
+    "notes": "Lead pass program, integrator locator"
+  },
+  {
+    "name": "Inductive Automation Integrators",
+    "url": "https://inductiveautomation.com/integrators",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "site:inductiveautomation.com integrator California",
+    "notes": "Ignition integrator directory — find companies USING Ignition"
+  },
+  {
+    "name": "Siemens Solution Partners",
+    "url": "https://www.siemens.com/global/en/products/automation/partners.html",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "siemens solution partner California automation",
+    "notes": "Less common in SoCal"
+  },
+  {
+    "name": "AVEVA (Wonderware) Partners",
+    "url": "https://www.aveva.com/en/partners/",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "wonderware system integrator California",
+    "notes": "Legacy Wonderware upgrade opportunities"
+  },
+  {
+    "name": "Beckhoff Partners",
+    "url": "https://www.beckhoff.com/en-us/company/partner/",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "beckhoff partner California",
+    "notes": "TwinCAT ecosystem"
+  },
+  {
+    "name": "Universal Robots CSI",
+    "url": "https://www.universal-robots.com/certified-system-integrators/",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "universal robots certified integrator California",
+    "notes": "Cobot integration — easy entry"
+  },
+  {
+    "name": "FANUC Authorized",
+    "url": "https://www.fanucamerica.com/support/authorized-integrators",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "FANUC authorized integrator California",
+    "notes": "Most common robot brand"
+  },
+  {
+    "name": "Cognex Partners",
+    "url": "https://www.cognex.com/partners",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "cognex partner California vision",
+    "notes": "Machine vision"
+  },
+  {
+    "name": "Control Engineering",
+    "url": "https://www.controleng.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:controleng.com California OR \"Southern California\" OR \"Orange County\" facility OR expansion OR upgrade",
+    "notes": "Subscribe to newsletter"
+  },
+  {
+    "name": "Automation World",
+    "url": "https://www.automationworld.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:automationworld.com California facility expansion upgrade",
+    "notes": "Packaging-heavy"
+  },
+  {
+    "name": "Food Engineering",
+    "url": "https://www.foodengineeringmag.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:foodengineeringmag.com California facility OR plant OR expansion",
+    "notes": "Top 100 list is gold"
+  },
+  {
+    "name": "Packaging World",
+    "url": "https://www.packworld.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:packworld.com California new facility OR expansion OR packaging line",
+    "notes": "New facility announcements"
+  },
+  {
+    "name": "Packaging Digest",
+    "url": "https://www.packagingdigest.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:packagingdigest.com California facility",
+    "notes": "Packaging industry news"
+  },
+  {
+    "name": "Brewery Industry News",
+    "url": "",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "brewbound.com OR craftbrewingbusiness.com California brewery expansion facility 2026",
+    "notes": "Brewery-specific news"
+  },
+  {
+    "name": "GEN Biotech News",
+    "url": "",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:genengnews.com California biotech facility manufacturing expansion",
+    "notes": "Biotech industry news"
+  },
+  {
+    "name": "LA Business Journal",
+    "url": "https://labusinessjournal.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:labusinessjournal.com manufacturing facility expansion",
+    "notes": "LA business news"
+  },
+  {
+    "name": "OC Register Business",
+    "url": "https://www.ocregister.com/business/",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:ocregister.com manufacturing OR brewery OR facility expansion",
+    "notes": "OC local news"
+  },
+  {
+    "name": "r/PLC",
+    "url": "",
+    "type": "forums",
+    "priority": "medium",
+    "search": "site:reddit.com/r/PLC California OR \"SoCal\" OR \"Orange County\" hiring OR contractor OR integrator",
+    "notes": "Help requests, contractor needs"
+  },
+  {
+    "name": "r/SCADA",
+    "url": "",
+    "type": "forums",
+    "priority": "medium",
+    "search": "site:reddit.com/r/SCADA California hiring OR help OR integrator",
+    "notes": "SCADA projects"
+  },
+  {
+    "name": "PLCTalk",
+    "url": "https://www.plctalk.net",
+    "type": "forums",
+    "priority": "medium",
+    "search": "site:plctalk.net California job OR hiring OR contractor",
+    "notes": "Job board, help wanted"
+  },
+  {
+    "name": "Control.com",
+    "url": "https://control.com",
+    "type": "forums",
+    "priority": "medium",
+    "search": "site:control.com California job OR hiring OR integrator needed",
+    "notes": "Process-focused forum"
+  },
+  {
+    "name": "Ignition Forum",
+    "url": "https://forum.inductiveautomation.com",
+    "type": "forums",
+    "priority": "medium",
+    "search": "site:forum.inductiveautomation.com California OR \"SoCal\" integrator OR help",
+    "notes": "Companies needing Ignition help"
+  },
+  {
+    "name": "CEQAnet",
+    "url": "https://ceqanet.lci.ca.gov/",
+    "type": "permits_and_filings",
+    "priority": "medium",
+    "search": "site:ceqanet.lci.ca.gov SCADA OR controls OR automation OR manufacturing OR processing facility",
+    "notes": "Environmental filings for major projects"
+  },
+  {
+    "name": "CA SOS Business Search",
+    "url": "https://bizfileonline.sos.ca.gov/search/business",
+    "type": "permits_and_filings",
+    "priority": "medium",
+    "search": "California secretary of state new business manufacturing {region}",
+    "notes": "Verify companies, find new filings"
+  },
+  {
+    "name": "USAspending",
+    "url": "https://www.usaspending.gov",
+    "type": "permits_and_filings",
+    "priority": "medium",
+    "search": "site:usaspending.gov SCADA California award",
+    "notes": "Federal grant/contract awards — who got money"
+  },
+  {
+    "name": "Mission Viejo BidNet",
+    "url": "https://www.bidnetdirect.com/california/cityofmissionviejo",
+    "type": "bidnet",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Mission Viejo"
+    ],
+    "notes": "BidNet Direct / California Purchasing Group"
+  },
+  {
+    "name": "Laguna Niguel CivicEngage",
+    "url": "https://www.cityoflagunaniguel.org/Bids.aspx",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of Laguna Niguel"
+    ],
+    "notes": "CivicEngage bid postings"
+  },
+  {
+    "name": "Westminster PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/westminster,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Westminster"
+    ],
+    "notes": "PublicPurchase portal"
+  },
+  {
+    "name": "Brea PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/brea,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Brea"
+    ],
+    "notes": "PublicPurchase + city eProcurement portal"
+  },
+  {
+    "name": "NOCCCD PlanetBids",
+    "url": "https://www.nocccd.edu/work-us/vendor-contractor-information/bid-opportunities",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "North Orange County Community College District"
+    ],
+    "notes": "Fullerton College, Cypress College, NOCE — active facilities bond program, uses PlanetBids"
+  },
+  {
+    "name": "SOCCCD PlanetBids",
+    "url": "https://www.socccd.edu/information/suppliers-contractors",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "South Orange County Community College District"
+    ],
+    "notes": "Saddleback College, Irvine Valley College — uses PlanetBids"
+  },
+  {
+    "name": "Laguna Beach County Water District",
+    "url": "https://www.lbcwd.org/about-us/rfp-postings",
+    "type": "utility",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Laguna Beach County Water District"
+    ],
+    "notes": "Small water district with competitive bid process"
+  },
+  {
+    "name": "Trabuco Canyon Water District",
+    "url": "https://www.tcwd.ca.gov/district-services/finance",
+    "type": "utility",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Trabuco Canyon Water District"
+    ],
+    "notes": "Exploring combined services with IRWD/SMWD. Active procurement."
+  },
+  {
+    "name": "OC Infrastructure Programs",
+    "url": "https://ocip.ocpublicworks.com/",
+    "type": "custom",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "OC Public Works",
+      "OC Flood Control District"
+    ],
+    "notes": "OC Public Works CIP project hub — construction bids, A&E procurement"
+  },
+  {
+    "name": "OC Sanitation District OpenGov",
+    "url": "https://procurement.opengov.com/portal/embed/ocsan/project-list",
+    "type": "opengov",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Orange County Sanitation District"
+    ],
+    "notes": "OC San uses OpenGov for goods/equipment/services (separate from PlanetBids for public works)"
+  },
+  {
+    "name": "Chino Hills CivicEngage",
+    "url": "https://www.chinohills.org/Bids.aspx",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Chino Hills"
+    ],
+    "notes": "CivicEngage bid postings"
+  },
+  {
+    "name": "Downey City Procurement",
+    "url": "https://www.downeyca.org/our-city/departments/finance/vendor-registration-open-bids",
+    "type": "custom",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Downey"
+    ],
+    "notes": "City procurement portal — Downey USD uses separate PlanetBids"
+  },
+  {
+    "name": "Whittier PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/cityofwhittier,ca/buyer/public/home",
+    "type": "custom",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Whittier"
+    ],
+    "notes": "PublicPurchase + e-arc.com PlanRoom for construction bids"
+  },
+  {
+    "name": "Compton RFPs and Bids",
+    "url": "https://www.comptoncity.org/departments/city-clerk/rfps-and-bids",
+    "type": "custom",
+    "region": "la",
+    "priority": "low",
+    "agencies": [
+      "City of Compton"
+    ],
+    "notes": "City website bid postings"
+  },
+  {
+    "name": "Santa Clarita BidNet",
+    "url": "https://www.bidnetdirect.com/california/cityofsantaclarita",
+    "type": "bidnet",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Santa Clarita"
+    ],
+    "notes": "BidNet Direct — city procurement"
+  },
+  {
+    "name": "SCV Water PlanetBids",
+    "url": "https://yourscvwater.com/bid-opportunities",
+    "type": "utility",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "Santa Clarita Valley Water Agency"
+    ],
+    "notes": "Water agency using PlanetBids — infrastructure = potential SCADA/controls"
+  },
+  {
+    "name": "Escondido BidNet",
+    "url": "https://www.bidnetdirect.com/california/cityofescondido",
+    "type": "bidnet",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of Escondido"
+    ],
+    "notes": "BidNet Direct — city procurement"
+  },
+  {
+    "name": "Oceanside City BidNet",
+    "url": "https://www.bidnetdirect.com/california/cityofoceanside",
+    "type": "bidnet",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of Oceanside"
+    ],
+    "notes": "BidNet Direct — separate from Oceanside USD on PlanetBids"
+  },
+  {
+    "name": "Padre Dam Municipal Water District",
+    "url": "https://www.padredam.org/Bids.aspx",
+    "type": "utility",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "Padre Dam Municipal Water District"
+    ],
+    "notes": "Active water district in Santee/East County. Pump station and sewer projects."
+  },
+  {
+    "name": "Otay Water District PlanetBids",
+    "url": "https://www.otaywater.gov/about-otay/bid-opportunities/",
+    "type": "utility",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "Otay Water District"
+    ],
+    "notes": "Major SD County water district. Uses PlanetBids. South Bay/East County."
+  },
+  {
+    "name": "Helix Water District BidNet",
+    "url": "https://www.bidnetdirect.com/california/helixwaterdistrict",
+    "type": "bidnet",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "Helix Water District"
+    ],
+    "notes": "La Mesa/El Cajon area. BidNet Direct for construction. Active CIP."
+  },
+  {
+    "name": "Santa Fe Irrigation District",
+    "url": "https://www.sfidwater.org/Bids.aspx",
+    "type": "utility",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "Santa Fe Irrigation District"
+    ],
+    "notes": "Rancho Santa Fe/Solana Beach. CivicEngage bid postings."
+  },
+  {
+    "name": "Vista Irrigation District PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/vistaid,ca/buyer/public/home",
+    "type": "custom",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "Vista Irrigation District"
+    ],
+    "notes": "PublicPurchase portal"
+  },
+  {
+    "name": "Cal eProcure (California State Contracts Register)",
+    "url": "https://caleprocure.ca.gov/",
+    "type": "custom",
+    "region": "ca",
+    "priority": "high",
+    "agencies": [
+      "California state agencies",
+      "DWR",
+      "Water Boards",
+      "Caltrans"
+    ],
+    "notes": "Official CA state procurement portal — replaced BidSync. CSCR access."
+  },
+  {
+    "name": "H2bid (Water/Wastewater Bid Database)",
+    "url": "https://h2bid.com/",
+    "type": "bidnet",
+    "region": "ca",
+    "priority": "high",
+    "agencies": [],
+    "notes": "Largest database of water/wastewater utility bids nationwide — niche aggregator"
+  },
+  {
+    "name": "BidNet Direct California Participating Buyers",
+    "url": "https://www.bidnetdirect.com/california/participating-buyers",
+    "type": "bidnet",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": [],
+    "notes": "List of 764+ California agencies on BidNet — discover new agencies to monitor"
+  },
+  {
+    "name": "CSIA Exchange (System Integrator Directory)",
+    "url": "https://www.csiaexchange.com/",
+    "type": "directories",
+    "priority": "high",
+    "search": "site:csiaexchange.com water wastewater California",
+    "notes": "Definitive directory of certified system integrators — dedicated water/wastewater section"
+  },
+  {
+    "name": "IQS Directory California Automation",
+    "url": "https://www.iqsdirectory.com/automation-equipment/california/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:iqsdirectory.com automation California",
+    "notes": "CA automation equipment manufacturers and system integrators"
+  },
+  {
+    "name": "CSIA Find an Integrator",
+    "url": "https://controlsys.org/find-an-integrator/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "California water wastewater integrator",
+    "notes": "CSIA official integrator search — filter by location and industry"
+  },
+  {
+    "name": "CWEA Job Board",
+    "url": "https://jobs.cwea.org/",
+    "type": "job_boards",
+    "priority": "high",
+    "search": "site:jobs.cwea.org controls OR SCADA OR automation",
+    "notes": "California Water Environment Association — primary CA wastewater job board. Hiring signals = automation investment."
+  },
+  {
+    "name": "AWWA Career Center",
+    "url": "https://careercenter.awwa.org/",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:careercenter.awwa.org California water",
+    "notes": "National water industry job board with strong CA listings"
+  },
+  {
+    "name": "ACWA Careers",
+    "url": "https://www.acwa.com/careers/",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:acwa.com careers California water",
+    "notes": "Association of CA Water Agencies — 450+ member agencies, aggregated job postings"
+  },
+  {
+    "name": "Work for Water California",
+    "url": "https://www.workforwater.org/states/california/",
+    "type": "job_boards",
+    "priority": "low",
+    "search": "California water wastewater jobs",
+    "notes": "AWWA/WEF joint water careers initiative"
+  },
+  {
+    "name": "CA-NV AWWA The SOURCE",
+    "url": "https://www.ca-nv-awwa.org/",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:ca-nv-awwa.org facility OR upgrade OR SCADA",
+    "notes": "Quarterly magazine for CA-NV water professionals. Profiles facility upgrades = early bid signals."
+  },
+  {
+    "name": "Food Processing Magazine",
+    "url": "https://www.foodprocessing.com/",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:foodprocessing.com California plant expansion facility",
+    "notes": "Dedicated Plant Expansion section. New facility construction = automation needs."
+  },
+  {
+    "name": "Orange County Business Journal",
+    "url": "https://www.ocbj.com/",
+    "type": "trade_pubs",
+    "priority": "high",
+    "search": "site:ocbj.com manufacturing OR facility OR expansion",
+    "notes": "Primary OC business journal. Covers manufacturing expansions, new facilities, corporate moves."
+  },
+  {
+    "name": "Mitsubishi Electric Solution Partners",
+    "url": "https://us.mitsubishielectric.com/fa/en/support/resources/solution-partners/",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "Mitsubishi Electric Diamond Partner California",
+    "notes": "Growing process automation presence. Diamond Partner directory by state."
+  },
+  {
+    "name": "LA County Building Permit Viewer",
+    "url": "https://apps.gis.lacounty.gov/dpw/m/?viewer=bpv_wf5",
+    "type": "permits_and_filings",
+    "priority": "low",
+    "search": "LA County building permits industrial manufacturing",
+    "notes": "GIS-based permit viewer — spot new industrial construction early"
+  },
+  {
+    "name": "West Basin Municipal Water District",
+    "url": "https://www.beaconbid.com/solicitations/west-basin-municipal-water-district/open",
+    "type": "utility",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "West Basin Municipal Water District"
+    ],
+    "notes": "Active DCS replacement program ($8M), Phase V SCADA upgrades, MCC replacements. Monitor for sub-projects."
+  },
+  {
+    "name": "Three Valleys Municipal Water District PlanetBids",
+    "url": "https://pbsystem.planetbids.com/portal/53500/bo/bo-search",
+    "type": "planetbids",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "Three Valleys Municipal Water District"
+    ],
+    "notes": "Wholesale water supplier to San Gabriel Valley. PlanetBids portal for purchasing, professional services, and design/construction."
+  },
+  {
+    "name": "Rainbow Municipal Water District PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/64732/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "Rainbow Municipal Water District"
+    ],
+    "notes": "Major SD County water district in Fallbrook/Rainbow area. Active PlanetBids portal for construction and vendor opportunities."
+  },
+  {
+    "name": "Valley Center Municipal Water District",
+    "url": "https://www.valleycenterwater.org/Projects/Project-Bid-Opportunities",
+    "type": "utility",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "Valley Center Municipal Water District"
+    ],
+    "notes": "SD County inland water district. Posts bid opportunities on website for CIP projects."
+  },
+  {
+    "name": "Rincon del Diablo Municipal Water District",
+    "url": "https://rinconwater.org/bids/",
+    "type": "utility",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "Rincon del Diablo Municipal Water District"
+    ],
+    "notes": "Escondido-area water district. Bid page on website for construction and vendor opportunities."
+  },
+  {
+    "name": "SAM.gov Federal Procurement",
+    "url": "https://sam.gov/search/?index=opp&keywords=SCADA",
+    "type": "custom",
+    "region": "ca",
+    "priority": "high",
+    "agencies": [
+      "Federal agencies",
+      "US Bureau of Reclamation",
+      "US Army Corps of Engineers"
+    ],
+    "notes": "Official federal procurement portal. Search SCADA/controls/automation for SoCal federal water infrastructure projects."
+  },
+  {
+    "name": "WaterWorld",
+    "url": "https://www.waterworld.com",
+    "type": "trade_pubs",
+    "priority": "high",
+    "search": "site:waterworld.com California facility OR upgrade OR SCADA OR expansion",
+    "notes": "Leading water/wastewater industry publication. Profiles facility upgrades and new projects = early bid signals."
+  },
+  {
+    "name": "Water & Wastes Digest",
+    "url": "https://www.wwdmag.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:wwdmag.com California facility OR upgrade OR SCADA",
+    "notes": "Water industry trade publication covering treatment plant projects and technology upgrades."
+  },
+  {
+    "name": "Treatment Plant Operator",
+    "url": "https://www.tpomag.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:tpomag.com California plant OR facility OR upgrade",
+    "notes": "Wastewater treatment operations magazine. Profiles plant upgrades and new facility construction."
+  },
+  {
+    "name": "Municipal Sewer & Water",
+    "url": "https://www.mswmag.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:mswmag.com California infrastructure OR SCADA OR upgrade",
+    "notes": "Municipal utility operations magazine. Covers collection system and treatment plant projects."
+  },
+  {
+    "name": "Processing Magazine",
+    "url": "https://www.processingmagazine.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:processingmagazine.com California plant OR expansion OR facility",
+    "notes": "Process industry magazine. Covers food, pharma, chemical plant expansions and automation upgrades."
+  },
+  {
+    "name": "Water Online",
+    "url": "https://www.wateronline.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:wateronline.com California SCADA OR automation OR facility upgrade",
+    "notes": "Water industry news and product portal. Technology articles signal where the industry is investing."
+  },
+  {
+    "name": "InTech Magazine (ISA)",
+    "url": "https://www.isa.org/intech-home",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:isa.org/intech California OR water OR wastewater automation",
+    "notes": "ISA's flagship publication for automation professionals. Covers industrial automation trends and project profiles."
+  },
+  {
+    "name": "Schneider Electric Partner Locator",
+    "url": "https://www.se.com/us/en/work/partners/",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "Schneider Electric partner California water wastewater integrator",
+    "notes": "Schneider (Modicon PLCs, EcoStruxure) partner directory. Find certified system integrators in SoCal."
+  },
+  {
+    "name": "Opto 22 Partner Network",
+    "url": "https://www.opto22.com/solutions/partner-network",
+    "type": "partner_networks",
+    "priority": "low",
+    "search": "Opto 22 partner California integrator",
+    "notes": "Opto 22 (PAC, SNAP I/O) partner network. Popular in water/wastewater. Find integrators using their platform."
+  },
+  {
+    "name": "CMTC / Roadmap 4 Innovation (CA Manufacturing)",
+    "url": "https://www.cmtc.com",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:cmtc.com California manufacturer",
+    "notes": "CA Manufacturing Technology Consulting (now Roadmap 4 Innovation). Client directory of CA manufacturers they've helped = companies investing in operations."
+  },
+  {
+    "name": "CASQA (CA Stormwater Quality Association)",
+    "url": "https://www.casqa.org",
+    "type": "directories",
+    "priority": "low",
+    "search": "site:casqa.org member California municipality",
+    "notes": "CA Stormwater Quality Association. Municipal members = entities with stormwater infrastructure that needs monitoring/controls."
+  },
+  {
+    "name": "CSDA (CA Special Districts Association)",
+    "url": "https://www.csda.net",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:csda.net member directory water district",
+    "notes": "CA Special Districts Association. Directory of water, sanitation, and other special districts across California."
+  },
+  {
+    "name": "NACWA (National Association of Clean Water Agencies)",
+    "url": "https://www.nacwa.org",
+    "type": "directories",
+    "priority": "low",
+    "search": "site:nacwa.org California member agency",
+    "notes": "National Association of Clean Water Agencies. Member list includes CA wastewater utilities investing in infrastructure."
+  },
+  {
+    "name": "Water Reuse Association",
+    "url": "https://watereuse.org",
+    "type": "directories",
+    "priority": "low",
+    "search": "site:watereuse.org California project member",
+    "notes": "Water reuse projects directory. CA is a leader in water reuse = advanced treatment = automation opportunities."
+  },
+  {
+    "name": "MrPLC.com",
+    "url": "https://www.mrplc.com",
+    "type": "forums",
+    "priority": "medium",
+    "search": "site:mrplc.com California job OR hiring OR contractor OR integrator",
+    "notes": "PLC programming community forum. Job postings and contractor requests in automation."
+  },
+  {
+    "name": "Eng-Tips (Automation & Process Engineering)",
+    "url": "https://www.eng-tips.com",
+    "type": "forums",
+    "priority": "low",
+    "search": "site:eng-tips.com California SCADA OR PLC OR controls OR automation",
+    "notes": "Engineering professional forum. Process controls section (798) has job postings and project discussions."
+  },
+  {
+    "name": "OC Development Services (Building Permits)",
+    "url": "https://ocds.ocpublicworks.com",
+    "type": "permits_and_filings",
+    "priority": "low",
+    "search": "Orange County building permits industrial manufacturing",
+    "notes": "OC Public Works Development Services. Building permits for new industrial/manufacturing construction."
+  },
+  {
+    "name": "QuestCDN (Construction Project Bidding)",
+    "url": "https://www.questcdn.com",
+    "type": "custom",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": [],
+    "notes": "Construction project plan room used by many CA water districts and cities. Plans and specs for infrastructure projects."
+  },
+  {
+    "name": "ConstructConnect",
+    "url": "https://www.constructconnect.com",
+    "type": "custom",
+    "region": "ca",
+    "priority": "low",
+    "agencies": [],
+    "notes": "Construction bidding intelligence platform. Tracks commercial and industrial construction projects across SoCal."
+  },
+  {
+    "name": "Dodge Construction Network",
+    "url": "https://www.construction.com",
+    "type": "custom",
+    "region": "ca",
+    "priority": "low",
+    "agencies": [],
+    "notes": "Dodge Data construction project database. Early stage project leads for commercial/industrial construction."
+  },
+  {
+    "name": "FindRFP",
+    "url": "https://www.findrfp.com",
+    "type": "custom",
+    "region": "ca",
+    "priority": "low",
+    "agencies": [],
+    "notes": "RFP search engine aggregating government solicitations. Search by keyword (SCADA, PLC, controls) and location."
+  },
+  {
+    "name": "San Diego Unified School District PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/43764/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "San Diego Unified School District"
+    ],
+    "notes": "2nd largest school district in CA. Major facilities bond program with ongoing construction = potential SCADA/controls work in new buildings."
+  },
+  {
+    "name": "MWD PlanetBids Portal",
+    "url": "https://vendors.planetbids.com/portal/16151/bo/bo-search",
+    "type": "planetbids",
+    "region": "socal",
+    "priority": "high",
+    "agencies": [
+      "Metropolitan Water District of Southern California"
+    ],
+    "notes": "MWD's dedicated PlanetBids portal for vendor registration and bid opportunities. Supplements the main MWD procurement page. Active Weymouth and Diemer treatment plant projects."
+  },
+  {
+    "name": "Las Virgenes Municipal Water District OpenGov",
+    "url": "https://procurement.opengov.com/portal/embed/lvmwd/project-list",
+    "type": "opengov",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "Las Virgenes Municipal Water District"
+    ],
+    "notes": "LVMWD serves Calabasas, Agoura Hills, Westlake Village area. OpenGov portal for procurement. Water treatment and distribution = SCADA/controls opportunities."
+  },
+  {
+    "name": "Zone 7 Water Agency OpenGov",
+    "url": "https://procurement.opengov.com/portal/embed/zone7water/calendar",
+    "type": "opengov",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "Zone 7 Water Agency"
+    ],
+    "notes": "Zone 7 serves Livermore Valley in Alameda County - outside primary target region but major water agency with SCADA infrastructure. OpenGov portal confirmed active."
+  },
+  {
+    "name": "City of San Diego Bids & Contracts",
+    "url": "https://www.sandiego.gov/purchasing/bids-contracts",
+    "type": "custom",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "City of San Diego",
+      "San Diego Public Utilities",
+      "San Diego Stormwater"
+    ],
+    "notes": "Major city procurement portal. San Diego Public Utilities operates massive water/wastewater system including Pure Water SD ($5B+ program). Frequent SCADA/controls/automation solicitations."
+  },
+  {
+    "name": "Coachella Valley Water District Business",
+    "url": "https://www.cvwd.org/35/Business",
+    "type": "utility",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "Coachella Valley Water District"
+    ],
+    "notes": "Major IE water district serving Coachella Valley. Active CIP with water/wastewater infrastructure = SCADA/controls opportunities. Business page confirmed active."
+  },
+  {
+    "name": "LADWP eRSP System",
+    "url": "https://www.ladwp.com/doing-business-ladwp/vendors-and-bidders/electronic-request-solicit-procure-ersp-system",
+    "type": "utility",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "LADWP"
+    ],
+    "notes": "LADWP's Electronic Request-Solicit-Procure system. Separate from the general LADWP bid page. Active procurement of SCADA/controls for water and power infrastructure."
+  },
+  {
+    "name": "MWD Procurement & Professional Services",
+    "url": "https://www.mwdh2o.com/procurement-and-professional-services/",
+    "type": "utility",
+    "region": "socal",
+    "priority": "high",
+    "agencies": [
+      "Metropolitan Water District of Southern California"
+    ],
+    "notes": "MWD's main procurement page listing current bids, RFPs, and professional services opportunities. Confirmed active. Water treatment plants need ongoing SCADA/controls support."
+  },
+  {
+    "name": "Norwalk Bid Opportunities",
+    "url": "https://www.norwalk.org/departments_services/finance/bid_opportunities.php",
+    "type": "custom",
+    "region": "la",
+    "priority": "low",
+    "agencies": [
+      "City of Norwalk"
+    ],
+    "notes": "Small LA County city with bid postings. May occasionally have facilities/public works projects."
+  },
+  {
+    "name": "Riverside County Building Permits",
+    "url": "https://building.rctlma.org/",
+    "type": "permits_and_filings",
+    "region": "ie",
+    "priority": "medium",
+    "notes": "Riverside County TLMA building permit portal. Search for new industrial/manufacturing construction permits in target IE cities."
+  },
+  {
+    "name": "San Bernardino County Accela Permits",
+    "url": "https://aca-prod.accela.com/SBC/Cap/CapHome.aspx?module=Building&TabName=Home",
+    "type": "permits_and_filings",
+    "region": "ie",
+    "priority": "medium",
+    "notes": "San Bernardino County building permit search via Accela. Look for new industrial/manufacturing construction in target IE cities."
+  },
+  {
+    "name": "San Bernardino County EZOP",
+    "url": "https://wp.sbcounty.gov/ezop/",
+    "type": "permits_and_filings",
+    "region": "ie",
+    "priority": "medium",
+    "notes": "SB County EZ Online Permits system. Building permits for unincorporated areas."
+  },
+  {
+    "name": "San Diego County PDS",
+    "url": "https://www.sandiegocounty.gov/content/sdc/pds.html",
+    "type": "permits_and_filings",
+    "region": "sd",
+    "priority": "medium",
+    "notes": "San Diego County Planning & Development Services. Building permits for unincorporated areas."
+  },
+  {
+    "name": "LA City Building & Safety",
+    "url": "https://dbs.lacity.gov/",
+    "type": "permits_and_filings",
+    "region": "la",
+    "priority": "medium",
+    "notes": "LA City Department of Building and Safety. Building permits for City of Los Angeles. New industrial/manufacturing permits."
+  },
+  {
+    "name": "SCADA Directory",
+    "url": "https://scadadirectory.com/",
+    "type": "directories",
+    "priority": "high",
+    "search": "site:scadadirectory.com California water wastewater",
+    "notes": "Dedicated SCADA industry directory. Lists vendors, integrators, and products by category. Water/wastewater section. Find companies installing SCADA systems in CA."
+  },
+  {
+    "name": "Water & Wastewater Directory",
+    "url": "https://www.waterwastewaterdirectory.com/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:waterwastewaterdirectory.com California SCADA controls",
+    "notes": "Industry directory for water/wastewater vendors and service providers. SCADA systems category."
+  },
+  {
+    "name": "BioPharmGuy CA Facilities",
+    "url": "https://biopharmguy.com/links/state-ca-all-geo.php",
+    "type": "directories",
+    "priority": "high",
+    "search": "site:biopharmguy.com California biotech pharmaceutical facility",
+    "notes": "Comprehensive directory of biotech/pharma companies by location. 1100+ CA entries. Filter by SoCal to find manufacturing facilities = automation opportunities."
+  },
+  {
+    "name": "BuiltInLA Biotech Companies",
+    "url": "https://www.builtinla.com/companies/type/biotech-companies",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:builtinla.com biotech pharmaceutical manufacturing",
+    "notes": "LA tech company directory with biotech filter. Good for finding SoCal biotech companies with manufacturing facilities."
+  },
+  {
+    "name": "Biotech-Careers.org CA Employers",
+    "url": "https://www.biotech-careers.org/employer-table-us/CA",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:biotech-careers.org California employer",
+    "notes": "Table of biotech employers in CA. Hiring signals = companies investing in operations and automation."
+  },
+  {
+    "name": "CLFP Processor Member List",
+    "url": "https://www.clfp.com/processor-member-list",
+    "type": "directories",
+    "priority": "high",
+    "search": "site:clfp.com processor member California Southern",
+    "notes": "California League of Food Processors member directory. Active list of CA food processing companies = primary automation targets."
+  },
+  {
+    "name": "CMTA (CA Manufacturers & Technology Assoc)",
+    "url": "https://cmta.net/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:cmta.net member California manufacturer",
+    "notes": "CA Manufacturers & Technology Association. Member directory and news about CA manufacturing investments."
+  },
+  {
+    "name": "Location OC",
+    "url": "https://www.locationoc.com/",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:locationoc.com manufacturing life sciences biotech",
+    "notes": "Orange County economic development site. Profiles of industries and companies in OC. Life sciences/biotech directory. New facility announcements."
+  },
+  {
+    "name": "OC Startup Council Biotech Directory",
+    "url": "https://ocstartupcouncil.org/biotech-startups-directory",
+    "type": "directories",
+    "priority": "low",
+    "search": "site:ocstartupcouncil.org biotech startup",
+    "notes": "OC biotech startup directory. Early-stage companies that may scale to manufacturing."
+  },
+  {
+    "name": "Davron (Automation Recruiter)",
+    "url": "https://www.davron.net/controls-engineer-recruiter-robotics-controls/",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:davron.net controls engineer automation California",
+    "notes": "Specialized recruiter for automation/controls engineering roles. Job postings reveal companies hiring = automation investment."
+  },
+  {
+    "name": "SimplyHired Controls/SCADA",
+    "url": "https://www.simplyhired.com/search?q=automation+controls+engineer&l=california",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:simplyhired.com controls OR SCADA OR PLC OR automation California",
+    "notes": "Job aggregator with strong automation/controls listings. Searches Indeed, Glassdoor, and niche boards."
+  },
+  {
+    "name": "Dice SCADA/Controls",
+    "url": "https://www.dice.com/jobs/q-scada-jobs",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:dice.com SCADA OR controls OR PLC California",
+    "notes": "Tech-focused job board. SCADA and controls engineering listings. Companies hiring = automation investment signals."
+  },
+  {
+    "name": "GovernmentJobs.com SCADA/Controls",
+    "url": "https://www.governmentjobs.com/",
+    "type": "job_boards",
+    "priority": "high",
+    "search": "site:governmentjobs.com SCADA OR controls OR automation California water OR wastewater",
+    "notes": "Primary platform for municipal/government hiring. SCADA/controls engineer postings reveal active automation investment by water/wastewater agencies. IRWD, Anaheim, Carlsbad all post here."
+  },
+  {
+    "name": "CareersInGovernment.com",
+    "url": "https://www.careersingovernment.com/",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:careersingovernment.com SCADA OR controls California",
+    "notes": "Government career site with SCADA/controls postings. Municipal agencies post when investing in automation."
+  },
+  {
+    "name": "OTS (Operator Training Services)",
+    "url": "https://www.getots.com/job-openings",
+    "type": "job_boards",
+    "priority": "medium",
+    "search": "site:getots.com SCADA OR controls California water",
+    "notes": "Water operator staffing service. Job openings include SCADA/controls positions at CA water agencies."
+  },
+  {
+    "name": "Underground Infrastructure Magazine",
+    "url": "https://undergroundinfrastructure.com/",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:undergroundinfrastructure.com California water wastewater infrastructure upgrade",
+    "notes": "Covers underground water/wastewater infrastructure projects. $1B+ water infrastructure upgrades in SoCal profiled here."
+  },
+  {
+    "name": "Inland Empire Business Journal",
+    "url": "https://iebizjournal.com/",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:iebizjournal.com manufacturing OR facility OR expansion OR industrial",
+    "notes": "Primary IE business publication. Covers manufacturing expansions, new facilities, corporate moves in Riverside and San Bernardino counties."
+  },
+  {
+    "name": "Water and Wastewater California",
+    "url": "https://www.waterandwastewater.com/california-wastewater-treatment-plants/",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:waterandwastewater.com California treatment plant",
+    "notes": "Directory of California wastewater treatment plants with profiles. Good for identifying facilities that may need automation upgrades."
+  },
+  {
+    "name": "r/instrumentation",
+    "url": "https://www.reddit.com/r/instrumentation/",
+    "type": "forums",
+    "priority": "medium",
+    "search": "site:reddit.com/r/instrumentation California OR SoCal hiring OR integrator",
+    "notes": "Instrumentation engineering subreddit. Process control discussions, job posts, and contractor requests."
+  },
+  {
+    "name": "GovWin/IQ SCADA Tracking",
+    "url": "https://iq.govwin.com/neo/public/tag/SCADA%20services",
+    "type": "custom",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": [],
+    "notes": "Government procurement intelligence platform. SCADA services tag shows upcoming procurement opportunities. Subscription required for full access."
+  },
+  {
+    "name": "HigherGov Federal/State Contract Tracking",
+    "url": "https://www.highergov.com/",
+    "type": "custom",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": [],
+    "notes": "Federal and state government contract tracking platform. Search SCADA/controls/automation for CA opportunities. Free tier available."
+  },
+  {
+    "name": "InstantMarkets SCADA Search",
+    "url": "https://www.instantmarkets.com/q/scada",
+    "type": "custom",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": [],
+    "notes": "Government bid aggregation search engine. SCADA search shows relevant procurement opportunities across CA agencies."
+  },
+  {
+    "name": "SCPPA (SoCal Public Power Authority)",
+    "url": "https://scppa.org/",
+    "type": "custom",
+    "region": "socal",
+    "priority": "medium",
+    "agencies": [
+      "Southern California Public Power Authority",
+      "Anaheim Public Utilities",
+      "Glendale Water & Power",
+      "Pasadena Water & Power",
+      "LADWP"
+    ],
+    "notes": "Joint powers authority for SoCal municipal utilities. Procurement for energy projects. Member utilities are potential automation clients."
+  },
+  {
+    "name": "OCTA Procurement (CAMMNET)",
+    "url": "https://cammnet.octa.net/",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Orange County Transportation Authority"
+    ],
+    "notes": "OCTA's procurement portal (CAMMNET). Major transportation agency with facilities, pump stations, and SCADA systems. Frequent construction and equipment bids."
+  },
+  {
+    "name": "SBCCD Construction Bid Opportunities",
+    "url": "https://sbccd.edu/district-services/facilities-planning-construction/construction-bid-opportunities.php",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "San Bernardino Community College District",
+      "Crafton Hills College",
+      "Valley College"
+    ],
+    "notes": "SBCCD construction bid opportunities. Community college district in IE with ongoing facilities bond programs = potential SCADA/controls in HVAC and building automation."
+  },
+  {
+    "name": "California Bid Network",
+    "url": "https://www.californiabids.com",
+    "type": "bidnet",
+    "region": "ca",
+    "priority": "medium",
+    "agencies": [],
+    "notes": "Aggregates construction and government bids across California. Good for discovering new agencies posting SCADA/controls/automation work."
+  },
+  {
+    "name": "Long Beach Utilities Purchasing",
+    "url": "https://www.lbutilities.org/about-us/purchasing",
+    "type": "utility",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "Long Beach Utilities",
+      "Long Beach Gas & Water"
+    ],
+    "notes": "Long Beach Utilities Department purchasing page. Gas and water utility operations = SCADA/controls opportunities."
+  },
+  {
+    "name": "Dana Point Public Notices & Bids",
+    "url": "https://www.danapoint.org/City-Government/City-Clerk/Public-Notices-Bids",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of Dana Point"
+    ],
+    "notes": "Dana Point bid postings via City Clerk page. Small OC coastal city. Occasional public works and facilities projects."
+  },
+  {
+    "name": "IUSD Bidder Information & Public Notices",
+    "url": "https://www.iusd.org/business-services/facilities-planning-construction-services/bidder-information-public-notices",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Irvine Unified School District"
+    ],
+    "notes": "IUSD facilities planning bid notices. Major OC school district with ongoing construction = building automation and controls opportunities."
+  },
+  {
+    "name": "NMUSD Bids & Purchasing",
+    "url": "https://www.nmusd.us/depts/busi/bids",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Newport-Mesa Unified School District"
+    ],
+    "notes": "NMUSD bid opportunities. Large OC school district covering Newport Beach and Costa Mesa. Facilities construction = potential controls/automation."
+  },
+  {
+    "name": "Chaffey College Purchasing",
+    "url": "https://www.chaffey.edu/purchasing/",
+    "type": "custom",
+    "region": "ie",
+    "priority": "low",
+    "agencies": [
+      "Chaffey College",
+      "Chaffey Community College District"
+    ],
+    "notes": "Chaffey College purchasing services. IE community college with facilities projects. Building automation/controls opportunities in new construction."
+  },
+  {
+    "name": "MiraCosta College Purchasing",
+    "url": "https://www.miracosta.edu/administrative/purchasing/index.html",
+    "type": "custom",
+    "region": "sd",
+    "priority": "low",
+    "agencies": [
+      "MiraCosta College",
+      "MiraCosta Community College District"
+    ],
+    "notes": "MiraCosta College purchasing and material management. SD County community college with vendor/contractor opportunities."
+  },
+  {
+    "name": "SoCalGas Doing Business With Us",
+    "url": "https://www.socalgas.com/about-us/doing-business-with-us",
+    "type": "utility",
+    "region": "socal",
+    "priority": "medium",
+    "agencies": [
+      "Southern California Gas Company"
+    ],
+    "notes": "SoCalGas vendor/supplier portal. Major gas utility with SCADA/controls infrastructure across all of SoCal. Pipeline monitoring = automation opportunities."
+  },
+  {
+    "name": "SCE Partners and Vendors",
+    "url": "https://www.sce.com/partners",
+    "type": "utility",
+    "region": "socal",
+    "priority": "medium",
+    "agencies": [
+      "Southern California Edison"
+    ],
+    "notes": "SCE partner and vendor portal. Major electric utility with grid automation, SCADA, and substation controls across SoCal."
+  },
+  {
+    "name": "SMUD Contract Opportunities",
+    "url": "https://www.smud.org/en/Corporate/Do-Business-with-SMUD",
+    "type": "utility",
+    "region": "ca",
+    "priority": "low",
+    "agencies": [
+      "Sacramento Municipal Utility District"
+    ],
+    "notes": "SMUD procurement portal. Outside primary target region but major CA municipal utility. Good model for utility automation procurement patterns."
+  },
+  {
+    "name": "Omnitrans Procurement",
+    "url": "https://www.omnitrans.org",
+    "type": "custom",
+    "region": "ie",
+    "priority": "low",
+    "agencies": [
+      "Omnitrans"
+    ],
+    "notes": "San Bernardino Valley's public transit agency. Bus fleet maintenance facilities = building automation/controls. Facility construction bids."
+  },
+  {
+    "name": "Emerson Certified System Integrators",
+    "url": "https://www.emerson.com/en-us/expertise/partner-connect/overview",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "Emerson DeltaV certified integrator California",
+    "notes": "Emerson (DeltaV DCS, Fisher valves, Rosemount instruments) partner directory. Find certified system integrators in SoCal for lead sharing."
+  },
+  {
+    "name": "Honeywell Connected Plant Partners",
+    "url": "https://buildings.honeywell.com/us/en/partners",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "Honeywell partner integrator California controls automation",
+    "notes": "Honeywell (Experion DCS, C300 controllers) partner network. Building automation and process control integrators in SoCal."
+  },
+  {
+    "name": "ABB Ability Partners",
+    "url": "https://new.abb.com/partners",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "ABB partner California system integrator automation",
+    "notes": "ABB (800xA DCS, ACS drives, RobotStudio) partner directory. Find CA system integrators for collaboration and lead sharing."
+  },
+  {
+    "name": "Endress+Hauser Partner Portal",
+    "url": "https://www.endress.com/en/service-support/partner-portal",
+    "type": "partner_networks",
+    "priority": "medium",
+    "search": "Endress+Hauser partner California instrumentation water wastewater",
+    "notes": "Endress+Hauser (instrumentation, flow, level, analysis) partner portal. Instrumentation partners in CA water/wastewater market."
+  },
+  {
+    "name": "Yokogawa Solution Partners",
+    "url": "https://www.yokogawa.com/us/partners/",
+    "type": "partner_networks",
+    "priority": "low",
+    "search": "Yokogawa partner California integrator DCS",
+    "notes": "Yokogawa (Centum DCS, STARDOM) solution partners. Smaller presence in SoCal but relevant for refinery/process industry work."
+  },
+  {
+    "name": "ISPE (Intl Society for Pharmaceutical Engineering)",
+    "url": "https://ispe.org",
+    "type": "directories",
+    "priority": "high",
+    "search": "site:ispe.org California facility member",
+    "notes": "ISPE is THE pharma manufacturing professional society. Member directory and facility profiles = companies investing in pharma automation. CA has massive pharma manufacturing."
+  },
+  {
+    "name": "Hydrocarbon Processing Magazine",
+    "url": "https://www.hydrocarbonprocessing.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:hydrocarbonprocessing.com California refinery expansion upgrade",
+    "notes": "Refining industry publication. SoCal has major refineries (Chevron El Segundo, Tesoro Wilmington, Phillips 66 Carson). Expansion/upgrade articles = automation leads."
+  },
+  {
+    "name": "Chemical Engineering Magazine",
+    "url": "https://www.chemengonline.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:chemengonline.com California plant expansion facility",
+    "notes": "Chemical engineering trade publication. Covers process plant expansions and technology upgrades in CA chemical manufacturing facilities."
+  },
+  {
+    "name": "BioProcess International",
+    "url": "https://bioprocessintl.com",
+    "type": "trade_pubs",
+    "priority": "medium",
+    "search": "site:bioprocessintl.com California biotech facility manufacturing expansion",
+    "notes": "Biopharmaceutical manufacturing publication. New facility announcements in SoCal biotech hubs = automation/controls opportunities."
+  },
+  {
+    "name": "San Diego Regional EDC",
+    "url": "https://www.sandiegobusiness.org",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:sandiegobusiness.org manufacturing life sciences biotech",
+    "notes": "San Diego Regional Economic Development Corporation. Track new business relocations and expansions in SD. Life sciences/biotech/manufacturing announcements = automation leads."
+  },
+  {
+    "name": "Select LA (LA Economic Development Corp)",
+    "url": "https://www.selectla.org",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:selectla.org manufacturing facility expansion",
+    "notes": "LA County Economic Development Corporation. Business attraction and expansion announcements. New manufacturing facilities = automation opportunities."
+  },
+  {
+    "name": "IE Economic Partnership",
+    "url": "https://www.ieep.com",
+    "type": "directories",
+    "priority": "medium",
+    "search": "site:ieep.com manufacturing industrial expansion Inland Empire",
+    "notes": "Inland Empire Economic Partnership. Regional economic development covering Riverside and San Bernardino counties. New facility announcements = automation leads."
+  },
+  {
+    "name": "OC One-Stop Center (Business Resources)",
+    "url": "https://www.oconestop.com",
+    "type": "directories",
+    "priority": "low",
+    "search": "site:oconestop.com employer manufacturing",
+    "notes": "OC workforce development. Employer listings reveal companies actively hiring in manufacturing = companies investing in operations."
+  },
+  {
+    "name": "CA DTSC EnviroStor",
+    "url": "https://www.envirostor.dtsc.ca.gov/public/",
+    "type": "permits_and_filings",
+    "priority": "medium",
+    "search": "site:envirostor.dtsc.ca.gov Southern California cleanup site",
+    "notes": "DTSC hazardous waste cleanup database. Sites undergoing remediation often need new SCADA/controls when rebuilt as manufacturing facilities."
+  },
+  {
+    "name": "CA State Water Board GeoTracker",
+    "url": "https://geotracker.waterboards.ca.gov/",
+    "type": "permits_and_filings",
+    "priority": "medium",
+    "search": "site:geotracker.waterboards.ca.gov Southern California cleanup",
+    "notes": "Water Board contamination tracking database. Sites being cleaned up and redeveloped = new industrial construction with automation needs."
+  },
+  {
+    "name": "LA County Permit Building Activity",
+    "url": "https://planning.lacounty.gov/building-activity",
+    "type": "permits_and_filings",
+    "region": "la",
+    "priority": "low",
+    "notes": "LA County building activity reports. Track new industrial and commercial construction permits in target areas."
+  },
+  {
+    "name": "CSULB Contract & Procurement Services",
+    "url": "https://www.csulb.edu/contract-procurement-services",
+    "type": "custom",
+    "region": "la",
+    "priority": "low",
+    "agencies": [
+      "California State University Long Beach"
+    ],
+    "notes": "CSULB procurement portal. Major university with ongoing facilities construction. Building automation and lab controls opportunities."
+  },
+  {
+    "name": "SDCCD Procurement",
+    "url": "https://www.sdccd.edu/administrative/purchasing/",
+    "type": "custom",
+    "region": "sd",
+    "priority": "low",
+    "agencies": [
+      "San Diego Community College District"
+    ],
+    "notes": "SDCCD purchasing and procurement. San Diego City, Mesa, and Miramar colleges. Facilities construction = building automation opportunities."
+  },
+  {
+    "name": "Built In San Diego Tech Companies",
+    "url": "https://www.builtinsd.com/companies",
+    "type": "directories",
+    "priority": "low",
+    "search": "site:builtinsd.com biotech manufacturing hardware",
+    "notes": "San Diego tech company directory. Filter for biotech/manufacturing companies with facilities = automation opportunities."
+  },
+  {
+    "name": "Huntington Beach PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/15340/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "City of Huntington Beach"
+    ],
+    "notes": "NEW PORTAL discovered 04/2026. Active SCADA engineering RFP (2026-0326, closed 04/27). Water utility, flood control, wastewater. 47 bidders. Separate from OC San portal/14058."
+  },
+  {
+    "name": "San Bernardino Municipal Water Department PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/15845/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "San Bernardino Municipal Water Department"
+    ],
+    "notes": "Active 10-15 year SCADA modernization program. SCADA HMI software procured (RFP 2025-P2). Integration/programming RFPs expected to follow. Allen-Bradley PLCs."
+  },
+  {
+    "name": "OCWD Online Planroom",
+    "url": "https://www.ocwdplanroom.com/aec/go.php",
+    "type": "custom",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Orange County Water District"
+    ],
+    "notes": "OCWD online planroom for construction bids. Separate from the RFP/Contracts page. Active project listings."
+  },
+  {
+    "name": "OCWD PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/ocwd,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Orange County Water District"
+    ],
+    "notes": "OCWD PublicPurchase portal for vendor registration and commodity/service bids."
+  },
+  {
+    "name": "OC San Doing Business Portal",
+    "url": "https://ocsan.gov/doingbusiness/",
+    "type": "custom",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Orange County Sanitation District"
+    ],
+    "notes": "OC San doing business hub page — links to PlanetBids (public works), OpenGov (goods/services), and vendor registration."
+  },
+  {
+    "name": "Hemet PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/39477/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Hemet"
+    ],
+    "notes": "Hemet uses PlanetBids for procurement. Active water pipeline materials bids."
+  },
+  {
+    "name": "Norco PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/54435/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Norco"
+    ],
+    "notes": "Norco uses PlanetBids for procurement. IE city with water infrastructure."
+  },
+  {
+    "name": "Victorville PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/victorville,ca/buyer/public/home",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Victorville"
+    ],
+    "notes": "Victorville uses PublicPurchase. Active water master plan update procurement."
+  },
+  {
+    "name": "Riverside County Flood Control BidNet",
+    "url": "https://www.bidnetdirect.com/california/rcflood",
+    "type": "bidnet",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "Riverside County Flood Control and Water Conservation District"
+    ],
+    "notes": "RCFC&WCD on BidNet Direct. Major IE flood control agency with pump stations, SCADA systems, and water infrastructure."
+  },
+  {
+    "name": "Riverside County Flood Control Construction Bids",
+    "url": "https://rcflood.org/construction-bids",
+    "type": "custom",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "Riverside County Flood Control and Water Conservation District"
+    ],
+    "notes": "RCFC&WCD direct construction bid page. Pump stations, flood control infrastructure = SCADA/controls opportunities."
+  },
+  {
+    "name": "Riverside County Purchasing Search",
+    "url": "https://purchasing.co.riverside.ca.us/search",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "County of Riverside"
+    ],
+    "notes": "Riverside County Purchasing and Fleet Services bid search. Supplements PublicPurchase portal."
+  },
+  {
+    "name": "Beaumont-Cherry Valley Water District PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/bcvwd,ca/buyer/public/home",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "Beaumont-Cherry Valley Water District"
+    ],
+    "notes": "BCVWD uses PublicPurchase. IE water district with active procurement including AMI projects."
+  },
+  {
+    "name": "Monte Vista Water District Doing Business",
+    "url": "https://www.mvwd.org/227/Doing-Business-with-MVWD",
+    "type": "utility",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "Monte Vista Water District"
+    ],
+    "notes": "MVWD doing business page. IE water district in Montclair/Ontario area. Solar+battery and AMI projects."
+  },
+  {
+    "name": "Encina Wastewater Authority PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/59724/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "Encina Wastewater Authority"
+    ],
+    "notes": "Encina JPA (Carlsbad area) uses PlanetBids. Major wastewater treatment facility = SCADA/controls opportunities."
+  },
+  {
+    "name": "San Diego County Regional Airport Authority PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/16725/bo/bo-search",
+    "type": "planetbids",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "San Diego County Regional Airport Authority"
+    ],
+    "notes": "SAN Airport uses PlanetBids. Major facility with building automation, SCADA for utilities, and construction projects."
+  },
+  {
+    "name": "SANDAG BidNet Direct",
+    "url": "https://www.bidnetdirect.com/sandag",
+    "type": "bidnet",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "San Diego Association of Governments"
+    ],
+    "notes": "SANDAG procurement via BidNet Direct. Regional transportation planning = facility infrastructure projects."
+  },
+  {
+    "name": "OCTA OpenGov Procurement Portal",
+    "url": "https://procurement.opengov.com/portal/embed/octa/project-list",
+    "type": "opengov",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Orange County Transportation Authority"
+    ],
+    "notes": "OCTA OpenGov procurement portal. Supplements CAMMNET. Major transit agency with facilities and infrastructure."
+  },
+  {
+    "name": "LA County DPW Bid Express",
+    "url": "https://www.bidexpress.com/businesses/10335/home",
+    "type": "custom",
+    "region": "la",
+    "priority": "high",
+    "agencies": [
+      "Los Angeles County Department of Public Works"
+    ],
+    "notes": "LA County DPW Bid Express portal for construction bids. Supplements the main DPW contracts page."
+  },
+  {
+    "name": "John Wayne Airport Business Opportunities",
+    "url": "https://www.ocair.com/business-opportunities-flyer/",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "John Wayne Airport",
+      "County of Orange"
+    ],
+    "notes": "JWA business opportunities page. Airport has major facilities including HVAC, building automation, and utility controls."
+  },
+  {
+    "name": "San Diego Airport Contracting Opportunities",
+    "url": "https://www.san.org/contracting-opportunities/",
+    "type": "custom",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "San Diego County Regional Airport Authority"
+    ],
+    "notes": "SAN Airport direct contracting page. Building systems, utilities, and construction projects."
+  },
+  {
+    "name": "Anaheim Public Utilities Proposals/RFP/Bid",
+    "url": "https://www.anaheim.net/1566/Proposals-RFP-Bid",
+    "type": "utility",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Anaheim Public Utilities"
+    ],
+    "notes": "Anaheim Public Utilities (water and electric) procurement page. Separate from city PlanetBids. SCADA/controls for water and power infrastructure."
+  },
+  {
+    "name": "Torrance Water Services",
+    "url": "https://www.torranceca.gov/our-city/public-works/water-services",
+    "type": "utility",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Torrance"
+    ],
+    "notes": "Torrance water services page. Municipal water system = SCADA/controls opportunities."
+  },
+  {
+    "name": "Pomona Water Resources Department",
+    "url": "https://www.pomonaca.gov/government/departments/water-resources-department",
+    "type": "utility",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Pomona"
+    ],
+    "notes": "Pomona Water Resources. Active procurement of ultrasonic water meters and infrastructure upgrades via PlanetBids."
+  },
+  {
+    "name": "IRWD Projects Out to Bid",
+    "url": "https://www.irwd.com/doing-business/cprojects",
+    "type": "utility",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Irvine Ranch Water District"
+    ],
+    "notes": "IRWD current construction projects out to bid. Active water/recycled water infrastructure = SCADA/controls opportunities."
+  },
+  {
+    "name": "SMWD RFQs/RFPs/Bids",
+    "url": "https://www.smwd.com/589/RFQsRFPsBids",
+    "type": "utility",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "Santa Margarita Water District"
+    ],
+    "notes": "SMWD direct bid/RFP page. Supplements PlanetBids. Active CIP with water infrastructure projects."
+  },
+  {
+    "name": "Fullerton PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/fullerton,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Fullerton"
+    ],
+    "notes": "Fullerton PublicPurchase portal. Supplements OpenGov for procurement."
+  },
+  {
+    "name": "Stanton BidNet Direct",
+    "url": "https://www.bidnetdirect.com/california/cityofstanton",
+    "type": "bidnet",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Stanton"
+    ],
+    "notes": "Stanton on BidNet Direct. Supplements PlanetBids and PublicPurchase."
+  },
+  {
+    "name": "Aliso Viejo PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/buyer/public/home?syndicatedOrgId=44275&region=CA",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of Aliso Viejo"
+    ],
+    "notes": "Aliso Viejo PublicPurchase portal. Small OC city. Occasional facilities/public works projects."
+  },
+  {
+    "name": "San Juan Capistrano PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/sanjuancapistrano,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of San Juan Capistrano"
+    ],
+    "notes": "San Juan Capistrano PublicPurchase portal. South OC city with water infrastructure."
+  },
+  {
+    "name": "San Clemente PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/28939/bo/bo-search",
+    "type": "planetbids",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of San Clemente"
+    ],
+    "notes": "San Clemente uses PlanetBids. South OC coastal city with water and infrastructure projects."
+  },
+  {
+    "name": "City of Orange PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/orange,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Orange"
+    ],
+    "notes": "City of Orange PublicPurchase portal. OC city with water utility and facilities."
+  },
+  {
+    "name": "OC Public Works PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/orangecopw,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "high",
+    "agencies": [
+      "OC Public Works"
+    ],
+    "notes": "OC Public Works PublicPurchase portal. Supplements OCIP and County OpenGov for procurement of goods and services."
+  },
+  {
+    "name": "Chula Vista Purchasing & Contracting",
+    "url": "https://www.chulavistaca.gov/departments/finance/selling-to-the-city",
+    "type": "custom",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of Chula Vista"
+    ],
+    "notes": "Chula Vista direct procurement page. Supplements PlanetBids. SD County second-largest city."
+  },
+  {
+    "name": "Redlands PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/redlands,ca/buyer/public/home",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Redlands"
+    ],
+    "notes": "Redlands PublicPurchase portal. Supplements PlanetBids for procurement."
+  },
+  {
+    "name": "Moreno Valley PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/moval,ca/buyer/public/home",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Moreno Valley"
+    ],
+    "notes": "Moreno Valley PublicPurchase portal. Supplements OpenGov for procurement."
+  },
+  {
+    "name": "Hemet PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/hemet,ca/buyer/public/home",
+    "type": "custom",
+    "region": "ie",
+    "priority": "medium",
+    "agencies": [
+      "City of Hemet"
+    ],
+    "notes": "Hemet PublicPurchase portal. Supplements PlanetBids for procurement."
+  },
+  {
+    "name": "Carson PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/buyer/public/home?syndicatedOrgId=13906&region=CA",
+    "type": "custom",
+    "region": "la",
+    "priority": "medium",
+    "agencies": [
+      "City of Carson"
+    ],
+    "notes": "Carson PublicPurchase portal. Supplements PlanetBids for procurement."
+  },
+  {
+    "name": "Santa Ana PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/santaana,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Santa Ana"
+    ],
+    "notes": "Santa Ana PublicPurchase portal. Supplements PlanetBids for procurement."
+  },
+  {
+    "name": "Cypress PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/buyer/public/home?syndicatedOrgId=28593&region=CA",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of Cypress"
+    ],
+    "notes": "Cypress PublicPurchase portal. Supplements PlanetBids. Small OC city."
+  },
+  {
+    "name": "Placentia PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/placentia,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of Placentia"
+    ],
+    "notes": "Placentia PublicPurchase portal. Supplements PlanetBids. Small OC city."
+  },
+  {
+    "name": "La Habra PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/lahabra,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of La Habra"
+    ],
+    "notes": "La Habra PublicPurchase portal. Supplements PlanetBids."
+  },
+  {
+    "name": "Seal Beach PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/buyer/public/home?syndicatedOrgId=26796&region=CA",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of Seal Beach"
+    ],
+    "notes": "Seal Beach PublicPurchase portal. Supplements PlanetBids."
+  },
+  {
+    "name": "Huntington Beach Bids Portal",
+    "url": "https://www.huntingtonbeachca.gov/departments/public_works/bids.php",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Huntington Beach"
+    ],
+    "notes": "HB Public Works bids page. Supplements PlanetBids. OC coastal city with water infrastructure."
+  },
+  {
+    "name": "Costa Mesa Bids/RFPs Postings",
+    "url": "https://www.costamesaca.gov/government/departments-and-divisions/finance/procurement/bids-rfps-postings",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Costa Mesa"
+    ],
+    "notes": "Costa Mesa direct bid/RFP page. Supplements PlanetBids."
+  },
+  {
+    "name": "Escondido PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/buyer/public/home?syndicatedOrgId=15279&region=CA",
+    "type": "custom",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of Escondido"
+    ],
+    "notes": "Escondido PublicPurchase portal. Supplements BidNet Direct."
+  },
+  {
+    "name": "National City PlanetBids Storm Water Pump Station",
+    "url": "https://www.bidnetdirect.com/california/solicitations/open-bids/statewide/STORM-WATER-PUMP-STATION-ENHANCEMENTS/443675955867",
+    "type": "bidnet",
+    "region": "sd",
+    "priority": "medium",
+    "agencies": [
+      "City of National City"
+    ],
+    "notes": "National City active on BidNet. Storm water pump station enhancements = SCADA/controls."
+  },
+  {
+    "name": "MWDOC PublicPurchase Portal",
+    "url": "https://www.publicpurchase.com/gems/mwdoc,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "Municipal Water District of Orange County"
+    ],
+    "notes": "MWDOC PublicPurchase portal. Wholesale water supplier to OC member agencies."
+  },
+  {
+    "name": "San Clemente PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/buyer/public/home?syndicatedOrgId=15135&region=CA",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of San Clemente"
+    ],
+    "notes": "San Clemente PublicPurchase portal. Supplements PlanetBids."
+  },
+  {
+    "name": "Lake Forest PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/lakeforest,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of Lake Forest"
+    ],
+    "notes": "Lake Forest PublicPurchase portal. Supplements OpenGov."
+  },
+  {
+    "name": "Tustin PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/buyer/public/home?syndicatedOrgId=15130&region=CA",
+    "type": "custom",
+    "region": "oc",
+    "priority": "low",
+    "agencies": [
+      "City of Tustin"
+    ],
+    "notes": "Tustin PublicPurchase portal. Supplements OpenGov."
+  },
+  {
+    "name": "Carlsbad PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/carlsbad,ca/buyer/public/home",
+    "type": "custom",
+    "region": "sd",
+    "priority": "low",
+    "agencies": [
+      "City of Carlsbad"
+    ],
+    "notes": "Carlsbad PublicPurchase portal. Supplements PlanetBids."
+  },
+  {
+    "name": "Chino Hills PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/buyer/public/home?syndicatedOrgId=15365&region=CA",
+    "type": "custom",
+    "region": "ie",
+    "priority": "low",
+    "agencies": [
+      "City of Chino Hills"
+    ],
+    "notes": "Chino Hills PublicPurchase portal. Supplements CivicEngage."
+  },
+  {
+    "name": "Glendale PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/burbank,ca/buyer/public/home",
+    "type": "custom",
+    "region": "la",
+    "priority": "low",
+    "agencies": [
+      "City of Glendale"
+    ],
+    "notes": "Glendale area PublicPurchase portal. Supplements city RFP page."
+  },
+  {
+    "name": "Lancaster PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/cityoflancaster,ca/buyer/public/home",
+    "type": "custom",
+    "region": "la",
+    "priority": "low",
+    "agencies": [
+      "City of Lancaster"
+    ],
+    "notes": "Lancaster PublicPurchase portal. Supplements PlanetBids."
+  },
+  {
+    "name": "Santa Clarita PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/santaclarita,ca/buyer/public/home",
+    "type": "custom",
+    "region": "la",
+    "priority": "low",
+    "agencies": [
+      "City of Santa Clarita"
+    ],
+    "notes": "Santa Clarita PublicPurchase portal. Supplements BidNet Direct."
+  },
+  {
+    "name": "Anaheim PublicPurchase",
+    "url": "https://www.publicpurchase.com/gems/anaheim,ca/buyer/public/home",
+    "type": "custom",
+    "region": "oc",
+    "priority": "medium",
+    "agencies": [
+      "City of Anaheim"
+    ],
+    "notes": "Anaheim PublicPurchase portal. Supplements PlanetBids."
+  },
+  {
+    "name": "Coachella Valley Water District PlanetBids",
+    "url": "https://vendors.planetbids.com/portal/16339/bo/bo-search",
+    "type": "planetbids",
+    "region": "ie",
+    "priority": "high",
+    "agencies": [
+      "Coachella Valley Water District"
+    ],
+    "notes": "NEW PORTAL discovered 04/2026. Active water infrastructure procurement. Pump stations, lift stations, treatment plants. IE region (Coachella Valley). Uses PlanetBids portal/16339."
+  },
+  {
+    "name": "SDCWA Engineering Dept BidNet",
+    "url": "https://www.bidnetdirect.com/california/engin",
+    "type": "bidnet",
+    "region": "sd",
+    "priority": "high",
+    "agencies": [
+      "San Diego County Water Authority"
+    ],
+    "notes": "SDCWA Engineering Department uses separate BidNet portal. Active controls/electrical engineering ($4M closed), hydroelectric projects, pipeline construction. Monitor for future controls/SCADA bids."
+  }
+]
