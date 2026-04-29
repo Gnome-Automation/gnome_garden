@@ -8,7 +8,7 @@ defmodule GnomeGarden.Finance.InvoiceBillingStatesTest do
     {:ok, org} =
       Operations.create_organization(%{
         name: "Test Org #{System.unique_integer([:positive])}",
-        organization_kind: :client
+        organization_kind: :business
       })
 
     {:ok, invoice} =
@@ -26,13 +26,13 @@ defmodule GnomeGarden.Finance.InvoiceBillingStatesTest do
   end
 
   test "can transition issued → partial with updated balance", %{invoice: invoice} do
-    {:ok, partial} = Finance.partial_invoice(invoice, balance_amount: Decimal.new("600.00"))
+    {:ok, partial} = Finance.partial_invoice(invoice, %{balance_amount: Decimal.new("600.00")})
     assert partial.status == :partial
     assert Decimal.equal?(partial.balance_amount, Decimal.new("600.00"))
   end
 
   test "can transition partial → paid", %{invoice: invoice} do
-    {:ok, partial} = Finance.partial_invoice(invoice, balance_amount: Decimal.new("400.00"))
+    {:ok, partial} = Finance.partial_invoice(invoice, %{balance_amount: Decimal.new("400.00")})
     {:ok, paid} = Finance.pay_invoice(partial)
     assert paid.status == :paid
     assert Decimal.equal?(paid.balance_amount, Decimal.new("0"))
@@ -45,13 +45,13 @@ defmodule GnomeGarden.Finance.InvoiceBillingStatesTest do
   end
 
   test "can transition partial → write_off", %{invoice: invoice} do
-    {:ok, partial} = Finance.partial_invoice(invoice, balance_amount: Decimal.new("400.00"))
+    {:ok, partial} = Finance.partial_invoice(invoice, %{balance_amount: Decimal.new("400.00")})
     {:ok, written_off} = Finance.write_off_invoice(partial)
     assert written_off.status == :write_off
   end
 
   test "cannot void a partial invoice", %{invoice: invoice} do
-    {:ok, partial} = Finance.partial_invoice(invoice, balance_amount: Decimal.new("400.00"))
+    {:ok, partial} = Finance.partial_invoice(invoice, %{balance_amount: Decimal.new("400.00")})
     assert {:error, _} = Finance.void_invoice(partial)
   end
 end
