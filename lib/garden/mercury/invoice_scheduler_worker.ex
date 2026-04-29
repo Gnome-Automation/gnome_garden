@@ -20,8 +20,11 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
   require Logger
   require Ash.Query
 
+  import Swoosh.Email
+
   alias GnomeGarden.Finance
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Mailer
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
@@ -118,9 +121,6 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
       end)
 
     if contact_email do
-      import Swoosh.Email
-      alias GnomeGarden.Mailer
-
       new()
       |> from({"GnomeGarden Billing", "billing@gnomegarden.io"})
       |> to(contact_email)
@@ -128,7 +128,15 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
         "Invoice #{loaded.invoice_number} — #{loaded.currency_code} #{loaded.total_amount}"
       )
       |> html_body(invoice_email_body(loaded))
-      |> Mailer.deliver!()
+      |> Mailer.deliver()
+      |> case do
+        {:ok, _} -> :ok
+        {:error, reason} ->
+          Logger.warning("InvoiceSchedulerWorker: failed to send invoice email",
+            invoice_id: invoice.id,
+            reason: inspect(reason)
+          )
+      end
     else
       Logger.warning(
         "InvoiceSchedulerWorker: no contact email for org #{loaded.organization_id}, invoice #{loaded.id} not emailed"
