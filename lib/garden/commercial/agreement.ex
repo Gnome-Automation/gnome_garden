@@ -84,7 +84,9 @@ defmodule GnomeGarden.Commercial.Agreement do
         :end_on,
         :auto_renew,
         :renewal_notice_days,
-        :notes
+        :notes,
+        :billing_cycle,
+        :next_billing_date
       ]
     end
 
@@ -127,7 +129,9 @@ defmodule GnomeGarden.Commercial.Agreement do
         :end_on,
         :auto_renew,
         :renewal_notice_days,
-        :notes
+        :notes,
+        :billing_cycle,
+        :next_billing_date
       ]
     end
 
@@ -301,6 +305,17 @@ defmodule GnomeGarden.Commercial.Agreement do
     end
 
     attribute :notes, :string do
+      public? true
+    end
+
+    attribute :billing_cycle, :atom do
+      allow_nil? false
+      default :none
+      public? true
+      constraints one_of: [:none, :weekly, :monthly]
+    end
+
+    attribute :next_billing_date, :date do
       public? true
     end
 
