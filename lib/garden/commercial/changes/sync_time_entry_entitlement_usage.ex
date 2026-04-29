@@ -30,10 +30,11 @@ defmodule GnomeGarden.Commercial.Changes.SyncTimeEntryEntitlementUsage do
   defp sync_time_entry_usage(time_entry, :sync) do
     with {:ok, usages} <- Commercial.list_usage_for_time_entry(time_entry.id),
          :ok <- destroy_all(usages),
-         {:ok, entitlement} <- matching_entitlement(time_entry) do
+         {:ok, entitlement} <- matching_entitlement(time_entry),
+         false <- is_nil(entitlement) do
       create_usage(time_entry, entitlement)
     else
-      {:ok, nil} -> {:ok, time_entry}
+      true -> {:ok, time_entry}
       {:error, error} -> {:error, error}
     end
   end

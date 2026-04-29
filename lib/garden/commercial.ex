@@ -226,11 +226,11 @@ defmodule GnomeGarden.Commercial do
       define :create_service_entitlement_usage, action: :create
       define :update_service_entitlement_usage, action: :update
       define :delete_service_entitlement_usage, action: :destroy
-      define :list_usage_for_entitlement, action: :for_entitlement
-      define :list_usage_for_agreement, action: :for_agreement
-      define :list_usage_for_time_entry, action: :for_time_entry
-      define :list_usage_for_expense, action: :for_expense
-      define :list_usage_for_work_order, action: :for_work_order
+      define :list_usage_for_entitlement, action: :for_entitlement, args: [:service_entitlement_id]
+      define :list_usage_for_agreement, action: :for_agreement, args: [:agreement_id]
+      define :list_usage_for_time_entry, action: :for_time_entry, args: [:time_entry_id]
+      define :list_usage_for_expense, action: :for_expense, args: [:expense_id]
+      define :list_usage_for_work_order, action: :for_work_order, args: [:work_order_id]
     end
   end
 
