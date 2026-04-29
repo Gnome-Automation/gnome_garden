@@ -121,19 +121,27 @@ defmodule GnomeGarden.Mercury.PaymentMatcherWorker do
 
   defp resolve_organization(nil), do: :not_found
 
-  defp resolve_organization(name) do
-    # Find a ClientBankAlias whose fragment appears in the counterparty name (case-insensitive)
-    lower_name = String.downcase(name)
+  defp resolve_organization(counterparty_name) do
+    # Search for any alias whose fragment appears in the counterparty name (case-insensitive)
+    # Uses a parameterized SQL query to avoid full table scan
+    import Ecto.Query, only: [from: 2]
 
-    all_aliases =
-      GnomeGarden.Mercury.ClientBankAlias
-      |> Ash.read!(domain: Mercury)
+    result =
+      GnomeGarden.Repo.one(
+        from a in "mercury_client_bank_aliases",
+          where:
+            fragment(
+              "lower(?) like '%' || lower(?) || '%'",
+              ^counterparty_name,
+              a.counterparty_name_fragment
+            ),
+          select: a.organization_id,
+          limit: 1
+      )
 
-    case Enum.find(all_aliases, fn a ->
-           String.contains?(lower_name, String.downcase(a.counterparty_name_fragment))
-         end) do
+    case result do
       nil -> :not_found
-      bank_alias -> {:ok, bank_alias.organization_id}
+      org_id -> {:ok, org_id}
     end
   end
 
@@ -160,33 +168,47 @@ defmodule GnomeGarden.Mercury.PaymentMatcherWorker do
   # --- Applying a match ---
 
   defp apply_match(txn, invoice, confidence) do
-    with {:ok, payment} <-
-           Finance.create_payment(%{
-             organization_id: invoice.organization_id,
-             agreement_id: invoice.agreement_id,
-             received_on: DateTime.to_date(txn.occurred_at),
-             payment_method: kind_to_payment_method(txn.kind),
-             currency_code: invoice.currency_code || "USD",
-             amount: txn.amount,
-             reference: txn.mercury_id
-           }),
-         {:ok, _application} <-
-           Finance.create_payment_application(%{
-             payment_id: payment.id,
-             invoice_id: invoice.id,
-             amount: txn.amount,
-             applied_on: DateTime.to_date(txn.occurred_at)
-           }),
-         {:ok, _match} <-
-           Mercury.create_payment_match(%{
-             mercury_transaction_id: txn.id,
-             finance_payment_id: payment.id,
-             match_source: :auto
-           }) do
-      close_or_partial(invoice, txn.amount)
-      Mercury.update_mercury_transaction(txn, %{match_confidence: confidence})
-      :ok
-    else
+    result =
+      Ash.transaction(
+        [GnomeGarden.Finance.Invoice, GnomeGarden.Mercury.PaymentMatch],
+        fn ->
+          with {:ok, payment} <-
+                 Finance.create_payment(%{
+                   organization_id: invoice.organization_id,
+                   agreement_id: invoice.agreement_id,
+                   received_on: DateTime.to_date(txn.occurred_at),
+                   payment_method: kind_to_payment_method(txn.kind),
+                   currency_code: invoice.currency_code || "USD",
+                   amount: txn.amount,
+                   reference: txn.mercury_id
+                 }),
+               {:ok, _application} <-
+                 Finance.create_payment_application(%{
+                   payment_id: payment.id,
+                   invoice_id: invoice.id,
+                   amount: txn.amount,
+                   applied_on: DateTime.to_date(txn.occurred_at)
+                 }),
+               {:ok, _match} <-
+                 Mercury.create_payment_match(%{
+                   mercury_transaction_id: txn.id,
+                   finance_payment_id: payment.id,
+                   match_source: :auto
+                 }),
+               {:ok, _} <- close_or_partial(invoice) do
+            :ok
+          else
+            {:error, reason} ->
+              Ash.DataLayer.rollback(GnomeGarden.Finance.Invoice, reason)
+          end
+        end
+      )
+
+    case result do
+      {:ok, :ok} ->
+        Mercury.update_mercury_transaction(txn, %{match_confidence: confidence})
+        :ok
+
       {:error, reason} ->
         Logger.error("PaymentMatcherWorker: failed to apply match",
           mercury_id: txn.mercury_id,
@@ -197,8 +219,7 @@ defmodule GnomeGarden.Mercury.PaymentMatcherWorker do
     end
   end
 
-  defp close_or_partial(invoice, _txn_amount) do
-    # Reload with fresh applied_amount after PaymentApplication was just created
+  defp close_or_partial(invoice) do
     {:ok, fresh} =
       Ash.get(GnomeGarden.Finance.Invoice, invoice.id, domain: Finance, load: [:applied_amount])
 
