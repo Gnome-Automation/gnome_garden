@@ -24,6 +24,7 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
 
   alias GnomeGarden.Finance
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Operations
   alias GnomeGarden.Mailer
 
   @impl Oban.Worker
@@ -110,15 +111,19 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
         GnomeGarden.Finance.Invoice,
         invoice.id,
         domain: GnomeGarden.Finance,
-        load: [:invoice_lines, organization: [:people]]
+        load: [:invoice_lines, :organization]
       )
 
     contact_email =
-      loaded.organization
-      |> Map.get(:people, [])
-      |> Enum.find_value(fn person ->
-        if person.email, do: to_string(person.email)
-      end)
+      case Operations.list_people_for_organization(loaded.organization_id) do
+        {:ok, people} ->
+          Enum.find_value(people, fn person ->
+            if person.email && !person.do_not_email, do: to_string(person.email)
+          end)
+
+        {:error, _} ->
+          nil
+      end
 
     if contact_email do
       new()
