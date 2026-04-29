@@ -114,7 +114,8 @@ config :gnome_garden, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        {"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker},
-       {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker}
+       {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker},
+       {"0 6 * * *", GnomeGarden.Mercury.InvoiceSchedulerWorker}
      ],
      timezone: "Etc/UTC"}
   ]
@@ -183,6 +184,9 @@ config :gnome_garden,
     GnomeGarden.Procurement
   ],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
+
+config :gnome_garden, :payment_matching,
+  underpayment_tolerance: "1.00"
 
 # Configure the endpoint
 config :gnome_garden, GnomeGardenWeb.Endpoint,
