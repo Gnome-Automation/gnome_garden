@@ -20,9 +20,7 @@ defmodule GnomeGardenWeb.MercuryWebhookController do
 
   def receive(conn, _payload) do
     Logger.warning("MercuryWebhookController: received payload without 'type' field")
-    conn
-    |> put_status(:bad_request)
-    |> json(%{error: "missing event type"})
+    json(conn, %{ok: true})
   end
 
   defp handle_event(conn, "transaction.created", payload) do

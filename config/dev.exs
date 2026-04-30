@@ -74,6 +74,7 @@ config :gnome_garden, GnomeGardenWeb.Endpoint,
 
 # Enable dev routes for dashboard and mailbox
 config :gnome_garden, dev_routes: true, token_signing_secret: "khxr4f86E//4bLKdD17Hvx9UnUil3B8U"
+config :gnome_garden, :mercury_webhook_secret, "test_secret_local"
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
