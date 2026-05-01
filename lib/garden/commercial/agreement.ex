@@ -86,7 +86,8 @@ defmodule GnomeGarden.Commercial.Agreement do
         :renewal_notice_days,
         :notes,
         :billing_cycle,
-        :next_billing_date
+        :next_billing_date,
+        :default_bill_rate
       ]
     end
 
@@ -131,7 +132,8 @@ defmodule GnomeGarden.Commercial.Agreement do
         :renewal_notice_days,
         :notes,
         :billing_cycle,
-        :next_billing_date
+        :next_billing_date,
+        :default_bill_rate
       ]
     end
 
@@ -316,6 +318,10 @@ defmodule GnomeGarden.Commercial.Agreement do
     end
 
     attribute :next_billing_date, :date do
+      public? true
+    end
+
+    attribute :default_bill_rate, :decimal do
       public? true
     end
 
