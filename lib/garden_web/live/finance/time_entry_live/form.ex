@@ -317,7 +317,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
 
       case agreement && agreement.default_bill_rate do
         nil -> params
-        rate -> Map.put(params, "bill_rate", Decimal.to_string(rate))
+        rate -> Map.put(params, "bill_rate", Decimal.to_string(rate, :normal))
       end
     else
       params
