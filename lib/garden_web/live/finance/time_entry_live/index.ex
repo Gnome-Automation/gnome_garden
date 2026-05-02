@@ -142,6 +142,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Index do
             :if={time_entry.status == :draft}
             phx-click="submit"
             phx-value-id={time_entry.id}
+            phx-disable-with="Submitting..."
             class="text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
           >
             Submit
