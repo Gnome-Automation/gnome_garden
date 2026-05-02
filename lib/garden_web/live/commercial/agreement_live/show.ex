@@ -4,6 +4,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
   import GnomeGardenWeb.Commercial.Helpers
 
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Finance
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -36,6 +37,32 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
   end
 
   @impl true
+  def handle_event("generate_invoice", _params, socket) do
+    actor = socket.assigns.current_user
+    agreement = socket.assigns.agreement
+
+    case Finance.create_invoice_from_agreement_sources(agreement.id, actor: actor) do
+      {:ok, invoice} ->
+        {:noreply, push_navigate(socket, to: "/finance/invoices/#{invoice.id}/review")}
+
+      {:error, %Ash.Error.Invalid{errors: errors}} ->
+        if Enum.any?(errors, fn
+             %{message: msg} when is_binary(msg) -> msg =~ "approved billable source records"
+             _ -> false
+           end) do
+          {:noreply,
+           put_flash(socket, :info, "No approved billable entries for this agreement yet.")}
+        else
+          {:noreply,
+           put_flash(socket, :error, "Could not generate invoice: #{inspect(errors)}")}
+        end
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Could not generate invoice: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <.page class="pb-8">
@@ -59,6 +86,13 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           </.button>
           <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
             Draft Invoice
+          </.button>
+          <.button
+            :if={@agreement.status == :active}
+            phx-click="generate_invoice"
+            variant="primary"
+          >
+            <.icon name="hero-document-plus" class="size-4" /> Generate Invoice
           </.button>
           <.button
             :if={can_create_project?(@agreement)}
