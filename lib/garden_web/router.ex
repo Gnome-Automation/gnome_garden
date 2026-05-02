@@ -199,6 +199,7 @@ defmodule GnomeGardenWeb.Router do
       # Finance - Time Entries
       live "/finance/time-entries", Finance.TimeEntryLive.Index, :index
       live "/finance/time-entries/new", Finance.TimeEntryLive.Form, :new
+      live "/finance/time-entries/approval-queue", Finance.ApprovalQueueLive, :index
       live "/finance/time-entries/:id", Finance.TimeEntryLive.Show, :show
       live "/finance/time-entries/:id/edit", Finance.TimeEntryLive.Form, :edit
 
