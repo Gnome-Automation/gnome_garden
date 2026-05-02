@@ -90,6 +90,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           <.button
             :if={@agreement.status == :active}
             phx-click="generate_invoice"
+            phx-disable-with="Generating..."
             variant="primary"
           >
             <.icon name="hero-document-plus" class="size-4" /> Generate Invoice
