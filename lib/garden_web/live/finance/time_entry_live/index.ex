@@ -136,9 +136,42 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Index do
             </:action>
           </.empty_state>
         </:empty>
+
+        <:col :let={time_entry} label="">
+          <button
+            :if={time_entry.status == :draft}
+            phx-click="submit"
+            phx-value-id={time_entry.id}
+            class="text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+          >
+            Submit
+          </button>
+        </:col>
       </Cinder.collection>
     </.page>
     """
+  end
+
+  @impl true
+  def handle_event("submit", %{"id" => id}, socket) do
+    actor = socket.assigns.current_user
+
+    case Finance.get_time_entry(id, actor: actor) do
+      {:ok, time_entry} ->
+        case Finance.submit_time_entry(time_entry, actor: actor) do
+          {:ok, _updated} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, "Time entry submitted for approval")
+             |> push_navigate(to: ~p"/finance/time-entries")}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Could not submit: #{inspect(reason)}")}
+        end
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Time entry not found")}
+    end
   end
 
   defp load_counts(actor) do
