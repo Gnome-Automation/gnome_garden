@@ -43,7 +43,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
 
     case Finance.create_invoice_from_agreement_sources(agreement.id, actor: actor) do
       {:ok, invoice} ->
-        {:noreply, push_navigate(socket, to: "/finance/invoices/#{invoice.id}/review")}
+        {:noreply, push_navigate(socket, to: ~p"/finance/invoices/#{invoice.id}/review")}
 
       {:error, %Ash.Error.Invalid{errors: errors}} ->
         if Enum.any?(errors, fn
