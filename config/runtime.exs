@@ -35,6 +35,10 @@ if mercury_api_key = System.get_env("MERCURY_API_KEY") do
     mercury_sandbox: System.get_env("MERCURY_SANDBOX", "true") == "true"
 end
 
+config :gnome_garden, :mercury_payment_info,
+  account_number: System.get_env("MERCURY_ACCOUNT_NUMBER", ""),
+  routing_number: System.get_env("MERCURY_ROUTING_NUMBER", "")
+
 if mercury_webhook_secret = System.get_env("MERCURY_WEBHOOK_SECRET") do
   config :gnome_garden,
     mercury_webhook_secret: mercury_webhook_secret

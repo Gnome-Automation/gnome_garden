@@ -100,3 +100,7 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+config :gnome_garden, :mercury_payment_info,
+  account_number: "123456789",
+  routing_number: "021000021"
