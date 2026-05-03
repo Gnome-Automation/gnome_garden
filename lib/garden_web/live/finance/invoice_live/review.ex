@@ -107,6 +107,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
           <button
             :if={@invoice.status == :draft}
             type="submit"
+            phx-disable-with="Issuing..."
             class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
           >
             <.icon name="hero-paper-airplane" class="size-4" /> Issue & Send Invoice
@@ -133,7 +134,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
 
     with {:ok, updated} <- Finance.update_invoice(invoice, %{due_on: due_on}, actor: actor),
          {:ok, issued} <- Finance.issue_invoice(updated, actor: actor) do
-      send_invoice_email(issued)
+      send_invoice_email(issued, actor)
 
       {:noreply,
        socket
@@ -145,24 +146,27 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
     end
   end
 
-  defp send_invoice_email(invoice) do
-    {:ok, loaded} =
-      Finance.get_invoice(invoice.id,
-        actor: nil,
-        load: [:invoice_lines, :organization]
-      )
+  defp send_invoice_email(invoice, actor) do
+    case Finance.get_invoice(invoice.id,
+           actor: actor,
+           load: [:invoice_lines, :organization]
+         ) do
+      {:ok, loaded} ->
+        mercury_info = Application.get_env(:gnome_garden, :mercury_payment_info, [])
 
-    mercury_info = Application.get_env(:gnome_garden, :mercury_payment_info, [])
+        loaded
+        |> InvoiceEmail.build(mercury_info)
+        |> Mailer.deliver()
+        |> case do
+          {:ok, _} ->
+            :ok
 
-    loaded
-    |> InvoiceEmail.build(mercury_info)
-    |> Mailer.deliver()
-    |> case do
-      {:ok, _} ->
-        :ok
+          {:error, reason} ->
+            Logger.warning("InvoiceLive.Review: email send failed", reason: inspect(reason))
+        end
 
       {:error, reason} ->
-        Logger.warning("InvoiceLive.Review: email send failed", reason: inspect(reason))
+        Logger.warning("InvoiceLive.Review: could not reload invoice for email", reason: inspect(reason))
     end
   end
 
