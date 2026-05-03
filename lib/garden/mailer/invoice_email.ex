@@ -11,12 +11,22 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
 
   import Swoosh.Email
 
+  require Logger
+
+  alias GnomeGarden.Operations
+
   @logo_url "https://raw.githubusercontent.com/Gnome-Automation/gnome-company/main/06-templates/assets/gnome-icon-clean.png"
 
   @spec build(map(), keyword()) :: Swoosh.Email.t()
   def build(invoice, mercury_info \\ []) do
     contact_email = find_contact_email(invoice)
     org_name = (invoice.organization && invoice.organization.name) || "Client"
+
+    if is_nil(contact_email) do
+      Logger.warning("InvoiceEmail: no contact email found for org #{invoice.organization_id}, sending to billing address",
+        invoice_number: invoice.invoice_number
+      )
+    end
 
     new()
     |> from({"Gnome Automation Billing", "billing@gnomeautomation.io"})
@@ -26,8 +36,6 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
   end
 
   defp find_contact_email(invoice) do
-    alias GnomeGarden.Operations
-
     case Operations.list_people_for_organization(invoice.organization_id, actor: nil) do
       {:ok, people} ->
         Enum.find_value(people, fn person ->
