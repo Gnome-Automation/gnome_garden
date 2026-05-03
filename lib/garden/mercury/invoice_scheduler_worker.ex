@@ -8,7 +8,7 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
   1. Calls create_invoice_from_agreement_sources — creates a draft invoice
      from all approved, unbilled TimeEntries and Expenses.
   2. Issues the invoice (draft → issued).
-  3. Sends invoice email to client via Swoosh.
+  3. Sends invoice email to client via GnomeGarden.Mailer.InvoiceEmail.
   4. Advances next_billing_date by one billing cycle.
 
   If there are no billable entries, the invoice is not created but
@@ -105,10 +105,8 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
 
   defp send_invoice_email(invoice) do
     {:ok, loaded} =
-      Ash.get(
-        GnomeGarden.Finance.Invoice,
-        invoice.id,
-        domain: GnomeGarden.Finance,
+      Finance.get_invoice(invoice.id,
+        actor: nil,
         load: [:invoice_lines, :organization]
       )
 
