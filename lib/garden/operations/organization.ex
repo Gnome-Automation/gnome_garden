@@ -35,6 +35,7 @@ defmodule GnomeGarden.Operations.Organization do
 
     references do
       reference :merged_into, on_delete: :nilify
+      reference :billing_contact, on_delete: :nilify
     end
   end
 

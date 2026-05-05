@@ -16,6 +16,10 @@ defmodule GnomeGarden.Finance.PaymentScheduleItem do
   postgres do
     table "payment_schedule_items"
     repo GnomeGarden.Repo
+
+    references do
+      reference :agreement, on_delete: :delete
+    end
   end
 
   actions do

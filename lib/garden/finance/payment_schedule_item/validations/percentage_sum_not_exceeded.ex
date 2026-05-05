@@ -15,7 +15,9 @@ defmodule GnomeGarden.Finance.PaymentScheduleItem.Validations.PercentageSumNotEx
 
   @impl true
   def validate(changeset, _opts, _context) do
-    agreement_id = Ash.Changeset.get_attribute(changeset, :agreement_id)
+    agreement_id =
+      Ash.Changeset.get_attribute(changeset, :agreement_id) ||
+        (changeset.data && changeset.data.agreement_id)
     new_pct = Ash.Changeset.get_attribute(changeset, :percentage) || Decimal.new("0")
     item_id = changeset.data && changeset.data.id
 
