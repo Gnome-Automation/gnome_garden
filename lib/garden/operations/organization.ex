@@ -260,6 +260,12 @@ defmodule GnomeGarden.Operations.Organization do
       destination_attribute_on_join_resource :person_id
       public? true
     end
+
+    belongs_to :billing_contact, GnomeGarden.Operations.Person do
+      attribute_type :uuid
+      allow_nil? true
+      attribute_writable? true
+    end
   end
 
   calculations do

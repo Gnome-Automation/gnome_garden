@@ -87,7 +87,8 @@ defmodule GnomeGarden.Commercial.Agreement do
         :notes,
         :billing_cycle,
         :next_billing_date,
-        :default_bill_rate
+        :default_bill_rate,
+        :payment_terms_days
       ]
     end
 
@@ -133,7 +134,8 @@ defmodule GnomeGarden.Commercial.Agreement do
         :notes,
         :billing_cycle,
         :next_billing_date,
-        :default_bill_rate
+        :default_bill_rate,
+        :payment_terms_days
       ]
     end
 
@@ -325,6 +327,12 @@ defmodule GnomeGarden.Commercial.Agreement do
       public? true
     end
 
+    attribute :payment_terms_days, :integer do
+      default 30
+      allow_nil? false
+      description "Days after invoice issue date when payment is due (default: 30)."
+    end
+
     timestamps()
   end
 
@@ -400,6 +408,10 @@ defmodule GnomeGarden.Commercial.Agreement do
 
     has_many :payments, GnomeGarden.Finance.Payment do
       public? true
+    end
+
+    has_many :payment_schedule_items, GnomeGarden.Finance.PaymentScheduleItem do
+      sort position: :asc
     end
   end
 

@@ -89,6 +89,8 @@ defmodule GnomeGarden.Finance do
       define :list_open_payments, action: :open
     end
 
+    resource GnomeGarden.Finance.PaymentScheduleItem
+
     resource GnomeGarden.Finance.PaymentApplication do
       define :list_payment_applications, action: :read
       define :get_payment_application, action: :read, get_by: [:id]
