@@ -222,6 +222,9 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/payment-applications/:id", Finance.PaymentApplicationLive.Show, :show
       live "/finance/payment-applications/:id/edit", Finance.PaymentApplicationLive.Form, :edit
 
+      # Finance - AR Aging
+      live "/finance/ar-aging", Finance.ArAgingLive, :index
+
       # Agents - Procurement targeting
       live "/procurement/targeting", Agents.ProcurementTargetingLive, :index
     end
