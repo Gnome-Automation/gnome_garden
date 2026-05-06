@@ -113,6 +113,16 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
             </.property>
             <.property name="Phone">{format_phone(@organization.phone)}</.property>
             <.property name="Roles">{format_roles(@organization.relationship_roles)}</.property>
+            <.property name="Billing Contact">
+              <%= if @organization.billing_contact do %>
+                <.link navigate={~p"/operations/people/#{@organization.billing_contact}"}>
+                  {@organization.billing_contact.first_name} {@organization.billing_contact.last_name}
+                  <span class="text-zinc-400 ml-1 text-sm">({@organization.billing_contact.email})</span>
+                </.link>
+              <% else %>
+                <span class="text-zinc-400 italic">Not set — invoices go to any affiliated contact</span>
+              <% end %>
+            </.property>
           </.properties>
         </.section>
 
@@ -319,7 +329,8 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
              procurement_sources: [],
              people: [:full_name, :status_variant],
              signals: [:status_variant],
-             pursuits: [:stage_variant]
+             pursuits: [:stage_variant],
+             billing_contact: []
            ]
          ) do
       {:ok, organization} -> organization

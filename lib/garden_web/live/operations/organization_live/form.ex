@@ -97,6 +97,15 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
             <div class="col-span-full">
               <.input field={@form[:notes]} type="textarea" label="Notes" />
             </div>
+            <div class="sm:col-span-3">
+              <.input
+                field={@form[:billing_contact_id]}
+                type="select"
+                label="Billing Contact"
+                prompt="None — use any affiliated contact"
+                options={billing_contact_options(@organization)}
+              />
+            </div>
           </div>
         </.form_section>
 
@@ -149,10 +158,20 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
   end
 
   defp load_organization!(id, actor) do
-    case Operations.get_organization(id, actor: actor) do
+    case Operations.get_organization(id,
+           actor: actor,
+           load: [people: [:full_name], billing_contact: []]
+         ) do
       {:ok, organization} -> organization
       {:error, error} -> raise "failed to load organization #{id}: #{inspect(error)}"
     end
+  end
+
+  defp billing_contact_options(nil), do: []
+
+  defp billing_contact_options(organization) do
+    (organization.people || [])
+    |> Enum.map(fn person -> {person.full_name, person.id} end)
   end
 
   defp role_options do
