@@ -270,6 +270,8 @@ defmodule GnomeGarden.Finance.Invoice do
     has_many :payment_applications, GnomeGarden.Finance.PaymentApplication do
       public? true
     end
+
+    has_one :credit_note, GnomeGarden.Finance.CreditNote
   end
 
   calculations do

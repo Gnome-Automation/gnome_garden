@@ -99,6 +99,23 @@ defmodule GnomeGarden.Finance do
       define :list_payment_applications_for_invoice, action: :for_invoice, args: [:invoice_id]
       define :list_payment_applications_for_payment, action: :for_payment, args: [:payment_id]
     end
+
+    resource GnomeGarden.Finance.FinanceSequence do
+      define :list_finance_sequences, action: :read
+    end
+
+    resource GnomeGarden.Finance.CreditNote do
+      define :list_credit_notes, action: :read
+      define :get_credit_note, action: :read, get_by: [:id]
+      define :create_credit_note, action: :create
+      define :issue_credit_note, action: :issue
+      define :update_credit_note, action: :update
+    end
+
+    resource GnomeGarden.Finance.CreditNoteLine do
+      define :list_credit_note_lines, action: :read
+      define :create_credit_note_line, action: :create
+    end
   end
 
   def create_payment_schedule_item(attrs, _opts \\ []) do
@@ -127,5 +144,27 @@ defmodule GnomeGarden.Finance do
 
   def create_invoices_from_fixed_fee_schedule(agreement_id, _opts \\ []) do
     GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeSchedule.generate(agreement_id)
+  end
+
+  @doc """
+  Atomically increments the named sequence and returns the new integer value.
+  Uses a raw SQL UPDATE ... RETURNING — safe under concurrency.
+  """
+  def next_sequence_value(name) do
+    {:ok, %{rows: [[val]]}} =
+      GnomeGarden.Repo.query(
+        "UPDATE finance_sequences SET last_value = last_value + 1 WHERE name = $1 RETURNING last_value",
+        [name]
+      )
+
+    val
+  end
+
+  @doc """
+  Formats a sequence integer as a credit note number string.
+  Example: 1 → "CN-0001"
+  """
+  def format_credit_note_number(n) do
+    "CN-" <> String.pad_leading("#{n}", 4, "0")
   end
 end
