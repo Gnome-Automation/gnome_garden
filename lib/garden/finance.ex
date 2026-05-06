@@ -100,4 +100,32 @@ defmodule GnomeGarden.Finance do
       define :list_payment_applications_for_payment, action: :for_payment, args: [:payment_id]
     end
   end
+
+  def create_payment_schedule_item(attrs, _opts \\ []) do
+    GnomeGarden.Finance.PaymentScheduleItem
+    |> Ash.Changeset.for_create(:create, attrs)
+    |> Ash.create(domain: __MODULE__, authorize?: false)
+  end
+
+  def list_payment_schedule_items_for_agreement(agreement_id, _opts \\ []) do
+    require Ash.Query
+
+    GnomeGarden.Finance.PaymentScheduleItem
+    |> Ash.Query.filter(agreement_id == ^agreement_id)
+    |> Ash.Query.sort(position: :asc)
+    |> Ash.read(domain: __MODULE__, authorize?: false)
+  end
+
+  def get_payment_schedule_item(id, _opts \\ []) do
+    GnomeGarden.Finance.PaymentScheduleItem
+    |> Ash.get(id, domain: __MODULE__, authorize?: false)
+  end
+
+  def delete_payment_schedule_item(item, _opts \\ []) do
+    Ash.destroy(item, domain: __MODULE__, authorize?: false)
+  end
+
+  def create_invoices_from_fixed_fee_schedule(agreement_id, _opts \\ []) do
+    GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeSchedule.generate(agreement_id)
+  end
 end
