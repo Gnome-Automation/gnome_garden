@@ -19,7 +19,7 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
 
   @spec build(map(), keyword()) :: Swoosh.Email.t()
   def build(invoice, mercury_info \\ []) do
-    contact_email = find_contact_email(invoice)
+    contact_email = find_billing_email(invoice.organization || %{})
     org_name = (invoice.organization && invoice.organization.name) || "Client"
 
     if is_nil(contact_email) do
@@ -35,8 +35,27 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
     |> html_body(build_html(invoice, org_name, mercury_info))
   end
 
-  defp find_contact_email(invoice) do
-    case Operations.list_people_for_organization(invoice.organization_id, actor: nil) do
+  @doc """
+  Returns the best available email address for an organization.
+
+  Priority:
+  1. organization.billing_contact.email (if set and do_not_email is false)
+  2. Any affiliated person with a valid email (existing logic)
+  3. nil if no email found
+  """
+  @spec find_billing_email(map()) :: String.t() | nil
+  def find_billing_email(organization) do
+    with_billing_contact(organization) || find_affiliated_email(organization)
+  end
+
+  defp with_billing_contact(%{billing_contact: %{email: email, do_not_email: false}})
+       when not is_nil(email),
+       do: to_string(email)
+
+  defp with_billing_contact(_), do: nil
+
+  defp find_affiliated_email(organization) do
+    case Operations.list_people_for_organization(organization.id, actor: nil, authorize?: false) do
       {:ok, people} ->
         Enum.find_value(people, fn person ->
           if person.email && !person.do_not_email, do: to_string(person.email)
