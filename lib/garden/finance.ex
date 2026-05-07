@@ -162,7 +162,7 @@ defmodule GnomeGarden.Finance do
       %{agreement_id: agreement_id, expense_ids: expense_ids},
       Keyword.merge([domain: __MODULE__], ash_opts)
     )
-    |> Ash.create(ash_opts)
+    |> Ash.create(Keyword.merge([domain: __MODULE__], ash_opts))
   end
 
   @doc """
