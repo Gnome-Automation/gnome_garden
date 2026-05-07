@@ -133,4 +133,140 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeScheduleTest do
     assert invoice.status == :draft
     assert invoice.agreement_id == agreement.id
   end
+
+  describe "with selected_expense_ids" do
+    setup %{agreement: agreement, org: org} do
+      user =
+        GnomeGarden.Repo.insert!(%GnomeGarden.Accounts.User{
+          id: Ecto.UUID.generate(),
+          email: "test-#{System.unique_integer([:positive])}@example.com"
+        })
+
+      {:ok, expense} =
+        Finance.create_expense(%{
+          agreement_id: agreement.id,
+          organization_id: org.id,
+          incurred_by_user_id: user.id,
+          description: "Hotel",
+          category: :travel,
+          amount: Decimal.new("500.00"),
+          incurred_on: Date.utc_today()
+        })
+
+      {:ok, expense} = Finance.submit_expense(expense)
+      {:ok, expense} = Finance.approve_expense(expense)
+
+      {:ok, expense2} =
+        Finance.create_expense(%{
+          agreement_id: agreement.id,
+          organization_id: org.id,
+          incurred_by_user_id: user.id,
+          description: "Flight",
+          category: :travel,
+          amount: Decimal.new("300.00"),
+          incurred_on: Date.utc_today()
+        })
+
+      {:ok, expense2} = Finance.submit_expense(expense2)
+      {:ok, expense2} = Finance.approve_expense(expense2)
+
+      %{expense: expense, expense2: expense2}
+    end
+
+    test "appends expense lines to the first invoice only", %{
+      agreement: agreement,
+      expense: expense
+    } do
+      {:ok, _} =
+        Finance.create_payment_schedule_item(%{
+          agreement_id: agreement.id,
+          position: 1,
+          label: "Deposit",
+          percentage: Decimal.new("50"),
+          due_days: 0
+        })
+
+      {:ok, _} =
+        Finance.create_payment_schedule_item(%{
+          agreement_id: agreement.id,
+          position: 2,
+          label: "Final",
+          percentage: Decimal.new("50"),
+          due_days: 30
+        })
+
+      assert {:ok, [inv1, inv2]} =
+               Finance.create_invoices_from_fixed_fee_schedule(
+                 agreement.id,
+                 [to_string(expense.id)]
+               )
+
+      {:ok, inv1_lines} = Finance.list_invoice_lines_for_invoice(inv1.id)
+      {:ok, inv2_lines} = Finance.list_invoice_lines_for_invoice(inv2.id)
+
+      assert Enum.any?(inv1_lines, &(&1.expense_id == expense.id))
+      assert Enum.empty?(Enum.filter(inv2_lines, & &1.expense_id))
+    end
+
+    test "updates subtotal, total_amount, balance_amount on first invoice", %{
+      agreement: agreement,
+      expense: expense
+    } do
+      assert {:ok, [first | _rest]} =
+               Finance.create_invoices_from_fixed_fee_schedule(
+                 agreement.id,
+                 [to_string(expense.id)]
+               )
+
+      # contract_value = 10_000, no schedule → single invoice for full amount
+      # + expense $500
+      assert Decimal.equal?(first.subtotal, Decimal.new("10500.00"))
+      assert Decimal.equal?(first.total_amount, Decimal.new("10500.00"))
+      assert Decimal.equal?(first.balance_amount, Decimal.new("10500.00"))
+    end
+
+    test "marks selected expenses as billed", %{agreement: agreement, expense: expense} do
+      assert {:ok, _invoices} =
+               Finance.create_invoices_from_fixed_fee_schedule(
+                 agreement.id,
+                 [to_string(expense.id)]
+               )
+
+      {:ok, reloaded} = Finance.get_expense(expense.id)
+      assert reloaded.status == :billed
+    end
+
+    test "leaves unselected expenses as approved", %{
+      agreement: agreement,
+      expense: expense,
+      expense2: expense2
+    } do
+      assert {:ok, _invoices} =
+               Finance.create_invoices_from_fixed_fee_schedule(
+                 agreement.id,
+                 [to_string(expense.id)]
+               )
+
+      {:ok, reloaded} = Finance.get_expense(expense2.id)
+      assert reloaded.status == :approved
+    end
+
+    test "with empty selected_expense_ids, no expense lines added", %{agreement: agreement} do
+      assert {:ok, [invoice]} =
+               Finance.create_invoices_from_fixed_fee_schedule(agreement.id, [])
+
+      {:ok, lines} = Finance.list_invoice_lines_for_invoice(invoice.id)
+      assert Enum.empty?(lines)
+    end
+
+    test "with no selected_expense_ids (default), no expense lines added", %{
+      agreement: agreement
+    } do
+      assert {:ok, [invoice]} =
+               Finance.create_invoices_from_fixed_fee_schedule(agreement.id)
+
+      {:ok, lines} = Finance.list_invoice_lines_for_invoice(invoice.id)
+      assert Enum.empty?(lines)
+    end
+  end
 end

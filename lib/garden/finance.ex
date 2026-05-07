@@ -143,8 +143,11 @@ defmodule GnomeGarden.Finance do
     Ash.destroy(item, domain: __MODULE__, authorize?: false)
   end
 
-  def create_invoices_from_fixed_fee_schedule(agreement_id, _opts \\ []) do
-    GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeSchedule.generate(agreement_id)
+  def create_invoices_from_fixed_fee_schedule(agreement_id, selected_expense_ids \\ [], _opts \\ []) do
+    GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeSchedule.generate(
+      agreement_id,
+      selected_expense_ids
+    )
   end
 
   @doc """
