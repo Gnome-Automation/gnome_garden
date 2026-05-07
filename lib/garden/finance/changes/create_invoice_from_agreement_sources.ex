@@ -17,10 +17,12 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSources do
   @impl true
   def change(changeset, _opts, _context) do
     agreement_id = Ash.Changeset.get_argument(changeset, :agreement_id)
+    selected_ids = Ash.Changeset.get_argument(changeset, :expense_ids) || []
 
     with {:ok, agreement} <- load_agreement(agreement_id),
          :ok <- validate_agreement_status(agreement),
-         {:ok, time_entries, expenses} <- load_sources(agreement_id),
+         {:ok, time_entries, all_expenses} <- load_sources(agreement_id),
+         expenses = filter_expenses(all_expenses, selected_ids),
          :ok <- validate_sources_present(time_entries, expenses),
          :ok <- validate_time_entry_rates(time_entries) do
       changeset
@@ -215,6 +217,12 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSources do
     time_entry_quantity(time_entry)
     |> Decimal.mult(time_entry.bill_rate)
     |> Decimal.round(2)
+  end
+
+  defp filter_expenses(_all_expenses, []), do: []
+
+  defp filter_expenses(all_expenses, selected_ids) do
+    Enum.filter(all_expenses, &(to_string(&1.id) in selected_ids))
   end
 
   defp expense_line_kind(%{category: category})

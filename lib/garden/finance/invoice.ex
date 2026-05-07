@@ -78,6 +78,7 @@ defmodule GnomeGarden.Finance.Invoice do
 
     create :create_from_agreement_sources do
       argument :agreement_id, :uuid, allow_nil?: false
+      argument :expense_ids, {:array, :string}, default: []
 
       accept [
         :invoice_number,
