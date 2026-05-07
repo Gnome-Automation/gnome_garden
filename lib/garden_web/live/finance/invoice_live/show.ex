@@ -302,7 +302,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
              :payment_application_count,
              :line_total_amount,
              :applied_amount,
-             :credit_note,
+             credit_note: [:status_variant],
              organization: [],
              agreement: [],
              project: [],
