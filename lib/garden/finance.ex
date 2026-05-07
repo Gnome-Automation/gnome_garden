@@ -60,6 +60,7 @@ defmodule GnomeGarden.Finance do
         action: :create_from_agreement_sources,
         args: [:agreement_id]
 
+
       define :update_invoice, action: :update
       define :issue_invoice, action: :issue
       define :pay_invoice, action: :mark_paid
@@ -144,6 +145,24 @@ defmodule GnomeGarden.Finance do
 
   def create_invoices_from_fixed_fee_schedule(agreement_id, _opts \\ []) do
     GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeSchedule.generate(agreement_id)
+  end
+
+  @doc """
+  Creates a draft invoice from approved billable time entries and expenses for a T&M agreement.
+
+  Accepts `expense_ids: [string]` to selectively include only those expenses.
+  If omitted or empty, no expense lines are added.
+  """
+  def create_invoice_from_agreement_sources(agreement_id, opts \\ []) do
+    {expense_ids, ash_opts} = Keyword.pop(opts, :expense_ids, [])
+
+    GnomeGarden.Finance.Invoice
+    |> Ash.Changeset.for_create(
+      :create_from_agreement_sources,
+      %{agreement_id: agreement_id, expense_ids: expense_ids},
+      Keyword.merge([domain: __MODULE__], ash_opts)
+    )
+    |> Ash.create(ash_opts)
   end
 
   @doc """
