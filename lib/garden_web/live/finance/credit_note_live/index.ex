@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.Finance.CreditNoteLive.Index do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Finance.Helpers, only: [format_atom: 1]
+
   alias GnomeGarden.Finance
 
   require Ash.Query
@@ -58,7 +60,7 @@ defmodule GnomeGardenWeb.Finance.CreditNoteLive.Index do
                 {cn.currency_code} {format_amount(cn.total_amount)}
               </td>
               <td class="px-5 py-3">
-                <.status_badge status={cn.status_variant}>{cn.status}</.status_badge>
+                <.status_badge status={cn.status_variant}>{format_atom(cn.status)}</.status_badge>
               </td>
               <td class="px-5 py-3 text-zinc-600">{cn.issued_on || "—"}</td>
             </tr>
@@ -75,7 +77,7 @@ defmodule GnomeGardenWeb.Finance.CreditNoteLive.Index do
       |> Ash.Query.sort(inserted_at: :desc)
       |> Ash.Query.load([:status_variant, :invoice, :organization])
 
-    case Finance.list_credit_notes(query: query, actor: actor, authorize?: false) do
+    case Finance.list_credit_notes(query: query, actor: actor) do
       {:ok, cns} -> cns
       _ -> []
     end

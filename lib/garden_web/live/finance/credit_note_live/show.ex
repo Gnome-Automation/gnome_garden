@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.Finance.CreditNoteLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Finance.Helpers, only: [format_atom: 1]
+
   alias GnomeGarden.Finance
   alias GnomeGarden.Mailer
   alias GnomeGarden.Mailer.CreditNoteEmail
@@ -58,9 +60,10 @@ defmodule GnomeGardenWeb.Finance.CreditNoteLive.Show do
            actor: socket.assigns.current_user
          ) do
       {:ok, updated} ->
+        reloaded = load_credit_note!(updated.id, socket.assigns.current_user)
         {:noreply,
          socket
-         |> assign(:credit_note, updated)
+         |> assign(:credit_note, reloaded)
          |> put_flash(:info, "Reason saved")}
 
       {:error, _} ->
@@ -77,7 +80,7 @@ defmodule GnomeGardenWeb.Finance.CreditNoteLive.Show do
         <:subtitle>
           <span class="inline-flex items-center gap-2">
             <.status_badge status={@credit_note.status_variant}>
-              {@credit_note.status}
+              {format_atom(@credit_note.status)}
             </.status_badge>
             <span class="text-zinc-400">/</span>
             <.link navigate={~p"/finance/invoices/#{@credit_note.invoice_id}"} class="hover:underline">
