@@ -45,16 +45,23 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeSchedule do
   defp maybe_append_expenses([], _agreement_id, _selected_ids), do: {:ok, []}
 
   defp maybe_append_expenses([first_invoice | rest], agreement_id, selected_expense_ids) do
-    {:ok, all_expenses} =
-      Finance.list_billable_expenses_for_agreement(agreement_id, authorize?: false)
+    with {:ok, all_expenses} <-
+           Finance.list_billable_expenses_for_agreement(agreement_id, authorize?: false) do
+      expenses =
+        Enum.filter(all_expenses, &(to_string(&1.id) in selected_expense_ids))
 
-    expenses =
-      Enum.filter(all_expenses, &(to_string(&1.id) in selected_expense_ids))
-
-    with :ok <- create_fixed_expense_lines(first_invoice, expenses),
-         {:ok, updated_invoice} <- update_invoice_totals(first_invoice, expenses) do
-      Enum.each(expenses, &Finance.bill_expense(&1, authorize?: false))
-      {:ok, [updated_invoice | rest]}
+      with :ok <- create_fixed_expense_lines(first_invoice, expenses),
+           {:ok, updated_invoice} <- update_invoice_totals(first_invoice, expenses) do
+        case Enum.reduce_while(expenses, :ok, fn expense, _acc ->
+               case Finance.bill_expense(expense, authorize?: false) do
+                 {:ok, _} -> {:cont, :ok}
+                 {:error, error} -> {:halt, {:error, error}}
+               end
+             end) do
+          :ok -> {:ok, [updated_invoice | rest]}
+          {:error, error} -> {:error, error}
+        end
+      end
     end
   end
 
