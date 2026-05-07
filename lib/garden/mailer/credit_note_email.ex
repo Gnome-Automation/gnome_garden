@@ -33,6 +33,9 @@ defmodule GnomeGarden.Mailer.CreditNoteEmail do
     lines_html =
       (credit_note.credit_note_lines || [])
       |> Enum.map(fn line ->
+        # line.line_total is stored as a negative value by convention —
+        # CreditNoteLine amounts are negated at creation time when copied from
+        # InvoiceLines, so no further negation is needed here.
         """
         <tr>
           <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;">#{line.description}</td>
