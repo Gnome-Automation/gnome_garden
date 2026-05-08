@@ -1,6 +1,6 @@
 # Expense Reinvoicing Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add an Unbilled Expenses table with checkboxes to the Agreement show page and thread selected expense IDs through both T&M and fixed-fee invoice generation paths so staff can selectively include expenses before clicking Generate Invoice.
 
@@ -34,7 +34,7 @@
 
 ---
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `test/garden/finance/changes/create_invoice_from_agreement_sources_test.exs`:
 
@@ -242,7 +242,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
 end
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /mnt/c/Users/bhammoud/Desktop/Gnome_Automation/gnome_garden_mercury
@@ -251,7 +251,7 @@ mix test test/garden/finance/changes/create_invoice_from_agreement_sources_test.
 
 Expected: compile errors about undefined `expense_ids` argument or test failures.
 
-- [ ] **Step 3: Add expense_ids argument to the action in invoice.ex**
+- [x] **Step 3: Add expense_ids argument to the action in invoice.ex**
 
 In `lib/garden/finance/invoice.ex`, find the `:create_from_agreement_sources` action (lines 79-89). Add the `expense_ids` argument:
 
@@ -270,7 +270,7 @@ create :create_from_agreement_sources do
 end
 ```
 
-- [ ] **Step 4: Modify CreateInvoiceFromAgreementSources to filter expenses**
+- [x] **Step 4: Modify CreateInvoiceFromAgreementSources to filter expenses**
 
 Replace the `change/3` function body in `lib/garden/finance/changes/create_invoice_from_agreement_sources.ex`. The change reads `expense_ids` from the changeset argument, then filters all fetched expenses down to only the selected ones before passing them through the rest of the pipeline:
 
@@ -328,7 +328,7 @@ end
 
 No other functions need to change — `create_invoice_lines_and_mark_sources`, `create_expense_lines`, `mark_expenses_billed`, and `subtotal` all receive the filtered `expenses` list and work correctly as-is.
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 ```bash
 mix test test/garden/finance/changes/create_invoice_from_agreement_sources_test.exs --no-start 2>&1 | tail -20
@@ -336,7 +336,7 @@ mix test test/garden/finance/changes/create_invoice_from_agreement_sources_test.
 
 Expected: all tests pass.
 
-- [ ] **Step 6: Run full test suite to check for regressions**
+- [x] **Step 6: Run full test suite to check for regressions**
 
 ```bash
 mix test --no-start 2>&1 | tail -10
@@ -344,7 +344,7 @@ mix test --no-start 2>&1 | tail -10
 
 Expected: same number of failures as before (0 new failures).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd /mnt/c/Users/bhammoud/Desktop/Gnome_Automation/gnome_garden_mercury
@@ -367,7 +367,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 ---
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add new tests to the end of `test/garden/finance/changes/create_invoice_from_fixed_fee_schedule_test.exs`. The existing tests must continue to pass.
 
@@ -510,7 +510,7 @@ Append after the last existing test (after line 135):
   end
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 mix test test/garden/finance/changes/create_invoice_from_fixed_fee_schedule_test.exs --no-start 2>&1 | tail -20
@@ -518,7 +518,7 @@ mix test test/garden/finance/changes/create_invoice_from_fixed_fee_schedule_test
 
 Expected: new tests fail (function still only takes 1 argument, etc.).
 
-- [ ] **Step 3: Modify CreateInvoiceFromFixedFeeSchedule**
+- [x] **Step 3: Modify CreateInvoiceFromFixedFeeSchedule**
 
 Replace the entire `lib/garden/finance/changes/create_invoice_from_fixed_fee_schedule.ex` with the following. Key changes: `generate/1` becomes `generate/2`; the existing logic is extracted to `do_generate/1`; expense appending is handled by `maybe_append_expenses/3`.
 
@@ -725,7 +725,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeSchedule do
 end
 ```
 
-- [ ] **Step 4: Update Finance.create_invoices_from_fixed_fee_schedule/2**
+- [x] **Step 4: Update Finance.create_invoices_from_fixed_fee_schedule/2**
 
 In `lib/garden/finance.ex`, change line 141-143 from:
 
@@ -746,7 +746,7 @@ def create_invoices_from_fixed_fee_schedule(agreement_id, selected_expense_ids \
 end
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 ```bash
 mix test test/garden/finance/changes/create_invoice_from_fixed_fee_schedule_test.exs --no-start 2>&1 | tail -20
@@ -754,7 +754,7 @@ mix test test/garden/finance/changes/create_invoice_from_fixed_fee_schedule_test
 
 Expected: all tests pass (both existing and new).
 
-- [ ] **Step 6: Run full test suite**
+- [x] **Step 6: Run full test suite**
 
 ```bash
 mix test --no-start 2>&1 | tail -10
@@ -762,7 +762,7 @@ mix test --no-start 2>&1 | tail -10
 
 Expected: 0 new failures.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add lib/garden/finance/changes/create_invoice_from_fixed_fee_schedule.ex \
@@ -783,7 +783,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 ---
 
-- [ ] **Step 1: Write failing LiveView tests**
+- [x] **Step 1: Write failing LiveView tests**
 
 Create `test/garden_web/live/commercial/agreement_live_test.exs`:
 
@@ -1023,7 +1023,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLiveTest do
 end
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 mix test test/garden_web/live/commercial/agreement_live_test.exs --no-start 2>&1 | tail -20
@@ -1031,7 +1031,7 @@ mix test test/garden_web/live/commercial/agreement_live_test.exs --no-start 2>&1
 
 Expected: failures (no `@unbilled_expenses` assign, no `toggle_expense` handler).
 
-- [ ] **Step 3: Modify agreement_live/show.ex — mount, assigns, handlers, template**
+- [x] **Step 3: Modify agreement_live/show.ex — mount, assigns, handlers, template**
 
 There are 5 distinct changes to make to `lib/garden_web/live/commercial/agreement_live/show.ex`:
 
@@ -1188,7 +1188,7 @@ defp reload_unbilled_expenses(socket) do
 end
 ```
 
-- [ ] **Step 4: Run LiveView tests**
+- [x] **Step 4: Run LiveView tests**
 
 ```bash
 mix test test/garden_web/live/commercial/agreement_live_test.exs --no-start 2>&1 | tail -20
@@ -1196,7 +1196,7 @@ mix test test/garden_web/live/commercial/agreement_live_test.exs --no-start 2>&1
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Run full test suite**
+- [x] **Step 5: Run full test suite**
 
 ```bash
 mix test --no-start 2>&1 | tail -10
@@ -1204,7 +1204,7 @@ mix test --no-start 2>&1 | tail -10
 
 Expected: 0 new failures.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/garden_web/live/commercial/agreement_live/show.ex \
