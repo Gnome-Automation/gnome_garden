@@ -1,8 +1,6 @@
 defmodule GnomeGardenWeb.InvoiceExportControllerTest do
   use GnomeGardenWeb.ConnCase
 
-  alias GnomeGarden.Finance
-
   describe "GET /finance/invoices/:id/export (CSV)" do
     test "redirects unauthenticated users", %{conn: conn} do
       conn = get(conn, ~p"/finance/invoices/00000000-0000-0000-0000-000000000001/export?format=csv")
@@ -113,11 +111,14 @@ defmodule GnomeGardenWeb.InvoiceExportControllerTest do
     invoice =
       case status do
         :issued ->
-          {:ok, inv} = GnomeGarden.Finance.issue_invoice(invoice)
+          {:ok, inv} = GnomeGarden.Finance.issue_invoice(invoice, authorize?: false)
           inv
 
-        _ ->
+        status when status in [nil, :draft] ->
           invoice
+
+        other ->
+          raise "insert_invoice/1 does not handle status #{inspect(other)} — add a case"
       end
 
     invoice
