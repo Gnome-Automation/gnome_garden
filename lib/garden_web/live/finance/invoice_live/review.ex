@@ -33,10 +33,10 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
         <:actions>
           <div class="relative" id="export-dropdown-wrapper">
             <details class="group">
-              <summary class="list-none cursor-pointer">
+              <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer">
                 <.button>
                   <.icon name="hero-arrow-down-tray" class="size-4" /> Export
-                  <.icon name="hero-chevron-down" class="size-3 ml-1 group-open:rotate-180 transition-transform" />
+                  <.icon name="hero-chevron-down" class="size-3 ml-1 group-open:rotate-180 transition" />
                 </.button>
               </summary>
               <div class="absolute right-0 mt-1 w-40 rounded-md border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-zinc-800 z-10">
