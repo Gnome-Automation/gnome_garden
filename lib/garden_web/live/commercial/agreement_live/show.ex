@@ -8,13 +8,23 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    agreement = load_agreement!(id, socket.assigns.current_user)
+    actor = socket.assigns.current_user
+    agreement = load_agreement!(id, actor)
+
+    unbilled_expenses =
+      case Finance.list_billable_expenses_for_agreement(agreement.id,
+             actor: actor, authorize?: false) do
+        {:ok, exps} -> exps
+        _ -> []
+      end
 
     {:ok,
      socket
      |> assign(:page_title, agreement.name)
      |> assign(:agreement, agreement)
-     |> assign(:schedule_pct_total, compute_pct_total(agreement.payment_schedule_items))}
+     |> assign(:schedule_pct_total, compute_pct_total(agreement.payment_schedule_items))
+     |> assign(:unbilled_expenses, unbilled_expenses)
+     |> assign(:selected_expense_ids, MapSet.new())}
   end
 
   @impl true
@@ -41,14 +51,18 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
   def handle_event("generate_invoice", _params, socket) do
     actor = socket.assigns.current_user
     agreement = socket.assigns.agreement
+    selected_ids = MapSet.to_list(socket.assigns.selected_expense_ids)
 
     result =
       case agreement.billing_model do
         :fixed_fee ->
-          Finance.create_invoices_from_fixed_fee_schedule(agreement.id)
+          Finance.create_invoices_from_fixed_fee_schedule(agreement.id, selected_ids)
 
         _ ->
-          case Finance.create_invoice_from_agreement_sources(agreement.id, actor: actor) do
+          case Finance.create_invoice_from_agreement_sources(agreement.id,
+                 expense_ids: selected_ids,
+                 actor: actor
+               ) do
             {:ok, invoice} -> {:ok, [invoice]}
             error -> error
           end
@@ -57,7 +71,12 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
     case result do
       {:ok, invoices} ->
         count = length(List.wrap(invoices))
-        {:noreply, put_flash(socket, :info, "#{count} invoice(s) created")}
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "#{count} invoice(s) created")
+         |> assign(:selected_expense_ids, MapSet.new())
+         |> reload_unbilled_expenses()}
 
       {:error, %Ash.Error.Invalid{errors: errors}} ->
         if Enum.any?(errors, fn
@@ -74,6 +93,18 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Could not generate invoice: #{inspect(reason)}")}
     end
+  end
+
+  @impl true
+  def handle_event("toggle_expense", %{"id" => id}, socket) do
+    ids = socket.assigns.selected_expense_ids
+
+    updated =
+      if MapSet.member?(ids, id),
+        do: MapSet.delete(ids, id),
+        else: MapSet.put(ids, id)
+
+    {:noreply, assign(socket, :selected_expense_ids, updated)}
   end
 
   @impl true
@@ -412,6 +443,38 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           </.link>
         </div>
       </.section>
+
+      <.section :if={not Enum.empty?(@unbilled_expenses)} title="Unbilled Expenses">
+        <table class="min-w-full divide-y divide-zinc-200 text-sm">
+          <thead class="bg-zinc-50">
+            <tr>
+              <th class="px-5 py-3"></th>
+              <th class="px-5 py-3 text-left font-medium text-zinc-500">Date</th>
+              <th class="px-5 py-3 text-left font-medium text-zinc-500">Category</th>
+              <th class="px-5 py-3 text-left font-medium text-zinc-500">Description</th>
+              <th class="px-5 py-3 text-left font-medium text-zinc-500">Vendor</th>
+              <th class="px-5 py-3 text-right font-medium text-zinc-500">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-zinc-200">
+            <tr :for={exp <- @unbilled_expenses}>
+              <td class="px-5 py-3">
+                <input
+                  type="checkbox"
+                  phx-click="toggle_expense"
+                  phx-value-id={exp.id}
+                  checked={MapSet.member?(@selected_expense_ids, to_string(exp.id))}
+                />
+              </td>
+              <td class="px-5 py-3">{exp.incurred_on}</td>
+              <td class="px-5 py-3">{format_atom(exp.category)}</td>
+              <td class="px-5 py-3">{exp.description}</td>
+              <td class="px-5 py-3 text-zinc-500">{exp.vendor || "—"}</td>
+              <td class="px-5 py-3 text-right font-medium">{format_amount(exp.amount)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </.section>
     </.page>
     """
   end
@@ -530,4 +593,18 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
 
   defp transition_agreement(agreement, :reopen, actor),
     do: Commercial.reopen_agreement(agreement, actor: actor)
+
+  defp reload_unbilled_expenses(socket) do
+    agreement = socket.assigns.agreement
+    actor = socket.assigns.current_user
+
+    unbilled_expenses =
+      case Finance.list_billable_expenses_for_agreement(agreement.id,
+             actor: actor, authorize?: false) do
+        {:ok, exps} -> exps
+        _ -> []
+      end
+
+    assign(socket, :unbilled_expenses, unbilled_expenses)
+  end
 end
