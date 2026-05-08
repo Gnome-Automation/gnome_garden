@@ -31,6 +31,31 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
           Review the generated line items, set a due date, then issue to send the invoice email.
         </:subtitle>
         <:actions>
+          <div class="relative" id="export-dropdown-wrapper">
+            <details class="group">
+              <summary class="list-none cursor-pointer">
+                <.button>
+                  <.icon name="hero-arrow-down-tray" class="size-4" /> Export
+                  <.icon name="hero-chevron-down" class="size-3 ml-1 group-open:rotate-180 transition-transform" />
+                </.button>
+              </summary>
+              <div class="absolute right-0 mt-1 w-40 rounded-md border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-zinc-800 z-10">
+                <a
+                  href={~p"/finance/invoices/#{@invoice}/export?format=pdf"}
+                  target="_blank"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                >
+                  Export as PDF
+                </a>
+                <a
+                  href={~p"/finance/invoices/#{@invoice}/export?format=csv"}
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                >
+                  Export as CSV
+                </a>
+              </div>
+            </details>
+          </div>
           <.button navigate={~p"/finance/invoices/#{@invoice}"}>
             <.icon name="hero-arrow-left" class="size-4" /> View Invoice
           </.button>
