@@ -76,7 +76,8 @@ defmodule GnomeGarden.Operations.Organization do
         :website,
         :phone,
         :primary_region,
-        :notes
+        :notes,
+        :billing_contact_id
       ]
 
       change {GnomeGarden.Operations.Changes.NormalizeOrganizationWebsite, []}
