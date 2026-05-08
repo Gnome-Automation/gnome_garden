@@ -16,13 +16,20 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
      |> assign(:invoice_count, counts.total)
      |> assign(:issued_count, counts.issued)
      |> assign(:paid_count, counts.paid)
-     |> assign(:balance_total, counts.balance_total)}
+     |> assign(:balance_total, counts.balance_total)
+     |> assign(:organizations, nil)
+     |> assign(:show_export_form, false)}
   end
 
   @impl true
   def handle_params(params, uri, socket) do
     socket = Cinder.UrlSync.handle_params(params, uri, socket)
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("toggle_export_form", _params, socket) do
+    {:noreply, assign(socket, :show_export_form, !socket.assigns.show_export_form)}
   end
 
   @impl true
@@ -38,11 +45,66 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
           <.button navigate={~p"/commercial/agreements"}>
             Agreements
           </.button>
+          <.button phx-click="toggle_export_form">
+            <.icon name="hero-arrow-down-tray" class="size-4" /> Export
+          </.button>
           <.button navigate={~p"/finance/invoices/new"} variant="primary">
             New Invoice
           </.button>
         </:actions>
       </.page_header>
+
+      <%= if @show_export_form do %>
+        <div class="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Export Invoices</h3>
+          <form method="get" action="/finance/invoices/batch-export" class="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
+            <div>
+              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">From</label>
+              <input
+                type="date"
+                name="from"
+                required
+                class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+              />
+            </div>
+            <div>
+              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">To</label>
+              <input
+                type="date"
+                name="to"
+                required
+                class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+              />
+            </div>
+            <div>
+              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Client (optional)</label>
+              <select
+                name="organization_id"
+                class="mt-1 block w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+              >
+                <option value="">All clients</option>
+                <%= for org <- @organizations do %>
+                  <option value={org.id}><%= org.name %></option>
+                <% end %>
+              </select>
+            </div>
+            <div class="flex gap-2 items-center">
+              <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                <input type="radio" name="format" value="csv" checked /> CSV
+              </label>
+              <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                <input type="radio" name="format" value="pdf" /> PDF
+              </label>
+              <button
+                type="submit"
+                class="ml-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500"
+              >
+                Download
+              </button>
+            </div>
+          </form>
+        </div>
+      <% end %>
 
       <div class="grid gap-4 md:grid-cols-4">
         <.stat_card
