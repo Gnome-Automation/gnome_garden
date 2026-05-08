@@ -82,13 +82,81 @@ defmodule GnomeGardenWeb.InvoiceExportControllerTest do
     Plug.Conn.put_private(conn, :gnome_garden_current_user, user)
   end
 
+  defp make_org do
+    {:ok, org} =
+      GnomeGarden.Operations.create_organization(%{
+        name: "Test Corp #{System.unique_integer([:positive])}",
+        organization_kind: :business
+      })
+
+    org
+  end
+
   defp insert_invoice(attrs) do
-    # Use your project's factory/fixture helpers to create an invoice
-    # This is a placeholder — adjust to match existing test patterns
-    raise "implement insert_invoice using your project's test factory"
+    org = make_org()
+
+    # status is controlled by the state machine — do not pass it to create.
+    # :draft is the default initial state; :issued requires calling issue_invoice/1.
+    {status, attrs} = Map.pop(attrs, :status)
+
+    defaults = %{
+      organization_id: org.id,
+      invoice_number: "INV-TEST-#{System.unique_integer([:positive])}",
+      currency_code: "USD",
+      total_amount: Decimal.new("500.00"),
+      balance_amount: Decimal.new("500.00")
+    }
+
+    {:ok, invoice} =
+      GnomeGarden.Finance.create_invoice(Map.merge(defaults, attrs))
+
+    invoice =
+      case status do
+        :issued ->
+          {:ok, inv} = GnomeGarden.Finance.issue_invoice(invoice)
+          inv
+
+        _ ->
+          invoice
+      end
+
+    invoice
   end
 
   defp insert_issued_invoice_with_lines(opts \\ []) do
-    raise "implement insert_issued_invoice_with_lines using your project's test factory"
+    line_count = Keyword.get(opts, :line_count, 1)
+    org = make_org()
+
+    {:ok, invoice} =
+      GnomeGarden.Finance.create_invoice(%{
+        organization_id: org.id,
+        invoice_number: "INV-ISSUED-#{System.unique_integer([:positive])}",
+        currency_code: "USD",
+        total_amount: Decimal.new("100.00"),
+        balance_amount: Decimal.new("100.00")
+      })
+
+    {:ok, invoice} = GnomeGarden.Finance.issue_invoice(invoice)
+
+    for i <- 1..line_count do
+      {:ok, _line} =
+        GnomeGarden.Finance.create_invoice_line(%{
+          invoice_id: invoice.id,
+          organization_id: org.id,
+          line_number: i,
+          description: "Service line #{i}",
+          quantity: Decimal.new("1"),
+          unit_price: Decimal.new("100.00"),
+          line_total: Decimal.new("100.00")
+        })
+    end
+
+    {:ok, invoice} =
+      GnomeGarden.Finance.get_invoice(invoice.id,
+        load: [:invoice_lines, :organization],
+        authorize?: false
+      )
+
+    invoice
   end
 end
