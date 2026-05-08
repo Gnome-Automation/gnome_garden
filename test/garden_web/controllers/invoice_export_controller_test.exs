@@ -40,6 +40,15 @@ defmodule GnomeGardenWeb.InvoiceExportControllerTest do
       # 1 header + 3 data rows
       assert length(lines) == 4
     end
+
+    test "returns HTML for issued invoice PDF", %{conn: conn} do
+      conn = log_in_user(conn)
+      invoice = insert_issued_invoice_with_lines()
+      conn = get(conn, ~p"/finance/invoices/#{invoice.id}/export?format=pdf")
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-type") |> hd() =~ "text/html"
+      assert conn.resp_body =~ invoice.invoice_number
+    end
   end
 
   describe "GET /finance/invoices/batch-export (CSV)" do
@@ -64,20 +73,45 @@ defmodule GnomeGardenWeb.InvoiceExportControllerTest do
       # Header row only
       assert conn.resp_body =~ "invoice_number"
     end
+
+    test "returns HTML for batch PDF", %{conn: conn} do
+      conn = log_in_user(conn)
+      _invoice = insert_issued_invoice_with_lines()
+      conn = get(conn, ~p"/finance/invoices/batch-export?format=pdf&from=2020-01-01&to=2099-12-31")
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-type") |> hd() =~ "text/html"
+    end
   end
 
   # Helpers
   # Note: GnomeGarden uses magic-link auth with no password registration.
-  # There are no AccountsFixtures in this codebase. Build a struct directly.
+  # There are no AccountsFixtures in this codebase.
   #
-  # We cannot use conn.assigns[:current_user] because load_from_session (in
-  # the :browser pipeline) unconditionally overwrites it to nil when there is
-  # no valid AshAuthentication token in the session. Instead we store the stub
-  # user in conn.private[:gnome_garden_current_user], which load_from_session
-  # never touches. The controller's require_authenticated_user checks both.
+  # We create a real user row via Ecto, generate a signed JWT via
+  # AshAuthentication.Jwt.token_for_user/1 (which also persists the token to the
+  # tokens table), then seed the session via Plug.Test.init_test_session/2 so
+  # the :browser pipeline's load_from_session plug can find the token and set
+  # conn.assigns[:current_user].
+  #
+  # We must mark the conn as phoenix_recycled so Phoenix.ConnTest.dispatch does
+  # not call recycle() again (which would discard the private session state).
   defp log_in_user(conn) do
-    user = %GnomeGarden.Accounts.User{id: Ecto.UUID.generate(), email: "test@example.com"}
-    Plug.Conn.put_private(conn, :gnome_garden_current_user, user)
+    user_id = Ecto.UUID.generate()
+    {:ok, user_id_bin} = Ecto.UUID.dump(user_id)
+
+    GnomeGarden.Repo.insert_all(
+      "users",
+      [%{id: user_id_bin, email: "test-#{user_id}@example.com"}],
+      on_conflict: :nothing
+    )
+
+    user = Ash.get!(GnomeGarden.Accounts.User, user_id, authorize?: false, domain: GnomeGarden.Accounts)
+
+    {:ok, token, _claims} = AshAuthentication.Jwt.token_for_user(user)
+
+    conn
+    |> Plug.Test.init_test_session(%{"user_token" => token})
+    |> Plug.Conn.put_private(:phoenix_recycled, true)
   end
 
   defp make_org do

@@ -159,6 +159,14 @@ defmodule GnomeGardenWeb.InvoiceExportController do
   defp csv_escape(nil), do: ""
 
   defp csv_escape(str) do
+    # Prevent CSV formula injection — prefix formula-starting chars with a tab
+    str =
+      if String.match?(str, ~r/^[=+\-@\t\r]/) do
+        "\t" <> str
+      else
+        str
+      end
+
     if String.contains?(str, [",", "\"", "\n"]) do
       ~s["#{String.replace(str, "\"", "\"\"")}"]
     else
@@ -177,10 +185,7 @@ defmodule GnomeGardenWeb.InvoiceExportController do
   end
 
   defp require_authenticated_user(conn, _opts) do
-    # WARNING: :gnome_garden_current_user in conn.private is a test-only escape hatch.
-    # It must never be set by any production plug or middleware.
-    # Production auth relies solely on conn.assigns[:current_user].
-    if conn.assigns[:current_user] || conn.private[:gnome_garden_current_user] do
+    if conn.assigns[:current_user] do
       conn
     else
       conn
