@@ -29,6 +29,20 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
 
   @impl true
   def handle_event("toggle_export_form", _params, socket) do
+    socket =
+      if socket.assigns.show_export_form do
+        # closing the form — no need to reload
+        socket
+      else
+        # opening the form — load organizations if not already loaded
+        if socket.assigns.organizations == nil do
+          orgs = GnomeGarden.Operations.list_organizations!(actor: socket.assigns.current_user)
+          assign(socket, :organizations, orgs)
+        else
+          socket
+        end
+      end
+
     {:noreply, assign(socket, :show_export_form, !socket.assigns.show_export_form)}
   end
 
@@ -59,8 +73,9 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
           <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Export Invoices</h3>
           <form method="get" action="/finance/invoices/batch-export" class="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
             <div>
-              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">From</label>
+              <label for="export_from" class="block text-sm/6 font-medium text-gray-900 dark:text-white">From</label>
               <input
+                id="export_from"
                 type="date"
                 name="from"
                 required
@@ -68,8 +83,9 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
               />
             </div>
             <div>
-              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">To</label>
+              <label for="export_to" class="block text-sm/6 font-medium text-gray-900 dark:text-white">To</label>
               <input
+                id="export_to"
                 type="date"
                 name="to"
                 required
@@ -78,26 +94,35 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
             </div>
             <div>
               <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Client (optional)</label>
-              <select
-                name="organization_id"
-                class="mt-1 block w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
-              >
-                <option value="">All clients</option>
-                <%= for org <- @organizations do %>
-                  <option value={org.id}><%= org.name %></option>
-                <% end %>
-              </select>
+              <div class="mt-1 grid grid-cols-1">
+                <select
+                  name="organization_id"
+                  class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white py-1.5 pr-8 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:*:bg-gray-800 dark:focus:outline-emerald-500"
+                >
+                  <option value="">All clients</option>
+                  <%= for org <- (@organizations || []) do %>
+                    <option value={org.id}><%= org.name %></option>
+                  <% end %>
+                </select>
+                <svg
+                  class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-500 sm:size-4 dark:text-gray-400"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                >
+                  <path fill-rule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                </svg>
+              </div>
             </div>
             <div class="flex gap-2 items-center">
               <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
-                <input type="radio" name="format" value="csv" checked /> CSV
+                <input type="radio" name="format" value="csv" checked={true} /> CSV
               </label>
               <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
                 <input type="radio" name="format" value="pdf" /> PDF
               </label>
               <button
                 type="submit"
-                class="ml-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500"
+                class="ml-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
               >
                 Download
               </button>
