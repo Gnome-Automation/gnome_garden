@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <title><%= @title %></title>
   <style>
+    @page {
+      margin: 0.5in;
+      size: letter;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -18,10 +23,12 @@
       max-width: 800px;
       margin: 0 auto;
       page-break-after: always;
+      break-after: page;
     }
 
     .invoice-page:last-child {
       page-break-after: avoid;
+      break-after: avoid;
     }
 
     .header {
@@ -138,6 +145,7 @@
     @media print {
       body { font-size: 12px; }
       .invoice-page { padding: 32px; }
+      tbody tr { break-inside: avoid; }
     }
   </style>
 </head>
@@ -177,6 +185,11 @@
             </tr>
           </thead>
           <tbody>
+            <%= if invoice.invoice_lines == [] do %>
+              <tr>
+                <td colspan="4" style="color: #888; font-style: italic;">No line items</td>
+              </tr>
+            <% end %>
             <%= for line <- invoice.invoice_lines do %>
               <tr>
                 <td><%= line.description %></td>
@@ -193,7 +206,7 @@
           <span class="amount">$<%= invoice.total_amount %></span>
         </div>
 
-        <%= if @mercury_info && @mercury_info != [] do %>
+        <%= if @mercury_info && @mercury_info[:routing_number] not in [nil, ""] do %>
           <div class="payment-info">
             <h3>Payment Instructions</h3>
             <p>Please remit payment via ACH transfer:</p>
