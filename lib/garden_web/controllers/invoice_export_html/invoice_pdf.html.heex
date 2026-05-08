@@ -144,8 +144,7 @@
 <body>
   <%= if @invoices == [] do %>
     <div class="no-invoices">
-      <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No invoices found</p>
-      <p>No issued, partial, or paid invoices matched the selected filters.</p>
+      <p>No invoices found for the selected filters.</p>
     </div>
   <% else %>
     <%= for invoice <- @invoices do %>
@@ -194,7 +193,7 @@
           <span class="amount">$<%= invoice.total_amount %></span>
         </div>
 
-        <%= if @mercury_info != [] do %>
+        <%= if @mercury_info && @mercury_info != [] do %>
           <div class="payment-info">
             <h3>Payment Instructions</h3>
             <p>Please remit payment via ACH transfer:</p>
