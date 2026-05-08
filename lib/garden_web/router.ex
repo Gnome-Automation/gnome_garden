@@ -57,6 +57,10 @@ defmodule GnomeGardenWeb.Router do
   scope "/", GnomeGardenWeb do
     pipe_through :browser
 
+    # Finance - Invoice Export (plain controller routes, before :id to avoid conflict)
+    get "/finance/invoices/batch-export", InvoiceExportController, :batch
+    get "/finance/invoices/:id/export", InvoiceExportController, :show
+
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_required}] do
