@@ -2,7 +2,6 @@ defmodule GnomeGardenWeb.InvoiceExportControllerTest do
   use GnomeGardenWeb.ConnCase
 
   alias GnomeGarden.Finance
-  alias GnomeGarden.Operations
 
   describe "GET /finance/invoices/:id/export (CSV)" do
     test "redirects unauthenticated users", %{conn: conn} do

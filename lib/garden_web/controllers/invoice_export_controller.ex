@@ -75,12 +75,13 @@ defmodule GnomeGardenWeb.InvoiceExportController do
   end
 
   defp send_csv(conn, invoices, opts) do
-    filename = Keyword.get(opts, :filename, "invoices") <> ".csv"
+    raw_filename = Keyword.get(opts, :filename, "invoices")
+    safe_filename = String.replace(raw_filename, ~r/[^\w\-.]/, "_") <> ".csv"
     csv = build_csv(invoices)
 
     conn
     |> put_resp_content_type("text/csv")
-    |> put_resp_header("content-disposition", ~s[attachment; filename="#{filename}"])
+    |> put_resp_header("content-disposition", ~s[attachment; filename="#{safe_filename}"])
     |> send_resp(200, csv)
   end
 
@@ -149,7 +150,7 @@ defmodule GnomeGardenWeb.InvoiceExportController do
         lines
       end)
 
-    header <> Enum.join(rows, "\n")
+    header <> Enum.join(rows, "\n") <> "\n"
   end
 
   defp decimal_str(nil), do: ""
@@ -176,9 +177,9 @@ defmodule GnomeGardenWeb.InvoiceExportController do
   end
 
   defp require_authenticated_user(conn, _opts) do
-    # conn.assigns[:current_user] is set by load_from_session for real requests.
-    # conn.private[:gnome_garden_current_user] is used by test helpers to
-    # inject a stub user without needing a real AshAuthentication token.
+    # WARNING: :gnome_garden_current_user in conn.private is a test-only escape hatch.
+    # It must never be set by any production plug or middleware.
+    # Production auth relies solely on conn.assigns[:current_user].
     if conn.assigns[:current_user] || conn.private[:gnome_garden_current_user] do
       conn
     else
