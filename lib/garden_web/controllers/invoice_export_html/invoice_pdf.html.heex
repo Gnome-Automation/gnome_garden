@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= @title %></title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      color: #111;
+      background: white;
+    }
+
+    .invoice-page {
+      padding: 48px;
+      max-width: 800px;
+      margin: 0 auto;
+      page-break-after: always;
+    }
+
+    .invoice-page:last-child {
+      page-break-after: avoid;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #059669;
+    }
+
+    .company-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #059669;
+    }
+
+    .invoice-meta { text-align: right; }
+    .invoice-meta h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .invoice-meta p { color: #555; margin: 2px 0; }
+
+    .billing-section {
+      margin-bottom: 32px;
+    }
+
+    .billing-section h3 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    .billing-section p {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+
+    thead th {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    thead th.num { text-align: right; }
+
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+
+    tbody td.num { text-align: right; }
+
+    .total-row {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 16px;
+      border-top: 2px solid #111;
+      margin-bottom: 40px;
+    }
+
+    .total-row .label {
+      font-weight: 600;
+      margin-right: 32px;
+    }
+
+    .total-row .amount {
+      font-weight: 700;
+      font-size: 16px;
+      min-width: 100px;
+      text-align: right;
+    }
+
+    .payment-info {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 20px;
+    }
+
+    .payment-info h3 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #059669;
+      margin-bottom: 12px;
+    }
+
+    .payment-info p {
+      margin: 4px 0;
+      color: #444;
+    }
+
+    .no-invoices {
+      text-align: center;
+      padding: 80px 48px;
+      color: #888;
+    }
+
+    @media print {
+      body { font-size: 12px; }
+      .invoice-page { padding: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <%= if @invoices == [] do %>
+    <div class="no-invoices">
+      <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No invoices found</p>
+      <p>No issued, partial, or paid invoices matched the selected filters.</p>
+    </div>
+  <% else %>
+    <%= for invoice <- @invoices do %>
+      <div class="invoice-page">
+        <div class="header">
+          <div class="company-name"><%= @company_name %></div>
+          <div class="invoice-meta">
+            <h2>Invoice</h2>
+            <p><strong><%= invoice.invoice_number %></strong></p>
+            <p>Issued: <%= invoice.issued_on %></p>
+            <%= if invoice.due_on do %>
+              <p>Due: <%= invoice.due_on %></p>
+            <% end %>
+            <p>Status: <%= invoice.status |> to_string() |> String.capitalize() %></p>
+          </div>
+        </div>
+
+        <div class="billing-section">
+          <h3>Bill To</h3>
+          <p><%= (invoice.organization && invoice.organization.name) || "—" %></p>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th class="num">Qty</th>
+              <th class="num">Unit Price</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <%= for line <- invoice.invoice_lines do %>
+              <tr>
+                <td><%= line.description %></td>
+                <td class="num"><%= line.quantity %></td>
+                <td class="num">$<%= line.unit_price %></td>
+                <td class="num">$<%= line.line_total %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+
+        <div class="total-row">
+          <span class="label">Total</span>
+          <span class="amount">$<%= invoice.total_amount %></span>
+        </div>
+
+        <%= if @mercury_info != [] do %>
+          <div class="payment-info">
+            <h3>Payment Instructions</h3>
+            <p>Please remit payment via ACH transfer:</p>
+            <p><strong>Routing Number:</strong> <%= @mercury_info[:routing_number] %></p>
+            <p><strong>Account Number:</strong> <%= @mercury_info[:account_number] %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</body>
+</html>
