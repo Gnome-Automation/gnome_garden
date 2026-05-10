@@ -28,7 +28,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   @impl true
   def mount(%{"finding_id" => finding_id}, _session, socket) do
     finding = load_finding!(finding_id, socket.assigns.current_user)
-    link_params = default_link_params()
+    link_params = default_link_params(finding)
     existing_documents = load_existing_documents(finding.id, socket.assigns.current_user)
 
     {:ok,
@@ -48,7 +48,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
        max_file_size: @max_file_size
      )
      |> assign_form(%{}, link_params)
-     |> assign_existing_link_form(default_existing_link_params())}
+     |> assign_existing_link_form(default_existing_link_params(finding))}
   end
 
   @impl true
@@ -70,7 +70,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
       <div class="space-y-6">
         <.form_section
           title="Finding Context"
-          description="Keep uploaded files on a reusable AshStorage-backed document record while the finding-specific role stays in the intake join."
+          description="Keep uploaded files on a reusable document record while the finding-specific role stays in the intake link."
         >
           <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
@@ -265,7 +265,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   @impl true
   def handle_event("validate", params, socket) do
     form_params = Map.get(params, "form", %{})
-    link_params = normalized_link_params(Map.get(params, "finding_document", %{}))
+
+    link_params =
+      normalized_link_params(
+        Map.get(params, "finding_document", %{}),
+        socket.assigns.finding
+      )
 
     {:noreply, assign_form(socket, form_params, link_params)}
   end
@@ -275,7 +280,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   end
 
   def handle_event("link_existing", %{"link" => params}, socket) do
-    existing_link_params = normalized_existing_link_params(params)
+    existing_link_params = normalized_existing_link_params(params, socket.assigns.finding)
 
     if blank?(existing_link_params["document_id"]) do
       {:noreply,
@@ -309,7 +314,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   @impl true
   def handle_event("save", params, socket) do
     form_params = Map.get(params, "form", %{})
-    link_params = normalized_link_params(Map.get(params, "finding_document", %{}))
+
+    link_params =
+      normalized_link_params(
+        Map.get(params, "finding_document", %{}),
+        socket.assigns.finding
+      )
 
     case consume_upload(socket) do
       {:ok, upload} ->
@@ -410,7 +420,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   end
 
   defp normalized_params(params, link_params, finding) do
-    Map.put(params, "finding_documents", [
+    params
+    |> Map.put_new("document_type", default_document_type(finding))
+    |> Map.put("finding_documents", [
       %{
         "finding_id" => finding.id,
         "document_role" => link_params["document_role"],
@@ -419,15 +431,15 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
     ])
   end
 
-  defp default_link_params do
+  defp default_link_params(finding) do
     %{
-      "document_role" => "supporting",
+      "document_role" => default_document_role(finding),
       "notes" => ""
     }
   end
 
-  defp normalized_link_params(params) do
-    defaults = default_link_params()
+  defp normalized_link_params(params, finding) do
+    defaults = default_link_params(finding)
 
     %{
       "document_role" => Map.get(params, "document_role", defaults["document_role"]),
@@ -435,16 +447,16 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
     }
   end
 
-  defp default_existing_link_params do
+  defp default_existing_link_params(finding) do
     %{
       "document_id" => "",
-      "document_role" => "supporting",
+      "document_role" => default_document_role(finding),
       "notes" => ""
     }
   end
 
-  defp normalized_existing_link_params(params) do
-    defaults = default_existing_link_params()
+  defp normalized_existing_link_params(params, finding) do
+    defaults = default_existing_link_params(finding)
 
     %{
       "document_id" => Map.get(params, "document_id", defaults["document_id"]),
@@ -509,6 +521,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   defp document_noun_plural(%{finding_family: :procurement}), do: "packets"
   defp document_noun_plural(%{finding_family: :discovery}), do: "source materials"
   defp document_noun_plural(_finding), do: "materials"
+
+  defp default_document_type(%{finding_family: :procurement}), do: "solicitation"
+  defp default_document_type(%{finding_family: :discovery}), do: "intake_note"
+  defp default_document_type(_finding), do: "other"
+
+  defp default_document_role(%{finding_family: :procurement}), do: "solicitation"
+  defp default_document_role(%{finding_family: :discovery}), do: "research_note"
+  defp default_document_role(_finding), do: "supporting"
 
   defp humanize_atom(value) when is_atom(value) do
     value

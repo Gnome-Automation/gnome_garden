@@ -3,12 +3,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   use Cinder.UrlSync
 
   import Cinder.Refresh
+  import GnomeGardenWeb.Components.AcquisitionUI, only: [finding_action_bar: 1, review_dialogs: 1]
 
   import GnomeGardenWeb.Commercial.Helpers, only: [format_date: 1, format_datetime: 1]
   require Ash.Query
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Commercial.DiscoveryFeedback
   alias GnomeGarden.Procurement.TargetingFeedback
 
   @queues [:review, :promoted, :rejected, :suppressed, :parked]
@@ -514,90 +514,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
             </div>
           </:col>
           <:col :let={finding} label="Actions">
-            <div class="flex flex-wrap gap-1.5">
-              <.button
-                :if={finding.status in [:new]}
-                id={"finding-start-review-#{finding.id}"}
-                phx-click="transition"
-                phx-value-id={finding.id}
-                phx-value-action="start_review"
-                class="px-2.5 py-1.5 text-xs"
-              >
-                Start Review
-              </.button>
-              <.button
-                :if={finding.status == :reviewing and finding.acceptance_ready}
-                id={"finding-accept-#{finding.id}"}
-                phx-click="open_dialog"
-                phx-value-id={finding.id}
-                phx-value-action="accept"
-                class="px-2.5 py-1.5 text-xs"
-              >
-                Accept
-              </.button>
-              <.button
-                :if={prep_action_path(finding)}
-                id={"finding-prep-#{finding.id}"}
-                navigate={prep_action_path(finding)}
-                class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-emerald-300 hover:text-emerald-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-emerald-400/40 dark:hover:text-emerald-300"
-              >
-                {prep_action_label(finding)}
-              </.button>
-              <.button
-                :if={
-                  finding.status == :accepted and finding.promotion_ready and
-                    is_nil(finding.signal_id)
-                }
-                id={"finding-promote-#{finding.id}"}
-                phx-click="transition"
-                phx-value-id={finding.id}
-                phx-value-action="promote"
-                variant="primary"
-                class="px-2.5 py-1.5 text-xs"
-              >
-                Promote To Signal
-              </.button>
-              <.button
-                :if={finding.status in [:reviewing, :accepted]}
-                id={"finding-reject-#{finding.id}"}
-                phx-click="open_dialog"
-                phx-value-id={finding.id}
-                phx-value-action="reject"
-                class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-rose-300 hover:text-rose-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-rose-400/40 dark:hover:text-rose-300"
-              >
-                Reject
-              </.button>
-              <.button
-                :if={finding.status in [:reviewing, :accepted]}
-                id={"finding-suppress-#{finding.id}"}
-                phx-click="open_dialog"
-                phx-value-id={finding.id}
-                phx-value-action="suppress"
-                class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-amber-300 hover:text-amber-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-amber-400/40 dark:hover:text-amber-300"
-              >
-                Suppress
-              </.button>
-              <.button
-                :if={finding.status in [:reviewing, :accepted]}
-                id={"finding-park-#{finding.id}"}
-                phx-click="open_dialog"
-                phx-value-id={finding.id}
-                phx-value-action="park"
-                class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-sky-300 hover:text-sky-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-sky-400/40 dark:hover:text-sky-300"
-              >
-                Park
-              </.button>
-              <.button
-                :if={show_reopen?(finding)}
-                id={"finding-reopen-#{finding.id}"}
-                phx-click="transition"
-                phx-value-id={finding.id}
-                phx-value-action="reopen"
-                class="px-2.5 py-1.5 text-xs"
-              >
-                Reopen
-              </.button>
-            </div>
+            <.finding_action_bar
+              finding={finding}
+              id_prefix="finding"
+              target_id={finding.id}
+              compact
+            />
             <p
               :if={finding.status == :reviewing and not finding.acceptance_ready}
               class="mt-2 max-w-xs text-xs leading-5 text-amber-700 dark:text-amber-200"
@@ -622,116 +544,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         </Cinder.collection>
       </.section>
 
-      <dialog
-        :if={@action_dialog && @action_dialog.type in [:accept, :reject, :suppress]}
-        id="finding-review-dialog"
-        class="modal"
-        phx-hook="ShowModal"
-      >
-        <div class="modal-box">
-          <h3 class="mb-2 text-lg font-bold">{dialog_heading(@action_dialog)}</h3>
-          <p class="mb-4 text-sm text-zinc-500">{@action_dialog.title}</p>
-          <form
-            id={"finding-#{@action_dialog.type}-form"}
-            phx-submit={"submit_#{@action_dialog.type}"}
-          >
-            <div class="space-y-3">
-              <.input
-                :if={@action_dialog.type == :accept}
-                name="reason"
-                value=""
-                label="Why are we accepting this finding?"
-                type="textarea"
-                placeholder="Explain why this intake is worth keeping and refining."
-                required
-              />
-              <.input
-                :if={@action_dialog.type in [:reject, :suppress]}
-                name="reason_code"
-                value={dialog_default_reason_code(@action_dialog)}
-                label="Disposition code"
-                type="select"
-                prompt={dialog_reason_prompt(@action_dialog)}
-                options={dialog_reason_options(@action_dialog)}
-              />
-              <.input
-                :if={@action_dialog.type in [:reject, :suppress]}
-                name="reason"
-                value=""
-                label="Operator note (optional)"
-                type="text"
-                placeholder="Add specific context for this intake decision"
-              />
-              <.input
-                :if={@action_dialog.type in [:reject, :suppress]}
-                name="feedback_scope"
-                value={dialog_default_feedback_scope(@action_dialog)}
-                label="Teach the search/profile (optional)"
-                type="select"
-                prompt={dialog_feedback_prompt(@action_dialog)}
-                options={dialog_feedback_scope_options(@action_dialog)}
-              />
-              <.input
-                :if={@action_dialog.type in [:reject, :suppress]}
-                name="exclude_terms"
-                value={@action_dialog.suggested_terms}
-                label="Keywords to suppress next time"
-                type="text"
-                placeholder="e.g. cctv, municipal ERP, generic admin software"
-              />
-            </div>
-            <div class="modal-action">
-              <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>
-              <.button type="submit" variant="primary" phx-disable-with="Saving...">
-                {dialog_submit_label(@action_dialog)}
-              </.button>
-            </div>
-          </form>
-        </div>
-        <form method="dialog" class="modal-backdrop">
-          <button phx-click="close_dialog">close</button>
-        </form>
-      </dialog>
-
-      <dialog
-        :if={@action_dialog && @action_dialog.type == :park}
-        id="finding-park-dialog"
-        class="modal"
-        phx-hook="ShowModal"
-      >
-        <div class="modal-box">
-          <h3 class="mb-2 text-lg font-bold">Park this finding?</h3>
-          <p class="mb-4 text-sm text-zinc-500">{@action_dialog.title}</p>
-          <form id="finding-park-form" phx-submit="submit_park">
-            <div class="space-y-3">
-              <.input
-                name="reason"
-                value=""
-                label="Why are we parking this?"
-                type="text"
-                placeholder="e.g. Keep watching, timing is not right yet"
-              />
-              <.input
-                :if={@action_dialog.family == :procurement}
-                name="research"
-                value=""
-                label="Research needed (optional)"
-                type="textarea"
-                placeholder="Capture any follow-up research or capability work needed before this returns."
-              />
-            </div>
-            <div class="modal-action">
-              <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>
-              <.button type="submit" variant="primary" phx-disable-with="Parking...">
-                Park Finding
-              </.button>
-            </div>
-          </form>
-        </div>
-        <form method="dialog" class="modal-backdrop">
-          <button phx-click="close_dialog">close</button>
-        </form>
-      </dialog>
+      <.review_dialogs action_dialog={@action_dialog} id_prefix="finding" />
     </.page>
     """
   end
@@ -949,40 +762,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
   defp finding_score_value(_finding), do: "-"
 
-  defp show_reopen?(%{status: :parked}), do: true
-
-  defp show_reopen?(%{status: :rejected, source_discovery_record_id: target_id})
-       when is_binary(target_id), do: true
-
-  defp show_reopen?(%{status: :suppressed, source_discovery_record_id: target_id})
-       when is_binary(target_id), do: true
-
-  defp show_reopen?(_finding), do: false
-
-  defp prep_action_path(%{
-         status: status,
-         signal_id: nil,
-         finding_family: :procurement,
-         id: id
-       })
-       when status in [:reviewing, :accepted],
-       do: "/acquisition/findings/#{id}/documents/new"
-
-  defp prep_action_path(%{
-         status: status,
-         signal_id: nil,
-         finding_family: :discovery,
-         id: id
-       })
-       when status in [:reviewing, :accepted],
-       do: "/acquisition/findings/#{id}/evidence/new"
-
-  defp prep_action_path(_finding), do: nil
-
-  defp prep_action_label(%{finding_family: :procurement}), do: "Add Packet"
-  defp prep_action_label(%{finding_family: :discovery}), do: "Add Evidence"
-  defp prep_action_label(_finding), do: "Add Prep"
-
   defp family_filter_label(:all), do: "All"
   defp family_filter_label(:procurement), do: "Procurement"
   defp family_filter_label(:discovery), do: "Discovery"
@@ -1087,60 +866,5 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     [discovery_record.industry, discovery_record.website_domain]
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.join(", ")
-  end
-
-  defp dialog_heading(%{type: :accept}), do: "Accept this finding?"
-  defp dialog_heading(%{type: :reject}), do: "Reject this finding?"
-  defp dialog_heading(%{type: :suppress}), do: "Suppress this finding?"
-
-  defp dialog_submit_label(%{type: :accept}), do: "Confirm Accept"
-  defp dialog_submit_label(%{type: :reject}), do: "Confirm Reject"
-  defp dialog_submit_label(%{type: :suppress}), do: "Confirm Suppress"
-
-  defp dialog_reason_prompt(%{type: :accept}), do: nil
-  defp dialog_reason_prompt(%{type: :reject}), do: "Select a disposition..."
-  defp dialog_reason_prompt(%{type: :suppress}), do: "Select a suppression reason..."
-
-  defp dialog_feedback_prompt(%{type: :accept}), do: nil
-  defp dialog_feedback_prompt(%{type: :reject}), do: "Just reject this finding"
-  defp dialog_feedback_prompt(%{type: :suppress}), do: "Just suppress this finding"
-
-  defp dialog_default_reason_code(%{type: :accept}), do: nil
-
-  defp dialog_default_reason_code(%{type: :suppress, family: :procurement}),
-    do: "source_noise_or_misclassified"
-
-  defp dialog_default_reason_code(%{type: :suppress, family: :discovery}),
-    do: "source_noise_or_misclassified"
-
-  defp dialog_default_reason_code(_dialog), do: nil
-
-  defp dialog_default_feedback_scope(%{type: :suppress}), do: "source"
-  defp dialog_default_feedback_scope(_dialog), do: nil
-
-  defp dialog_reason_options(%{type: :accept}), do: []
-
-  defp dialog_reason_options(%{family: :procurement}),
-    do: TargetingFeedback.pass_reason_options()
-
-  defp dialog_reason_options(%{family: :discovery}),
-    do: DiscoveryFeedback.reject_reason_options()
-
-  defp dialog_feedback_scope_options(%{type: :accept}), do: []
-
-  defp dialog_feedback_scope_options(%{family: :procurement}) do
-    [
-      {"Out of scope for us", "out_of_scope"},
-      {"Not targeting this type right now", "not_targeting_right_now"},
-      {"This source is noisy", "source"}
-    ]
-  end
-
-  defp dialog_feedback_scope_options(%{family: :discovery}) do
-    [
-      {"Out of scope for us", "out_of_scope"},
-      {"Not targeting this type right now", "not_targeting_right_now"},
-      {"This source is noisy", "source"}
-    ]
   end
 end
