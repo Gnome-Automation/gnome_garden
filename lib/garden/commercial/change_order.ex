@@ -37,7 +37,7 @@ defmodule GnomeGarden.Commercial.ChangeOrder do
       reference :organization, on_delete: :delete
       reference :site, on_delete: :nilify
       reference :managed_system, on_delete: :nilify
-      reference :owner_user, on_delete: :nilify
+      reference :owner_team_member, on_delete: :nilify
     end
   end
 
@@ -68,7 +68,7 @@ defmodule GnomeGarden.Commercial.ChangeOrder do
         :organization_id,
         :site_id,
         :managed_system_id,
-        :owner_user_id,
+        :owner_team_member_id,
         :change_order_number,
         :title,
         :description,
@@ -88,7 +88,7 @@ defmodule GnomeGarden.Commercial.ChangeOrder do
         :organization_id,
         :site_id,
         :managed_system_id,
-        :owner_user_id,
+        :owner_team_member_id,
         :change_order_number,
         :title,
         :description,
@@ -255,7 +255,7 @@ defmodule GnomeGarden.Commercial.ChangeOrder do
       public? true
     end
 
-    belongs_to :owner_user, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

@@ -27,6 +27,10 @@ defmodule GnomeGarden.Acquisition.ResearchRequest do
   postgres do
     table "research_requests"
     repo GnomeGarden.Repo
+
+    references do
+      reference :assigned_team_member, on_delete: :nilify
+    end
   end
 
   state_machine do
@@ -55,7 +59,7 @@ defmodule GnomeGarden.Acquisition.ResearchRequest do
         :researchable_type,
         :researchable_id,
         :requested_by_id,
-        :assigned_to_id
+        :assigned_team_member_id
       ]
     end
 
@@ -66,7 +70,7 @@ defmodule GnomeGarden.Acquisition.ResearchRequest do
         :notes,
         :findings,
         :due_at,
-        :assigned_to_id
+        :assigned_team_member_id
       ]
     end
 
@@ -101,8 +105,13 @@ defmodule GnomeGarden.Acquisition.ResearchRequest do
     end
 
     read :by_assignee do
-      argument :user_id, :uuid, allow_nil?: false
-      filter expr(assigned_to_id == ^arg(:user_id) and state in [:requested, :in_progress])
+      argument :assigned_team_member_id, :uuid, allow_nil?: false
+
+      filter expr(
+               assigned_team_member_id == ^arg(:assigned_team_member_id) and
+                 state in [:requested, :in_progress]
+             )
+
       prepare build(sort: [priority_sort: :asc, due_at: :asc])
     end
 
@@ -225,9 +234,9 @@ defmodule GnomeGarden.Acquisition.ResearchRequest do
       description "User who requested the research"
     end
 
-    belongs_to :assigned_to, GnomeGarden.Accounts.User do
+    belongs_to :assigned_team_member, GnomeGarden.Operations.TeamMember do
       public? true
-      description "User assigned to do the research"
+      description "Team member assigned to do the research"
     end
 
     has_many :research_links, GnomeGarden.Acquisition.ResearchLink do

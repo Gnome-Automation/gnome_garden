@@ -33,6 +33,20 @@ defmodule GnomeGarden.Mercury.ClientBankAlias do
       primary? true
       accept [:counterparty_name_fragment, :organization_id]
     end
+
+    read :matching_counterparty do
+      argument :counterparty_name, :string, allow_nil?: false
+
+      filter expr(
+               fragment(
+                 "lower(?) like '%' || lower(?) || '%'",
+                 ^arg(:counterparty_name),
+                 counterparty_name_fragment
+               )
+             )
+
+      prepare build(sort: [inserted_at: :asc], limit: 1)
+    end
   end
 
   attributes do

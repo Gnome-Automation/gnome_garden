@@ -18,6 +18,7 @@ defmodule GnomeGarden.Procurement.Bid do
     repo GnomeGarden.Repo
 
     references do
+      reference :owner_team_member, on_delete: :nilify
       reference :signal, on_delete: :nilify
       reference :organization, on_delete: :nilify
     end
@@ -60,7 +61,7 @@ defmodule GnomeGarden.Procurement.Bid do
                      [
                        :id,
                        :status,
-                       :owner_id,
+                       :owner_team_member_id,
                        :signal_id,
                        :organization_id,
                        :inserted_at,
@@ -108,7 +109,17 @@ defmodule GnomeGarden.Procurement.Bid do
 
     update :update do
       require_atomic? false
-      accept [:description, :bid_type, :due_at, :notes, :metadata, :owner_id, :organization_id]
+
+      accept [
+        :description,
+        :bid_type,
+        :due_at,
+        :notes,
+        :metadata,
+        :owner_team_member_id,
+        :organization_id
+      ]
+
       change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
       change {GnomeGarden.Procurement.Changes.EnqueueDocumentIngest, []}
     end
@@ -439,9 +450,9 @@ defmodule GnomeGarden.Procurement.Bid do
       public? true
     end
 
-    belongs_to :owner, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
-      description "User assigned to this bid"
+      description "Team member responsible for this bid"
     end
 
     belongs_to :signal, GnomeGarden.Commercial.Signal do

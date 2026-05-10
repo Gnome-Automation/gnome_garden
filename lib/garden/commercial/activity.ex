@@ -21,6 +21,7 @@ defmodule GnomeGarden.Commercial.Activity do
     repo GnomeGarden.Repo
 
     references do
+      reference :owner_team_member, on_delete: :nilify
       reference :pursuit, on_delete: :nilify
     end
   end
@@ -41,7 +42,7 @@ defmodule GnomeGarden.Commercial.Activity do
         :outcome,
         :organization_id,
         :person_id,
-        :owner_id,
+        :owner_team_member_id,
         :bid_id,
         :pursuit_id
       ]
@@ -58,7 +59,7 @@ defmodule GnomeGarden.Commercial.Activity do
         :outcome,
         :organization_id,
         :person_id,
-        :owner_id,
+        :owner_team_member_id,
         :bid_id,
         :pursuit_id
       ]
@@ -173,9 +174,9 @@ defmodule GnomeGarden.Commercial.Activity do
       description "Related person"
     end
 
-    belongs_to :owner, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
-      description "User who owns/performed this activity"
+      description "Team member who owns/performed this activity"
     end
 
     belongs_to :bid, GnomeGarden.Procurement.Bid do

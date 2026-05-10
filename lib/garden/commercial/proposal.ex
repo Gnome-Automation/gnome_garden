@@ -34,7 +34,7 @@ defmodule GnomeGarden.Commercial.Proposal do
       reference :organization, on_delete: :delete
       reference :site, on_delete: :nilify
       reference :managed_system, on_delete: :nilify
-      reference :owner_user, on_delete: :nilify
+      reference :owner_team_member, on_delete: :nilify
     end
   end
 
@@ -64,7 +64,7 @@ defmodule GnomeGarden.Commercial.Proposal do
         :organization_id,
         :site_id,
         :managed_system_id,
-        :owner_user_id,
+        :owner_team_member_id,
         :proposal_number,
         :name,
         :description,
@@ -83,7 +83,7 @@ defmodule GnomeGarden.Commercial.Proposal do
         :organization_id,
         :site_id,
         :managed_system_id,
-        :owner_user_id,
+        :owner_team_member_id,
         :proposal_number,
         :name,
         :description,
@@ -241,7 +241,7 @@ defmodule GnomeGarden.Commercial.Proposal do
       public? true
     end
 
-    belongs_to :owner_user, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

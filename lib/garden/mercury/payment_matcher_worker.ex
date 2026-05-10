@@ -120,26 +120,9 @@ defmodule GnomeGarden.Mercury.PaymentMatcherWorker do
   defp resolve_organization(nil), do: :not_found
 
   defp resolve_organization(counterparty_name) do
-    # Search for any alias whose fragment appears in the counterparty name (case-insensitive)
-    # Uses a parameterized SQL query to avoid full table scan
-    import Ecto.Query, only: [from: 2]
-
-    result =
-      GnomeGarden.Repo.one(
-        from a in "mercury_client_bank_aliases",
-          where:
-            fragment(
-              "lower(?) like '%' || lower(?) || '%'",
-              ^counterparty_name,
-              a.counterparty_name_fragment
-            ),
-          select: a.organization_id,
-          limit: 1
-      )
-
-    case result do
-      nil -> :not_found
-      org_id -> {:ok, org_id}
+    case Mercury.list_client_bank_aliases_for_counterparty(counterparty_name) do
+      {:ok, [%{organization_id: organization_id} | _]} -> {:ok, organization_id}
+      _ -> :not_found
     end
   end
 

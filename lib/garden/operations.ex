@@ -120,4 +120,13 @@ defmodule GnomeGarden.Operations do
       define :list_low_stock_inventory_items, action: :low_stock
     end
   end
+
+  def current_team_member_id(nil), do: nil
+
+  def current_team_member_id(%{id: user_id} = actor) do
+    case get_team_member_by_user(user_id, actor: actor) do
+      {:ok, team_member} -> team_member.id
+      {:error, _error} -> nil
+    end
+  end
 end

@@ -35,7 +35,7 @@ defmodule GnomeGarden.Execution.Project do
       reference :site, on_delete: :nilify
       reference :managed_system, on_delete: :nilify
       reference :agreement, on_delete: :nilify
-      reference :manager_user, on_delete: :nilify
+      reference :manager_team_member, on_delete: :nilify
     end
   end
 
@@ -65,7 +65,7 @@ defmodule GnomeGarden.Execution.Project do
         :site_id,
         :managed_system_id,
         :agreement_id,
-        :manager_user_id,
+        :manager_team_member_id,
         :code,
         :name,
         :description,
@@ -95,7 +95,7 @@ defmodule GnomeGarden.Execution.Project do
         :budget_hours,
         :budget_amount,
         :notes,
-        :manager_user_id
+        :manager_team_member_id
       ]
 
       change GnomeGarden.Execution.Changes.CreateProjectFromAgreement
@@ -107,7 +107,7 @@ defmodule GnomeGarden.Execution.Project do
         :site_id,
         :managed_system_id,
         :agreement_id,
-        :manager_user_id,
+        :manager_team_member_id,
         :code,
         :name,
         :description,
@@ -286,7 +286,7 @@ defmodule GnomeGarden.Execution.Project do
       public? true
     end
 
-    belongs_to :manager_user, GnomeGarden.Accounts.User do
+    belongs_to :manager_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

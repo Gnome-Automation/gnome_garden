@@ -1,13 +1,14 @@
-# Seed the deduped legacy procurement watchlist.
+# Seed the default procurement source catalogs.
 #
-# Run with: mix run priv/repo/seeds/lead_sources.exs
+# Run with: mix run priv/repo/seeds/procurement_sources.exs
 
 alias GnomeGarden.Procurement.SourceCatalog
 
-IO.puts("Seeding legacy procurement watchlist...")
+IO.puts("Seeding procurement source catalogs...")
 
 for {label, loader} <- [
-      {"legacy procurement watchlist", &SourceCatalog.ensure_legacy_watchlist/0},
+      {"default bid sources", &SourceCatalog.ensure_default_bid_sources/0},
+      {"utility discovery pilot", &SourceCatalog.ensure_utility_discovery_pilot/0},
       {"BidNet controls pilot", &SourceCatalog.ensure_bidnet_controls_pilot/0}
     ] do
   case loader.() do

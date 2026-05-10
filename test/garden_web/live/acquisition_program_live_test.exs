@@ -37,7 +37,6 @@ defmodule GnomeGardenWeb.AcquisitionProgramLiveTest do
     assert html =~ program.name
     assert has_element?(view, "#launch-program-#{acquisition_program.id}")
     assert html =~ "1 total"
-    refute html =~ "Legacy Discovery Programs"
   end
 
   test "program registry hides launch when a program is not runnable", %{conn: conn} do

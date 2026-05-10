@@ -125,6 +125,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   defp create_run(deployment, actor, task_override, run_kind, opts) do
     schedule_slot = Keyword.get(opts, :schedule_slot)
     extra_metadata = Keyword.get(opts, :metadata, %{})
+    requested_by_team_member_id = GnomeGarden.Operations.current_team_member_id(actor)
 
     metadata =
       %{
@@ -147,6 +148,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
         run_kind: run_kind,
         schedule_slot: schedule_slot,
         requested_by_user_id: actor && actor.id,
+        requested_by_team_member_id: requested_by_team_member_id,
         metadata: metadata
       },
       actor: actor
@@ -184,7 +186,8 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
               template: deployment.agent.template,
               run_kind: started_run.run_kind,
               schedule_slot: started_run.schedule_slot,
-              requested_by_user_id: actor && actor.id
+              requested_by_user_id: actor && actor.id,
+              requested_by_team_member_id: started_run.requested_by_team_member_id
             }
           })
 
@@ -223,7 +226,8 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
                template: deployment.agent.template,
                run_kind: started_run.run_kind,
                schedule_slot: started_run.schedule_slot,
-               requested_by_user_id: actor && actor.id
+               requested_by_user_id: actor && actor.id,
+               requested_by_team_member_id: started_run.requested_by_team_member_id
              }
            }),
          {:ok, pid} <-

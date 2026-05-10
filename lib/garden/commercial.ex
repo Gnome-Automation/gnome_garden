@@ -40,7 +40,7 @@ defmodule GnomeGarden.Commercial do
 
       define :list_discovery_programs_for_owner,
         action: :for_owner,
-        args: [:owner_user_id]
+        args: [:owner_team_member_id]
     end
 
     resource GnomeGarden.Commercial.DiscoveryRecord do
@@ -120,7 +120,7 @@ defmodule GnomeGarden.Commercial do
       define :complete_task, action: :complete
       define :cancel_task, action: :cancel
       define :reopen_task, action: :reopen
-      define :list_tasks_by_owner, action: :by_owner, args: [:owner_id]
+      define :list_tasks_by_owner_team_member, action: :by_owner, args: [:owner_team_member_id]
       define :list_tasks_by_organization, action: :by_organization, args: [:organization_id]
       define :list_tasks_by_pursuit, action: :by_pursuit, args: [:pursuit_id]
       define :list_overdue_tasks, action: :overdue

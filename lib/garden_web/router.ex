@@ -204,7 +204,6 @@ defmodule GnomeGardenWeb.Router do
 
       # Agents - Procurement targeting
       live "/procurement/targeting", Agents.ProcurementTargetingLive, :index
-      live "/procurement/sources", Acquisition.RedirectLive, :sources
     end
   end
 

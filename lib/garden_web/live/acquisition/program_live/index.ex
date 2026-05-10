@@ -110,8 +110,8 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
             <p class="text-sm text-base-content/50">
               {program.description || "No description yet."}
             </p>
-            <p :if={program.owner_user_id} class="text-xs text-base-content/40">
-              Owner {program.owner_user_id}
+            <p :if={program.owner_team_member} class="text-xs text-base-content/40">
+              Owner {program.owner_team_member.display_name}
             </p>
           </div>
         </:col>

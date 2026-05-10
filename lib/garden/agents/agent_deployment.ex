@@ -19,7 +19,7 @@ defmodule GnomeGarden.Agents.AgentDeployment do
       :visibility,
       :enabled,
       :agent_id,
-      :owner_user_id,
+      :owner_team_member_id,
       :last_run_state,
       :last_run_at
     ]
@@ -31,7 +31,7 @@ defmodule GnomeGarden.Agents.AgentDeployment do
 
     references do
       reference :agent, on_delete: :delete
-      reference :owner_user, on_delete: :nilify
+      reference :owner_team_member, on_delete: :nilify
     end
   end
 
@@ -49,7 +49,7 @@ defmodule GnomeGarden.Agents.AgentDeployment do
         :source_scope,
         :memory_namespace,
         :agent_id,
-        :owner_user_id
+        :owner_team_member_id
       ]
     end
 
@@ -64,7 +64,7 @@ defmodule GnomeGarden.Agents.AgentDeployment do
         :source_scope,
         :memory_namespace,
         :agent_id,
-        :owner_user_id
+        :owner_team_member_id
       ]
     end
 
@@ -79,11 +79,24 @@ defmodule GnomeGarden.Agents.AgentDeployment do
     end
 
     read :visible do
-      filter expr(visibility in [:shared, :system] or owner_user_id == ^actor(:id))
+      argument :owner_team_member_id, :uuid
+
+      filter expr(
+               visibility in [:shared, :system] or
+                 (not is_nil(^arg(:owner_team_member_id)) and
+                    owner_team_member_id == ^arg(:owner_team_member_id))
+             )
 
       prepare build(
                 sort: [updated_at: :desc, inserted_at: :desc],
-                load: [:agent, :run_count, :active_run_count, :last_run_state, :last_run_at]
+                load: [
+                  :agent,
+                  :owner_team_member,
+                  :run_count,
+                  :active_run_count,
+                  :last_run_state,
+                  :last_run_at
+                ]
               )
     end
 
@@ -92,7 +105,14 @@ defmodule GnomeGarden.Agents.AgentDeployment do
 
       prepare build(
                 sort: [updated_at: :desc, inserted_at: :desc],
-                load: [:agent, :run_count, :active_run_count, :last_run_state, :last_run_at]
+                load: [
+                  :agent,
+                  :owner_team_member,
+                  :run_count,
+                  :active_run_count,
+                  :last_run_state,
+                  :last_run_at
+                ]
               )
     end
 
@@ -101,14 +121,28 @@ defmodule GnomeGarden.Agents.AgentDeployment do
 
       prepare build(
                 sort: [updated_at: :desc, inserted_at: :desc],
-                load: [:agent, :run_count, :active_run_count, :last_run_state, :last_run_at]
+                load: [
+                  :agent,
+                  :owner_team_member,
+                  :run_count,
+                  :active_run_count,
+                  :last_run_state,
+                  :last_run_at
+                ]
               )
     end
 
     read :console do
       prepare build(
                 sort: [updated_at: :desc, inserted_at: :desc],
-                load: [:agent, :run_count, :active_run_count, :last_run_state, :last_run_at]
+                load: [
+                  :agent,
+                  :owner_team_member,
+                  :run_count,
+                  :active_run_count,
+                  :last_run_state,
+                  :last_run_at
+                ]
               )
     end
   end
@@ -167,7 +201,7 @@ defmodule GnomeGarden.Agents.AgentDeployment do
       public? true
     end
 
-    belongs_to :owner_user, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       allow_nil? true
       public? true
     end

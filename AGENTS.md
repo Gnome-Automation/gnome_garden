@@ -16,6 +16,9 @@ mix usage_rules.search_docs "code interface"
 mix usage_rules.search_docs "belongs_to" -p ash
 ```
 
+Also run `mix help <task>` before using generators, codegen, migration, or
+project-specific Mix tasks whose options matter.
+
 ## Critical: Codex Architecture Map
 
 For implemented architecture and data-model lookup, treat these as authoritative:
@@ -33,6 +36,25 @@ mix llm.generate_resource_map
 The files under `documentation/architecture/` and `documentation/domains/` may include planned or aspirational model details. Do not treat them as implemented unless the same domain or resource also appears in `docs/llm/generated/resources.json`.
 
 ## Ash Framework Guidelines
+
+### Ash Design Order
+
+Ash is the application boundary for persisted business behavior. When deciding
+where logic belongs, use this order:
+
+1. Existing domain code interface.
+2. Existing resource action, policy, preparation, validation, change,
+   calculation, aggregate, relationship, identity, or action hook.
+3. A new intent-named Ash action exposed through the domain.
+4. A domain-local Ash extension module under `changes/`, `preparations/`,
+   `calculations/`, `validations/`, or `aggregates/`.
+5. Plain Elixir service code only for external orchestration, transport,
+   protocol parsing, LLM/tool coordination, or runtime process concerns.
+
+Keep domain facades thin. They should expose and compose Ash actions, not grow
+into parallel context layers. Treat helper-heavy resources, repeated domain
+helpers, or Ash logic in web modules as design pressure to add or refine
+resource actions.
 
 ### Resource Structure
 
@@ -117,7 +139,7 @@ GnomeGarden.MyDomain.list_resources()
 GnomeGarden.MyDomain.create_resource(%{name: "foo"})
 GnomeGarden.MyDomain.get_resource(id)
 
-# CORRECT - Use Ash directly when code interface isn't defined
+# OK inside domain/resource internals or narrow setup paths when no interface exists
 Ash.read!(MyResource)
 Ash.create!(MyResource, %{name: "foo"})
 
@@ -411,6 +433,10 @@ prepare filter expr(user_id == ^actor(:id))  # Scope to current user
      end
    end
    ```
+10. **Don't build Ash queries in callers when the shape has meaning** - If a
+    LiveView, controller, worker, Jido action, or service needs filtering,
+    sorting, loading, authorization checks, or a single-record lookup, model
+    that as an intent-named read/action and expose it through the domain.
 
 ### AshPhoenix Forms in LiveViews
 
@@ -946,6 +972,15 @@ action row should be intentionally designed for:
 2. **Generate migrations**: `mix ash.codegen`
 3. **Apply migrations**: `mix ash.migrate`
 4. **Before committing**: `mix precommit`
+
+## Code Shape
+
+- If a file grows past roughly 500 lines, consider splitting it into focused
+  modules or components before adding more behavior.
+- Prefer domain-local folders over generic helper buckets.
+- Repeated label, filter, sorting, ownership, or status logic is usually a sign
+  that the resource needs a calculation, preparation, action, or shared
+  domain-local module.
 
 ## Dev Routes
 

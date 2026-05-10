@@ -20,7 +20,7 @@ defmodule GnomeGarden.Operations.Person do
       :last_name,
       :email,
       :status,
-      :owner_user_id,
+      :owner_team_member_id,
       :inserted_at
     ]
   end
@@ -35,7 +35,7 @@ defmodule GnomeGarden.Operations.Person do
     end
 
     references do
-      reference :owner_user, on_delete: :nilify
+      reference :owner_team_member, on_delete: :nilify
       reference :merged_into, on_delete: :nilify
     end
   end
@@ -59,7 +59,7 @@ defmodule GnomeGarden.Operations.Person do
         :do_not_email,
         :timezone,
         :notes,
-        :owner_user_id
+        :owner_team_member_id
       ]
 
       change {GnomeGarden.Operations.Changes.NormalizePersonIdentity, []}
@@ -81,7 +81,7 @@ defmodule GnomeGarden.Operations.Person do
         :do_not_email,
         :timezone,
         :notes,
-        :owner_user_id
+        :owner_team_member_id
       ]
 
       change {GnomeGarden.Operations.Changes.NormalizePersonIdentity, []}
@@ -99,7 +99,7 @@ defmodule GnomeGarden.Operations.Person do
 
       prepare build(
                 sort: [last_name: :asc, first_name: :asc],
-                load: [:owner_user, :organization_affiliations, :organizations]
+                load: [:owner_team_member, :organization_affiliations, :organizations]
               )
     end
 
@@ -116,7 +116,7 @@ defmodule GnomeGarden.Operations.Person do
 
       prepare build(
                 sort: [last_name: :asc, first_name: :asc],
-                load: [:owner_user, :organization_affiliations, :organizations]
+                load: [:owner_team_member, :organization_affiliations, :organizations]
               )
     end
 
@@ -235,7 +235,7 @@ defmodule GnomeGarden.Operations.Person do
   end
 
   relationships do
-    belongs_to :owner_user, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

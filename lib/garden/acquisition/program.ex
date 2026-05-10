@@ -26,7 +26,7 @@ defmodule GnomeGarden.Acquisition.Program do
 
     references do
       reference :discovery_program, on_delete: :nilify
-      reference :owner_user, on_delete: :nilify
+      reference :owner_team_member, on_delete: :nilify
     end
   end
 
@@ -47,7 +47,7 @@ defmodule GnomeGarden.Acquisition.Program do
         :metadata,
         :last_run_at,
         :discovery_program_id,
-        :owner_user_id
+        :owner_team_member_id
       ]
     end
 
@@ -62,7 +62,7 @@ defmodule GnomeGarden.Acquisition.Program do
         :metadata,
         :last_run_at,
         :discovery_program_id,
-        :owner_user_id
+        :owner_team_member_id
       ]
     end
 
@@ -89,7 +89,8 @@ defmodule GnomeGarden.Acquisition.Program do
                   :health_variant,
                   :health_note,
                   :status_variant,
-                  :latest_run_id
+                  :latest_run_id,
+                  :owner_team_member
                 ]
               )
     end
@@ -162,7 +163,7 @@ defmodule GnomeGarden.Acquisition.Program do
       public? true
     end
 
-    belongs_to :owner_user, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

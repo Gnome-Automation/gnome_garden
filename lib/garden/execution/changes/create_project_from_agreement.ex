@@ -43,7 +43,7 @@ defmodule GnomeGarden.Execution.Changes.CreateProjectFromAgreement do
     |> set_if_unchanged(:organization_id, agreement.organization_id)
     |> set_if_unchanged(:site_id, agreement.site_id)
     |> set_if_unchanged(:managed_system_id, agreement.managed_system_id)
-    |> set_if_unchanged(:manager_user_id, agreement.owner_user_id)
+    |> set_if_unchanged(:manager_team_member_id, agreement.owner_team_member_id)
     |> set_if_unchanged(:name, agreement.name)
     |> set_if_unchanged(:start_on, agreement.start_on)
     |> set_if_unchanged(:target_end_on, agreement.end_on)

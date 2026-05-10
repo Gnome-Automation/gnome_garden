@@ -4,6 +4,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
   import GnomeGardenWeb.Finance.Helpers
 
   alias GnomeGarden.Finance
+  alias GnomeGarden.Operations
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -216,7 +217,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
   defp transition_expense(expense, :approve, actor) do
     params =
       if actor do
-        %{approved_by_team_member_id: current_team_member_id(actor)}
+        %{approved_by_team_member_id: Operations.current_team_member_id(actor)}
       else
         %{}
       end
@@ -232,13 +233,4 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
 
   defp transition_expense(expense, :reopen, actor),
     do: Finance.reopen_expense(expense, actor: actor)
-
-  defp current_team_member_id(nil), do: nil
-
-  defp current_team_member_id(actor) do
-    case GnomeGarden.Operations.get_team_member_by_user(actor.id, actor: actor) do
-      {:ok, team_member} -> team_member.id
-      {:error, _error} -> nil
-    end
-  end
 end

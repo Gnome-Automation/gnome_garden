@@ -46,7 +46,8 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
           domain: Agents,
           params: %{
             "visibility" => "private",
-            "enabled" => "true"
+            "enabled" => "true",
+            "owner_team_member_id" => GnomeGarden.Operations.current_team_member_id(actor)
           }
         )
       end

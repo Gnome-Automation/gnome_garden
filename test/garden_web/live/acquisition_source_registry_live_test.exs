@@ -1,4 +1,4 @@
-defmodule GnomeGardenWeb.ProcurementSourcesLiveTest do
+defmodule GnomeGardenWeb.AcquisitionSourceRegistryLiveTest do
   use GnomeGardenWeb.ConnCase
 
   setup :register_and_log_in_user
@@ -7,13 +7,6 @@ defmodule GnomeGardenWeb.ProcurementSourcesLiveTest do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Procurement
-
-  test "legacy procurement sources route redirects to the acquisition source registry", %{
-    conn: conn
-  } do
-    assert {:error, {:live_redirect, %{to: "/acquisition/sources"}}} =
-             live(conn, ~p"/procurement/sources")
-  end
 
   test "acquisition source registry renders synced procurement sources", %{conn: conn} do
     {:ok, source} =

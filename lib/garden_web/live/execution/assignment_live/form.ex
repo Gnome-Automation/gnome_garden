@@ -266,16 +266,7 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Form do
     |> maybe_put("work_item_id", params["work_item_id"])
     |> maybe_put("work_order_id", params["work_order_id"])
     |> maybe_put("assigned_team_member_id", params["assigned_team_member_id"])
-    |> Map.put("assigned_by_team_member_id", current_team_member_id(actor))
-  end
-
-  defp current_team_member_id(nil), do: nil
-
-  defp current_team_member_id(actor) do
-    case Operations.get_team_member_by_user(actor.id, actor: actor) do
-      {:ok, team_member} -> team_member.id
-      {:error, _error} -> nil
-    end
+    |> Map.put("assigned_by_team_member_id", Operations.current_team_member_id(actor))
   end
 
   defp team_member_label(team_member), do: team_member.display_name || "Team member"

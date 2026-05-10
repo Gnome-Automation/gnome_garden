@@ -40,7 +40,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
       reference :discovery_program, on_delete: :nilify
       reference :organization, on_delete: :nilify
       reference :contact_person, on_delete: :nilify
-      reference :owner_user, on_delete: :nilify
+      reference :owner_team_member, on_delete: :nilify
       reference :promoted_signal, on_delete: :nilify
     end
   end
@@ -86,7 +86,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
         :discovery_program_id,
         :organization_id,
         :contact_person_id,
-        :owner_user_id
+        :owner_team_member_id
       ]
 
       change {GnomeGarden.Commercial.Changes.NormalizeDiscoveryRecordWebsite, []}
@@ -112,7 +112,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
         :discovery_program_id,
         :organization_id,
         :contact_person_id,
-        :owner_user_id
+        :owner_team_member_id
       ]
 
       change {GnomeGarden.Commercial.Changes.NormalizeDiscoveryRecordWebsite, []}
@@ -380,7 +380,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
       public? true
     end
 
-    belongs_to :owner_user, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

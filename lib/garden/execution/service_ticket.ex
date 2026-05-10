@@ -40,7 +40,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
       reference :requester_person, on_delete: :nilify
       reference :service_level_policy, on_delete: :nilify
       reference :requester_user, on_delete: :nilify
-      reference :owner_user, on_delete: :nilify
+      reference :owner_team_member, on_delete: :nilify
     end
   end
 
@@ -75,7 +75,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
         :requester_person_id,
         :service_level_policy_id,
         :requester_user_id,
-        :owner_user_id,
+        :owner_team_member_id,
         :ticket_number,
         :title,
         :description,
@@ -100,7 +100,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
         :requester_person_id,
         :service_level_policy_id,
         :requester_user_id,
-        :owner_user_id,
+        :owner_team_member_id,
         :ticket_number,
         :title,
         :description,
@@ -343,7 +343,7 @@ defmodule GnomeGarden.Execution.ServiceTicket do
       public? true
     end
 
-    belongs_to :owner_user, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

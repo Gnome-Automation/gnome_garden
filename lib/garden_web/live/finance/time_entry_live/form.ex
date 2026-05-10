@@ -269,17 +269,8 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
     |> maybe_put("work_order_id", params["work_order_id"])
     |> maybe_put(
       "member_team_member_id",
-      params["member_team_member_id"] || current_team_member_id(actor)
+      params["member_team_member_id"] || Operations.current_team_member_id(actor)
     )
-  end
-
-  defp current_team_member_id(nil), do: nil
-
-  defp current_team_member_id(actor) do
-    case Operations.get_team_member_by_user(actor.id, actor: actor) do
-      {:ok, team_member} -> team_member.id
-      {:error, _error} -> nil
-    end
   end
 
   defp maybe_put(map, _key, nil), do: map

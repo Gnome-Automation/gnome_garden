@@ -66,7 +66,7 @@ defmodule GnomeGarden.Acquisition.Projector do
     :metadata,
     :last_run_at,
     :discovery_program_id,
-    :owner_user_id
+    :owner_team_member_id
   ]
 
   def sync_bid(%Bid{id: bid_id}, opts) when is_binary(bid_id),
@@ -349,7 +349,7 @@ defmodule GnomeGarden.Acquisition.Projector do
         },
         last_run_at: discovery_program.last_run_at,
         discovery_program_id: discovery_program.id,
-        owner_user_id: discovery_program.owner_user_id
+        owner_team_member_id: discovery_program.owner_team_member_id
       },
       actor: actor,
       upsert?: true,

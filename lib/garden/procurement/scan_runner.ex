@@ -142,7 +142,7 @@ defmodule GnomeGarden.Procurement.ScanRunner do
         notes: "Used for on-demand procurement source scans launched directly by operators."
       },
       agent_id: template_id,
-      owner_user_id: actor && actor.id
+      owner_team_member_id: GnomeGarden.Operations.current_team_member_id(actor)
     }
   end
 

@@ -44,7 +44,7 @@ defmodule GnomeGarden.Commercial.Changes.CreateAgreementFromProposal do
     |> set_if_unchanged(:organization_id, proposal.organization_id)
     |> set_if_unchanged(:site_id, proposal.site_id)
     |> set_if_unchanged(:managed_system_id, proposal.managed_system_id)
-    |> set_if_unchanged(:owner_user_id, proposal.owner_user_id)
+    |> set_if_unchanged(:owner_team_member_id, proposal.owner_team_member_id)
     |> set_if_unchanged(:reference_number, proposal.proposal_number)
     |> set_if_unchanged(:name, proposal.name)
     |> set_if_unchanged(:agreement_type, infer_agreement_type(proposal.delivery_model))

@@ -110,17 +110,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/procurement/targeting"]
     },
-    %{
-      id: "proc-sources",
-      section: "Procurement",
-      icon: "hero-globe-alt",
-      label: "Sources",
-      path: "/procurement/sources",
-      badge: 0,
-      hot: false,
-      match: ["/procurement/sources"]
-    },
-
     # Commercial
     %{
       id: "com-pursuits",

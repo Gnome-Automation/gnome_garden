@@ -33,7 +33,7 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
     repo GnomeGarden.Repo
 
     references do
-      reference :owner_user, on_delete: :nilify
+      reference :owner_team_member, on_delete: :nilify
     end
   end
 
@@ -69,7 +69,7 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
         :cadence_hours,
         :notes,
         :metadata,
-        :owner_user_id
+        :owner_team_member_id
       ]
 
       change GnomeGarden.Commercial.Changes.SyncAcquisitionProgram
@@ -92,7 +92,7 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
         :last_run_at,
         :notes,
         :metadata,
-        :owner_user_id
+        :owner_team_member_id
       ]
 
       change GnomeGarden.Commercial.Changes.SyncAcquisitionProgram
@@ -172,8 +172,8 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
     end
 
     read :for_owner do
-      argument :owner_user_id, :uuid, allow_nil?: false
-      filter expr(owner_user_id == ^arg(:owner_user_id))
+      argument :owner_team_member_id, :uuid, allow_nil?: false
+      filter expr(owner_team_member_id == ^arg(:owner_team_member_id))
 
       prepare build(
                 sort: [priority: :desc, inserted_at: :desc],
@@ -278,7 +278,7 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
   end
 
   relationships do
-    belongs_to :owner_user, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

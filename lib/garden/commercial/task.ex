@@ -21,6 +21,7 @@ defmodule GnomeGarden.Commercial.Task do
     repo GnomeGarden.Repo
 
     references do
+      reference :owner_team_member, on_delete: :nilify
       reference :pursuit, on_delete: :nilify
     end
   end
@@ -52,7 +53,7 @@ defmodule GnomeGarden.Commercial.Task do
         :task_type,
         :related_to_type,
         :related_to_id,
-        :owner_id,
+        :owner_team_member_id,
         :pursuit_id,
         :organization_id,
         :person_id
@@ -68,7 +69,7 @@ defmodule GnomeGarden.Commercial.Task do
         :task_type,
         :related_to_type,
         :related_to_id,
-        :owner_id,
+        :owner_team_member_id,
         :pursuit_id,
         :organization_id,
         :person_id
@@ -98,8 +99,13 @@ defmodule GnomeGarden.Commercial.Task do
     end
 
     read :by_owner do
-      argument :owner_id, :uuid, allow_nil?: false
-      filter expr(owner_id == ^arg(:owner_id) and status in [:pending, :in_progress])
+      argument :owner_team_member_id, :uuid, allow_nil?: false
+
+      filter expr(
+               owner_team_member_id == ^arg(:owner_team_member_id) and
+                 status in [:pending, :in_progress]
+             )
+
       prepare build(sort: [due_at: :asc])
     end
 
@@ -204,9 +210,9 @@ defmodule GnomeGarden.Commercial.Task do
   end
 
   relationships do
-    belongs_to :owner, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
-      description "User assigned to this task"
+      description "Team member assigned to this task"
     end
 
     belongs_to :organization, GnomeGarden.Operations.Organization do

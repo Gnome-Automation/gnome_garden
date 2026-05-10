@@ -40,8 +40,8 @@ defmodule GnomeGarden.Execution.WorkOrder do
       reference :maintenance_plan, on_delete: :nilify
       reference :agreement, on_delete: :nilify
       reference :project, on_delete: :nilify
-      reference :requested_by_user, on_delete: :nilify
-      reference :assigned_user, on_delete: :nilify
+      reference :requested_by_team_member, on_delete: :nilify
+      reference :assigned_team_member, on_delete: :nilify
     end
   end
 
@@ -75,8 +75,8 @@ defmodule GnomeGarden.Execution.WorkOrder do
         :maintenance_plan_id,
         :agreement_id,
         :project_id,
-        :requested_by_user_id,
-        :assigned_user_id,
+        :requested_by_team_member_id,
+        :assigned_team_member_id,
         :reference_number,
         :title,
         :description,
@@ -100,8 +100,8 @@ defmodule GnomeGarden.Execution.WorkOrder do
         :maintenance_plan_id,
         :agreement_id,
         :project_id,
-        :requested_by_user_id,
-        :assigned_user_id,
+        :requested_by_team_member_id,
+        :assigned_team_member_id,
         :reference_number,
         :title,
         :description,
@@ -310,11 +310,11 @@ defmodule GnomeGarden.Execution.WorkOrder do
       public? true
     end
 
-    belongs_to :requested_by_user, GnomeGarden.Accounts.User do
+    belongs_to :requested_by_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 
-    belongs_to :assigned_user, GnomeGarden.Accounts.User do
+    belongs_to :assigned_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

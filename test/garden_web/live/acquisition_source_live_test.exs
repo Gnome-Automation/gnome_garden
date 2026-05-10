@@ -48,7 +48,6 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources")
 
     assert render(view) =~ "Source Registry"
-    refute render(view) =~ "Legacy Procurement Sources"
   end
 
   test "source registry hides launch when a source is not runnable", %{conn: conn} do

@@ -54,7 +54,7 @@ defmodule GnomeGarden.Commercial.Changes.CreatePursuitFromSignal do
     |> set_if_unchanged(:organization_id, signal.organization_id)
     |> set_if_unchanged(:site_id, signal.site_id)
     |> set_if_unchanged(:managed_system_id, signal.managed_system_id)
-    |> set_if_unchanged(:owner_user_id, signal.owner_user_id)
+    |> set_if_unchanged(:owner_team_member_id, signal.owner_team_member_id)
     |> set_if_unchanged(:name, signal.title)
     |> set_if_unchanged(:description, signal.description)
     |> set_if_unchanged(:pursuit_type, infer_pursuit_type(signal))

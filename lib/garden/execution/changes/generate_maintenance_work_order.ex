@@ -40,7 +40,7 @@ defmodule GnomeGarden.Execution.Changes.GenerateMaintenanceWorkOrder do
       asset_id: record.asset_id,
       maintenance_plan_id: record.id,
       agreement_id: record.agreement_id,
-      assigned_user_id: record.assigned_user_id,
+      assigned_team_member_id: record.assigned_team_member_id,
       title: "Scheduled maintenance: #{record.name}",
       description: record.description || "Auto-generated from maintenance plan #{record.name}",
       work_type: work_type_for_plan(record.plan_type),

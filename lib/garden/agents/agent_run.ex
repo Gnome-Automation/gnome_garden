@@ -25,6 +25,7 @@ defmodule GnomeGarden.Agents.AgentRun do
       reference :deployment, on_delete: :delete
       reference :parent_run, on_delete: :nilify
       reference :requested_by_user, on_delete: :nilify
+      reference :requested_by_team_member, on_delete: :nilify
     end
   end
 
@@ -51,6 +52,7 @@ defmodule GnomeGarden.Agents.AgentRun do
         :run_kind,
         :schedule_slot,
         :requested_by_user_id,
+        :requested_by_team_member_id,
         :runtime_instance_id,
         :request_id,
         :parent_run_id,
@@ -89,6 +91,8 @@ defmodule GnomeGarden.Agents.AgentRun do
                 load: [
                   :agent,
                   :deployment,
+                  :requested_by_user,
+                  :requested_by_team_member,
                   :output_count,
                   :procurement_source_output_count,
                   :bid_output_count,
@@ -111,6 +115,8 @@ defmodule GnomeGarden.Agents.AgentRun do
                 load: [
                   :agent,
                   :deployment,
+                  :requested_by_user,
+                  :requested_by_team_member,
                   :output_count,
                   :procurement_source_output_count,
                   :bid_output_count,
@@ -128,6 +134,8 @@ defmodule GnomeGarden.Agents.AgentRun do
                 load: [
                   :agent,
                   :deployment,
+                  :requested_by_user,
+                  :requested_by_team_member,
                   :output_count,
                   :procurement_source_output_count,
                   :bid_output_count,
@@ -152,6 +160,8 @@ defmodule GnomeGarden.Agents.AgentRun do
                 load: [
                   :agent,
                   :deployment,
+                  :requested_by_user,
+                  :requested_by_team_member,
                   :output_count,
                   :procurement_source_output_count,
                   :bid_output_count,
@@ -251,6 +261,11 @@ defmodule GnomeGarden.Agents.AgentRun do
     end
 
     belongs_to :requested_by_user, GnomeGarden.Accounts.User do
+      allow_nil? true
+      public? true
+    end
+
+    belongs_to :requested_by_team_member, GnomeGarden.Operations.TeamMember do
       allow_nil? true
       public? true
     end

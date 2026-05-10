@@ -627,6 +627,9 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
     end)
   end
 
+  defp requester_label(%{requested_by_team_member: %{display_name: display_name}}),
+    do: display_name
+
   defp requester_label(%{requested_by_user: %{email: email}}), do: email
   defp requester_label(_run), do: "System"
 
@@ -644,7 +647,7 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
   end
 
   defp owner_label(%{visibility: :system}), do: "System"
-  defp owner_label(%{owner_user: %{email: email}}), do: email
+  defp owner_label(%{owner_team_member: %{display_name: display_name}}), do: display_name
   defp owner_label(_deployment), do: "Unassigned"
 
   defp ensure_deletable(%{active_run_count: count}) when is_integer(count) and count > 0 do

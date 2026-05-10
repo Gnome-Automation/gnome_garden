@@ -469,6 +469,8 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
       load: [
         :agent,
         :deployment,
+        :requested_by_user,
+        :requested_by_team_member,
         :parent_run,
         :output_count,
         :procurement_source_output_count,
@@ -488,6 +490,9 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
   defp maybe_subscribe(_run), do: :ok
 
   defp unique_event_id, do: "tool-event-#{System.unique_integer([:positive])}"
+
+  defp requester_label(%{requested_by_team_member: %{display_name: display_name}}),
+    do: display_name
 
   defp requester_label(%{requested_by_user: %{email: email}}), do: email
   defp requester_label(_run), do: "System"

@@ -109,7 +109,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
                    "Used by commercial discovery programs to run targeted market discovery sweeps."
                },
                agent_id: template.id,
-               owner_user_id: actor && actor.id
+               owner_team_member_id: GnomeGarden.Operations.current_team_member_id(actor)
              },
              actor: actor
            ) do

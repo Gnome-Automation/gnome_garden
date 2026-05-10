@@ -46,6 +46,10 @@ defmodule GnomeGarden.Mercury do
         action: :read,
         get_by: [:counterparty_name_fragment]
 
+      define :list_client_bank_aliases_for_counterparty,
+        action: :matching_counterparty,
+        args: [:counterparty_name]
+
       define :create_client_bank_alias, action: :create
 
       define :delete_client_bank_alias,

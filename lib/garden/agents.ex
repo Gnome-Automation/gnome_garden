@@ -23,7 +23,7 @@ defmodule GnomeGarden.Agents do
     end
 
     resource GnomeGarden.Agents.AgentDeployment do
-      define :list_agent_deployments, action: :visible
+      define :list_agent_deployments, action: :visible, args: [:owner_team_member_id]
       define :list_console_agent_deployments, action: :console
       define :list_enabled_agent_deployments, action: :enabled
       define :list_scheduled_agent_deployments, action: :scheduled
