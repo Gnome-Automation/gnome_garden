@@ -16,7 +16,7 @@ defmodule GnomeGarden.Finance.TimeEntry do
     table_columns [
       :id,
       :work_date,
-      :member_user_id,
+      :member_team_member_id,
       :organization_id,
       :project_id,
       :work_order_id,
@@ -35,8 +35,8 @@ defmodule GnomeGarden.Finance.TimeEntry do
       reference :project, on_delete: :nilify
       reference :work_item, on_delete: :nilify
       reference :work_order, on_delete: :nilify
-      reference :member_user, on_delete: :nilify
-      reference :approved_by_user, on_delete: :nilify
+      reference :member_team_member, on_delete: :nilify
+      reference :approved_by_team_member, on_delete: :nilify
     end
   end
 
@@ -66,7 +66,7 @@ defmodule GnomeGarden.Finance.TimeEntry do
         :project_id,
         :work_item_id,
         :work_order_id,
-        :member_user_id,
+        :member_team_member_id,
         :work_date,
         :minutes,
         :description,
@@ -84,7 +84,7 @@ defmodule GnomeGarden.Finance.TimeEntry do
         :project_id,
         :work_item_id,
         :work_order_id,
-        :member_user_id,
+        :member_team_member_id,
         :work_date,
         :minutes,
         :description,
@@ -102,7 +102,7 @@ defmodule GnomeGarden.Finance.TimeEntry do
 
     update :approve do
       require_atomic? false
-      accept [:approved_by_user_id]
+      accept [:approved_by_team_member_id]
       change transition_state(:approved)
       change set_attribute(:approved_at, &DateTime.utc_now/0)
       change {GnomeGarden.Commercial.Changes.SyncTimeEntryEntitlementUsage, mode: :sync}
@@ -126,7 +126,7 @@ defmodule GnomeGarden.Finance.TimeEntry do
       accept []
       change transition_state(:draft)
       change set_attribute(:approved_at, nil)
-      change set_attribute(:approved_by_user_id, nil)
+      change set_attribute(:approved_by_team_member_id, nil)
       change set_attribute(:billed_at, nil)
       change {GnomeGarden.Commercial.Changes.SyncTimeEntryEntitlementUsage, mode: :clear}
     end
@@ -248,12 +248,12 @@ defmodule GnomeGarden.Finance.TimeEntry do
       public? true
     end
 
-    belongs_to :member_user, GnomeGarden.Accounts.User do
+    belongs_to :member_team_member, GnomeGarden.Operations.TeamMember do
       allow_nil? false
       public? true
     end
 
-    belongs_to :approved_by_user, GnomeGarden.Accounts.User do
+    belongs_to :approved_by_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

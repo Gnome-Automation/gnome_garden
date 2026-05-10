@@ -28,11 +28,11 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Form do
       <.page_header eyebrow="Commercial">
         {@page_title}
         <:subtitle>
-          Define how broad lead-finder work should hunt, where it should look, and how often it should cycle.
+          Define how broad target-discovery work should hunt, where it should look, and how often it should cycle.
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/discovery-programs"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to programs
+            Back to programs
           </.button>
         </:actions>
       </.page_header>

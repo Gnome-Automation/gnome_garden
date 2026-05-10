@@ -275,3 +275,38 @@ Each line must be a valid JSON object with these exact fields:
 **estimated_value:** number in dollars (null if unknown)
 
 Append one line per bid. Do NOT overwrite the file — append so multiple runs accumulate.
+
+## Persisting findings to Gnome database
+
+You also have these database-backed tools (in addition to writing markdown):
+
+- `save_bid` — persists a bid to the Gnome database. Idempotent: re-saving the same URL updates the row.
+- `save_source` — persists a new procurement portal you discover.
+- `save_source_config` — persists selectors for a known source so later scans can run deterministically. Use after you inspect a source page and identify listing/title/date/link selectors.
+- `run_source_scan` — runs the deterministic scanner for one configured source. Use only after `save_source_config` succeeds.
+
+Call `save_bid` AS YOU SCORE EACH BID, not in a batch at the end. The markdown is for humans; `save_bid` puts the finding into the live review queue.
+
+### Documents on `save_bid`
+
+If the bid page lists supporting documents (RFP PDF, scope, addenda), pass them
+as a structured `documents` array — Gnome will download and attach them to the
+finding for offline analysis.
+
+```json
+"documents": [
+  { "url": "https://.../RFP.pdf", "filename": "RFP.pdf", "document_type": "solicitation" },
+  { "url": "https://.../Addendum1.pdf", "filename": "Addendum1.pdf", "document_type": "addendum" }
+]
+```
+
+Allowed `document_type` values: `solicitation`, `scope`, `pricing`, `addendum`, `other`.
+Skip the array if you only see filenames without resolvable URLs.
+
+### When a save fails
+
+Failed `save_*` calls are written to `_failed_imports.jsonl` in the sidecar
+directory. Gnome's retry worker picks them up. **Do not retry the same call in
+a tight loop** — write the markdown finding, log the error, and move on.
+
+Required fields: `title`, `url`. Highly recommended: `score_total`, `score_tier`, `agency`, `due_at`, `region`. All scoring fields are optional but useful.

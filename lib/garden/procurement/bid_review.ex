@@ -7,16 +7,15 @@ defmodule GnomeGarden.Procurement.BidReview do
   effects.
   """
 
-  alias GnomeGarden.CRM.PipelineEvents
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.CompanyProfileLearning
   alias GnomeGarden.Commercial.DiscoveryRecord
+  alias GnomeGarden.Commercial.Events
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.Bid
   alias GnomeGarden.Procurement.TargetingFeedback
-  alias GnomeGarden.Sales
 
   def start_review(bid_or_id, actor \\ nil) do
     with {:ok, bid} <- load_bid(bid_or_id, actor) do
@@ -210,7 +209,7 @@ defmodule GnomeGarden.Procurement.BidReview do
 
   defp do_discovery_record_for_bid(%Bid{organization_id: organization_id}, actor)
        when is_binary(organization_id) do
-    case Acquisition.list_discovery_records_for_organization(organization_id, actor: actor) do
+    case Commercial.list_discovery_records_for_organization(organization_id, actor: actor) do
       {:ok, [discovery_record | _rest]} -> discovery_record
       _ -> nil
     end
@@ -218,7 +217,7 @@ defmodule GnomeGarden.Procurement.BidReview do
 
   defp do_discovery_record_for_bid(%Bid{organization: %{website_domain: website_domain}}, actor)
        when is_binary(website_domain) do
-    case Acquisition.get_discovery_record_by_website_domain(website_domain, actor: actor) do
+    case Commercial.get_discovery_record_by_website_domain(website_domain, actor: actor) do
       {:ok, discovery_record} -> discovery_record
       _ -> nil
     end
@@ -251,7 +250,7 @@ defmodule GnomeGarden.Procurement.BidReview do
           ]
       end
 
-    case Acquisition.create_discovery_record(attrs, Keyword.put(upsert_opts, :actor, actor)) do
+    case Commercial.create_discovery_record(attrs, Keyword.put(upsert_opts, :actor, actor)) do
       {:ok, discovery_record} ->
         {:ok,
          %{
@@ -273,7 +272,7 @@ defmodule GnomeGarden.Procurement.BidReview do
     with {:ok, reopened_discovery_record} <-
            maybe_reopen_discovery_record(discovery_record, actor),
          {:ok, updated_discovery_record} <-
-           Acquisition.update_discovery_record(
+           Commercial.update_discovery_record(
              reopened_discovery_record,
              discovery_record_attrs(bid, organization),
              actor: actor
@@ -288,14 +287,14 @@ defmodule GnomeGarden.Procurement.BidReview do
 
   defp maybe_reopen_discovery_record(%DiscoveryRecord{status: status} = discovery_record, actor)
        when status in [:rejected, :archived] do
-    Acquisition.reopen_discovery_record(discovery_record, actor: actor)
+    Commercial.reopen_discovery_record(discovery_record, actor: actor)
   end
 
   defp maybe_reopen_discovery_record(%DiscoveryRecord{} = discovery_record, _actor),
     do: {:ok, discovery_record}
 
   defp maybe_start_discovery_review(%DiscoveryRecord{status: :new} = discovery_record, actor) do
-    case Acquisition.start_review_for_discovery_record(discovery_record, actor: actor) do
+    case Commercial.review_discovery_record(discovery_record, actor: actor) do
       {:ok, reviewed_discovery_record} -> reviewed_discovery_record
       {:error, _error} -> discovery_record
     end
@@ -353,7 +352,7 @@ defmodule GnomeGarden.Procurement.BidReview do
   end
 
   defp log_event(event_type, bid, reason, to_state, actor) do
-    case PipelineEvents.log(
+    case Events.log(
            %{
              event_type: event_type,
              subject_type: "bid",
@@ -372,7 +371,7 @@ defmodule GnomeGarden.Procurement.BidReview do
   end
 
   defp log_park_event(bid, reason, actor) do
-    PipelineEvents.log(
+    Events.log(
       %{
         event_type: :parked,
         subject_type: "bid",
@@ -394,7 +393,7 @@ defmodule GnomeGarden.Procurement.BidReview do
 
   defp maybe_create_research_request(bid, event, reason, research_note) do
     with {:ok, research} <-
-           Sales.create_research_request(%{
+           Acquisition.create_research_request(%{
              research_type: :qualification,
              priority: :normal,
              notes: research_note,
@@ -402,7 +401,7 @@ defmodule GnomeGarden.Procurement.BidReview do
              researchable_id: bid.id
            }),
          {:ok, _link} <-
-           Sales.create_research_link(%{
+           Acquisition.create_research_link(%{
              research_request_id: research.id,
              bid_id: bid.id,
              event_id: event.id,

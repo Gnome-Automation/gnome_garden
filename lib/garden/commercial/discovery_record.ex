@@ -1,11 +1,12 @@
 defmodule GnomeGarden.Commercial.DiscoveryRecord do
   @moduledoc """
-  Discovery-record resource waiting for human promotion into the signal inbox.
+  Source-specific discovery record that feeds the acquisition queue.
 
-  This resource remains the durable backing model for acquisition-side
-  discovery records. It aggregates raw observations, links to a durable
-  organization when available, and only becomes a commercial signal when a
-  human decides the record deserves active follow-up.
+  Discovery records are for programmatic outbound discovery where the system
+  needs a durable source record, evidence rollup, identity resolution, and
+  source-state transitions. Direct findings can enter Acquisition without this
+  wrapper and still be accepted or promoted once their own summary, source, and
+  work description are ready.
   """
 
   use Ash.Resource,
@@ -63,6 +64,11 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
 
     create :create do
       primary? true
+      upsert? true
+      upsert_identity :unique_website_domain
+
+      upsert_fields {:replace_all_except,
+                     [:id, :inserted_at, :status, :promoted_at, :promoted_signal_id]}
 
       accept [
         :name,
@@ -71,6 +77,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
         :region,
         :industry,
         :size_bucket,
+        :record_type,
         :fit_score,
         :intent_score,
         :status,
@@ -96,6 +103,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
         :region,
         :industry,
         :size_bucket,
+        :record_type,
         :fit_score,
         :intent_score,
         :status,
@@ -156,63 +164,84 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
       change {GnomeGarden.Commercial.Changes.SyncDiscoveryRecordFinding, []}
     end
 
-    read :review_queue do
-      filter expr(status in [:new, :reviewing])
+    create :create_prospect do
+      description """
+      Create a prospect discovery record together with its backing Organization
+      in a single transaction. Idempotent on website domain.
+      """
 
-      prepare build(
-                sort: [intent_score: :desc, fit_score: :desc, inserted_at: :desc],
-                load: [
-                  :discovery_program,
-                  :organization,
-                  :promoted_signal,
-                  :discovery_evidence_count,
-                  :latest_evidence_at,
-                  :latest_evidence_summary
-                ]
-              )
+      upsert? true
+      upsert_identity :unique_website_domain
+
+      upsert_fields {:replace_all_except,
+                     [:id, :inserted_at, :status, :promoted_at, :promoted_signal_id]}
+
+      accept [
+        :name,
+        :website,
+        :location,
+        :region,
+        :industry,
+        :size_bucket,
+        :fit_score,
+        :intent_score,
+        :notes,
+        :metadata,
+        :discovery_program_id
+      ]
+
+      argument :organization_name, :string
+      argument :organization_website, :string
+      argument :organization_primary_region, :string
+      argument :organization_phone, :string
+      argument :organization_notes, :string
+      argument :organization_status, :atom
+      argument :organization_relationship_roles, {:array, :string}
+
+      change set_attribute(:record_type, :prospect)
+      change {GnomeGarden.Commercial.Changes.UpsertOrganizationForDiscoveryRecord, []}
+      change {GnomeGarden.Commercial.Changes.NormalizeDiscoveryRecordWebsite, []}
+      change {GnomeGarden.Commercial.Changes.SyncDiscoveryRecordFinding, []}
     end
 
-    read :promoted do
-      filter expr(status == :promoted)
+    create :create_opportunity do
+      description """
+      Create an opportunity discovery record (company seeking an integrator)
+      together with its backing Organization in a single transaction.
+      """
 
-      prepare build(
-                sort: [promoted_at: :desc, inserted_at: :desc],
-                load: [:discovery_program, :organization, :promoted_signal]
-              )
-    end
+      upsert? true
+      upsert_identity :unique_website_domain
 
-    read :rejected do
-      filter expr(status == :rejected)
+      upsert_fields {:replace_all_except,
+                     [:id, :inserted_at, :status, :promoted_at, :promoted_signal_id]}
 
-      prepare build(
-                sort: [updated_at: :desc, inserted_at: :desc],
-                load: [
-                  :discovery_program,
-                  :organization,
-                  :promoted_signal,
-                  :discovery_evidence_count,
-                  :latest_evidence_at,
-                  :latest_evidence_summary,
-                  :status_variant
-                ]
-              )
-    end
+      accept [
+        :name,
+        :website,
+        :location,
+        :region,
+        :industry,
+        :size_bucket,
+        :fit_score,
+        :intent_score,
+        :notes,
+        :metadata,
+        :discovery_program_id
+      ]
 
-    read :archived do
-      filter expr(status == :archived)
+      argument :organization_name, :string
+      argument :organization_website, :string
+      argument :organization_primary_region, :string
+      argument :organization_phone, :string
+      argument :organization_notes, :string
+      argument :organization_status, :atom
+      argument :organization_relationship_roles, {:array, :string}
 
-      prepare build(
-                sort: [updated_at: :desc, inserted_at: :desc],
-                load: [
-                  :discovery_program,
-                  :organization,
-                  :promoted_signal,
-                  :discovery_evidence_count,
-                  :latest_evidence_at,
-                  :latest_evidence_summary,
-                  :status_variant
-                ]
-              )
+      change set_attribute(:record_type, :opportunity)
+      change {GnomeGarden.Commercial.Changes.UpsertOrganizationForDiscoveryRecord, []}
+      change {GnomeGarden.Commercial.Changes.NormalizeDiscoveryRecordWebsite, []}
+      change {GnomeGarden.Commercial.Changes.SyncDiscoveryRecordFinding, []}
     end
 
     read :for_organization do
@@ -291,6 +320,13 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
     attribute :size_bucket, :atom do
       public? true
       constraints one_of: [:small, :medium, :large, :enterprise]
+    end
+
+    attribute :record_type, :atom do
+      allow_nil? false
+      default :prospect
+      public? true
+      constraints one_of: [:prospect, :opportunity]
     end
 
     attribute :fit_score, :integer do

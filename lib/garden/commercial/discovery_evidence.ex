@@ -1,10 +1,10 @@
 defmodule GnomeGarden.Commercial.DiscoveryEvidence do
   @moduledoc """
-  Raw discovery evidence supporting a discovery record.
+  Raw discovery evidence supporting a source discovery record.
 
   Observations capture the exact evidence that caused a company to enter the
-  discovery record queue: hiring posts, expansion news, legacy stack mentions,
-  directory listings, or direct referrals.
+  acquisition queue from a discovery program: hiring posts, expansion news,
+  legacy stack mentions, directory listings, or direct referrals.
   """
 
   use Ash.Resource,

@@ -26,19 +26,19 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Show do
             <.status_badge status={@managed_system.lifecycle_variant}>
               {format_atom(@managed_system.lifecycle_status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{@managed_system.code || "No system code"}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/managed-systems"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/operations/assets/new?managed_system_id=#{@managed_system.id}"}>
-            <.icon name="hero-cpu-chip" class="size-4" /> New Asset
+            New Asset
           </.button>
           <.button navigate={~p"/operations/managed-systems/#{@managed_system}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -80,13 +80,13 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Show do
       </div>
 
       <.section :if={@managed_system.description} title="Description">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@managed_system.description}
         </p>
       </.section>
 
       <.section :if={@managed_system.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@managed_system.notes}
         </p>
       </.section>
@@ -110,8 +110,8 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{asset.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{asset.name}</p>
+              <p class="text-sm text-base-content/50">
                 {asset.asset_tag || "No asset tag"}
               </p>
             </div>
@@ -131,10 +131,10 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end

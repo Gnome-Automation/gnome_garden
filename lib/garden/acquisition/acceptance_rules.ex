@@ -22,15 +22,15 @@ defmodule GnomeGarden.Acquisition.AcceptanceRules do
     |> family_blockers(finding)
   end
 
+  defp family_blockers(blockers, %{finding_family: :discovery, source_discovery_record_id: nil}) do
+    blockers
+  end
+
   defp family_blockers(blockers, %{finding_family: :discovery} = finding) do
     evidence_count = discovery_evidence_count(finding)
 
-    blockers
-    |> maybe_block(
-      is_nil(finding.source_discovery_record_id),
-      "Link a discovery record before accepting."
-    )
-    |> maybe_block(
+    maybe_block(
+      blockers,
       evidence_count < 1,
       "Add at least one piece of discovery evidence before accepting."
     )

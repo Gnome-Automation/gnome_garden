@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Execution.AssignmentLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Execution.Helpers
 
@@ -7,16 +8,21 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    assignments = load_assignments(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Assignments")
-     |> assign(:assignment_count, length(assignments))
-     |> assign(:confirmed_count, Enum.count(assignments, &(&1.status == :confirmed)))
-     |> assign(:in_progress_count, Enum.count(assignments, &(&1.status == :in_progress)))
-     |> assign(:onsite_count, Enum.count(assignments, &(&1.location_mode == :onsite)))
-     |> stream(:assignments, assignments)}
+     |> assign(:assignment_count, counts.total)
+     |> assign(:confirmed_count, counts.confirmed)
+     |> assign(:in_progress_count, counts.in_progress)
+     |> assign(:onsite_count, counts.onsite)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -30,10 +36,10 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/execution/work-items"}>
-            <.icon name="hero-queue-list" class="size-4" /> Work Items
+            Work Items
           </.button>
           <.button navigate={~p"/execution/assignments/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Assignment
+            New Assignment
           </.button>
         </:actions>
       </.page_header>
@@ -68,13 +74,56 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Index do
         />
       </div>
 
-      <.section
-        title="Dispatch Board"
-        description="Make schedule commitments visible so work items, work orders, and billing can trust the execution calendar."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="assignments-table"
+        resource={GnomeGarden.Execution.Assignment}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[load: assignment_index_loads()]}
+        click={fn row -> JS.navigate(~p"/execution/assignments/#{row}") end}
       >
-        <div :if={@assignment_count == 0} class="p-6 sm:p-7">
+        <:col :let={assignment} field="title" search sort label="Assignment">
+          <div class="space-y-1">
+            <div class="font-medium text-base-content">{assignment.title}</div>
+            <p class="text-sm text-base-content/50">
+              {format_atom(assignment.assignment_type)} · {format_atom(assignment.location_mode)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={assignment} label="Context">
+          <div class="space-y-1">
+            <p>{(assignment.project && assignment.project.name) || "-"}</p>
+            <p class="text-xs text-base-content/40">
+              {(assignment.work_item && assignment.work_item.title) ||
+                (assignment.work_order && assignment.work_order.title) ||
+                "No work item/work order"}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={assignment} label="Assignee">
+          {display_team_member(assignment.assigned_team_member)}
+        </:col>
+
+        <:col :let={assignment} field="scheduled_start_at" sort label="Schedule">
+          <div class="space-y-1">
+            <p>{format_datetime(assignment.scheduled_start_at)}</p>
+            <p class="text-xs text-base-content/40">
+              {format_minutes(assignment.planned_minutes)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={assignment} field="status" sort label="Status">
+          <.status_badge status={assignment.status_variant}>
+            {format_atom(assignment.status)}
+          </.status_badge>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-calendar-days"
             title="No assignments yet"
@@ -86,95 +135,34 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@assignment_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Assignment
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Context
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Assignee
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Schedule
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="assignments"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, assignment} <- @streams.assignments} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/execution/assignments/#{assignment}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {assignment.title}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {format_atom(assignment.assignment_type)} · {format_atom(
-                        assignment.location_mode
-                      )}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{(assignment.project && assignment.project.name) || "-"}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {(assignment.work_item && assignment.work_item.title) ||
-                        (assignment.work_order && assignment.work_order.title) ||
-                        "No work item/work order"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {display_email(assignment.assigned_user)}
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{format_datetime(assignment.scheduled_start_at)}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {format_minutes(assignment.planned_minutes)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={assignment.status_variant}>
-                    {format_atom(assignment.status)}
-                  </.status_badge>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_assignments(actor) do
-    user_loads = if actor, do: [assigned_user: []], else: []
+  defp load_counts(actor) do
+    case Execution.list_assignments(actor: actor) do
+      {:ok, assignments} ->
+        %{
+          total: length(assignments),
+          confirmed: Enum.count(assignments, &(&1.status == :confirmed)),
+          in_progress: Enum.count(assignments, &(&1.status == :in_progress)),
+          onsite: Enum.count(assignments, &(&1.location_mode == :onsite))
+        }
 
-    case Execution.list_assignments(
-           actor: actor,
-           query: [sort: [scheduled_start_at: :asc, inserted_at: :asc]],
-           load: [:status_variant, project: [], work_item: [], work_order: []] ++ user_loads
-         ) do
-      {:ok, assignments} -> assignments
-      {:error, error} -> raise "failed to load assignments: #{inspect(error)}"
+      {:error, _} ->
+        %{total: 0, confirmed: 0, in_progress: 0, onsite: 0}
     end
+  end
+
+  defp assignment_index_loads do
+    [
+      :status_variant,
+      assigned_team_member: [],
+      project: [],
+      work_item: [],
+      work_order: []
+    ]
   end
 end

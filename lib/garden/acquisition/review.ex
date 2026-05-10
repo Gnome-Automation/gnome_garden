@@ -3,8 +3,9 @@ defmodule GnomeGarden.Acquisition.Review do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.Finding
+  alias GnomeGarden.Commercial
+  alias GnomeGarden.Commercial.CompanyProfileLearning
   alias GnomeGarden.Commercial.DiscoveryFeedback
-  alias GnomeGarden.Commercial.DiscoveryReview
   alias GnomeGarden.Procurement.TargetingFeedback
   alias GnomeGarden.Procurement.BidReview
 
@@ -144,7 +145,8 @@ defmodule GnomeGarden.Acquisition.Review do
           :acceptance_blockers,
           :promotion_ready,
           :promotion_blockers
-        ] ++ GnomeGarden.Acquisition.AcceptanceRules.required_load() ++
+        ] ++
+          GnomeGarden.Acquisition.AcceptanceRules.required_load() ++
           GnomeGarden.Acquisition.PromotionRules.required_load()
     )
   end
@@ -154,7 +156,7 @@ defmodule GnomeGarden.Acquisition.Review do
 
   defp start_review_on_origin(%{source_discovery_record_id: discovery_record_id}, actor)
        when is_binary(discovery_record_id),
-       do: DiscoveryReview.start_review(discovery_record_id, actor)
+       do: review_discovery_record(discovery_record_id, actor)
 
   defp start_review_on_origin(finding, actor),
     do: transition_finding(finding, :start_review, actor)
@@ -168,15 +170,20 @@ defmodule GnomeGarden.Acquisition.Review do
 
   defp promote_origin(%{source_discovery_record_id: discovery_record_id}, actor)
        when is_binary(discovery_record_id) do
-    with {:ok, result} <- DiscoveryReview.promote(discovery_record_id, actor),
+    with {:ok, result} <- promote_discovery_record(discovery_record_id, actor),
          {:ok, _finding} <-
            Acquisition.sync_discovery_record_finding(discovery_record_id, actor: actor) do
       {:ok, result}
     end
   end
 
-  defp promote_origin(%Finding{} = finding, actor),
-    do: transition_finding(finding, :promote, actor)
+  defp promote_origin(%Finding{} = finding, actor) do
+    with {:ok, signal} <- ensure_signal_for_finding(finding, actor),
+         {:ok, promoted_finding} <-
+           transition_finding(finding, :promote, actor, %{signal_id: signal.id}) do
+      {:ok, %{finding: promoted_finding, signal: signal}}
+    end
+  end
 
   defp reject_origin(%{source_bid_id: bid_id}, actor_feedback, actor) when is_binary(bid_id),
     do:
@@ -189,7 +196,7 @@ defmodule GnomeGarden.Acquisition.Review do
   defp reject_origin(%{source_discovery_record_id: discovery_record_id}, actor_feedback, actor)
        when is_binary(discovery_record_id),
        do:
-         DiscoveryReview.reject(
+         reject_discovery_record(
            discovery_record_id,
            normalize_feedback(actor_feedback, "Rejected from acquisition queue"),
            actor
@@ -216,7 +223,7 @@ defmodule GnomeGarden.Acquisition.Review do
       |> normalize_feedback("Keep watching, not ready")
       |> Map.put_new("reason_code", "not_ready_yet")
 
-    DiscoveryReview.reject(discovery_record_id, params, actor)
+    reject_discovery_record(discovery_record_id, params, actor)
   end
 
   defp park_origin(%Finding{} = finding, _feedback, actor),
@@ -227,7 +234,7 @@ defmodule GnomeGarden.Acquisition.Review do
 
   defp reopen_origin(%{source_discovery_record_id: discovery_record_id}, actor)
        when is_binary(discovery_record_id),
-       do: DiscoveryReview.reopen(discovery_record_id, actor)
+       do: reopen_discovery_record(discovery_record_id, actor)
 
   defp reopen_origin(%Finding{} = finding, actor),
     do: transition_finding(finding, :reopen, actor)
@@ -253,6 +260,189 @@ defmodule GnomeGarden.Acquisition.Review do
       Acquisition.get_finding(finding.id, actor: actor)
     end
   end
+
+  defp review_discovery_record(discovery_record_id, actor) do
+    with {:ok, discovery_record} <- load_discovery_record(discovery_record_id, actor) do
+      Commercial.review_discovery_record(discovery_record, actor: actor)
+    end
+  end
+
+  defp promote_discovery_record(discovery_record_id, actor) do
+    with {:ok, discovery_record} <- load_discovery_record(discovery_record_id, actor),
+         {:ok, promoted_discovery_record} <-
+           promote_discovery_record_via_acquisition(discovery_record, actor),
+         {:ok, refreshed_discovery_record} <-
+           load_discovery_record(promoted_discovery_record.id, actor) do
+      {:ok,
+       %{
+         discovery_record: refreshed_discovery_record,
+         signal: refreshed_discovery_record.promoted_signal,
+         recommendation: discovery_record_recommendation(refreshed_discovery_record)
+       }}
+    end
+  end
+
+  defp promote_discovery_record_via_acquisition(discovery_record, actor) do
+    discovery_record
+    |> Ash.Changeset.for_update(:promote_to_signal, %{}, actor: actor)
+    |> Ash.update(domain: Commercial)
+  end
+
+  defp reject_discovery_record(discovery_record_id, reason_or_feedback, actor) do
+    feedback = DiscoveryFeedback.normalize_feedback(reason_or_feedback)
+
+    with {:ok, discovery_record} <- load_discovery_record(discovery_record_id, actor),
+         {:ok, rejected_discovery_record} <-
+           Commercial.reject_discovery_record(
+             discovery_record,
+             %{notes: feedback.reason || "Rejected during acquisition review"},
+             actor: actor
+           ),
+         {:ok, updated_discovery_record} <-
+           persist_discovery_feedback(rejected_discovery_record, feedback, actor),
+         :ok <- maybe_apply_discovery_targeting_feedback(updated_discovery_record, feedback),
+         {:ok, refreshed_discovery_record} <-
+           load_discovery_record(updated_discovery_record.id, actor) do
+      {:ok, refreshed_discovery_record}
+    end
+  end
+
+  defp reopen_discovery_record(discovery_record_id, actor) do
+    with {:ok, discovery_record} <- load_discovery_record(discovery_record_id, actor) do
+      Commercial.reopen_discovery_record(discovery_record, actor: actor)
+    end
+  end
+
+  defp load_discovery_record(discovery_record_id, actor) do
+    Commercial.get_discovery_record(
+      discovery_record_id,
+      actor: actor,
+      load: [
+        :discovery_program,
+        :organization,
+        :promoted_signal,
+        :status_variant,
+        :discovery_evidence_count,
+        :latest_evidence_at,
+        :latest_evidence_summary
+      ]
+    )
+  end
+
+  defp discovery_record_recommendation(discovery_record) do
+    intent_score = discovery_record.intent_score || 0
+    fit_score = discovery_record.fit_score || 0
+
+    cond do
+      discovery_record.promoted_signal_id ->
+        %{
+          action: :open_signal,
+          label: "Review Signal",
+          detail:
+            "This discovery record is already in commercial review with intake provenance attached."
+        }
+
+      intent_score >= 80 and fit_score >= 75 ->
+        %{
+          action: :promote_to_signal,
+          label: "Promote To Signal",
+          detail:
+            "Strong fit and intent signals support moving this discovery record into commercial review."
+        }
+
+      intent_score >= 65 ->
+        %{
+          action: :start_review,
+          label: "Start Review",
+          detail:
+            "Interesting discovery record, but validate identity and evidence before promotion."
+        }
+
+      true ->
+        %{
+          action: :reject,
+          label: "Reject And Teach",
+          detail: "Low-intent or weak-fit discovery should feed the shared targeting model."
+        }
+    end
+  end
+
+  defp persist_discovery_feedback(discovery_record, feedback, actor) do
+    metadata =
+      (discovery_record.metadata || %{})
+      |> Map.new()
+      |> Map.put("discovery_feedback", DiscoveryFeedback.feedback_metadata(feedback))
+
+    Commercial.update_discovery_record(discovery_record, %{metadata: metadata}, actor: actor)
+  end
+
+  defp maybe_apply_discovery_targeting_feedback(
+         _discovery_record,
+         %DiscoveryFeedback{feedback_scope: nil}
+       ),
+       do: :ok
+
+  defp maybe_apply_discovery_targeting_feedback(discovery_record, %DiscoveryFeedback{} = feedback) do
+    market_focus = (discovery_record.metadata || %{})["market_focus"] || %{}
+
+    CompanyProfileLearning.record_targeting_feedback(
+      company_profile_key: market_focus["company_profile_key"],
+      company_profile_mode: market_focus["company_profile_mode"],
+      feedback_scope: feedback.feedback_scope,
+      exclude_terms: feedback.exclude_terms,
+      reason: feedback.reason,
+      source_type: "discovery_record",
+      source_id: discovery_record.id
+    )
+    |> case do
+      {:ok, _result} -> :ok
+      {:error, _error} -> :ok
+    end
+  end
+
+  defp ensure_signal_for_finding(%Finding{signal: %Commercial.Signal{} = signal}, _actor),
+    do: {:ok, signal}
+
+  defp ensure_signal_for_finding(%Finding{signal_id: signal_id}, actor) when is_binary(signal_id),
+    do: Commercial.get_signal(signal_id, actor: actor)
+
+  defp ensure_signal_for_finding(%Finding{} = finding, actor) do
+    Commercial.create_signal(
+      %{
+        title: finding.title,
+        description: finding.summary || finding.work_summary,
+        signal_type: signal_type_for_finding(finding),
+        source_channel: source_channel_for_finding(finding),
+        external_ref: "acquisition_finding:#{finding.id}",
+        source_url: finding.source_url,
+        observed_at: finding.observed_at || finding.inserted_at || DateTime.utc_now(),
+        organization_id: finding.organization_id,
+        notes: finding.recommendation || finding.score_note || finding.work_note,
+        metadata:
+          reject_nil_values(%{
+            finding_id: finding.id,
+            finding_family: finding.finding_family,
+            finding_type: finding.finding_type,
+            source_external_ref: finding.external_ref,
+            score_tier: finding.score_tier,
+            fit_score: finding.fit_score,
+            intent_score: finding.intent_score
+          })
+      },
+      actor: actor
+    )
+  end
+
+  defp signal_type_for_finding(%{finding_type: :bid_notice}), do: :bid_notice
+  defp signal_type_for_finding(%{finding_type: :integrator_request}), do: :inbound_request
+  defp signal_type_for_finding(%{finding_type: :contact_signal}), do: :referral
+  defp signal_type_for_finding(%{finding_type: :hiring_signal}), do: :market_signal
+  defp signal_type_for_finding(%{finding_type: :expansion_signal}), do: :service_need
+  defp signal_type_for_finding(_finding), do: :market_signal
+
+  defp source_channel_for_finding(%{finding_family: :procurement}), do: :procurement_portal
+  defp source_channel_for_finding(%{finding_family: :discovery}), do: :agent_discovery
+  defp source_channel_for_finding(_finding), do: :manual
 
   defp normalize_feedback(%{} = feedback, default_reason) do
     feedback
@@ -411,6 +601,8 @@ defmodule GnomeGarden.Acquisition.Review do
   defp maybe_put_metadata(metadata, _key, nil), do: metadata
   defp maybe_put_metadata(metadata, _key, ""), do: metadata
   defp maybe_put_metadata(metadata, key, value), do: Map.put(metadata, key, value)
+
+  defp reject_nil_values(map), do: Map.reject(map, fn {_key, value} -> is_nil(value) end)
 
   defp to_atom_key_map(%{} = map) do
     Map.new(map, fn {key, value} ->

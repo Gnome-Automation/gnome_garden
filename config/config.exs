@@ -11,6 +11,8 @@ config :cinder, default_theme: GnomeGardenWeb.CinderTheme
 config :ex_cldr, default_backend: GnomeGarden.Cldr
 config :ash_oban, pro?: false
 
+config :gnome_garden, :pi_service_token, System.get_env("PI_SERVICE_TOKEN", "dev-pi-token")
+
 # Register Z.AI (Zhipu AI) models in LLMDB catalog
 config :llm_db,
   custom: %{
@@ -108,14 +110,15 @@ config :jido_ai,
 config :gnome_garden, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
-  queues: [default: 10, lead_scanning: 2, mercury: 10],
+  queues: [default: 10, procurement_scanning: 2, mercury: 10],
   repo: GnomeGarden.Repo,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
        {"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker},
        {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker},
-       {"0 6 * * *", GnomeGarden.Mercury.InvoiceSchedulerWorker}
+       {"0 6 * * *", GnomeGarden.Mercury.InvoiceSchedulerWorker},
+       {"*/5 * * * *", GnomeGarden.Acquisition.Workers.RetryFailedImports}
      ],
      timezone: "Etc/UTC"}
   ]
@@ -180,13 +183,11 @@ config :gnome_garden,
     GnomeGarden.Execution,
     GnomeGarden.Finance,
     GnomeGarden.Operations,
-    GnomeGarden.Sales,
     GnomeGarden.Procurement
   ],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 
-config :gnome_garden, :payment_matching,
-  underpayment_tolerance: "1.00"
+config :gnome_garden, :payment_matching, underpayment_tolerance: "1.00"
 
 # Configure the endpoint
 config :gnome_garden, GnomeGardenWeb.Endpoint,

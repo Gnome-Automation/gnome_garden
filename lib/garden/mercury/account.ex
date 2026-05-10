@@ -100,13 +100,13 @@ defmodule GnomeGarden.Mercury.Account do
     timestamps()
   end
 
-  identities do
-    identity :unique_mercury_id, [:mercury_id]
-  end
-
   relationships do
     has_many :transactions, GnomeGarden.Mercury.Transaction do
       public? true
     end
+  end
+
+  identities do
+    identity :unique_mercury_id, [:mercury_id]
   end
 end

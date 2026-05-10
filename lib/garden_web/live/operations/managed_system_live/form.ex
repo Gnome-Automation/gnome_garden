@@ -33,7 +33,7 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/managed-systems"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to systems
+            Back to systems
           </.button>
         </:actions>
       </.page_header>

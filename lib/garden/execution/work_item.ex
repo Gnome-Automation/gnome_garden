@@ -32,7 +32,7 @@ defmodule GnomeGarden.Execution.WorkItem do
     references do
       reference :project, on_delete: :delete
       reference :parent_work_item, on_delete: :nilify
-      reference :owner_user, on_delete: :nilify
+      reference :owner_team_member, on_delete: :nilify
     end
   end
 
@@ -61,7 +61,7 @@ defmodule GnomeGarden.Execution.WorkItem do
       accept [
         :project_id,
         :parent_work_item_id,
-        :owner_user_id,
+        :owner_team_member_id,
         :code,
         :title,
         :description,
@@ -78,7 +78,7 @@ defmodule GnomeGarden.Execution.WorkItem do
       accept [
         :project_id,
         :parent_work_item_id,
-        :owner_user_id,
+        :owner_team_member_id,
         :code,
         :title,
         :description,
@@ -254,7 +254,7 @@ defmodule GnomeGarden.Execution.WorkItem do
       public? true
     end
 
-    belongs_to :owner_user, GnomeGarden.Accounts.User do
+    belongs_to :owner_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

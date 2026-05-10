@@ -1,6 +1,7 @@
 defmodule GnomeGarden.Operations.Person do
   @moduledoc """
-  Durable external person record used across CRM, service, and delivery.
+  Durable external person record used across commercial work, service, and
+  delivery.
 
   People are modeled independently from organizations so the same person can be
   associated with multiple companies over time without duplicating identity.

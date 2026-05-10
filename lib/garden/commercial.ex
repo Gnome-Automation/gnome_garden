@@ -52,17 +52,14 @@ defmodule GnomeGarden.Commercial do
         args: [:website_domain]
 
       define :create_discovery_record, action: :create
+      define :create_prospect_discovery_record, action: :create_prospect
+      define :create_opportunity_discovery_record, action: :create_opportunity
       define :update_discovery_record, action: :update
       define :resolve_discovery_record_identity, action: :resolve_identity
       define :review_discovery_record, action: :start_review
-      define :promote_discovery_record_to_signal, action: :promote_to_signal
       define :reject_discovery_record, action: :reject
       define :archive_discovery_record, action: :archive
       define :reopen_discovery_record, action: :reopen
-      define :list_review_discovery_records, action: :review_queue
-      define :list_promoted_discovery_records, action: :promoted
-      define :list_rejected_discovery_records, action: :rejected
-      define :list_archived_discovery_records, action: :archived
 
       define :list_discovery_records_for_organization,
         action: :for_organization,
@@ -96,6 +93,39 @@ defmodule GnomeGarden.Commercial do
       define :list_discovery_evidence_for_program,
         action: :for_discovery_program,
         args: [:discovery_program_id]
+    end
+
+    resource GnomeGarden.Commercial.Activity do
+      define :list_activities, action: :read
+      define :get_activity, action: :read, get_by: [:id]
+      define :create_activity, action: :create
+      define :update_activity, action: :update
+      define :list_recent_activities, action: :recent
+      define :list_activities_by_organization, action: :by_organization, args: [:organization_id]
+      define :list_activities_by_person, action: :by_person, args: [:person_id]
+      define :list_activities_by_pursuit, action: :by_pursuit, args: [:pursuit_id]
+      define :list_activities_by_type, action: :by_type, args: [:activity_type]
+    end
+
+    resource GnomeGarden.Commercial.Event do
+      define :log_event, action: :log
+    end
+
+    resource GnomeGarden.Commercial.Task do
+      define :list_tasks, action: :read
+      define :get_task, action: :read, get_by: [:id]
+      define :create_task, action: :create
+      define :update_task, action: :update
+      define :start_task, action: :start
+      define :complete_task, action: :complete
+      define :cancel_task, action: :cancel
+      define :reopen_task, action: :reopen
+      define :list_tasks_by_owner, action: :by_owner, args: [:owner_id]
+      define :list_tasks_by_organization, action: :by_organization, args: [:organization_id]
+      define :list_tasks_by_pursuit, action: :by_pursuit, args: [:pursuit_id]
+      define :list_overdue_tasks, action: :overdue
+      define :list_due_today_tasks, action: :due_today
+      define :list_urgent_tasks, action: :urgent
     end
 
     resource GnomeGarden.Commercial.Signal do
@@ -226,7 +256,11 @@ defmodule GnomeGarden.Commercial do
       define :create_service_entitlement_usage, action: :create
       define :update_service_entitlement_usage, action: :update
       define :delete_service_entitlement_usage, action: :destroy
-      define :list_usage_for_entitlement, action: :for_entitlement, args: [:service_entitlement_id]
+
+      define :list_usage_for_entitlement,
+        action: :for_entitlement,
+        args: [:service_entitlement_id]
+
       define :list_usage_for_agreement, action: :for_agreement, args: [:agreement_id]
       define :list_usage_for_time_entry, action: :for_time_entry, args: [:time_entry_id]
       define :list_usage_for_expense, action: :for_expense, args: [:expense_id]

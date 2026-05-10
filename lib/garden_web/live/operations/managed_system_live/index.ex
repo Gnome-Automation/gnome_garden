@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Operations.Helpers
 
@@ -7,19 +8,21 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    managed_systems = load_managed_systems(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Managed Systems")
-     |> assign(:system_count, length(managed_systems))
-     |> assign(:active_count, Enum.count(managed_systems, &(&1.lifecycle_status == :active)))
-     |> assign(:critical_count, Enum.count(managed_systems, &(&1.criticality == :critical)))
-     |> assign(
-       :asset_count,
-       Enum.reduce(managed_systems, 0, fn system, total -> total + (system.asset_count || 0) end)
-     )
-     |> stream(:managed_systems, managed_systems)}
+     |> assign(:system_count, counts.total)
+     |> assign(:active_count, counts.active)
+     |> assign(:critical_count, counts.critical)
+     |> assign(:asset_count, counts.assets)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -33,10 +36,10 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/sites"}>
-            <.icon name="hero-map-pin" class="size-4" /> Sites
+            Sites
           </.button>
           <.button navigate={~p"/operations/managed-systems/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Managed System
+            New Managed System
           </.button>
         </:actions>
       </.page_header>
@@ -71,13 +74,64 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Index do
         />
       </div>
 
-      <.section
-        title="System Context"
-        description="Managed systems keep automation, software, and hybrid installations explicit instead of burying them inside project or asset notes."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="managed-systems-table"
+        resource={GnomeGarden.Operations.ManagedSystem}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[
+          load: [
+            :lifecycle_variant,
+            :criticality_variant,
+            :asset_count,
+            organization: [],
+            site: []
+          ]
+        ]}
+        click={fn row -> JS.navigate(~p"/operations/managed-systems/#{row}") end}
       >
-        <div :if={@system_count == 0} class="p-6 sm:p-7">
+        <:col :let={managed_system} field="name" sort search label="Managed System">
+          <div class="space-y-0.5">
+            <div class="font-medium text-base-content">{managed_system.name}</div>
+            <div class="text-xs text-base-content/50">
+              {managed_system.code || "No system code"}
+            </div>
+          </div>
+        </:col>
+
+        <:col :let={managed_system} field="organization.name" sort search label="Organization">
+          {(managed_system.organization && managed_system.organization.name) || "-"}
+        </:col>
+
+        <:col :let={managed_system} field="site.name" sort search label="Site">
+          <div class="space-y-0.5">
+            <p>{(managed_system.site && managed_system.site.name) || "-"}</p>
+            <p class="text-xs text-base-content/40">
+              {format_atom(managed_system.system_type)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={managed_system} field="lifecycle_status" sort label="Lifecycle">
+          <.status_badge status={managed_system.lifecycle_variant}>
+            {format_atom(managed_system.lifecycle_status)}
+          </.status_badge>
+        </:col>
+
+        <:col :let={managed_system} field="criticality" sort label="Criticality">
+          <div class="space-y-0.5">
+            <.status_badge status={managed_system.criticality_variant}>
+              {format_atom(managed_system.criticality)}
+            </.status_badge>
+            <p class="text-xs text-base-content/40">
+              {managed_system.asset_count || 0} assets
+            </p>
+          </div>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-circle-stack"
             title="No managed systems yet"
@@ -89,97 +143,25 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@system_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Managed System
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Organization
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Site
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Lifecycle
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Criticality
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="managed-systems"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, managed_system} <- @streams.managed_systems} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/operations/managed-systems/#{managed_system}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {managed_system.name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {managed_system.code || "No system code"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {(managed_system.organization && managed_system.organization.name) || "-"}
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{(managed_system.site && managed_system.site.name) || "-"}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {format_atom(managed_system.system_type)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={managed_system.lifecycle_variant}>
-                    {format_atom(managed_system.lifecycle_status)}
-                  </.status_badge>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.status_badge status={managed_system.criticality_variant}>
-                      {format_atom(managed_system.criticality)}
-                    </.status_badge>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {managed_system.asset_count || 0} assets
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_managed_systems(actor) do
-    case Operations.list_managed_systems(
-           actor: actor,
-           query: [sort: [name: :asc]],
-           load: [
-             :lifecycle_variant,
-             :criticality_variant,
-             :asset_count,
-             organization: [],
-             site: []
-           ]
-         ) do
-      {:ok, managed_systems} -> managed_systems
-      {:error, error} -> raise "failed to load managed systems: #{inspect(error)}"
+  defp load_counts(actor) do
+    case Operations.list_managed_systems(actor: actor, load: [:asset_count]) do
+      {:ok, systems} ->
+        %{
+          total: length(systems),
+          active: Enum.count(systems, &(&1.lifecycle_status == :active)),
+          critical: Enum.count(systems, &(&1.criticality == :critical)),
+          assets:
+            Enum.reduce(systems, 0, fn system, total -> total + (system.asset_count || 0) end)
+        }
+
+      {:error, _} ->
+        %{total: 0, active: 0, critical: 0, assets: 0}
     end
   end
 end

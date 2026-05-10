@@ -53,10 +53,10 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/people"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/operations/people/#{@person}/edit"} variant="primary">
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -91,7 +91,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
               <a
                 :if={@person.email}
                 href={"mailto:#{@person.email}"}
-                class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400"
+                class="text-emerald-600 hover:text-primary"
               >
                 {@person.email}
               </a>
@@ -104,7 +104,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
                 :if={@person.linkedin_url}
                 href={@person.linkedin_url}
                 target="_blank"
-                class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400"
+                class="text-emerald-600 hover:text-primary"
               >
                 View Profile
               </a>
@@ -134,7 +134,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
       </div>
 
       <.section :if={@person.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@person.notes}
         </p>
       </.section>
@@ -158,7 +158,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
                   >
                     {candidate.person.full_name}
                   </.link>
-                  <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                  <p class="text-sm text-base-content/50">
                     {candidate.person.email || candidate.person.phone || "No direct contact details"}
                   </p>
                 </div>
@@ -170,7 +170,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
                     {format_merge_reason(reason)}
                   </.tag>
                 </div>
-                <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                <p class="text-xs text-base-content/40">
                   {candidate.person.organization_count} organizations · {candidate_person_organizations(
                     candidate.person
                   )}
@@ -201,7 +201,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
             navigate={~p"/operations/affiliations/new?#{[person_id: @person.id]}"}
             variant="primary"
           >
-            <.icon name="hero-plus" class="size-4" /> Add Affiliation
+            Add Affiliation
           </.button>
         </:actions>
         <div id="person-organizations" class="space-y-3">
@@ -219,8 +219,8 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{organization.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{organization.name}</p>
+              <p class="text-sm text-base-content/50">
                 {format_roles(organization.relationship_roles)}
               </p>
             </div>

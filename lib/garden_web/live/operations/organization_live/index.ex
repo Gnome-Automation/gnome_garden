@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Operations.OrganizationLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Operations.Helpers
 
@@ -7,15 +8,20 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    organizations = load_organizations(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Organizations")
-     |> assign(:organization_count, length(organizations))
-     |> assign(:prospect_count, Enum.count(organizations, &(&1.status == :prospect)))
-     |> assign(:active_count, Enum.count(organizations, &(&1.status == :active)))
-     |> stream(:organizations, organizations)}
+     |> assign(:organization_count, counts.total)
+     |> assign(:prospect_count, counts.prospect)
+     |> assign(:active_count, counts.active)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -29,15 +35,15 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/people"}>
-            <.icon name="hero-users" class="size-4" /> People
+            People
           </.button>
           <.button navigate={~p"/operations/organizations/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Organization
+            New Organization
           </.button>
         </:actions>
       </.page_header>
 
-      <div class="grid gap-4 md:grid-cols-3">
+      <div class="grid gap-2 sm:grid-cols-3">
         <.stat_card
           title="Organizations"
           value={Integer.to_string(@organization_count)}
@@ -60,13 +66,51 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Index do
         />
       </div>
 
-      <.section
-        title="Organization Directory"
-        description="Review the customer, prospect, partner, and agency records feeding the rest of the platform."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="organizations-table"
+        resource={GnomeGarden.Operations.Organization}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[load: [:status_variant, :people_count, :signal_count, :pursuit_count]]}
+        click={fn row -> JS.navigate(~p"/operations/organizations/#{row}") end}
       >
-        <div :if={@organization_count == 0} class="p-6 sm:p-7">
+        <:col :let={org} field="name" search sort label="Organization">
+          <div class="space-y-0.5">
+            <div class="font-medium text-base-content">{org.name}</div>
+            <div class="text-xs text-base-content/50">
+              {org.primary_region || "No primary region"}
+            </div>
+          </div>
+        </:col>
+
+        <:col :let={org} field="organization_kind" sort label="Kind">
+          <.tag color={tag_color_for_kind(org.organization_kind)}>
+            {format_atom(org.organization_kind)}
+          </.tag>
+        </:col>
+
+        <:col :let={org} label="Roles">
+          {format_roles(org.relationship_roles)}
+        </:col>
+
+        <:col :let={org} label="Footprint">
+          <div class="space-y-0.5">
+            <p>{org.people_count || 0} people</p>
+            <p class="text-xs text-base-content/40">
+              {org.signal_count || 0} signals, {org.pursuit_count || 0} pursuits
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={org} field="status" sort label="Status">
+          <.status_badge status={org.status_variant}>
+            {format_atom(org.status)}
+          </.status_badge>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-building-office-2"
             title="No organizations yet"
@@ -78,90 +122,23 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@organization_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Organization
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Kind
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Roles
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Footprint
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="organizations"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, organization} <- @streams.organizations} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/operations/organizations/#{organization}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {organization.name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {organization.primary_region || "No primary region"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.tag color={tag_color_for_kind(organization.organization_kind)}>
-                    {format_atom(organization.organization_kind)}
-                  </.tag>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {format_roles(organization.relationship_roles)}
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{organization.people_count || 0} people</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {organization.signal_count || 0} signals, {organization.pursuit_count || 0} pursuits
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={organization.status_variant}>
-                    {format_atom(organization.status)}
-                  </.status_badge>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_organizations(actor) do
-    case Operations.list_organizations(
-           actor: actor,
-           load: [
-             :status_variant,
-             :people_count,
-             :signal_count,
-             :pursuit_count
-           ]
-         ) do
-      {:ok, organizations} -> Enum.sort_by(organizations, &String.downcase(&1.name || ""))
-      {:error, error} -> raise "failed to load organizations: #{inspect(error)}"
+  defp load_counts(actor) do
+    case Operations.list_organizations(actor: actor) do
+      {:ok, orgs} ->
+        %{
+          total: length(orgs),
+          prospect: Enum.count(orgs, &(&1.status == :prospect)),
+          active: Enum.count(orgs, &(&1.status == :active))
+        }
+
+      {:error, _} ->
+        %{total: 0, prospect: 0, active: 0}
     end
   end
 end

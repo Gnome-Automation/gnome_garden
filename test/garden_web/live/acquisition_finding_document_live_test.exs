@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Acquisition
@@ -83,9 +85,6 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
     assert refreshed_finding.promotion_document_count == 1
     assert refreshed_finding.promotion_ready
     assert refreshed_finding.promotion_blockers == []
-
-    {:ok, queue_view, _html} = live(conn, ~p"/acquisition/findings")
-    assert has_element?(queue_view, "#finding-promote-#{finding.id}")
   end
 
   test "linked procurement documents can be removed from the finding detail", %{conn: conn} do
@@ -264,14 +263,11 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
 
     assert {:error, {:live_redirect, %{to: path}}} = submit_result
 
-    {:ok, queue_view, _html} = live(conn, path)
+    {:ok, show_view, _html} = live(conn, path)
 
-    refute has_element?(queue_view, "#finding-promote-#{finding.id}")
-
-    assert render(queue_view) =~
+    assert render(show_view) =~
              "Attach a substantive procurement packet (solicitation, scope, pricing, or addendum) before promotion."
 
-    {:ok, show_view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
     assert render(show_view) =~ "Reference only"
 
     {:ok, refreshed_finding} =

@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
+  import Cinder.Refresh
   import GnomeGardenWeb.Commercial.Helpers
 
   alias GnomeGarden.Acquisition
@@ -11,12 +13,13 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Discovery Programs")
-     |> assign(:program_count, 0)
-     |> assign(:active_count, 0)
-     |> assign(:review_discovery_record_count, 0)
-     |> assign(:pilot_ready_count, 0)
-     |> stream(:programs, [], reset: true)
-     |> refresh_program_listing()}
+     |> assign_counts()}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -29,7 +32,8 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
            ) do
       {:noreply,
        socket
-       |> refresh_program_listing()
+       |> assign_counts()
+       |> refresh_table("discovery-programs-table")
        |> put_flash(:info, "Started discovery run #{short_id(run.id)}.")}
     else
       {:error, :active_run_exists} ->
@@ -52,14 +56,14 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
       <.page_header eyebrow="Commercial">
         Discovery Programs
         <:subtitle>
-          Durable lead-finder definitions for regions, industries, and search motions. Programs own the discovery backlog without confusing it with runtime-only agent state.
+          Durable target-finder definitions for regions, industries, and search motions. Programs own the discovery backlog without confusing it with runtime-only agent state.
         </:subtitle>
         <:actions>
           <.button navigate={~p"/acquisition/findings?family=discovery"}>
-            <.icon name="hero-inbox-stack" class="size-4" /> Discovery Intake
+            Discovery Intake
           </.button>
           <.button navigate={~p"/commercial/discovery-programs/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Program
+            New Program
           </.button>
         </:actions>
       </.page_header>
@@ -94,13 +98,114 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
         />
       </div>
 
-      <.section
-        title="Discovery Portfolio"
-        description="Treat lead finding as a real operating motion with explicit scope, cadence, and backlog ownership."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="discovery-programs-table"
+        resource={GnomeGarden.Commercial.DiscoveryProgram}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[
+          load: [
+            :status_variant,
+            :priority_variant,
+            :is_due_to_run,
+            :run_status_variant,
+            :run_status_label,
+            :discovery_record_count,
+            :review_discovery_record_count,
+            :discovery_evidence_count,
+            :latest_evidence_at
+          ]
+        ]}
       >
-        <div :if={@program_count == 0} class="p-6 sm:p-7">
+        <:col :let={program} field="name" sort search label="Program">
+          <div class="space-y-1">
+            <.link
+              navigate={~p"/commercial/discovery-programs/#{program}"}
+              class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
+            >
+              {program.name}
+            </.link>
+            <p class="text-sm text-base-content/50">
+              {format_atom(program.program_type)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={program} label="Scope">
+          <div class="space-y-1">
+            <p>{summary_list(program.target_regions, "No regions")}</p>
+            <p class="text-xs text-base-content/40">
+              {summary_list(program.target_industries, "No industries")}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={program} label="Backlog">
+          <div class="space-y-1">
+            <p>{program.discovery_record_count} discovery records</p>
+            <p class="text-xs text-base-content/40">
+              {program.review_discovery_record_count} waiting review
+            </p>
+            <p class="text-xs text-base-content/40">
+              {program.discovery_evidence_count} evidence items
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={program} field="cadence_hours" sort label="Cadence">
+          <div class="space-y-1">
+            <p>Every {program.cadence_hours}h</p>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/40">
+              <span>{format_datetime(program.last_run_at)}</span>
+              <.status_badge status={program.run_status_variant}>
+                {program.run_status_label}
+              </.status_badge>
+            </div>
+          </div>
+        </:col>
+
+        <:col :let={program} field="status" sort label="Status">
+          <div class="space-y-2">
+            <.status_badge status={program.status_variant}>
+              {format_atom(program.status)}
+            </.status_badge>
+            <.status_badge status={program.priority_variant}>
+              {format_atom(program.priority)}
+            </.status_badge>
+          </div>
+        </:col>
+
+        <:col :let={program} label="Actions">
+          <div class="flex flex-wrap gap-2">
+            <.button
+              :if={program_runnable?(program)}
+              id={"run-program-#{program.id}"}
+              phx-click="run_now"
+              phx-value-id={program.id}
+              class="px-2.5 py-1.5 text-xs"
+              variant={if(program.is_due_to_run, do: "primary", else: nil)}
+            >
+              Run Now
+            </.button>
+            <.button
+              id={"program-targets-#{program.id}"}
+              navigate={discovery_intake_path(program)}
+              class="px-2.5 py-1.5 text-xs"
+            >
+              Intake
+            </.button>
+            <.button
+              navigate={~p"/commercial/discovery-programs/#{program}"}
+              class="px-2.5 py-1.5 text-xs"
+            >
+              Open
+            </.button>
+          </div>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-radar"
             title="No discovery programs yet"
@@ -112,163 +217,39 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@program_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Program
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Scope
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Backlog
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Cadence
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="discovery-programs"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, program} <- @streams.programs} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/commercial/discovery-programs/#{program}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {program.name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {format_atom(program.program_type)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{summary_list(program.target_regions, "No regions")}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {summary_list(program.target_industries, "No industries")}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{program.discovery_record_count} discovery records</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {program.review_discovery_record_count} waiting review
-                    </p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {program.discovery_evidence_count} evidence items
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>Every {program.cadence_hours}h</p>
-                    <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
-                      <span>{format_datetime(program.last_run_at)}</span>
-                      <.status_badge status={program.run_status_variant}>
-                        {program.run_status_label}
-                      </.status_badge>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-2">
-                    <.status_badge status={program.status_variant}>
-                      {format_atom(program.status)}
-                    </.status_badge>
-                    <.status_badge status={program.priority_variant}>
-                      {format_atom(program.priority)}
-                    </.status_badge>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="flex flex-wrap gap-2">
-                    <.button
-                      :if={program_runnable?(program)}
-                      id={"run-program-#{program.id}"}
-                      phx-click="run_now"
-                      phx-value-id={program.id}
-                      class="px-2.5 py-1.5 text-xs"
-                      variant={if(program.is_due_to_run, do: "primary", else: nil)}
-                    >
-                      <.icon name="hero-play" class="size-4" /> Run Now
-                    </.button>
-                    <.button
-                      id={"program-targets-#{program.id}"}
-                      navigate={discovery_intake_path(program)}
-                      class="px-2.5 py-1.5 text-xs"
-                    >
-                      <.icon name="hero-inbox-stack" class="size-4" /> Intake
-                    </.button>
-                    <.button
-                      navigate={~p"/commercial/discovery-programs/#{program}"}
-                      class="px-2.5 py-1.5 text-xs"
-                    >
-                      Open
-                    </.button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_programs(actor) do
-    case Commercial.list_discovery_programs(
-           actor: actor,
-           query: [sort: [priority: :desc, inserted_at: :desc]],
-           load: [
-             :status_variant,
-             :priority_variant,
-             :is_due_to_run,
-             :run_status_variant,
-             :run_status_label,
-             :discovery_record_count,
-             :review_discovery_record_count,
-             :discovery_evidence_count,
-             :latest_evidence_at
-           ]
-         ) do
-      {:ok, programs} -> programs
-      {:error, error} -> raise "failed to load discovery programs: #{inspect(error)}"
-    end
-  end
-
-  defp refresh_program_listing(socket) do
-    programs = load_programs(socket.assigns.current_user)
+  defp assign_counts(socket) do
+    counts = load_counts(socket.assigns.current_user)
 
     socket
-    |> assign(:program_count, length(programs))
-    |> assign(:active_count, Enum.count(programs, &(&1.status == :active)))
-    |> assign(
-      :review_discovery_record_count,
-      Enum.reduce(programs, 0, &(&1.review_discovery_record_count + &2))
-    )
-    |> assign(
-      :pilot_ready_count,
-      Enum.count(programs, &(&1.status == :active and &1.is_due_to_run))
-    )
-    |> stream(:programs, programs, reset: true)
+    |> assign(:program_count, counts.total)
+    |> assign(:active_count, counts.active)
+    |> assign(:review_discovery_record_count, counts.review_discovery_record_count)
+    |> assign(:pilot_ready_count, counts.pilot_ready)
+  end
+
+  defp load_counts(actor) do
+    case Commercial.list_discovery_programs(
+           actor: actor,
+           load: [:is_due_to_run, :review_discovery_record_count]
+         ) do
+      {:ok, programs} ->
+        %{
+          total: length(programs),
+          active: Enum.count(programs, &(&1.status == :active)),
+          review_discovery_record_count:
+            Enum.reduce(programs, 0, &(&1.review_discovery_record_count + &2)),
+          pilot_ready: Enum.count(programs, &(&1.status == :active and &1.is_due_to_run))
+        }
+
+      {:error, _} ->
+        %{total: 0, active: 0, review_discovery_record_count: 0, pilot_ready: 0}
+    end
   end
 
   defp program_runnable?(%{status: :archived}), do: false
@@ -280,7 +261,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
   defp summary_list(values, _empty_label), do: Enum.join(values, ", ")
 
   defp discovery_intake_path(program) do
-    case Acquisition.get_program_by_legacy_discovery_program(program.id) do
+    case Acquisition.get_program_by_discovery_program(program.id) do
       {:ok, acquisition_program} ->
         ~p"/acquisition/findings?family=discovery&program_id=#{acquisition_program.id}"
 

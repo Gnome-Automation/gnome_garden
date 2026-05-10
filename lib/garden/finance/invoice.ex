@@ -164,7 +164,9 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     read :overdue do
-      filter expr(status in [:issued, :partial] and not is_nil(due_on) and due_on < ^Date.utc_today())
+      filter expr(
+               status in [:issued, :partial] and not is_nil(due_on) and due_on < ^Date.utc_today()
+             )
 
       prepare build(
                 sort: [due_on: :asc],

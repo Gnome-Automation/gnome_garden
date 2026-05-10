@@ -23,7 +23,7 @@ defmodule GnomeGarden.Acquisition.Source do
     end
 
     references do
-      reference :legacy_procurement_source, on_delete: :nilify
+      reference :procurement_source, on_delete: :nilify
       reference :organization, on_delete: :nilify
     end
   end
@@ -47,7 +47,7 @@ defmodule GnomeGarden.Acquisition.Source do
         :metadata,
         :last_run_at,
         :last_success_at,
-        :legacy_procurement_source_id,
+        :procurement_source_id,
         :organization_id
       ]
     end
@@ -65,7 +65,7 @@ defmodule GnomeGarden.Acquisition.Source do
         :metadata,
         :last_run_at,
         :last_success_at,
-        :legacy_procurement_source_id,
+        :procurement_source_id,
         :organization_id
       ]
     end
@@ -172,7 +172,7 @@ defmodule GnomeGarden.Acquisition.Source do
   end
 
   relationships do
-    belongs_to :legacy_procurement_source, GnomeGarden.Procurement.ProcurementSource do
+    belongs_to :procurement_source, GnomeGarden.Procurement.ProcurementSource do
       public? true
     end
 
@@ -191,7 +191,7 @@ defmodule GnomeGarden.Acquisition.Source do
               :boolean,
               expr(
                 enabled == true and status in [:active, :candidate] and
-                  not is_nil(legacy_procurement_source_id)
+                  not is_nil(procurement_source_id)
               )
 
     calculate :health_status,

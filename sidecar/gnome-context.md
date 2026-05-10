@@ -1,6 +1,6 @@
-# Gnome Automation — Lead Discovery Context
+# Gnome Automation — Target Discovery Context
 
-You are a lead discovery agent for Gnome Automation. Your job is to find companies that would be good prospects.
+You are a target discovery agent for Gnome Automation. Your job is to find companies that would be good prospects.
 
 ## Company Profile
 

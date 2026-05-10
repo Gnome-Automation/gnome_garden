@@ -4,7 +4,6 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFindingTest do
   alias GnomeGarden.Agents
   alias GnomeGarden.Agents.TemplateCatalog
   alias GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding
-  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
   alias GnomeGarden.Support.IdentityNormalizer
@@ -34,8 +33,8 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFindingTest do
 
     {:ok, organization} = Operations.get_organization(result.organization_id)
     {:ok, person} = Operations.get_person(result.person_id)
-    {:ok, discovery_record} = Acquisition.get_discovery_record(result.discovery_record_id)
-    {:ok, observation} = Acquisition.get_discovery_evidence(result.evidence_id)
+    {:ok, discovery_record} = Commercial.get_discovery_record(result.discovery_record_id)
+    {:ok, observation} = Commercial.get_discovery_evidence(result.evidence_id)
 
     assert organization.name == "North Coast Packaging"
     assert organization.status == :prospect
@@ -102,8 +101,8 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFindingTest do
         %{}
       )
 
-    {:ok, discovery_record} = Acquisition.get_discovery_record(result.discovery_record_id)
-    {:ok, observation} = Acquisition.get_discovery_evidence(result.evidence_id)
+    {:ok, discovery_record} = Commercial.get_discovery_record(result.discovery_record_id)
+    {:ok, observation} = Commercial.get_discovery_evidence(result.evidence_id)
 
     assert discovery_record.discovery_program_id == discovery_program.id
     assert observation.discovery_program_id == discovery_program.id
@@ -182,7 +181,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFindingTest do
         %{}
       )
 
-    {:ok, discovery_record} = Acquisition.get_discovery_record(result.discovery_record_id)
+    {:ok, discovery_record} = Commercial.get_discovery_record(result.discovery_record_id)
 
     assert result.organization_id == existing_organization.id
     assert discovery_record.organization_id == existing_organization.id
@@ -234,7 +233,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFindingTest do
         %{}
       )
 
-    {:ok, discovery_record} = Acquisition.get_discovery_record(result.discovery_record_id)
+    {:ok, discovery_record} = Commercial.get_discovery_record(result.discovery_record_id)
 
     assert result.person_id == person.id
     assert discovery_record.contact_person_id == person.id

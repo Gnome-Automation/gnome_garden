@@ -27,9 +27,9 @@ defmodule GnomeGarden.Execution do
       define :reopen_assignment, action: :reopen
       define :list_open_assignments, action: :open
 
-      define :list_assignments_for_assigned_user,
-        action: :for_assigned_user,
-        args: [:assigned_user_id]
+      define :list_assignments_for_assigned_team_member,
+        action: :for_assigned_team_member,
+        args: [:assigned_team_member_id]
 
       define :list_assignments_for_project, action: :for_project, args: [:project_id]
       define :list_assignments_for_work_item, action: :for_work_item, args: [:work_item_id]

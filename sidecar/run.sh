@@ -4,7 +4,7 @@
 # Usage:
 #   ./run.sh scan      — scan all sources for bids
 #   ./run.sh discover  — find new procurement portals
-#   ./run.sh hunt      — find commercial leads
+#   ./run.sh hunt      — find commercial targets
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -37,7 +37,7 @@ case "$MODE" in
     PROMPT="Read sources.json to see what's already tracked. Search for new procurement portals across all target regions (Orange County, Los Angeles, Inland Empire, San Diego) and all target agency types (water districts, sanitation districts, municipal utilities, county public works, port authorities, school districts). Work through each region and agency type systematically. Add new sources to sources.json and write findings to discoveries/sources/."
     ;;
   hunt)
-    SKILL="skills/discover-leads.md"
+    SKILL="skills/discover-targets.md"
     PROMPT="Read seen.json to avoid duplicates. You have a large search budget — use it all. Work through EVERY phase in the skill file systematically:
 
 Phase 1: Check all known prospects for fresh signals (hiring, expansion, legacy pain).
@@ -47,14 +47,14 @@ Phase 4: Check partner networks — Rockwell, Ignition integrator lists.
 Phase 5: Scan trade pubs for facility announcements and project news.
 Phase 6: General web searches across all industry × region combos.
 
-Use the browser tool (node browse.mjs) to read company websites and verify details. Use Brave for discovery searches. After finishing all 6 phases, review your findings — which industries had gaps? Search deeper there. Follow threads — one company leads to competitors, suppliers, partners. Keep going until you've thoroughly covered every industry and region. Write findings to discoveries/leads/."
+Use the browser tool (node browse.mjs) to read company websites and verify details. Use Brave for discovery searches. After finishing all 6 phases, review your findings — which industries had gaps? Search deeper there. Follow threads — one company points to competitors, suppliers, partners. Keep going until you've thoroughly covered every industry and region. Write findings to discoveries/targets/."
     ;;
   *)
     echo "Usage: ./run.sh <scan|discover|hunt>"
     echo ""
     echo "  scan      Scan all known sources for bids"
     echo "  discover  Find new procurement portals to monitor"
-    echo "  hunt      Find commercial leads matching Gnome's ICP"
+    echo "  hunt      Find commercial targets matching Gnome's ICP"
     exit 1
     ;;
 esac

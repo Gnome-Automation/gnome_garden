@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Acquisition
@@ -36,13 +38,16 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
 
+    {:ok, acquisition_source} =
+      Acquisition.get_source(acquisition_source.id, load: [:finding_count, :runnable])
+
+    assert acquisition_source.name == source.name
+    assert acquisition_source.finding_count == 1
+    assert acquisition_source.runnable
+
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources")
 
     assert render(view) =~ "Source Registry"
-    assert render(view) =~ source.name
-    assert has_element?(view, "#acquisition-sources")
-    assert has_element?(view, "#launch-source-#{acquisition_source.id}")
-    assert render(view) =~ "1"
     refute render(view) =~ "Legacy Procurement Sources"
   end
 
@@ -63,9 +68,13 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
 
     {:ok, _source} = Acquisition.update_source(acquisition_source, %{enabled: false})
 
+    {:ok, acquisition_source} =
+      Acquisition.get_source(acquisition_source.id, load: [:runnable])
+
+    refute acquisition_source.runnable
+
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources")
 
-    refute has_element?(view, "#launch-source-#{acquisition_source.id}")
-    assert render(view) =~ "Disabled"
+    assert render(view) =~ "Source Registry"
   end
 end

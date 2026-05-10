@@ -28,7 +28,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/signals"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to queue
+            Back to queue
           </.button>
         </:actions>
       </.page_header>
@@ -36,7 +36,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Form do
       <.form for={@form} id="signal-form" phx-change="validate" phx-submit="save" class="space-y-6">
         <.form_section
           title="Signal Details"
-          description="Describe the raw lead, bid, or market trigger that just entered the system."
+          description="Describe the raw target, bid, or market trigger that just entered the system."
         >
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-4">

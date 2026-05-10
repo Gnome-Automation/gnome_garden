@@ -121,7 +121,7 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/console/agents"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to Agents Console
+            Back to Agents Console
           </.button>
         </:actions>
       </.page_header>

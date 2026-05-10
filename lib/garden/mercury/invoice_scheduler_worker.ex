@@ -135,7 +135,9 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
       |> html_body(invoice_email_body(loaded))
       |> Mailer.deliver()
       |> case do
-        {:ok, _} -> :ok
+        {:ok, _} ->
+          :ok
+
         {:error, reason} ->
           Logger.warning("InvoiceSchedulerWorker: failed to send invoice email",
             invoice_id: invoice.id,

@@ -66,9 +66,7 @@ defmodule GnomeGarden.Mercury.PaymentMatcherWorker do
     case Regex.run(~r/INV-[A-Z0-9-]+/i, reference) do
       [invoice_number] ->
         GnomeGarden.Finance.Invoice
-        |> Ash.Query.filter(
-          invoice_number == ^invoice_number and status in [:issued, :partial]
-        )
+        |> Ash.Query.filter(invoice_number == ^invoice_number and status in [:issued, :partial])
         |> Ash.read_one(domain: Finance)
         |> case do
           {:ok, invoice} when not is_nil(invoice) -> {:ok, invoice, :exact}

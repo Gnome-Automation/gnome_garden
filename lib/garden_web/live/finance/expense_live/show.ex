@@ -43,25 +43,25 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
             <.status_badge status={@expense.status_variant}>
               {format_atom(@expense.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{format_date(@expense.incurred_on)}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/finance/expenses"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button :if={@expense.project} navigate={~p"/execution/projects/#{@expense.project}"}>
-            <.icon name="hero-wrench-screwdriver" class="size-4" /> Project
+            Project
           </.button>
           <.button
             :if={@expense.work_order}
             navigate={~p"/execution/work-orders/#{@expense.work_order}"}
           >
-            <.icon name="hero-wrench-screwdriver" class="size-4" /> Work Order
+            Work Order
           </.button>
           <.button navigate={~p"/finance/expenses/#{@expense}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -93,8 +93,14 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
               label="Billable"
               value={if(@expense.billable, do: "Yes", else: "No")}
             />
-            <.property_item label="Incurred By" value={display_email(@expense.incurred_by_user)} />
-            <.property_item label="Approved By" value={display_email(@expense.approved_by_user)} />
+            <.property_item
+              label="Incurred By"
+              value={display_team_member(@expense.incurred_by_team_member)}
+            />
+            <.property_item
+              label="Approved By"
+              value={display_team_member(@expense.approved_by_team_member)}
+            />
             <.property_item label="Approved At" value={format_datetime(@expense.approved_at)} />
             <.property_item label="Billed At" value={format_datetime(@expense.billed_at)} />
             <.property_item
@@ -128,13 +134,13 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
       </div>
 
       <.section title="Description">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@expense.description}
         </p>
       </.section>
 
       <.section :if={@expense.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@expense.notes}
         </p>
       </.section>
@@ -148,34 +154,28 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end
 
   defp load_expense!(id, actor) do
-    user_loads =
-      if actor do
-        [incurred_by_user: [], approved_by_user: []]
-      else
-        []
-      end
-
     case Finance.get_expense(
            id,
            actor: actor,
-           load:
-             [
-               :status_variant,
-               :entitlement_usage_count,
-               organization: [],
-               agreement: [],
-               project: [],
-               work_order: []
-             ] ++ user_loads
+           load: [
+             :status_variant,
+             :entitlement_usage_count,
+             incurred_by_team_member: [],
+             approved_by_team_member: [],
+             organization: [],
+             agreement: [],
+             project: [],
+             work_order: []
+           ]
          ) do
       {:ok, expense} -> expense
       {:error, error} -> raise "failed to load expense #{id}: #{inspect(error)}"
@@ -216,7 +216,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
   defp transition_expense(expense, :approve, actor) do
     params =
       if actor do
-        %{approved_by_user_id: actor.id}
+        %{approved_by_team_member_id: current_team_member_id(actor)}
       else
         %{}
       end
@@ -232,4 +232,13 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
 
   defp transition_expense(expense, :reopen, actor),
     do: Finance.reopen_expense(expense, actor: actor)
+
+  defp current_team_member_id(nil), do: nil
+
+  defp current_team_member_id(actor) do
+    case GnomeGarden.Operations.get_team_member_by_user(actor.id, actor: actor) do
+      {:ok, team_member} -> team_member.id
+      {:error, _error} -> nil
+    end
+  end
 end

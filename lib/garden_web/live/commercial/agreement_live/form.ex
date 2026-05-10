@@ -36,7 +36,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/agreements"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to agreements
+            Back to agreements
           </.button>
         </:actions>
       </.page_header>
@@ -48,8 +48,8 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
       >
         <div class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="space-y-1">
-            <p class="font-medium text-zinc-900 dark:text-white">{@proposal.name}</p>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+            <p class="font-medium text-base-content">{@proposal.name}</p>
+            <p class="text-sm text-base-content/50">
               {@proposal.proposal_number}
               <span class="mx-1 text-zinc-400">/</span>
               {(@proposal.organization && @proposal.organization.name) || "No organization linked"}

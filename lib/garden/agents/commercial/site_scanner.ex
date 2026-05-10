@@ -15,7 +15,7 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
   hiring/expansion discoveries as acquisition discovery evidence for human review.
   """
 
-  alias GnomeGarden.Acquisition
+  alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.CompanyProfileContext
   alias GnomeGarden.Commercial.DiscoveryIdentityResolver
   alias GnomeGarden.Commercial.MarketFocus
@@ -267,7 +267,7 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
        ) do
     external_ref = "#{source.id}:#{signal_kind}:#{signal.url}"
 
-    Acquisition.create_discovery_evidence(
+    Commercial.create_discovery_evidence(
       %{
         discovery_record_id: discovery_record.id,
         observation_type: observation_type(signal_kind),
@@ -381,10 +381,10 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
     {:ok, discovery_record} =
       case WebIdentity.website_domain(source.url) do
         nil ->
-          Acquisition.create_discovery_record(attrs)
+          Commercial.create_discovery_record(attrs)
 
         _website_domain ->
-          Acquisition.create_discovery_record(
+          Commercial.create_discovery_record(
             attrs,
             upsert?: true,
             upsert_identity: :unique_website_domain,

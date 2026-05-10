@@ -41,9 +41,16 @@ defmodule GnomeGarden.Mercury do
 
     resource GnomeGarden.Mercury.ClientBankAlias do
       define :list_client_bank_aliases, action: :read
-      define :get_client_bank_alias_by_fragment, action: :read, get_by: [:counterparty_name_fragment]
+
+      define :get_client_bank_alias_by_fragment,
+        action: :read,
+        get_by: [:counterparty_name_fragment]
+
       define :create_client_bank_alias, action: :create
-      define :delete_client_bank_alias, action: :destroy, default_options: [return_destroyed?: true]
+
+      define :delete_client_bank_alias,
+        action: :destroy,
+        default_options: [return_destroyed?: true]
     end
   end
 end

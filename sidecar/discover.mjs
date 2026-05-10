@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Pi-powered lead discovery — standalone experiment.
+ * Pi-powered target discovery — standalone experiment.
  *
  * No Phoenix integration. Searches the web, evaluates companies against
  * Gnome's ICP, scores them, and prints structured findings to stdout.
@@ -123,7 +123,7 @@ const reportFinding = {
   name: "report_finding",
   label: "Report Finding",
   description:
-    "Report a discovered company as a potential lead. Call this for every company that passes your evaluation. Include your AI-assessed scores and reasoning.",
+    "Report a discovered company as a potential target. Call this for every company that passes your evaluation. Include your AI-assessed scores and reasoning.",
   parameters: Type.Object({
     company_name: Type.String({ description: "Company name" }),
     company_description: Type.String({
@@ -225,7 +225,7 @@ const reportFinding = {
 // System prompt
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You are a lead discovery agent for Gnome Automation.
+const SYSTEM_PROMPT = `You are a target discovery agent for Gnome Automation.
 
 COMPANY PROFILE
 - Name: Gnome
@@ -314,7 +314,7 @@ SEARCH STRATEGY:
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.error(`\nPi Lead Discovery — ${providerName}/${modelId}`);
+  console.error(`\nPi Target Discovery — ${providerName}/${modelId}`);
   console.error(`Query: "${query}"`);
   console.error(
     `Brave search: ${process.env.BRAVE_API_KEY ? "enabled" : "DISABLED (no BRAVE_API_KEY)"}`

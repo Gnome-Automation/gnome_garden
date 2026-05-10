@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.ProcurementTargetingLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Commercial.CompanyProfileLearning

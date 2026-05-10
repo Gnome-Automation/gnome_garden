@@ -17,14 +17,20 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorkerTest do
       })
       |> Ash.create!(domain: GnomeGarden.Operations)
 
-    # TimeEntry requires a member_user_id — insert a bare User record
     user =
-      GnomeGarden.Repo.insert!(%GnomeGarden.Accounts.User{
-        id: Ecto.UUID.generate(),
+      Ash.Seed.seed!(GnomeGarden.Accounts.User, %{
         email: "worker-#{System.unique_integer([:positive])}@example.com"
       })
 
-    %{org: org, user: user}
+    team_member =
+      Ash.Seed.seed!(GnomeGarden.Operations.TeamMember, %{
+        user_id: user.id,
+        display_name: "Scheduler Worker #{System.unique_integer([:positive])}",
+        role: :operator,
+        status: :active
+      })
+
+    %{org: org, team_member: team_member}
   end
 
   defp active_agreement(org, billing_cycle, next_billing_date) do
@@ -43,14 +49,14 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorkerTest do
     |> Ash.update!(domain: Commercial)
   end
 
-  defp approved_time_entry(org, agreement, user) do
+  defp approved_time_entry(org, agreement, team_member) do
     # bill_rate is required — validate_time_entry_rates will error if nil
     entry =
       GnomeGarden.Finance.TimeEntry
       |> Ash.Changeset.for_create(:create, %{
         organization_id: org.id,
         agreement_id: agreement.id,
-        member_user_id: user.id,
+        member_team_member_id: team_member.id,
         work_date: Date.utc_today(),
         description: "Test work",
         minutes: 60,
@@ -69,9 +75,9 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorkerTest do
     |> Ash.update!(domain: Finance)
   end
 
-  test "generates and issues invoice for due agreement", %{org: org, user: user} do
+  test "generates and issues invoice for due agreement", %{org: org, team_member: team_member} do
     agreement = active_agreement(org, :monthly, Date.utc_today())
-    _entry = approved_time_entry(org, agreement, user)
+    _entry = approved_time_entry(org, agreement, team_member)
 
     assert :ok = InvoiceSchedulerWorker.perform(%Oban.Job{args: %{}})
 
@@ -84,10 +90,10 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorkerTest do
     assert hd(invoices).status == :issued
   end
 
-  test "advances next_billing_date after invoicing", %{org: org, user: user} do
+  test "advances next_billing_date after invoicing", %{org: org, team_member: team_member} do
     today = Date.utc_today()
     agreement = active_agreement(org, :monthly, today)
-    _entry = approved_time_entry(org, agreement, user)
+    _entry = approved_time_entry(org, agreement, team_member)
 
     assert :ok = InvoiceSchedulerWorker.perform(%Oban.Job{args: %{}})
 
@@ -95,10 +101,10 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorkerTest do
     assert updated.next_billing_date == Date.shift(today, month: 1)
   end
 
-  test "skips agreements not yet due", %{org: org, user: user} do
+  test "skips agreements not yet due", %{org: org, team_member: team_member} do
     future_date = Date.add(Date.utc_today(), 7)
     agreement = active_agreement(org, :weekly, future_date)
-    _entry = approved_time_entry(org, agreement, user)
+    _entry = approved_time_entry(org, agreement, team_member)
 
     assert :ok = InvoiceSchedulerWorker.perform(%Oban.Job{args: %{}})
 

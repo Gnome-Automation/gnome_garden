@@ -25,7 +25,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/organizations"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to organizations
+            Back to organizations
           </.button>
         </:actions>
       </.page_header>

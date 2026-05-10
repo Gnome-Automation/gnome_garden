@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Operations.AssetLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Operations.Helpers
 
@@ -7,19 +8,21 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    assets = load_assets(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Assets")
-     |> assign(:asset_count, length(assets))
-     |> assign(:active_count, Enum.count(assets, &(&1.lifecycle_status == :active)))
-     |> assign(:critical_count, Enum.count(assets, &(&1.criticality == :critical)))
-     |> assign(
-       :work_order_count,
-       Enum.reduce(assets, 0, fn asset, total -> total + (asset.work_order_count || 0) end)
-     )
-     |> stream(:assets, assets)}
+     |> assign(:asset_count, counts.total)
+     |> assign(:active_count, counts.active)
+     |> assign(:critical_count, counts.critical)
+     |> assign(:work_order_count, counts.work_orders)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -33,10 +36,10 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/organizations"}>
-            <.icon name="hero-building-office-2" class="size-4" /> Organizations
+            Organizations
           </.button>
           <.button navigate={~p"/operations/assets/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Asset
+            New Asset
           </.button>
         </:actions>
       </.page_header>
@@ -71,13 +74,72 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Index do
         />
       </div>
 
-      <.section
-        title="Installed Base"
-        description="Assets anchor the CMMS side of the platform so work orders and maintenance plans target real systems."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="assets-table"
+        resource={GnomeGarden.Operations.Asset}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[
+          load: [
+            :lifecycle_variant,
+            :criticality_variant,
+            :work_order_count,
+            organization: [],
+            site: [],
+            managed_system: []
+          ]
+        ]}
+        click={fn row -> JS.navigate(~p"/operations/assets/#{row}") end}
       >
-        <div :if={@asset_count == 0} class="p-6 sm:p-7">
+        <:col :let={asset} field="name" sort search label="Asset">
+          <div class="space-y-0.5">
+            <div class="font-medium text-base-content">{asset.name}</div>
+            <div class="text-xs text-base-content/50">
+              {asset.asset_tag || "No asset tag"}
+            </div>
+          </div>
+        </:col>
+
+        <:col :let={asset} field="organization.name" sort search label="Context">
+          <div class="space-y-0.5">
+            <p>{(asset.organization && asset.organization.name) || "-"}</p>
+            <p class="text-xs text-base-content/40">
+              {(asset.site && asset.site.name) ||
+                (asset.managed_system && asset.managed_system.name) ||
+                "No site/system"}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={asset} field="asset_type" sort label="Type">
+          <div class="space-y-0.5">
+            <p>{format_atom(asset.asset_type)}</p>
+            <p class="text-xs text-base-content/40">
+              {format_atom(asset.delivery_mode)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={asset} field="lifecycle_status" sort label="Lifecycle">
+          <.status_badge status={asset.lifecycle_variant}>
+            {format_atom(asset.lifecycle_status)}
+          </.status_badge>
+        </:col>
+
+        <:col :let={asset} field="criticality" sort label="Criticality">
+          <div class="space-y-0.5">
+            <.status_badge status={asset.criticality_variant}>
+              {format_atom(asset.criticality)}
+            </.status_badge>
+            <p class="text-xs text-base-content/40">
+              {asset.work_order_count || 0} work orders
+            </p>
+          </div>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-cpu-chip"
             title="No assets yet"
@@ -89,105 +151,25 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@asset_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Asset
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Context
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Type
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Lifecycle
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Criticality
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="assets"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, asset} <- @streams.assets} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/operations/assets/#{asset}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {asset.name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {asset.asset_tag || "No asset tag"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{(asset.organization && asset.organization.name) || "-"}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {(asset.site && asset.site.name) ||
-                        (asset.managed_system && asset.managed_system.name) ||
-                        "No site/system"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{format_atom(asset.asset_type)}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {format_atom(asset.delivery_mode)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={asset.lifecycle_variant}>
-                    {format_atom(asset.lifecycle_status)}
-                  </.status_badge>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.status_badge status={asset.criticality_variant}>
-                      {format_atom(asset.criticality)}
-                    </.status_badge>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {asset.work_order_count || 0} work orders
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_assets(actor) do
-    case Operations.list_assets(
-           actor: actor,
-           query: [sort: [name: :asc]],
-           load: [
-             :lifecycle_variant,
-             :criticality_variant,
-             :work_order_count,
-             organization: [],
-             site: [],
-             managed_system: []
-           ]
-         ) do
-      {:ok, assets} -> assets
-      {:error, error} -> raise "failed to load assets: #{inspect(error)}"
+  defp load_counts(actor) do
+    case Operations.list_assets(actor: actor, load: [:work_order_count]) do
+      {:ok, assets} ->
+        %{
+          total: length(assets),
+          active: Enum.count(assets, &(&1.lifecycle_status == :active)),
+          critical: Enum.count(assets, &(&1.criticality == :critical)),
+          work_orders:
+            Enum.reduce(assets, 0, fn asset, total -> total + (asset.work_order_count || 0) end)
+        }
+
+      {:error, _} ->
+        %{total: 0, active: 0, critical: 0, work_orders: 0}
     end
   end
 end

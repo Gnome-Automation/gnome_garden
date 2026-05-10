@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Commercial.Helpers
 
@@ -7,15 +8,20 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    pursuits = load_pursuits(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Pursuits")
-     |> assign(:active_count, length(pursuits))
-     |> assign(:proposed_count, Enum.count(pursuits, &(&1.stage in [:proposed, :negotiating])))
-     |> assign(:weighted_total, weighted_total(pursuits))
-     |> stream(:pursuits, pursuits)}
+     |> assign(:active_count, counts.active)
+     |> assign(:proposed_count, counts.proposed)
+     |> assign(:weighted_total, counts.weighted_total)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -29,10 +35,10 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/signals"}>
-            <.icon name="hero-inbox-stack" class="size-4" /> Signal Queue
+            Signal Queue
           </.button>
           <.button navigate={~p"/commercial/pursuits/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Pursuit
+            New Pursuit
           </.button>
         </:actions>
       </.page_header>
@@ -60,13 +66,56 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
         />
       </div>
 
-      <.section
-        title="Active Pipeline"
-        description="Keep the pipeline intentionally small and explicit so every active pursuit has a real owner."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="pursuits-table"
+        query={Ash.Query.for_read(GnomeGarden.Commercial.Pursuit, :active)}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[
+          load: [:organization, :signal, :weighted_value, :proposal_count, :stage_variant]
+        ]}
+        click={fn pursuit -> JS.navigate(~p"/commercial/pursuits/#{pursuit}") end}
       >
-        <div :if={@active_count == 0} class="p-6 sm:p-7">
+        <:col :let={pursuit} field="name" sort search label="Pursuit">
+          <div class="space-y-1">
+            <div class="font-medium text-zinc-900 dark:text-white">{pursuit.name}</div>
+            <p class="text-sm text-base-content/50">
+              {format_atom(pursuit.pursuit_type)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={pursuit} field="organization.name" sort search label="Organization">
+          {(pursuit.organization && pursuit.organization.name) || "-"}
+        </:col>
+
+        <:col :let={pursuit} field="stage" sort label="Stage">
+          <div class="space-y-2">
+            <.status_badge status={pursuit.stage_variant}>
+              {format_atom(pursuit.stage)}
+            </.status_badge>
+            <div>
+              <.tag color={:zinc}>{pursuit.probability}%</.tag>
+            </div>
+          </div>
+        </:col>
+
+        <:col :let={pursuit} field="target_value" sort label="Target">
+          <div class="space-y-1">
+            <p>{format_amount(pursuit.target_value)}</p>
+            <p class="text-xs text-base-content/40">
+              Weighted {format_amount(pursuit.weighted_value)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={pursuit} field="expected_close_on" sort label="Close">
+          {format_date(pursuit.expected_close_on)}
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-arrow-trending-up"
             title="No pursuits yet"
@@ -78,88 +127,26 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@active_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Pursuit
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Organization
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Stage
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Target
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Close
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="pursuits"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, pursuit} <- @streams.pursuits} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/commercial/pursuits/#{pursuit}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {pursuit.name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {format_atom(pursuit.pursuit_type)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {(pursuit.organization && pursuit.organization.name) || "-"}
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-2">
-                    <.status_badge status={pursuit.stage_variant}>
-                      {format_atom(pursuit.stage)}
-                    </.status_badge>
-                    <div>
-                      <.tag color={:zinc}>{pursuit.probability}%</.tag>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{format_amount(pursuit.target_value)}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      Weighted {format_amount(pursuit.weighted_value)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {format_date(pursuit.expected_close_on)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_pursuits(actor) do
+  defp load_counts(actor) do
     case Commercial.list_active_pursuits(
            actor: actor,
-           load: [:organization, :signal, :weighted_value, :proposal_count, :stage_variant]
+           load: [:weighted_value]
          ) do
-      {:ok, pursuits} -> pursuits
-      {:error, error} -> raise "failed to load pursuits: #{inspect(error)}"
+      {:ok, pursuits} ->
+        %{
+          active: length(pursuits),
+          proposed: Enum.count(pursuits, &(&1.stage in [:proposed, :negotiating])),
+          weighted_total: weighted_total(pursuits)
+        }
+
+      {:error, _} ->
+        %{active: 0, proposed: 0, weighted_total: Decimal.new(0)}
     end
   end
 

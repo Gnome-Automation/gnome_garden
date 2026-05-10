@@ -40,7 +40,7 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/execution/service-tickets"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to tickets
+            Back to tickets
           </.button>
         </:actions>
       </.page_header>

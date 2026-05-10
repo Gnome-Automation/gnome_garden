@@ -43,25 +43,25 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
             <.status_badge status={@time_entry.status_variant}>
               {format_atom(@time_entry.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{format_date(@time_entry.work_date)}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/finance/time-entries"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button :if={@time_entry.project} navigate={~p"/execution/projects/#{@time_entry.project}"}>
-            <.icon name="hero-wrench-screwdriver" class="size-4" /> Project
+            Project
           </.button>
           <.button
             :if={@time_entry.work_order}
             navigate={~p"/execution/work-orders/#{@time_entry.work_order}"}
           >
-            <.icon name="hero-wrench-screwdriver" class="size-4" /> Work Order
+            Work Order
           </.button>
           <.button navigate={~p"/finance/time-entries/#{@time_entry}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -87,8 +87,14 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
           <div class="grid gap-5 sm:grid-cols-2">
             <.property_item label="Work Date" value={format_date(@time_entry.work_date)} />
             <.property_item label="Minutes" value={format_minutes(@time_entry.minutes)} />
-            <.property_item label="Member" value={display_email(@time_entry.member_user)} />
-            <.property_item label="Approved By" value={display_email(@time_entry.approved_by_user)} />
+            <.property_item
+              label="Member"
+              value={display_team_member(@time_entry.member_team_member)}
+            />
+            <.property_item
+              label="Approved By"
+              value={display_team_member(@time_entry.approved_by_team_member)}
+            />
             <.property_item
               label="Billable"
               value={if(@time_entry.billable, do: "Yes", else: "No")}
@@ -131,13 +137,13 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
       </div>
 
       <.section title="Description">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@time_entry.description}
         </p>
       </.section>
 
       <.section :if={@time_entry.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@time_entry.notes}
         </p>
       </.section>
@@ -151,35 +157,29 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end
 
   defp load_time_entry!(id, actor) do
-    user_loads =
-      if actor do
-        [member_user: [], approved_by_user: []]
-      else
-        []
-      end
-
     case Finance.get_time_entry(
            id,
            actor: actor,
-           load:
-             [
-               :status_variant,
-               :entitlement_usage_count,
-               organization: [],
-               agreement: [],
-               project: [],
-               work_item: [],
-               work_order: []
-             ] ++ user_loads
+           load: [
+             :status_variant,
+             :entitlement_usage_count,
+             member_team_member: [],
+             approved_by_team_member: [],
+             organization: [],
+             agreement: [],
+             project: [],
+             work_item: [],
+             work_order: []
+           ]
          ) do
       {:ok, time_entry} -> time_entry
       {:error, error} -> raise "failed to load time entry #{id}: #{inspect(error)}"
@@ -220,7 +220,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
   defp transition_time_entry(time_entry, :approve, actor) do
     params =
       if actor do
-        %{approved_by_user_id: actor.id}
+        %{approved_by_team_member_id: current_team_member_id(actor)}
       else
         %{}
       end
@@ -236,4 +236,13 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
 
   defp transition_time_entry(time_entry, :reopen, actor),
     do: Finance.reopen_time_entry(time_entry, actor: actor)
+
+  defp current_team_member_id(nil), do: nil
+
+  defp current_team_member_id(actor) do
+    case GnomeGarden.Operations.get_team_member_by_user(actor.id, actor: actor) do
+      {:ok, team_member} -> team_member.id
+      {:error, _error} -> nil
+    end
+  end
 end

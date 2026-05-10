@@ -14,7 +14,16 @@ defmodule GnomeGarden.Mercury.Transaction do
   """
 
   admin do
-    table_columns [:id, :mercury_id, :amount, :kind, :status, :counterparty_name, :match_confidence, :occurred_at]
+    table_columns [
+      :id,
+      :mercury_id,
+      :amount,
+      :kind,
+      :status,
+      :counterparty_name,
+      :match_confidence,
+      :occurred_at
+    ]
   end
 
   postgres do
@@ -93,7 +102,18 @@ defmodule GnomeGarden.Mercury.Transaction do
     attribute :kind, :atom do
       allow_nil? false
       public? true
-      constraints one_of: [:external_transfer, :internal_transfer, :outbound, :inbound, :fee, :ach, :wire, :check, :other]
+
+      constraints one_of: [
+                    :external_transfer,
+                    :internal_transfer,
+                    :outbound,
+                    :inbound,
+                    :fee,
+                    :ach,
+                    :wire,
+                    :check,
+                    :other
+                  ]
     end
 
     attribute :status, :atom do
@@ -132,10 +152,6 @@ defmodule GnomeGarden.Mercury.Transaction do
     timestamps()
   end
 
-  identities do
-    identity :unique_mercury_id, [:mercury_id]
-  end
-
   relationships do
     belongs_to :account, GnomeGarden.Mercury.Account do
       allow_nil? false
@@ -146,5 +162,9 @@ defmodule GnomeGarden.Mercury.Transaction do
       destination_attribute :mercury_transaction_id
       public? true
     end
+  end
+
+  identities do
+    identity :unique_mercury_id, [:mercury_id]
   end
 end

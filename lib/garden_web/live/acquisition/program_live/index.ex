@@ -1,5 +1,8 @@
 defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
+
+  import Cinder.Refresh
 
   import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
@@ -11,21 +14,27 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Acquisition Programs")
-     |> assign(:programs_empty?, true)
-     |> assign(:program_counts, %{total: 0, healthy: 0, attention: 0, runnable: 0})
-     |> stream(:programs, [], reset: true)
-     |> refresh_programs()}
+     |> assign(:program_counts, program_counts(socket.assigns.current_user))}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
   def handle_event("launch_run", %{"id" => id}, socket) do
     with {:ok, program} <- Acquisition.get_program(id, actor: socket.assigns.current_user),
-         legacy_id when is_binary(legacy_id) <- program.legacy_discovery_program_id,
+         discovery_program_id when is_binary(discovery_program_id) <- program.discovery_program_id,
          {:ok, %{run: run}} <-
-           Commercial.launch_discovery_program(legacy_id, actor: socket.assigns.current_user) do
+           Commercial.launch_discovery_program(discovery_program_id,
+             actor: socket.assigns.current_user
+           ) do
       {:noreply,
        socket
-       |> refresh_programs()
+       |> assign(:program_counts, program_counts(socket.assigns.current_user))
+       |> refresh_table("acquisition-programs-table")
        |> put_flash(:info, "Launched discovery run #{run.id} for #{program.name}.")}
     else
       nil ->
@@ -52,7 +61,7 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/acquisition/findings"}>
-            <.icon name="hero-inbox-stack" class="size-4" /> Queue
+            Queue
           </.button>
         </:actions>
       </.page_header>
@@ -87,155 +96,120 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
         />
       </div>
 
-      <.section
-        title="Acquisition Programs"
-        description="See family, scope, run health, and finding volume from one acquisition-native registry."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="acquisition-programs-table"
+        query={Ash.Query.for_read(GnomeGarden.Acquisition.Program, :console)}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
       >
-        <div :if={@programs_empty?} class="p-6 sm:p-7">
+        <:col :let={program} field="name" search sort label="Program">
+          <div class="space-y-1">
+            <p class="font-medium text-base-content">{program.name}</p>
+            <p class="text-sm text-base-content/50">
+              {program.description || "No description yet."}
+            </p>
+            <p :if={program.owner_user_id} class="text-xs text-base-content/40">
+              Owner {program.owner_user_id}
+            </p>
+          </div>
+        </:col>
+        <:col :let={program} label="Family">
+          <div class="space-y-2">
+            <span class="badge badge-info badge-sm">
+              {program.program_family |> to_string() |> String.capitalize()}
+            </span>
+            <span class="badge badge-outline badge-sm">
+              {program.program_type
+              |> to_string()
+              |> String.replace("_", " ")
+              |> String.capitalize()}
+            </span>
+          </div>
+        </:col>
+        <:col :let={program} field="status" sort label="Run Health">
+          <div class="space-y-2">
+            <.status_badge status={program.status_variant}>
+              {format_atom(program.status)}
+            </.status_badge>
+            <.status_badge status={program.health_variant}>
+              {format_atom(program.health_status)}
+            </.status_badge>
+            <p class="text-xs text-base-content/50">
+              {program.health_note}
+            </p>
+            <p class="text-xs text-base-content/50">
+              Last run {format_datetime(program.last_run_at)}
+            </p>
+          </div>
+        </:col>
+        <:col :let={program} label="Findings">
+          <div class="space-y-1 text-sm text-base-content/80">
+            <p>{program.finding_count} total</p>
+            <p class="text-xs text-base-content/50">
+              {program.review_finding_count} review · {program.promoted_finding_count} promoted · {program.noise_finding_count} noise
+            </p>
+          </div>
+        </:col>
+        <:col :let={program} label="Actions">
+          <div class="flex flex-wrap gap-2">
+            <.link
+              navigate={
+                ~p"/acquisition/findings?family=#{program.program_family}&program_id=#{program.id}"
+              }
+              class="btn btn-xs btn-ghost"
+            >
+              Open Queue
+            </.link>
+            <.button
+              :if={program.runnable}
+              id={"launch-program-#{program.id}"}
+              phx-click="launch_run"
+              phx-value-id={program.id}
+              class="px-2.5 py-1.5 text-xs"
+              variant="primary"
+            >
+              Launch Run
+            </.button>
+            <.link
+              :if={program.latest_run_id}
+              navigate={~p"/console/agents/runs/#{program.latest_run_id}"}
+              class="btn btn-xs btn-ghost"
+            >
+              Open Run
+            </.link>
+          </div>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-radar"
             title="No acquisition programs"
             description="Backfilled discovery programs and future research programs will appear here."
           />
-        </div>
-
-        <div :if={!@programs_empty?} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Program
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Family
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Run Health
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Findings
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="acquisition-programs"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, program} <- @streams.programs} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <p class="font-medium text-zinc-900 dark:text-white">{program.name}</p>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {program.description || "No description yet."}
-                    </p>
-                    <p
-                      :if={program.owner_user_id}
-                      class="text-xs text-zinc-400 dark:text-zinc-500"
-                    >
-                      Owner {program.owner_user_id}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-2">
-                    <span class="badge badge-info badge-sm">
-                      {program.program_family |> to_string() |> String.capitalize()}
-                    </span>
-                    <span class="badge badge-outline badge-sm">
-                      {program.program_type
-                      |> to_string()
-                      |> String.replace("_", " ")
-                      |> String.capitalize()}
-                    </span>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-2">
-                    <.status_badge status={program.status_variant}>
-                      {format_atom(program.status)}
-                    </.status_badge>
-                    <.status_badge status={program.health_variant}>
-                      {format_atom(program.health_status)}
-                    </.status_badge>
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                      {program.health_note}
-                    </p>
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                      Last run {format_datetime(program.last_run_at)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1 text-sm text-zinc-700 dark:text-zinc-200">
-                    <p>{program.finding_count} total</p>
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                      {program.review_finding_count} review · {program.promoted_finding_count} promoted · {program.noise_finding_count} noise
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="flex flex-wrap gap-2">
-                    <.link
-                      navigate={
-                        ~p"/acquisition/findings?family=#{program.program_family}&program_id=#{program.id}"
-                      }
-                      class="btn btn-xs btn-ghost"
-                    >
-                      Open Queue
-                    </.link>
-                    <.button
-                      :if={program.runnable}
-                      id={"launch-program-#{program.id}"}
-                      phx-click="launch_run"
-                      phx-value-id={program.id}
-                      class="px-2.5 py-1.5 text-xs"
-                      variant="primary"
-                    >
-                      Launch Run
-                    </.button>
-                    <.link
-                      :if={program.latest_run_id}
-                      navigate={~p"/console/agents/runs/#{program.latest_run_id}"}
-                      class="btn btn-xs btn-ghost"
-                    >
-                      Open Run
-                    </.link>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp refresh_programs(socket) do
-    programs = Acquisition.list_console_programs!(actor: socket.assigns.current_user)
+  defp program_counts(actor) do
+    case Acquisition.list_console_programs(actor: actor) do
+      {:ok, programs} ->
+        %{
+          total: length(programs),
+          healthy: Enum.count(programs, &(&1.health_status in [:healthy, :running])),
+          attention:
+            Enum.count(
+              programs,
+              &(&1.health_status in [:failing, :stale, :noisy, :cancelled])
+            ),
+          runnable: Enum.count(programs, & &1.runnable)
+        }
 
-    socket
-    |> assign(:programs_empty?, programs == [])
-    |> assign(:program_counts, program_counts(programs))
-    |> stream(:programs, programs, reset: true)
-  end
-
-  defp program_counts(programs) do
-    %{
-      total: length(programs),
-      healthy: Enum.count(programs, &(&1.health_status in [:healthy, :running])),
-      attention:
-        Enum.count(
-          programs,
-          &(&1.health_status in [:failing, :stale, :noisy, :cancelled])
-        ),
-      runnable: Enum.count(programs, & &1.runnable)
-    }
+      {:error, _} ->
+        %{total: 0, healthy: 0, attention: 0, runnable: 0}
+    end
   end
 end

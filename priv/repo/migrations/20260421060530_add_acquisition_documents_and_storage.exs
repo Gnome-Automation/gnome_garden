@@ -46,7 +46,8 @@ defmodule GnomeGarden.Repo.Migrations.AddAcquisitionDocumentsAndStorage do
             name: "acquisition_document_attachments_blob_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
 
       add :document_id, :uuid
     end
@@ -73,7 +74,8 @@ defmodule GnomeGarden.Repo.Migrations.AddAcquisitionDocumentsAndStorage do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :document_id, :uuid, null: false
     end

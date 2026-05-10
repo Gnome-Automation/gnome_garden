@@ -40,7 +40,7 @@ defmodule GnomeGarden.Acquisition.ProjectorTest do
       })
 
     {:ok, _discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "Harbor Foods",
         website: "https://harbor-foods.example.com",
@@ -68,7 +68,7 @@ defmodule GnomeGarden.Acquisition.ProjectorTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "North Coast Packaging",
         website: "https://northcoastpackaging.example.com",

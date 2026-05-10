@@ -5,7 +5,7 @@ config :bcrypt_elixir, log_rounds: 1
 config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 
 db_host = System.get_env("GNOME_GARDEN_DB_HOST", "localhost")
-db_port = String.to_integer(System.get_env("GNOME_GARDEN_DB_PORT", "5435"))
+db_port = String.to_integer(System.get_env("GNOME_GARDEN_DB_PORT", "5433"))
 
 # Configure your database
 #

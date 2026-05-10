@@ -52,3 +52,9 @@ jido/
 # Claude Code local cache
 .claude/
 .superpowers/
+
+# Nix dev environment
+.pgdata/
+.nix-mix/
+.nix-hex/
+result

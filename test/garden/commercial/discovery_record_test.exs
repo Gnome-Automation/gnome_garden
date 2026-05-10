@@ -5,9 +5,9 @@ defmodule GnomeGarden.Commercial.DiscoveryRecordTest do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
 
-  test "promote_discovery_record_to_signal creates and links a signal" do
+  test "acquisition review promotes a discovery record and links a signal" do
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         name: "Mesa Controls Brewing",
         website: "https://www.mesacontrolsbrewing.com",
         location: "Anaheim, CA",
@@ -19,7 +19,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecordTest do
       })
 
     {:ok, _observation} =
-      Acquisition.create_discovery_evidence(%{
+      Commercial.create_discovery_evidence(%{
         discovery_record_id: discovery_record.id,
         observation_type: :hiring,
         source_channel: :job_board,
@@ -30,14 +30,23 @@ defmodule GnomeGarden.Commercial.DiscoveryRecordTest do
         summary: "Hiring controls engineer for canning line expansion"
       })
 
-    {:ok, promoted_discovery_record} =
-      Acquisition.promote_discovery_record_to_signal(discovery_record)
+    {:ok, finding} = Acquisition.get_finding_by_source_discovery_record(discovery_record.id)
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:ok, _finding} =
+             Acquisition.accept_finding_review(finding.id, %{
+               reason: "Qualified discovery target with supporting evidence."
+             })
+
+    assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
+
+    {:ok, promoted_discovery_record} = Commercial.get_discovery_record(discovery_record.id)
 
     assert promoted_discovery_record.status == :promoted
     assert promoted_discovery_record.promoted_signal_id
+    assert promoted_finding.signal_id == promoted_discovery_record.promoted_signal_id
 
     {:ok, signal} = Commercial.get_signal(promoted_discovery_record.promoted_signal_id)
-    {:ok, finding} = Acquisition.get_finding_by_source_discovery_record(discovery_record.id)
 
     assert signal.signal_type == :outbound_target
     assert signal.source_channel == :agent_discovery
@@ -47,9 +56,33 @@ defmodule GnomeGarden.Commercial.DiscoveryRecordTest do
     assert signal.external_ref == "discovery_record:#{discovery_record.id}"
   end
 
+  test "acquisition review requires discovery evidence before accepting" do
+    {:ok, discovery_record} =
+      Commercial.create_discovery_record(%{
+        name: "No Evidence Controls",
+        website: "https://www.no-evidence-controls.example.com",
+        location: "Anaheim, CA",
+        region: "oc",
+        industry: "food",
+        fit_score: 81,
+        intent_score: 88,
+        notes: "Looks interesting, but has no structured evidence yet."
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_source_discovery_record(discovery_record.id)
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:error, error} =
+             Acquisition.accept_finding_review(finding.id, %{
+               reason: "Looks interesting, but has no structured evidence yet."
+             })
+
+    assert inspect(error) =~ "Add at least one piece of discovery evidence before accepting."
+  end
+
   test "creating discovery evidence refreshes the acquisition finding summary" do
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         name: "Coastal Systems Foods",
         website: "https://coastalsystemsfoods.example.com",
         notes: "Initial discovery record without evidence"
@@ -59,7 +92,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecordTest do
     assert finding.summary == "Initial discovery record without evidence"
 
     {:ok, _observation} =
-      Acquisition.create_discovery_evidence(%{
+      Commercial.create_discovery_evidence(%{
         discovery_record_id: discovery_record.id,
         observation_type: :expansion,
         source_channel: :news_site,
@@ -111,7 +144,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecordTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         name: "North Coast Packaging",
         website: "https://northcoastpackaging.com",
         organization_id: duplicate_organization.id
@@ -127,7 +160,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecordTest do
     assert merged_source.merged_into_id == canonical_organization.id
 
     assert {:ok, refreshed_discovery_record} =
-             Acquisition.get_discovery_record(discovery_record.id)
+             Commercial.get_discovery_record(discovery_record.id)
 
     assert refreshed_discovery_record.organization_id == canonical_organization.id
 
@@ -176,7 +209,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecordTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         name: "North Coast Packaging",
         website: "https://northcoastpackaging.com",
         contact_person_id: duplicate_person.id
@@ -189,7 +222,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRecordTest do
     assert merged_source.merged_into_id == canonical_person.id
 
     assert {:ok, refreshed_discovery_record} =
-             Acquisition.get_discovery_record(discovery_record.id)
+             Commercial.get_discovery_record(discovery_record.id)
 
     assert refreshed_discovery_record.contact_person_id == canonical_person.id
 

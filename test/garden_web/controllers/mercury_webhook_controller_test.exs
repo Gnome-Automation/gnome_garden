@@ -37,6 +37,7 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
         status: :active,
         kind: :checking
       })
+
     account
   end
 
@@ -50,6 +51,7 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
         status: :pending,
         occurred_at: DateTime.utc_now()
       })
+
     txn
   end
 

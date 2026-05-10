@@ -102,8 +102,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Sources</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm font-semibold text-base-content">Sources</p>
+              <p class="text-xs text-base-content/50">
                 Runnable scan targets in the acquisition registry.
               </p>
             </div>
@@ -128,14 +128,14 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{source.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{source.name}</p>
+              <p class="text-sm text-base-content/50">
                 {source.review_finding_count} review · {source.promoted_finding_count} promoted · {source.noise_finding_count} noise
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 {source.health_note}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 Last run {format_datetime(source.last_run_at)}
               </p>
             </div>
@@ -153,9 +153,9 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Programs</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                Acquisition programs that can launch ongoing lead-finding work right now.
+              <p class="text-sm font-semibold text-base-content">Programs</p>
+              <p class="text-xs text-base-content/50">
+                Acquisition programs that can launch ongoing target-discovery work right now.
               </p>
             </div>
             <.button navigate={~p"/acquisition/programs"} class="px-2.5 py-1.5 text-xs">
@@ -179,14 +179,14 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{program.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{program.name}</p>
+              <p class="text-sm text-base-content/50">
                 {program.review_finding_count} review · {program.promoted_finding_count} promoted · {program.noise_finding_count} noise
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 {program.health_note}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 Last run {format_datetime(program.last_run_at)}
               </p>
             </div>
@@ -204,8 +204,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Intake</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm font-semibold text-base-content">Intake</p>
+              <p class="text-xs text-base-content/50">
                 Unified procurement and discovery findings waiting on operator review.
               </p>
             </div>
@@ -228,13 +228,13 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{finding.title}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{finding.title}</p>
+              <p class="text-sm text-base-content/50">
                 {(finding.organization && finding.organization.name) ||
                   (finding.source && finding.source.name) ||
                   (finding.program && finding.program.name) || "Direct intake"}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 {format_datetime(finding.observed_at || finding.inserted_at)}
               </p>
             </div>
@@ -247,8 +247,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Signals</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm font-semibold text-base-content">Signals</p>
+              <p class="text-xs text-base-content/50">
                 Accepted intake already handed into commercial review.
               </p>
             </div>
@@ -271,11 +271,11 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{signal.title}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{signal.title}</p>
+              <p class="text-sm text-base-content/50">
                 {(signal.organization && signal.organization.name) || "No organization linked"}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 {format_datetime(signal.observed_at)}
               </p>
             </div>
@@ -288,8 +288,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Pursuits</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm font-semibold text-base-content">Pursuits</p>
+              <p class="text-xs text-base-content/50">
                 Commercial work already in motion.
               </p>
             </div>
@@ -312,11 +312,11 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{pursuit.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{pursuit.name}</p>
+              <p class="text-sm text-base-content/50">
                 {(pursuit.organization && pursuit.organization.name) || "No organization linked"}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 Expected close {format_date(pursuit.expected_close_on)}
               </p>
             </div>
@@ -341,8 +341,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Maintenance</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">Preventive plans due soon.</p>
+              <p class="text-sm font-semibold text-base-content">Maintenance</p>
+              <p class="text-xs text-base-content/50">Preventive plans due soon.</p>
             </div>
             <.button navigate={~p"/execution/maintenance-plans"} class="px-2.5 py-1.5 text-xs">
               Open Plans
@@ -363,11 +363,11 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{maintenance_plan.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{maintenance_plan.name}</p>
+              <p class="text-sm text-base-content/50">
                 {(maintenance_plan.asset && maintenance_plan.asset.name) || "No asset linked"}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 Due {format_date(maintenance_plan.next_due_on)}
               </p>
             </div>
@@ -380,8 +380,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Service Tickets</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm font-semibold text-base-content">Service Tickets</p>
+              <p class="text-xs text-base-content/50">
                 Customer-facing support queue.
               </p>
             </div>
@@ -404,8 +404,8 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{service_ticket.title}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{service_ticket.title}</p>
+              <p class="text-sm text-base-content/50">
                 {(service_ticket.organization && service_ticket.organization.name) ||
                   "No organization linked"}
               </p>
@@ -424,8 +424,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Work Orders</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm font-semibold text-base-content">Work Orders</p>
+              <p class="text-xs text-base-content/50">
                 Dispatch and execution pressure.
               </p>
             </div>
@@ -448,13 +448,13 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{work_order.title}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{work_order.title}</p>
+              <p class="text-sm text-base-content/50">
                 {(work_order.asset && work_order.asset.name) ||
                   (work_order.maintenance_plan && work_order.maintenance_plan.name) ||
                   "No asset or plan linked"}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 Due {format_date(work_order.due_on)}
               </p>
             </div>
@@ -474,8 +474,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Overdue Invoices</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm font-semibold text-base-content">Overdue Invoices</p>
+              <p class="text-xs text-base-content/50">
                 Receivables that need follow-up.
               </p>
             </div>
@@ -498,13 +498,13 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">
+              <p class="font-medium text-base-content">
                 {invoice.invoice_number || "Invoice"}
               </p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm text-base-content/50">
                 {(invoice.organization && invoice.organization.name) || "No organization linked"}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 Due {format_date(invoice.due_on)}
               </p>
             </div>
@@ -512,7 +512,7 @@
               <.status_badge status={invoice.status_variant}>
                 {format_atom(invoice.status)}
               </.status_badge>
-              <p class="text-sm font-medium text-zinc-900 dark:text-white">
+              <p class="text-sm font-medium text-base-content">
                 {format_amount(invoice.balance_amount)}
               </p>
             </div>
@@ -522,10 +522,10 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">
+              <p class="text-sm font-semibold text-base-content">
                 Unapplied Payments
               </p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="text-xs text-base-content/50">
                 Cash received but not fully allocated.
               </p>
             </div>
@@ -548,13 +548,13 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">
+              <p class="font-medium text-base-content">
                 {payment.payment_number || "Payment"}
               </p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm text-base-content/50">
                 {(payment.organization && payment.organization.name) || "No organization linked"}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 Received {format_date(payment.received_on)}
               </p>
             </div>
@@ -562,7 +562,7 @@
               <.status_badge status={payment.status_variant}>
                 {format_atom(payment.status)}
               </.status_badge>
-              <p class="text-sm font-medium text-zinc-900 dark:text-white">
+              <p class="text-sm font-medium text-base-content">
                 {format_amount(payment.amount)}
               </p>
             </div>
@@ -572,8 +572,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Approved Time</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">Labor ready for billing.</p>
+              <p class="text-sm font-semibold text-base-content">Approved Time</p>
+              <p class="text-xs text-base-content/50">Labor ready for billing.</p>
             </div>
             <.button navigate={~p"/finance/time-entries"} class="px-2.5 py-1.5 text-xs">
               Open Time
@@ -594,17 +594,17 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{time_entry.description}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{time_entry.description}</p>
+              <p class="text-sm text-base-content/50">
                 {(time_entry.project && time_entry.project.name) ||
                   (time_entry.work_order && time_entry.work_order.title) ||
                   "No project or work order linked"}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 {format_date(time_entry.work_date)}
               </p>
             </div>
-            <p class="text-sm font-medium text-zinc-900 dark:text-white">
+            <p class="text-sm font-medium text-base-content">
               {format_minutes(time_entry.minutes)}
             </p>
           </.link>
@@ -613,8 +613,8 @@
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">Approved Expenses</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">Costs ready for billing.</p>
+              <p class="text-sm font-semibold text-base-content">Approved Expenses</p>
+              <p class="text-xs text-base-content/50">Costs ready for billing.</p>
             </div>
             <.button navigate={~p"/finance/expenses"} class="px-2.5 py-1.5 text-xs">
               Open Expenses
@@ -635,17 +635,17 @@
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{expense.description}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{expense.description}</p>
+              <p class="text-sm text-base-content/50">
                 {(expense.project && expense.project.name) ||
                   (expense.work_order && expense.work_order.title) ||
                   "No project or work order linked"}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 {format_date(expense.incurred_on)}
               </p>
             </div>
-            <p class="text-sm font-medium text-zinc-900 dark:text-white">
+            <p class="text-sm font-medium text-base-content">
               {format_amount(expense.amount)}
             </p>
           </.link>
@@ -655,7 +655,7 @@
 
     <.section
       title="Launch Points"
-      description="Jump straight into the main operating surfaces instead of the old CRM shells."
+      description="Jump straight into the main operating surfaces instead of the old intake-management shells."
     >
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <.action_card

@@ -50,19 +50,19 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
             <.status_badge status={@maintenance_plan.status_variant}>
               {format_atom(@maintenance_plan.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{format_atom(@maintenance_plan.plan_type)}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/execution/maintenance-plans"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button phx-click="transition" phx-value-action="generate_work_order">
-            <.icon name="hero-wrench-screwdriver" class="size-4" /> Generate Work Order
+            Generate Work Order
           </.button>
           <.button navigate={~p"/execution/maintenance-plans/#{@maintenance_plan}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -151,13 +151,13 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
       </div>
 
       <.section :if={@maintenance_plan.description} title="Description">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@maintenance_plan.description}
         </p>
       </.section>
 
       <.section :if={@maintenance_plan.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@maintenance_plan.notes}
         </p>
       </.section>
@@ -181,8 +181,8 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{work_order.title}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{work_order.title}</p>
+              <p class="text-sm text-base-content/50">
                 {work_order.reference_number || "No reference number"}
               </p>
             </div>
@@ -202,10 +202,10 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end

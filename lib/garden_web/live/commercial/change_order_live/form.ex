@@ -45,7 +45,7 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/change-orders"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to change orders
+            Back to change orders
           </.button>
         </:actions>
       </.page_header>
@@ -60,8 +60,8 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Form do
             :if={@agreement}
             class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
           >
-            <p class="font-medium text-zinc-900 dark:text-white">{@agreement.name}</p>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+            <p class="font-medium text-base-content">{@agreement.name}</p>
+            <p class="text-sm text-base-content/50">
               Agreement · {@agreement.reference_number || "No reference"}
             </p>
           </div>
@@ -69,8 +69,8 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Form do
             :if={@project}
             class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
           >
-            <p class="font-medium text-zinc-900 dark:text-white">{@project.name}</p>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+            <p class="font-medium text-base-content">{@project.name}</p>
+            <p class="text-sm text-base-content/50">
               Project · {@project.code || "No code"}
             </p>
           </div>

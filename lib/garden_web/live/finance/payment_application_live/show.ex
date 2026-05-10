@@ -27,7 +27,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Show do
               {(@payment_application.payment && @payment_application.payment.payment_number) ||
                 "Payment"}
             </span>
-            <span class="text-zinc-400 dark:text-zinc-500">→</span>
+            <span class="text-base-content/40">→</span>
             <span>
               {(@payment_application.invoice && @payment_application.invoice.invoice_number) ||
                 "Invoice"}
@@ -36,10 +36,10 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Show do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/finance/payment-applications"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/finance/payment-applications/#{@payment_application}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -64,7 +64,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Show do
       </.section>
 
       <.section :if={@payment_application.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@payment_application.notes}
         </p>
       </.section>
@@ -78,10 +78,10 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end

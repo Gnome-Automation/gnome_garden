@@ -29,6 +29,7 @@ defmodule GnomeGarden.Providers.MercuryTest do
       step_names = Keyword.keys(req.request_steps)
       base_url_pos = Enum.find_index(step_names, &(&1 == :mercury_put_base_url))
       auth_pos = Enum.find_index(step_names, &(&1 == :mercury_put_auth))
+
       assert base_url_pos < auth_pos,
              "Expected mercury_put_base_url (pos #{base_url_pos}) before mercury_put_auth (pos #{auth_pos})"
     end
@@ -65,7 +66,8 @@ defmodule GnomeGarden.Providers.MercuryTest do
         Req.Test.json(conn, %{"accounts" => [], "page" => %{}})
       end)
 
-      assert {:ok, _} = Mercury.list_accounts(mercury_sandbox: false, plug: {Req.Test, __MODULE__})
+      assert {:ok, _} =
+               Mercury.list_accounts(mercury_sandbox: false, plug: {Req.Test, __MODULE__})
     end
 
     test "defaults to sandbox when no option and no app config" do
@@ -95,6 +97,7 @@ defmodule GnomeGarden.Providers.MercuryTest do
   describe "mercury_put_auth step" do
     setup do
       Application.put_env(:gnome_garden, :mercury_sandbox, true)
+
       on_exit(fn ->
         Application.delete_env(:gnome_garden, :mercury_sandbox)
         Application.delete_env(:gnome_garden, :mercury_api_key)
@@ -118,7 +121,10 @@ defmodule GnomeGarden.Providers.MercuryTest do
       Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:from-config")
 
       Req.Test.stub(__MODULE__, fn conn ->
-        assert Plug.Conn.get_req_header(conn, "authorization") == ["Bearer secret-token:from-config"]
+        assert Plug.Conn.get_req_header(conn, "authorization") == [
+                 "Bearer secret-token:from-config"
+               ]
+
         Req.Test.json(conn, %{"accounts" => [], "page" => %{}})
       end)
 
@@ -144,6 +150,7 @@ defmodule GnomeGarden.Providers.MercuryTest do
     setup do
       Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
       Application.put_env(:gnome_garden, :mercury_sandbox, true)
+
       on_exit(fn ->
         Application.delete_env(:gnome_garden, :mercury_api_key)
         Application.delete_env(:gnome_garden, :mercury_sandbox)
@@ -163,7 +170,9 @@ defmodule GnomeGarden.Providers.MercuryTest do
       Req.Test.stub(__MODULE__, fn conn ->
         conn
         |> Plug.Conn.put_status(401)
-        |> Req.Test.json(%{"errors" => %{"errorCode" => "unauthorized", "message" => "Bad token"}})
+        |> Req.Test.json(%{
+          "errors" => %{"errorCode" => "unauthorized", "message" => "Bad token"}
+        })
       end)
 
       assert {:error, :unauthorized} = Mercury.list_accounts(plug: {Req.Test, __MODULE__})
@@ -194,7 +203,9 @@ defmodule GnomeGarden.Providers.MercuryTest do
       Req.Test.stub(__MODULE__, fn conn ->
         conn
         |> Plug.Conn.put_status(500)
-        |> Req.Test.json(%{"errors" => %{"errorCode" => "serverError", "message" => "Something broke"}})
+        |> Req.Test.json(%{
+          "errors" => %{"errorCode" => "serverError", "message" => "Something broke"}
+        })
       end)
 
       assert {:error, {500, "Something broke"}} =
@@ -226,6 +237,7 @@ defmodule GnomeGarden.Providers.MercuryTest do
     setup do
       Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
       Application.put_env(:gnome_garden, :mercury_sandbox, true)
+
       on_exit(fn ->
         Application.delete_env(:gnome_garden, :mercury_api_key)
         Application.delete_env(:gnome_garden, :mercury_sandbox)
@@ -247,6 +259,7 @@ defmodule GnomeGarden.Providers.MercuryTest do
     setup do
       Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
       Application.put_env(:gnome_garden, :mercury_sandbox, true)
+
       on_exit(fn ->
         Application.delete_env(:gnome_garden, :mercury_api_key)
         Application.delete_env(:gnome_garden, :mercury_sandbox)
@@ -269,6 +282,7 @@ defmodule GnomeGarden.Providers.MercuryTest do
     setup do
       Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
       Application.put_env(:gnome_garden, :mercury_sandbox, true)
+
       on_exit(fn ->
         Application.delete_env(:gnome_garden, :mercury_api_key)
         Application.delete_env(:gnome_garden, :mercury_sandbox)
@@ -356,6 +370,7 @@ defmodule GnomeGarden.Providers.MercuryTest do
     setup do
       Application.put_env(:gnome_garden, :mercury_api_key, "secret-token:test")
       Application.put_env(:gnome_garden, :mercury_sandbox, true)
+
       on_exit(fn ->
         Application.delete_env(:gnome_garden, :mercury_api_key)
         Application.delete_env(:gnome_garden, :mercury_sandbox)

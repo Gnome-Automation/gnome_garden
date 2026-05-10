@@ -82,6 +82,11 @@ if garage_access_key = System.get_env("GARAGE_ACCESS_KEY") do
 end
 
 if config_env() == :prod do
+  config :gnome_garden,
+         :pi_service_token,
+         System.get_env("PI_SERVICE_TOKEN") ||
+           raise("PI_SERVICE_TOKEN must be set in production")
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

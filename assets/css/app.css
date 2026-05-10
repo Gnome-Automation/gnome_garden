@@ -9,6 +9,7 @@
 @source "../../lib/garden_web";
 @source "../../lib/garden";
 
+
 /* A Tailwind plugin that makes "hero-#{ICON}" classes available.
    The heroicons installation itself is managed by your mix.exs */
 @plugin "../vendor/heroicons";
@@ -20,40 +21,42 @@
   themes: false;
 }
 
-/* Protocol-inspired theme: Zinc neutrals + Emerald accent
-   Based on Tailwind Plus Protocol template */
+/* Garden dark theme — cool-teal surfaces, one mint accent.
+   Recipe: every dark has a green tint (no neutral gray); one accent (#3ddc8a)
+   for highlights only; borders darker than panels so the UI feels etched;
+   text is mint-tinted, not pure white. */
 @plugin "../vendor/daisyui-theme" {
   name: "dark";
   default: false;
   prefersdark: true;
   color-scheme: "dark";
-  /* Zinc-based dark backgrounds */
-  --color-base-100: oklch(21% 0.006 285.885);  /* zinc-900 */
-  --color-base-200: oklch(25% 0.006 285.885);  /* zinc-800 */
-  --color-base-300: oklch(32% 0.006 285.885);  /* zinc-700 */
-  --color-base-content: oklch(98% 0.002 285);   /* zinc-50 */
-  /* Emerald primary */
-  --color-primary: oklch(76.5% 0.177 163);      /* emerald-400 */
-  --color-primary-content: oklch(21% 0.006 285.885);
-  /* Zinc secondary */
-  --color-secondary: oklch(55% 0.014 285.885); /* zinc-500 */
-  --color-secondary-content: oklch(98% 0.002 285);
-  /* Emerald accent */
-  --color-accent: oklch(76.5% 0.177 163);
-  --color-accent-content: oklch(21% 0.006 285.885);
-  /* Zinc neutral */
-  --color-neutral: oklch(37% 0.014 285.885);   /* zinc-600 */
-  --color-neutral-content: oklch(98% 0.002 285);
-  /* Semantic colors */
-  --color-info: oklch(68% 0.158 241.966);       /* sky-400 */
-  --color-info-content: oklch(21% 0.006 285.885);
-  --color-success: oklch(76.5% 0.177 163);      /* emerald-400 */
-  --color-success-content: oklch(21% 0.006 285.885);
-  --color-warning: oklch(82% 0.165 84);         /* amber-400 */
-  --color-warning-content: oklch(21% 0.006 285.885);
-  --color-error: oklch(71% 0.194 13);           /* rose-400 */
-  --color-error-content: oklch(21% 0.006 285.885);
-  /* Protocol-style rounded corners */
+  /* Cool-teal surfaces */
+  --color-base-100: #0b1614;       /* page bg */
+  --color-base-200: #0f1f1c;       /* panel: sidebars, top bars, sheets */
+  --color-base-300: #122925;       /* surface: chips, inactive pills */
+  --color-base-content: #e5f3ef;   /* text — mint-tinted, not pure white */
+  /* Brand mint accent */
+  --color-primary: #3ddc8a;
+  --color-primary-content: #0b1614;
+  /* Secondary = subdued mint for less-loud actions */
+  --color-secondary: #1d6a4a;      /* accent-dim */
+  --color-secondary-content: #e5f3ef;
+  /* Accent = same mint (kept for daisy components) */
+  --color-accent: #3ddc8a;
+  --color-accent-content: #0b1614;
+  /* Neutral surface — slightly lifted, used for hover/focus chrome */
+  --color-neutral: #173631;        /* surface-hi */
+  --color-neutral-content: #e5f3ef;
+  /* Semantic */
+  --color-info: oklch(68% 0.158 241.966);
+  --color-info-content: #0b1614;
+  --color-success: #3ddc8a;
+  --color-success-content: #0b1614;
+  --color-warning: #f0a040;
+  --color-warning-content: #0b1614;
+  --color-error: #ff6a55;
+  --color-error-content: #ffffff;
+  /* Rounded corners */
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
   --radius-box: 1rem;

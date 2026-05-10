@@ -51,16 +51,16 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
             <.status_badge status={@organization.status_variant}>
               {format_atom(@organization.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{format_atom(@organization.organization_kind)}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/organizations"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/operations/organizations/#{@organization}/edit"} variant="primary">
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -105,7 +105,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
                 :if={@organization.website}
                 href={@organization.website}
                 target="_blank"
-                class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400"
+                class="text-emerald-600 hover:text-primary"
               >
                 {@organization.website}
               </a>
@@ -129,7 +129,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
       </div>
 
       <.section :if={@organization.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@organization.notes}
         </p>
       </.section>
@@ -153,7 +153,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
                   >
                     {candidate.organization.name}
                   </.link>
-                  <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                  <p class="text-sm text-base-content/50">
                     {candidate.organization.website_domain || candidate.organization.primary_region ||
                       "No domain"}
                   </p>
@@ -166,7 +166,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
                     {format_merge_reason(reason)}
                   </.tag>
                 </div>
-                <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                <p class="text-xs text-base-content/40">
                   {candidate.organization.people_count} people · {candidate.organization.signal_count} signals · {candidate.organization.pursuit_count} pursuits · {candidate.organization.procurement_source_count} sources
                 </p>
               </div>
@@ -196,7 +196,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
               navigate={~p"/operations/affiliations/new?#{[organization_id: @organization.id]}"}
               variant="primary"
             >
-              <.icon name="hero-plus" class="size-4" /> Add Affiliation
+              Add Affiliation
             </.button>
           </:actions>
           <div id="organization-people" class="space-y-3">
@@ -214,8 +214,8 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
               class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
             >
               <div class="space-y-1">
-                <p class="font-medium text-zinc-900 dark:text-white">{person.full_name}</p>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                <p class="font-medium text-base-content">{person.full_name}</p>
+                <p class="text-sm text-base-content/50">
                   {person.email || person.phone || "No contact details"}
                 </p>
               </div>
@@ -232,7 +232,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
         >
           <div id="organization-commercial" class="space-y-4">
             <div>
-              <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+              <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-base-content/40">
                 Signals
               </h3>
               <div class="mt-3 space-y-2">
@@ -244,7 +244,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
                   navigate={~p"/commercial/signals/#{signal}"}
                   class="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
                 >
-                  <span class="font-medium text-zinc-900 dark:text-white">{signal.title}</span>
+                  <span class="font-medium text-base-content">{signal.title}</span>
                   <.status_badge status={signal.status_variant}>
                     {format_atom(signal.status)}
                   </.status_badge>
@@ -253,7 +253,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
             </div>
 
             <div>
-              <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+              <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-base-content/40">
                 Pursuits
               </h3>
               <div class="mt-3 space-y-2">
@@ -265,7 +265,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
                   navigate={~p"/commercial/pursuits/#{pursuit}"}
                   class="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
                 >
-                  <span class="font-medium text-zinc-900 dark:text-white">{pursuit.name}</span>
+                  <span class="font-medium text-base-content">{pursuit.name}</span>
                   <.status_badge status={pursuit.stage_variant}>
                     {format_atom(pursuit.stage)}
                   </.status_badge>
@@ -292,8 +292,8 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
             navigate={~p"/acquisition/sources"}
             class="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
-            <span class="font-medium text-zinc-900 dark:text-white">{source.name}</span>
-            <span class="text-sm text-zinc-500 dark:text-zinc-400">
+            <span class="font-medium text-base-content">{source.name}</span>
+            <span class="text-sm text-base-content/50">
               {format_atom(source.source_type)}
             </span>
           </.link>

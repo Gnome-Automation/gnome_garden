@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Operations.PersonLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Operations.Helpers
 
@@ -7,15 +8,20 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    people = load_people(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "People")
-     |> assign(:people_count, length(people))
-     |> assign(:active_count, Enum.count(people, &(&1.status == :active)))
-     |> assign(:linked_count, Enum.count(people, &((&1.organization_count || 0) > 0)))
-     |> stream(:people, people)}
+     |> assign(:people_count, counts.total)
+     |> assign(:active_count, counts.active)
+     |> assign(:linked_count, counts.linked)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -29,10 +35,10 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/organizations"}>
-            <.icon name="hero-building-office-2" class="size-4" /> Organizations
+            Organizations
           </.button>
           <.button navigate={~p"/operations/people/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Person
+            New Person
           </.button>
         </:actions>
       </.page_header>
@@ -60,13 +66,45 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Index do
         />
       </div>
 
-      <.section
-        title="People Directory"
-        description="Review the durable people model instead of duplicating contacts per company."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="people-table"
+        resource={GnomeGarden.Operations.Person}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[load: [:full_name, :status_variant, :organization_count]]}
+        click={fn row -> JS.navigate(~p"/operations/people/#{row}") end}
       >
-        <div :if={@people_count == 0} class="p-6 sm:p-7">
+        <:col :let={person} field="last_name" sort search label="Person">
+          <div class="space-y-0.5">
+            <div class="font-medium text-base-content">{person.full_name}</div>
+            <div class="text-xs text-base-content/50">
+              {format_atom(person.preferred_contact_method)}
+            </div>
+          </div>
+        </:col>
+
+        <:col :let={person} field="email" sort search label="Contact">
+          <div class="space-y-0.5">
+            <p>{person.email || "-"}</p>
+            <p class="text-xs text-base-content/40">
+              {person.mobile || person.phone || "No phone"}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={person} label="Organizations">
+          {person.organization_count || 0}
+        </:col>
+
+        <:col :let={person} field="status" sort label="Status">
+          <.status_badge status={person.status_variant}>
+            {format_atom(person.status)}
+          </.status_badge>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-users"
             title="No people yet"
@@ -78,82 +116,23 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@people_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Person
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Contact
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Organizations
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="people"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, person} <- @streams.people} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/operations/people/#{person}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {person.full_name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {format_atom(person.preferred_contact_method)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{person.email || "-"}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {person.mobile || person.phone || "No phone"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {person.organization_count || 0}
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={person.status_variant}>
-                    {format_atom(person.status)}
-                  </.status_badge>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_people(actor) do
-    case Operations.list_people(
-           actor: actor,
-           load: [:full_name, :status_variant, :organization_count]
-         ) do
+  defp load_counts(actor) do
+    case Operations.list_people(actor: actor, load: [:organization_count]) do
       {:ok, people} ->
-        Enum.sort_by(people, fn person ->
-          String.downcase("#{person.last_name || ""} #{person.first_name || ""}")
-        end)
+        %{
+          total: length(people),
+          active: Enum.count(people, &(&1.status == :active)),
+          linked: Enum.count(people, &((&1.organization_count || 0) > 0))
+        }
 
-      {:error, error} ->
-        raise "failed to load people: #{inspect(error)}"
+      {:error, _} ->
+        %{total: 0, active: 0, linked: 0}
     end
   end
 end

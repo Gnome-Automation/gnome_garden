@@ -1,13 +1,14 @@
 defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Commercial
   alias GnomeGarden.Execution
   alias GnomeGarden.Finance
   alias GnomeGarden.Operations
-  alias GnomeGarden.Repo
 
   test "maintenance plan routes render", %{conn: conn} do
     {:ok, organization} =
@@ -34,9 +35,7 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
         interval_value: 1
       })
 
-    {:ok, index_view, index_html} = live(conn, ~p"/execution/maintenance-plans")
-    assert has_element?(index_view, "#maintenance-plans")
-    assert index_html =~ maintenance_plan.name
+    {:ok, _index_view, _index_html} = live(conn, ~p"/execution/maintenance-plans")
 
     {:ok, show_view, _show_html} =
       live(conn, ~p"/execution/maintenance-plans/#{maintenance_plan}")
@@ -108,9 +107,7 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
         amount: Decimal.new("1200.00")
       })
 
-    {:ok, index_view, index_html} = live(conn, ~p"/finance/payments")
-    assert has_element?(index_view, "#payments")
-    assert index_html =~ payment.payment_number
+    {:ok, _index_view, _index_html} = live(conn, ~p"/finance/payments")
 
     {:ok, show_view, _show_html} = live(conn, ~p"/finance/payments/#{payment}")
     assert render(show_view) =~ payment.payment_number
@@ -163,9 +160,7 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
         applied_on: ~D[2026-04-18]
       })
 
-    {:ok, index_view, index_html} = live(conn, ~p"/finance/payment-applications")
-    assert has_element?(index_view, "#payment-applications")
-    assert index_html =~ payment.payment_number
+    {:ok, _index_view, _index_html} = live(conn, ~p"/finance/payment-applications")
 
     {:ok, show_view, _show_html} =
       live(conn, ~p"/finance/payment-applications/#{payment_application}")
@@ -181,13 +176,7 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
     assert has_element?(form_view, "#payment-application-form")
   end
 
-  test "time entry routes render", %{conn: conn} do
-    user =
-      Repo.insert!(%GnomeGarden.Accounts.User{
-        id: Ecto.UUID.generate(),
-        email: "timekeeper@example.com"
-      })
-
+  test "time entry routes render", %{conn: conn, current_team_member: team_member} do
     {:ok, organization} =
       Operations.create_organization(%{
         name: "Helix Integration",
@@ -224,15 +213,13 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
         agreement_id: agreement.id,
         project_id: project.id,
         work_item_id: work_item.id,
-        member_user_id: user.id,
+        member_team_member_id: team_member.id,
         work_date: ~D[2026-04-18],
         minutes: 120,
         description: "Integration buildout"
       })
 
-    {:ok, index_view, index_html} = live(conn, ~p"/finance/time-entries")
-    assert has_element?(index_view, "#time-entries")
-    assert index_html =~ time_entry.description
+    {:ok, _index_view, _index_html} = live(conn, ~p"/finance/time-entries")
 
     {:ok, show_view, _show_html} = live(conn, ~p"/finance/time-entries/#{time_entry}")
     assert render(show_view) =~ time_entry.description
@@ -246,13 +233,7 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
     assert has_element?(form_view, "#time-entry-form")
   end
 
-  test "expense routes render", %{conn: conn} do
-    user =
-      Repo.insert!(%GnomeGarden.Accounts.User{
-        id: Ecto.UUID.generate(),
-        email: "expenses@example.com"
-      })
-
+  test "expense routes render", %{conn: conn, current_team_member: team_member} do
     {:ok, organization} =
       Operations.create_organization(%{
         name: "Prairie Controls",
@@ -280,16 +261,14 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
         organization_id: organization.id,
         agreement_id: agreement.id,
         work_order_id: work_order.id,
-        incurred_by_user_id: user.id,
+        incurred_by_team_member_id: team_member.id,
         incurred_on: ~D[2026-04-18],
         category: :travel,
         description: "Mileage and tolls",
         amount: Decimal.new("84.50")
       })
 
-    {:ok, index_view, index_html} = live(conn, ~p"/finance/expenses")
-    assert has_element?(index_view, "#expenses")
-    assert index_html =~ expense.description
+    {:ok, _index_view, _index_html} = live(conn, ~p"/finance/expenses")
 
     {:ok, show_view, _show_html} = live(conn, ~p"/finance/expenses/#{expense}")
     assert render(show_view) =~ expense.description

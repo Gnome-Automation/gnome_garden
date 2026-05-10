@@ -1,51 +1,47 @@
 defmodule GnomeGardenWeb.CinderTheme do
   @moduledoc """
-  Protocol-inspired Cinder theme.
-  Clean zinc neutrals with emerald accent, matching Tailwind Plus table patterns.
+  Garden Cinder theme — uses daisyUI semantic tokens so tables follow the
+  active theme (cool-teal garden palette in dark mode).
   """
   use Cinder.Theme
 
-  # Container - white table on zinc background
-  set :container_class, "bg-white py-6 dark:bg-zinc-900"
-
-  # Table wrapper for horizontal scroll
+  # Container
+  set :container_class, "rounded-xl border border-base-content/10 bg-base-200"
   set :table_wrapper_class, "overflow-x-auto"
 
-  # Table - clean and minimal with whitespace-nowrap
+  # Table
   set :table_class, "w-full text-left whitespace-nowrap"
 
-  # Header styling - border-b separator, semibold text
+  # Header
   set :thead_class,
-      "border-b border-zinc-200 text-sm/6 text-zinc-900 dark:border-white/15 dark:text-white"
+      "border-b border-base-content/10 text-[11px] font-semibold uppercase tracking-wider text-base-content/50"
 
-  set :th_class, "py-2 pr-8 pl-4 font-semibold sm:pl-6 lg:pl-8"
+  set :th_class, "px-4 py-2.5 sm:px-5"
   set :header_row_class, ""
 
-  # Body and rows - divide-y for clean separators
-  set :tbody_class, "divide-y divide-zinc-100 dark:divide-white/10"
-  set :row_class, ""
-  set :td_class, "py-4 pr-8 pl-4 text-sm/6 text-zinc-500 sm:pl-6 lg:pl-8 dark:text-zinc-400"
+  # Body + rows
+  set :tbody_class, "divide-y divide-base-content/5"
+  set :row_class, "hover:bg-base-300/40"
+  set :td_class, "px-4 py-3 text-sm text-base-content/80 sm:px-5"
+  set :selected_row_class, "bg-primary/5"
 
-  # Selected rows
-  set :selected_row_class, "bg-emerald-50/50 dark:bg-emerald-500/5"
-
-  # Pagination - clean style
+  # Pagination
   set :pagination_container_class,
-      "flex items-center justify-between px-4 py-4 border-t border-zinc-200 sm:px-6 lg:px-8 dark:border-white/15"
+      "flex items-center justify-between gap-3 px-4 py-3 border-t border-base-content/10 sm:px-5"
 
   set :pagination_button_class,
-      "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white"
+      "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-base-content/70 hover:bg-base-300 hover:text-base-content"
 
-  set :pagination_info_class, "text-sm text-zinc-500 dark:text-zinc-400"
+  set :pagination_info_class, "text-xs text-base-content/50"
 
   # Page size dropdown
-  set :page_size_container_class, "flex items-center gap-2 text-sm text-zinc-500"
+  set :page_size_container_class, "flex items-center gap-2 text-xs text-base-content/50"
 
   set :page_size_dropdown_class,
-      "rounded-md border-0 bg-transparent py-1 pl-2 pr-8 text-sm text-zinc-600 ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-emerald-500 dark:text-zinc-400 dark:ring-white/15"
+      "rounded-md border border-base-content/10 bg-base-100 px-2 py-1 text-xs text-base-content focus:border-primary focus:outline-none"
 
-  # Controls/filters section - minimal, just search
-  set :controls_class, "px-4 pb-4 sm:px-6 lg:px-8"
+  # Controls / filters section — search only, filters hidden
+  set :controls_class, "px-4 py-3 sm:px-5"
   set :filter_header_class, "hidden"
   set :filter_title_class, "hidden"
   set :filter_container_class, ""
@@ -53,33 +49,30 @@ defmodule GnomeGardenWeb.CinderTheme do
   set :filter_count_class, "hidden"
   set :filter_label_class, "hidden"
 
-  # Search - clean rounded input
+  # Search input
   set :search_container_class, ""
 
   set :search_input_class,
-      "w-full max-w-md rounded-md border-0 bg-zinc-100 px-4 py-2 text-sm text-zinc-900 ring-1 ring-inset ring-zinc-300 placeholder:text-zinc-400 focus:bg-white focus:ring-2 focus:ring-emerald-500 dark:bg-white/5 dark:text-white dark:ring-white/15 dark:placeholder:text-zinc-500 dark:focus:bg-white/10"
+      "w-full max-w-md rounded-md border border-base-content/10 bg-base-100 px-3 py-1.5 text-sm text-base-content placeholder:text-base-content/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
 
-  # Sort controls
+  # Sort indicators
   set :sort_indicator_class, "inline-block ml-1"
-  set :sort_asc_icon_class, "size-3 inline text-zinc-400"
-  set :sort_desc_icon_class, "size-3 inline text-zinc-400"
-  set :sort_none_icon_class, "size-3 inline text-zinc-300 dark:text-zinc-600"
+  set :sort_asc_icon_class, "size-3 inline text-primary"
+  set :sort_desc_icon_class, "size-3 inline text-primary"
+  set :sort_none_icon_class, "size-3 inline text-base-content/30"
 
-  # Loading - small inline spinner in top right
-  set :loading_overlay_class, "absolute top-4 right-4"
-
-  set :loading_container_class,
-      "flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400"
-
+  # Loading
+  set :loading_overlay_class, "absolute top-3 right-3"
+  set :loading_container_class, "flex items-center gap-2 text-xs text-primary"
   set :loading_spinner_class, "size-4 animate-spin"
   set :loading_spinner_circle_class, "opacity-25"
   set :loading_spinner_path_class, "opacity-75"
 
-  # Empty state
-  set :empty_class, "py-12"
-  set :empty_container_class, "text-center text-zinc-500 dark:text-zinc-400"
+  # Empty
+  set :empty_class, "py-10"
+  set :empty_container_class, "text-center text-sm text-base-content/50"
 
-  # Grid layout for cards
-  set :grid_class, "grid gap-6 p-4 sm:p-6 lg:p-8"
+  # Grid layout
+  set :grid_class, "grid gap-4 p-4 sm:p-5"
   set :grid_item_class, ""
 end

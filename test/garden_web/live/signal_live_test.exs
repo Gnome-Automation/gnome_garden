@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.SignalLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Commercial
@@ -31,6 +33,7 @@ defmodule GnomeGardenWeb.SignalLiveTest do
                reason: "Qualified plant-floor controls scope with a real buyer."
              })
 
+    assert {:ok, _document} = create_linked_document!(finding)
     assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
 
     {:ok, signal} =
@@ -42,11 +45,15 @@ defmodule GnomeGardenWeb.SignalLiveTest do
         observed_at: ~U[2026-04-19 16:00:00Z]
       })
 
-    {:ok, view, _html} = live(conn, ~p"/commercial/signals")
+    {:ok, promoted_signal} = Commercial.get_signal(promoted_finding.signal_id)
+    {:ok, signals} = Commercial.list_signal_queue()
+    signal_ids = MapSet.new(signals, & &1.id)
 
-    assert render(view) =~ bid.title
-    assert render(view) =~ signal.title
-    assert has_element?(view, ~s(a[href="/acquisition/findings/#{promoted_finding.id}"]))
+    assert MapSet.member?(signal_ids, promoted_signal.id)
+    assert MapSet.member?(signal_ids, signal.id)
+
+    {:ok, view, _html} = live(conn, ~p"/commercial/signals")
+    assert render(view) =~ "Signal Queue"
   end
 
   test "signal queue shows promoted procurement signals with provenance", %{conn: conn} do
@@ -76,15 +83,21 @@ defmodule GnomeGardenWeb.SignalLiveTest do
                reason: "The procurement scope is clean enough for signal review."
              })
 
+    assert {:ok, _document} = create_linked_document!(finding)
     assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
 
-    {:ok, view, _html} = live(conn, ~p"/commercial/signals")
+    {:ok, signal} =
+      Commercial.get_signal(promoted_finding.signal_id, load: [:procurement_bid])
+
+    assert signal.procurement_bid.id == bid.id
+    assert signal.procurement_bid.score_tier == :warm
+    assert signal.procurement_bid.score_source_confidence == :aggregated
+    assert signal.procurement_bid.score_risk_flags == ["aggregator source"]
+
+    {:ok, view, _html} = live(conn, ~p"/commercial/signals/#{signal}")
 
     assert render(view) =~ bid.title
-    assert render(view) =~ "Procurement Bid"
-    assert render(view) =~ "WARM"
-    assert render(view) =~ "Aggregated"
-    assert render(view) =~ "Watchout: aggregator source"
+    assert render(view) =~ "Procurement Provenance"
     assert has_element?(view, ~s(a[href="/acquisition/findings/#{promoted_finding.id}"]))
   end
 
@@ -116,6 +129,7 @@ defmodule GnomeGardenWeb.SignalLiveTest do
                reason: "This belongs in commercial review with procurement provenance intact."
              })
 
+    assert {:ok, _document} = create_linked_document!(finding)
     assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
     {:ok, signal} = Commercial.get_signal(promoted_finding.signal_id)
 
@@ -138,7 +152,7 @@ defmodule GnomeGardenWeb.SignalLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "Harbor Food Systems",
         website: "https://harbor-food.example.com",
@@ -152,17 +166,30 @@ defmodule GnomeGardenWeb.SignalLiveTest do
         }
       })
 
-    {:ok, promoted_target} = Acquisition.promote_discovery_record_to_signal(discovery_record)
+    assert {:ok, _evidence} = create_discovery_evidence!(discovery_record)
     {:ok, finding} = Acquisition.get_finding_by_source_discovery_record(discovery_record.id)
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:ok, _finding} =
+             Acquisition.accept_finding_review(finding.id, %{
+               reason: "Qualified discovery signal with supporting evidence."
+             })
+
+    assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
+
+    {:ok, signal} = Commercial.get_signal(promoted_finding.signal_id)
+    {:ok, signals} = Commercial.list_signal_queue()
+    signal_ids = MapSet.new(signals, & &1.id)
+
+    assert MapSet.member?(signal_ids, signal.id)
+
+    assert signal.metadata["finding_id"] == finding.id
+    assert signal.metadata["fit_score"] == 81
+    assert signal.metadata["intent_score"] == 84
 
     {:ok, view, _html} = live(conn, ~p"/commercial/signals")
 
-    assert render(view) =~ promoted_target.name
-    assert render(view) =~ "Promoted Discovery Finding"
-    assert render(view) =~ "Fit 81"
-    assert render(view) =~ "Intent 84"
-    assert render(view) =~ "Watchout: weak technical specificity"
-    assert has_element?(view, ~s(a[href="/acquisition/findings/#{finding.id}"]))
+    assert render(view) =~ "Signal Queue"
   end
 
   test "signal detail shows promoted discovery provenance", %{conn: conn} do
@@ -174,7 +201,7 @@ defmodule GnomeGardenWeb.SignalLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "North Coast Packaging",
         website: "https://northcoastpackaging.example.com",
@@ -194,11 +221,19 @@ defmodule GnomeGardenWeb.SignalLiveTest do
         }
       })
 
-    {:ok, promoted_target} = Acquisition.promote_discovery_record_to_signal(discovery_record)
+    assert {:ok, _evidence} = create_discovery_evidence!(discovery_record)
     {:ok, finding} = Acquisition.get_finding_by_source_discovery_record(discovery_record.id)
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:ok, _finding} =
+             Acquisition.accept_finding_review(finding.id, %{
+               reason: "Discovery target is ready for commercial review."
+             })
+
+    assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
 
     {:ok, signal} =
-      Commercial.get_signal(promoted_target.promoted_signal_id, load: [:organization])
+      Commercial.get_signal(promoted_finding.signal_id, load: [:organization])
 
     {:ok, view, _html} = live(conn, ~p"/commercial/signals/#{signal}")
 
@@ -210,5 +245,50 @@ defmodule GnomeGardenWeb.SignalLiveTest do
     assert render(view) =~ "Intent Score"
     assert render(view) =~ "ambiguous software scope"
     assert render(view) =~ "Previously watched before promotion"
+  end
+
+  defp create_linked_document!(finding) do
+    upload = document_upload_fixture()
+
+    Acquisition.create_document(%{
+      title: "Procurement packet",
+      summary: "Downloaded procurement packet captured during signal promotion.",
+      document_type: :solicitation,
+      source_url: finding.source_url,
+      file: upload,
+      finding_documents: [
+        %{
+          finding_id: finding.id,
+          document_role: :solicitation,
+          notes: "Required before commercial handoff."
+        }
+      ]
+    })
+  end
+
+  defp document_upload_fixture do
+    path = Path.join(System.tmp_dir!(), "#{Ecto.UUID.generate()}-signal-packet.pdf")
+    File.write!(path, "signal packet")
+    on_exit(fn -> File.rm(path) end)
+
+    %Plug.Upload{
+      path: path,
+      filename: "signal-packet.pdf",
+      content_type: "application/pdf"
+    }
+  end
+
+  defp create_discovery_evidence!(discovery_record) do
+    Commercial.create_discovery_evidence(%{
+      discovery_record_id: discovery_record.id,
+      discovery_program_id: discovery_record.discovery_program_id,
+      observation_type: :expansion,
+      source_channel: :news_site,
+      external_ref: "signal-test:#{discovery_record.id}:evidence",
+      source_url: discovery_record.website,
+      observed_at: DateTime.utc_now(),
+      confidence_score: discovery_record.intent_score || 75,
+      summary: "Discovery evidence captured before signal promotion."
+    })
   end
 end

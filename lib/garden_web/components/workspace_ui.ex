@@ -3,8 +3,8 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
   Shared page-shell components for admin-style resource views.
 
   These components standardize the `index/show/form` presentation used across
-  CRM and console screens so LiveViews can stay focused on loading data and
-  handling events.
+  operator and console screens so LiveViews can stay focused on loading data
+  and handling events.
   """
 
   use Phoenix.Component
@@ -18,12 +18,14 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
 
   def page(assigns) do
     ~H"""
-    <div class={["mx-auto space-y-5", @max_width, @class]}>
+    <div class={["mx-auto space-y-3", @max_width, @class]}>
       {render_slot(@inner_block)}
     </div>
     """
   end
 
+  # `eyebrow` is no longer rendered — the rail/tabs chrome already shows the
+  # area name. Kept as an accepted attr for source compatibility.
   attr :eyebrow, :string, default: nil
   attr :class, :any, default: nil
   slot :inner_block, required: true
@@ -32,37 +34,20 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
 
   def page_header(assigns) do
     ~H"""
-    <section class={[
-      "relative overflow-hidden rounded-[1.5rem] bg-white/90 ring-1 ring-inset ring-zinc-900/10 shadow-sm dark:bg-zinc-900/80 dark:ring-white/10",
-      @class
-    ]}>
-      <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_42%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.1),transparent_38%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_42%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.12),transparent_38%)]" />
-      <div class="relative flex flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-end lg:justify-between">
-        <div class="space-y-2">
-          <p
-            :if={@eyebrow}
-            class="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-300"
-          >
-            {@eyebrow}
-          </p>
-          <div class="space-y-1.5">
-            <h1 class="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-3xl">
-              {render_slot(@inner_block)}
-            </h1>
-            <div
-              :if={@subtitle != []}
-              class="max-w-4xl text-sm leading-5 text-zinc-600 dark:text-zinc-300"
-            >
-              {render_slot(@subtitle)}
-            </div>
-          </div>
-        </div>
-
-        <div :if={@actions != []} class="flex flex-wrap items-center gap-2 lg:justify-end">
-          {render_slot(@actions)}
-        </div>
+    <header class={["flex flex-wrap items-center justify-between gap-3", @class]}>
+      <div class="min-w-0 flex-1">
+        <h1 class="text-lg font-semibold tracking-tight text-base-content sm:text-xl">
+          {render_slot(@inner_block)}
+        </h1>
+        <p :if={@subtitle != []} class="mt-0.5 text-xs leading-5 text-base-content/60">
+          {render_slot(@subtitle)}
+        </p>
       </div>
-    </section>
+
+      <div :if={@actions != []} class="flex shrink-0 flex-wrap items-center gap-1.5">
+        {render_slot(@actions)}
+      </div>
+    </header>
     """
   end
 
@@ -88,11 +73,11 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
           <div class="space-y-1">
             <h2
               :if={@title}
-              class="text-base font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-lg"
+              class="text-base font-semibold tracking-tight text-base-content sm:text-lg"
             >
               {@title}
             </h2>
-            <p :if={@description} class="max-w-4xl text-sm leading-5 text-zinc-600 dark:text-zinc-300">
+            <p :if={@description} class="max-w-4xl text-sm leading-5 text-base-content/70">
               {@description}
             </p>
           </div>
@@ -133,8 +118,8 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
         <.icon name={@icon} class="size-6" />
       </div>
       <div class="space-y-1">
-        <h3 class="text-base font-semibold text-zinc-900 dark:text-white">{@title}</h3>
-        <p :if={@description} class="max-w-md text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+        <h3 class="text-base font-semibold text-base-content">{@title}</h3>
+        <p :if={@description} class="max-w-md text-sm leading-6 text-base-content/60">
           {@description}
         </p>
       </div>
@@ -146,17 +131,19 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
   end
 
   attr :title, :string, required: true
-  attr :description, :string, required: true
+  attr :description, :string, default: nil
   attr :icon, :string, required: true
   attr :value, :string, required: true
   attr :accent, :string, default: "emerald"
 
   def stat_card(assigns) do
+    # Map legacy accent names to daisyUI semantic colors so cards inherit the
+    # active theme (garden palette in dark mode).
     accent_classes = %{
-      "emerald" => "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300",
-      "sky" => "bg-sky-100 text-sky-700 dark:bg-sky-400/10 dark:text-sky-300",
-      "amber" => "bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300",
-      "rose" => "bg-rose-100 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300"
+      "emerald" => "bg-primary/10 text-primary",
+      "sky" => "bg-info/10 text-info",
+      "amber" => "bg-warning/10 text-warning",
+      "rose" => "bg-error/10 text-error"
     }
 
     assigns =
@@ -167,27 +154,22 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
       )
 
     ~H"""
-    <.section body_class="p-0">
-      <div class="flex flex-col gap-2.5 px-3 py-3 sm:flex-row sm:items-start sm:gap-3 sm:px-4 sm:py-3.5 lg:px-5">
-        <div class={[
-          "flex size-8 shrink-0 items-center justify-center rounded-xl sm:size-9",
-          @accent_class
-        ]}>
-          <.icon name={@icon} class="size-4 sm:size-[1.125rem]" />
-        </div>
-        <div class="min-w-0 space-y-1">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400 sm:text-xs">
-            {@title}
-          </p>
-          <p class="text-xl font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-2xl">
-            {@value}
-          </p>
-          <p class="text-xs leading-5 text-zinc-600 dark:text-zinc-300">
-            {@description}
-          </p>
-        </div>
+    <div class="flex items-center gap-3 rounded-lg border border-base-content/10 bg-base-200 px-3 py-2">
+      <div class={["flex size-8 shrink-0 items-center justify-center rounded-md", @accent_class]}>
+        <.icon name={@icon} class="size-4" />
       </div>
-    </.section>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-baseline gap-2">
+          <span class="text-lg font-semibold leading-none tabular-nums">{@value}</span>
+          <span class="truncate text-[11px] font-semibold uppercase tracking-wider text-base-content/60">
+            {@title}
+          </span>
+        </div>
+        <p :if={@description} class="mt-0.5 truncate text-[11px] text-base-content/50">
+          {@description}
+        </p>
+      </div>
+    </div>
     """
   end
 
@@ -205,10 +187,10 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
           <.icon name={@icon} class="size-4 sm:size-[1.125rem]" />
         </div>
         <div class="min-w-0 space-y-1">
-          <h3 class="text-sm font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-base">
+          <h3 class="text-sm font-semibold tracking-tight text-base-content sm:text-base">
             {@title}
           </h3>
-          <p class="text-sm leading-5 text-zinc-600 dark:text-zinc-300">
+          <p class="text-sm leading-5 text-base-content/70">
             {@description}
           </p>
         </div>

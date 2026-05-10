@@ -33,7 +33,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/finance/payment-applications"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to applications
+            Back to applications
           </.button>
         </:actions>
       </.page_header>

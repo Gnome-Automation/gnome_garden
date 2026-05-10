@@ -5,7 +5,7 @@ defmodule GnomeGardenWeb.Layouts do
   """
   use GnomeGardenWeb, :html
 
-  import GnomeGardenWeb.Nav
+  alias GnomeGardenWeb.Components.RailNav
 
   @doc """
   Renders your app layout.
@@ -32,126 +32,76 @@ defmodule GnomeGardenWeb.Layouts do
   attr :current_path, :string, default: "/", doc: "the current request path"
 
   def app(assigns) do
+    # Layout function — called from controllers and LiveView mounts. The
+    # received `assigns` shape isn't always a Phoenix.Component assigns map,
+    # so we don't call `assign/3` here; instead we delegate to a function
+    # component (`<.app_chrome>`) which gets a clean assigns map.
     ~H"""
-    <div id="app-shell" class="min-h-screen" phx-hook="SidebarCollapse">
-      <%!-- Mobile off-canvas sidebar --%>
-      <div
-        id="mobile-sidebar-backdrop"
-        class="fixed inset-0 z-50 bg-gray-900/80 hidden lg:hidden"
-        phx-click={hide_mobile_sidebar()}
-      >
-      </div>
-
-      <div
-        id="mobile-sidebar"
-        class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden -translate-x-full transition-transform duration-300 ease-in-out lg:hidden"
-      >
-        <%!-- Close button --%>
-        <div class="absolute top-0 right-0 -mr-12 pt-2">
-          <button
-            type="button"
-            class="ml-1 flex size-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-            phx-click={hide_mobile_sidebar()}
-          >
-            <span class="sr-only">Close sidebar</span>
-            <.icon name="hero-x-mark" class="size-6 text-white" />
-          </button>
-        </div>
-        <.sidebar_nav
-          id="mobile-nav"
-          current_path={@current_path}
-          current_user={@current_user}
-          nav_counts={assigns[:nav_counts] || %{}}
-        />
-      </div>
-
-      <%!-- Desktop sidebar (expanded) --%>
-      <div
-        id="sidebar-expanded"
-        class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col lg:overflow-hidden transition-all duration-200"
-      >
-        <.sidebar_nav
-          id="desktop-nav"
-          current_path={@current_path}
-          current_user={@current_user}
-          nav_counts={assigns[:nav_counts] || %{}}
-        />
-      </div>
-
-      <%!-- Desktop sidebar (collapsed) --%>
-      <div
-        id="sidebar-collapsed"
-        class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:w-20 lg:flex-col lg:overflow-hidden transition-all duration-200"
-      >
-        <.sidebar_nav
-          id="collapsed-nav"
-          current_path={@current_path}
-          current_user={@current_user}
-          nav_counts={assigns[:nav_counts] || %{}}
-          collapsed
-        />
-      </div>
-
-      <%!-- Main content area --%>
-      <div id="main-content" class="transition-all duration-200 lg:pl-72">
-        <%!-- App top bar --%>
-        <div class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur dark:border-white/10 dark:bg-zinc-900/95">
-          <div class="px-2 sm:px-3 lg:px-4">
-            <div class="flex min-h-14 flex-wrap items-center justify-between gap-2 py-2">
-              <div class="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  class="-m-2 shrink-0 p-2 text-gray-700 dark:text-gray-200 lg:hidden"
-                  phx-click={show_mobile_sidebar()}
-                >
-                  <span class="sr-only">Open sidebar</span>
-                  <.icon name="hero-bars-3" class="size-5" />
-                </button>
-
-                <div
-                  :if={workspace_nav?(@current_path)}
-                  class="flex min-w-0 flex-1 flex-wrap items-center gap-3"
-                >
-                  <.section_context current_path={@current_path} page_title={@page_title} />
-                  <.section_subnav
-                    current_path={@current_path}
-                    nav_counts={assigns[:nav_counts] || %{}}
-                  />
-                </div>
-              </div>
-
-              <div class="flex shrink-0 items-center gap-1.5">
-                <.theme_toggle />
-                <.header_account_controls current_user={@current_user} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <%!-- Page content --%>
-        <main class="px-2 py-3 pb-20 sm:px-3 sm:py-4 lg:px-4 lg:pb-6">
-          {@inner_content}
-        </main>
-
-        <.flash_group flash={@flash} />
-      </div>
-
-      <.mobile_primary_nav current_path={@current_path} nav_counts={assigns[:nav_counts] || %{}} />
-    </div>
+    <.app_chrome
+      current_path={@current_path}
+      current_user={@current_user}
+      flash={@flash}
+    >
+      {@inner_content}
+    </.app_chrome>
     """
   end
 
-  defp show_mobile_sidebar do
-    JS.remove_class("hidden", to: "#mobile-sidebar-backdrop")
-    |> JS.remove_class("-translate-x-full", to: "#mobile-sidebar")
-    |> JS.add_class("translate-x-0", to: "#mobile-sidebar")
-    |> JS.focus_first(to: "#mobile-sidebar")
-  end
+  attr :current_path, :string, required: true
+  attr :current_user, :any, default: nil
+  attr :flash, :map, required: true
+  slot :inner_block, required: true
 
-  defp hide_mobile_sidebar do
-    JS.add_class("hidden", to: "#mobile-sidebar-backdrop")
-    |> JS.remove_class("translate-x-0", to: "#mobile-sidebar")
-    |> JS.add_class("-translate-x-full", to: "#mobile-sidebar")
+  defp app_chrome(assigns) do
+    area = RailNav.area_for_path(assigns.current_path)
+    active = RailNav.active_dest(assigns.current_path, area)
+    open_count = length(RailNav.area_dests(area))
+
+    assigns =
+      assigns
+      |> assign(:area, area)
+      |> assign(:active, active)
+      |> assign(:open_count, open_count)
+
+    ~H"""
+    <div class="flex h-screen w-full overflow-hidden bg-base-100 text-base-content">
+      <%!-- Rail (desktop only) --%>
+      <div class="hidden lg:block">
+        <RailNav.rail area={@area} />
+      </div>
+
+      <div class="flex flex-1 flex-col min-w-0 min-h-0">
+        <%!-- Desktop chrome --%>
+        <div class="hidden lg:block">
+          <RailNav.area_header area={@area} open_count={@open_count}>
+            <:extra>
+              <.theme_toggle />
+              <.header_account_controls current_user={@current_user} />
+            </:extra>
+          </RailNav.area_header>
+          <RailNav.tab_strip area={@area} active_id={@active.id} />
+        </div>
+
+        <%!-- Mobile chrome --%>
+        <RailNav.mobile_top area={@area} active_label={@active.label}>
+          <:actions>
+            <.theme_toggle />
+            <.header_account_controls current_user={@current_user} />
+          </:actions>
+        </RailNav.mobile_top>
+
+        <%!-- Single content slot — rendered once so LiveComponents inside have unique IDs --%>
+        <main class="flex-1 min-h-0 overflow-auto bg-base-100 px-4 py-4 pb-28 lg:px-6 lg:py-6 lg:pb-6">
+          {render_slot(@inner_block)}
+        </main>
+
+        <%!-- Mobile bottom bar --%>
+        <RailNav.mobile_bar area={@area} />
+      </div>
+
+      <.flash_group flash={@flash} />
+    </div>
+    """
   end
 
   @doc """
@@ -170,12 +120,12 @@ defmodule GnomeGardenWeb.Layouts do
       >
         <span class="flex size-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-semibold text-white">
           <%= if @current_user do %>
-            {String.first(@current_user.email || "U") |> String.upcase()}
+            {account_initial(@current_user)}
           <% else %>
             ?
           <% end %>
         </span>
-        <span class="hidden max-w-40 truncate text-sm font-medium text-zinc-700 dark:text-zinc-200 sm:block">
+        <span class="hidden max-w-40 truncate text-sm font-medium text-base-content/80 sm:block">
           {account_label(@current_user)}
         </span>
         <.icon name="hero-chevron-down" class="hidden size-4 text-zinc-400 sm:block" />
@@ -186,14 +136,14 @@ defmodule GnomeGardenWeb.Layouts do
       >
         <%= if @current_user do %>
           <div class="rounded-xl bg-zinc-50 px-3 py-3 dark:bg-white/[0.04]">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/40">
               Signed In
             </p>
-            <div class="mt-1 truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">
+            <div class="mt-1 truncate text-sm font-medium text-base-content">
               {account_label(@current_user)}
             </div>
-            <div class="truncate text-xs text-zinc-500 dark:text-zinc-400">
-              {@current_user.email}
+            <div class="truncate text-xs text-base-content/50">
+              {account_email(@current_user)}
             </div>
           </div>
           <div class="my-2 h-px bg-zinc-900/10 dark:bg-white/10" />
@@ -206,10 +156,10 @@ defmodule GnomeGardenWeb.Layouts do
           </.link>
         <% else %>
           <div class="rounded-xl bg-zinc-50 px-3 py-3 dark:bg-white/[0.04]">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/40">
               Account
             </p>
-            <p class="mt-1 text-sm text-zinc-700 dark:text-zinc-200">
+            <p class="mt-1 text-sm text-base-content/80">
               Sign in to work the operator queues.
             </p>
           </div>
@@ -237,28 +187,23 @@ defmodule GnomeGardenWeb.Layouts do
   defp account_label(nil), do: "Guest"
 
   defp account_label(user) do
-    user.email
+    user
+    |> account_email()
     |> to_string()
     |> String.split("@")
     |> List.first()
   end
 
-  defp workspace_nav?(path) when is_binary(path) do
-    Enum.any?(
-      [
-        "/procurement",
-        "/commercial",
-        "/operations",
-        "/execution",
-        "/finance",
-        "/console",
-        "/agent"
-      ],
-      &String.starts_with?(path, &1)
-    )
+  defp account_initial(user) do
+    user
+    |> account_label()
+    |> String.first()
+    |> Kernel.||("U")
+    |> String.upcase()
   end
 
-  defp workspace_nav?(_path), do: false
+  defp account_email(%{email: email}), do: to_string(email)
+  defp account_email(_user), do: nil
 
   @doc """
   Shows the flash group with standard titles and content.
@@ -343,7 +288,7 @@ defmodule GnomeGardenWeb.Layouts do
       >
         <.icon
           name="hero-moon-micro"
-          class="size-4 text-zinc-500 dark:text-zinc-400 dark:[[data-theme=dark]_&]:text-white"
+          class="size-4 text-base-content/50 dark:[[data-theme=dark]_&]:text-white"
         />
       </button>
     </div>

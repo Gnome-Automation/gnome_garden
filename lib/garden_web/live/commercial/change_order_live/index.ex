@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Commercial.Helpers
 
@@ -7,19 +8,21 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    change_orders = load_change_orders(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Change Orders")
-     |> assign(:change_order_count, length(change_orders))
-     |> assign(:submitted_count, Enum.count(change_orders, &(&1.status == :submitted)))
-     |> assign(
-       :approved_count,
-       Enum.count(change_orders, &(&1.status in [:approved, :implemented]))
-     )
-     |> assign(:total_amount, sum_amounts(change_orders, :total_amount))
-     |> stream(:change_orders, change_orders)}
+     |> assign(:change_order_count, counts.total)
+     |> assign(:submitted_count, counts.submitted)
+     |> assign(:approved_count, counts.approved)
+     |> assign(:total_amount, counts.total_amount)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -33,10 +36,10 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/agreements"}>
-            <.icon name="hero-document-check" class="size-4" /> Agreements
+            Agreements
           </.button>
           <.button navigate={~p"/commercial/change-orders/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Change Order
+            New Change Order
           </.button>
         </:actions>
       </.page_header>
@@ -71,13 +74,58 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Index do
         />
       </div>
 
-      <.section
-        title="Post-Award Changes"
-        description="Keep scope, schedule, and pricing deltas explicit so the original agreement remains historically accurate."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="change-orders-table"
+        resource={GnomeGarden.Commercial.ChangeOrder}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[
+          load: [
+            :status_variant,
+            :line_count,
+            :total_amount,
+            agreement: [],
+            project: [],
+            organization: []
+          ]
+        ]}
+        click={fn change_order -> JS.navigate(~p"/commercial/change-orders/#{change_order}") end}
       >
-        <div :if={@change_order_count == 0} class="p-6 sm:p-7">
+        <:col :let={change_order} field="title" sort search label="Change Order">
+          <div class="space-y-1">
+            <div class="font-medium text-zinc-900 dark:text-white">{change_order.title}</div>
+            <p class="text-sm text-base-content/50">
+              {change_order.change_order_number}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={change_order} field="agreement.name" sort search label="Agreement">
+          {(change_order.agreement && change_order.agreement.name) || "-"}
+        </:col>
+
+        <:col :let={change_order} field="change_type" sort label="Type">
+          {format_atom(change_order.change_type)}
+        </:col>
+
+        <:col :let={change_order} field="total_amount" sort label="Value">
+          <div class="space-y-1">
+            <p>{format_amount(change_order.total_amount)}</p>
+            <p class="text-xs text-base-content/40">
+              {change_order.line_count || 0} lines
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={change_order} field="status" sort label="Status">
+          <.status_badge status={change_order.status_variant}>
+            {format_atom(change_order.status)}
+          </.status_badge>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-arrow-path"
             title="No change orders yet"
@@ -89,91 +137,24 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@change_order_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Change Order
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Agreement
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Type
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Value
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="change-orders"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, change_order} <- @streams.change_orders} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/commercial/change-orders/#{change_order}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {change_order.title}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {change_order.change_order_number}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {(change_order.agreement && change_order.agreement.name) || "-"}
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {format_atom(change_order.change_type)}
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{format_amount(change_order.total_amount)}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {change_order.line_count || 0} lines
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={change_order.status_variant}>
-                    {format_atom(change_order.status)}
-                  </.status_badge>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_change_orders(actor) do
-    case Commercial.list_change_orders(
-           actor: actor,
-           query: [sort: [requested_on: :desc, inserted_at: :desc]],
-           load: [
-             :status_variant,
-             :line_count,
-             :total_amount,
-             agreement: [],
-             project: [],
-             organization: []
-           ]
-         ) do
-      {:ok, change_orders} -> change_orders
-      {:error, error} -> raise "failed to load change orders: #{inspect(error)}"
+  defp load_counts(actor) do
+    case Commercial.list_change_orders(actor: actor, load: [:total_amount]) do
+      {:ok, change_orders} ->
+        %{
+          total: length(change_orders),
+          submitted: Enum.count(change_orders, &(&1.status == :submitted)),
+          approved: Enum.count(change_orders, &(&1.status in [:approved, :implemented])),
+          total_amount: sum_amounts(change_orders, :total_amount)
+        }
+
+      {:error, _} ->
+        %{total: 0, submitted: 0, approved: 0, total_amount: Decimal.new(0)}
     end
   end
 

@@ -28,12 +28,22 @@ defmodule GnomeGardenWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :pi_service do
+    plug :accepts, ["json"]
+    plug GnomeGardenWeb.Plugs.PiServiceAuth
+  end
+
+  scope "/api/pi", GnomeGardenWeb do
+    pipe_through :pi_service
+    post "/run", PiRpcController, :run
+  end
+
   scope "/", GnomeGardenWeb do
     pipe_through :browser
 
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
-      on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_optional}] do
+      on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_required}] do
       live "/agent", AgentLive
       live "/console/agents", Console.AgentsLive
       live "/console/agents/deployments/new", Console.AgentDeploymentFormLive
@@ -192,8 +202,8 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/payment-applications/:id", Finance.PaymentApplicationLive.Show, :show
       live "/finance/payment-applications/:id/edit", Finance.PaymentApplicationLive.Form, :edit
 
-      # Agents - Sales Discovery
-      live "/procurement/targeting", Agents.Sales.ProcurementTargetingLive, :index
+      # Agents - Procurement targeting
+      live "/procurement/targeting", Agents.ProcurementTargetingLive, :index
       live "/procurement/sources", Acquisition.RedirectLive, :sources
     end
   end

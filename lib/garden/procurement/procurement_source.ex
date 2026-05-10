@@ -41,7 +41,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
     notifiers: [Ash.Notifier.PubSub]
 
   postgres do
-    table "lead_sources"
+    table "procurement_sources"
     repo GnomeGarden.Repo
 
     references do
@@ -56,7 +56,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         scheduler_cron "0 */6 * * *"
         worker_module_name __MODULE__.AshOban.Worker.ScheduledScan
         scheduler_module_name __MODULE__.AshOban.Scheduler.ScheduledScan
-        queue :lead_scanning
+        queue :procurement_scanning
         max_attempts 3
 
         where expr(
@@ -92,6 +92,11 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
 
     create :create do
       primary? true
+      upsert? true
+      upsert_identity :unique_url
+
+      upsert_fields {:replace_all_except,
+                     [:id, :inserted_at, :status, :enabled, :config_status, :scrape_config]}
 
       accept [
         :name,

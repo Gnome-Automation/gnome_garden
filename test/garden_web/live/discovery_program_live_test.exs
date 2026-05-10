@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Acquisition
@@ -20,7 +22,7 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: discovery_program.id,
         name: "Pulse Packaging",
         website: "https://pulsepackaging.example.com",
@@ -30,7 +32,7 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
       })
 
     {:ok, _evidence} =
-      Acquisition.create_discovery_evidence(%{
+      Commercial.create_discovery_evidence(%{
         discovery_record_id: discovery_record.id,
         discovery_program_id: discovery_program.id,
         observation_type: :hiring,
@@ -42,27 +44,13 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
       })
 
     {:ok, acquisition_program} =
-      Acquisition.get_program_by_legacy_discovery_program(discovery_program.id)
+      Acquisition.get_program_by_discovery_program(discovery_program.id)
 
-    {:ok, index_view, index_html} = live(conn, ~p"/commercial/discovery-programs")
-    assert has_element?(index_view, "#discovery-programs")
-    assert index_html =~ discovery_program.name
-    assert has_element?(index_view, "#run-program-#{discovery_program.id}")
-    assert has_element?(index_view, "#program-targets-#{discovery_program.id}")
-
-    assert has_element?(
-             index_view,
-             ~s(a[href="/acquisition/findings?family=discovery&program_id=#{acquisition_program.id}"])
-           )
-
-    index_view
-    |> element("#run-program-#{discovery_program.id}")
-    |> render_click()
-
-    assert render(index_view) =~ "Started discovery run"
+    {:ok, index_view, _index_html} = live(conn, ~p"/commercial/discovery-programs")
+    assert render(index_view) =~ "Discovery Programs"
 
     {:ok, refreshed_program} = Commercial.get_discovery_program(discovery_program.id)
-    assert refreshed_program.last_run_at
+    refute refreshed_program.last_run_at
 
     {:ok, show_view, _show_html} =
       live(conn, ~p"/commercial/discovery-programs/#{discovery_program}")
@@ -74,6 +62,15 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
              show_view,
              ~s(a[href="/acquisition/findings?family=discovery&program_id=#{acquisition_program.id}"])
            )
+
+    show_view
+    |> element("button[phx-click='run_now']")
+    |> render_click()
+
+    assert render(show_view) =~ "Started discovery run"
+
+    {:ok, refreshed_program} = Commercial.get_discovery_program(discovery_program.id)
+    assert refreshed_program.last_run_at
 
     {:ok, form_view, _form_html} = live(conn, ~p"/commercial/discovery-programs/new")
     assert has_element?(form_view, "#discovery-program-form")

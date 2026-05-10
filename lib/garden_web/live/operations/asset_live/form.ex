@@ -29,7 +29,7 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/assets"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to assets
+            Back to assets
           </.button>
         </:actions>
       </.page_header>

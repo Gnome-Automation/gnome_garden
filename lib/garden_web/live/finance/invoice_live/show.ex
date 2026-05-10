@@ -42,7 +42,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             <.status_badge status={@invoice.status_variant}>
               {format_atom(@invoice.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>
               {(@invoice.organization && @invoice.organization.name) || "No organization linked"}
             </span>
@@ -50,13 +50,13 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/finance/invoices"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/finance/payment-applications/new?invoice_id=#{@invoice.id}"}>
-            <.icon name="hero-link" class="size-4" /> Apply Payment
+            Apply Payment
           </.button>
           <.button navigate={~p"/finance/invoices/#{@invoice}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -122,7 +122,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
       </.section>
 
       <.section :if={@invoice.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@invoice.notes}
         </p>
       </.section>
@@ -145,16 +145,16 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">
+              <p class="font-medium text-base-content">
                 {line.line_number}. {line.description}
               </p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm text-base-content/50">
                 {format_atom(line.line_kind)} · Qty {Decimal.to_string(line.quantity)}
               </p>
             </div>
-            <div class="text-right text-sm text-zinc-600 dark:text-zinc-300">
+            <div class="text-right text-sm text-base-content/70">
               <p>{format_amount(line.line_total)}</p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 {format_amount(line.unit_price)} each
               </p>
             </div>
@@ -187,14 +187,14 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">
+              <p class="font-medium text-base-content">
                 {(application.payment && application.payment.payment_number) || "Payment"}
               </p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm text-base-content/50">
                 Applied {format_date(application.applied_on)}
               </p>
             </div>
-            <p class="text-sm font-medium text-zinc-900 dark:text-white">
+            <p class="text-sm font-medium text-base-content">
               {format_amount(application.amount)}
             </p>
           </.link>
@@ -210,10 +210,10 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end

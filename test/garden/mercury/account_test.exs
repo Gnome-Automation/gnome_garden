@@ -41,7 +41,15 @@ defmodule GnomeGarden.Mercury.AccountTest do
 
   test "fetches account by mercury_id" do
     id = "lookup-#{System.unique_integer([:positive])}"
-    {:ok, created} = Mercury.create_mercury_account(%{mercury_id: id, name: "Test", status: :active, kind: :checking})
+
+    {:ok, created} =
+      Mercury.create_mercury_account(%{
+        mercury_id: id,
+        name: "Test",
+        status: :active,
+        kind: :checking
+      })
+
     assert {:ok, fetched} = Mercury.get_mercury_account_by_mercury_id(id)
     assert fetched.id == created.id
   end
@@ -56,7 +64,9 @@ defmodule GnomeGarden.Mercury.AccountTest do
         current_balance: Decimal.new("1000.00")
       })
 
-    {:ok, updated} = Mercury.update_mercury_account(account, %{current_balance: Decimal.new("1500.00")})
+    {:ok, updated} =
+      Mercury.update_mercury_account(account, %{current_balance: Decimal.new("1500.00")})
+
     assert updated.current_balance == Decimal.new("1500.00")
   end
 end

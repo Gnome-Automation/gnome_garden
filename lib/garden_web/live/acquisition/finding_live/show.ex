@@ -5,6 +5,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.PromotionRules
+  alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.DiscoveryFeedback
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement.TargetingFeedback
@@ -188,7 +189,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
            socket.assigns.finding,
          attrs when attrs != %{} <- identity_attrs_from_params(params),
          {:ok, _updated_discovery_record} <-
-           Acquisition.resolve_discovery_record_identity(
+           Commercial.resolve_discovery_record_identity(
              discovery_record,
              attrs,
              actor: socket.assigns.current_user
@@ -273,16 +274,16 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/acquisition/findings"}>
-            <.icon name="hero-inbox-stack" class="size-4" /> Back To Queue
+            Back To Queue
           </.button>
           <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"}>
-            <.icon name="hero-paper-clip" class="size-4" /> Add Document
+            {document_action_label(@finding)}
           </.button>
           <.button
             :if={@finding.source_discovery_record_id}
             navigate={~p"/acquisition/findings/#{@finding.id}/evidence/new"}
           >
-            <.icon name="hero-plus" class="size-4" /> Add Evidence
+            Add Evidence
           </.button>
           <.button
             :if={@finding.source}
@@ -290,7 +291,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
               ~p"/acquisition/findings?family=#{@finding.finding_family}&source_id=#{@finding.source_id}"
             }
           >
-            <.icon name="hero-globe-alt" class="size-4" /> Source Queue
+            Source Queue
           </.button>
           <.button
             :if={@finding.program}
@@ -298,7 +299,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
               ~p"/acquisition/findings?family=#{@finding.finding_family}&program_id=#{@finding.program_id}"
             }
           >
-            <.icon name="hero-radar" class="size-4" /> Program Queue
+            Program Queue
           </.button>
         </:actions>
       </.page_header>
@@ -318,7 +319,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             |> String.replace("_", " ")
             |> String.capitalize()
           }
-          description="What sort of lead or work signal this record represents."
+          description="What sort of work signal this record represents."
           icon="hero-tag"
           accent="sky"
         />
@@ -350,7 +351,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             phx-click="transition"
             phx-value-action="start_review"
           >
-            <.icon name="hero-eye" class="size-4" /> Start Review
+            Start Review
           </.button>
           <.button
             :if={@finding.status == :reviewing and @finding.acceptance_ready}
@@ -358,14 +359,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             phx-click="open_dialog"
             phx-value-action="accept"
           >
-            <.icon name="hero-check" class="size-4" /> Accept
+            Accept
           </.button>
           <.button
             :if={prep_action_path(@finding)}
             id="finding-show-prep-action"
             navigate={prep_action_path(@finding)}
           >
-            <.icon name="hero-paper-clip" class="size-4" /> {prep_action_label(@finding)}
+            {prep_action_label(@finding)}
           </.button>
           <.button
             :if={
@@ -376,7 +377,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             phx-value-action="promote"
             variant="primary"
           >
-            <.icon name="hero-arrow-up-right" class="size-4" /> Promote To Signal
+            Promote To Signal
           </.button>
           <.button
             :if={@finding.status in [:reviewing, :accepted]}
@@ -384,7 +385,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             phx-click="open_dialog"
             phx-value-action="reject"
           >
-            <.icon name="hero-x-mark" class="size-4" /> Reject
+            Reject
           </.button>
           <.button
             :if={@finding.status in [:reviewing, :accepted]}
@@ -392,7 +393,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             phx-click="open_dialog"
             phx-value-action="suppress"
           >
-            <.icon name="hero-no-symbol" class="size-4" /> Suppress
+            Suppress
           </.button>
           <.button
             :if={@finding.status in [:reviewing, :accepted]}
@@ -400,7 +401,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             phx-click="open_dialog"
             phx-value-action="park"
           >
-            <.icon name="hero-pause-circle" class="size-4" /> Park
+            Park
           </.button>
           <.button
             :if={show_reopen?(@finding)}
@@ -408,7 +409,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             phx-click="transition"
             phx-value-action="reopen"
           >
-            <.icon name="hero-arrow-path" class="size-4" /> Reopen
+            Reopen
           </.button>
         </div>
         <div
@@ -459,7 +460,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
               </span>
             </div>
 
-            <p class="text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+            <p class="text-sm leading-6 text-base-content/70">
               {@finding.summary || "No summary captured yet."}
             </p>
 
@@ -467,10 +468,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
               :if={@finding.recommendation}
               class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
             >
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
                 Recommendation
               </p>
-              <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-200">
+              <p class="mt-2 text-sm text-base-content/80">
                 {@finding.recommendation}
               </p>
             </div>
@@ -517,7 +518,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
               <a
                 :if={@finding.source_url}
                 href={@finding.source_url}
-                class="text-emerald-700 hover:text-emerald-600 dark:text-emerald-300"
+                class="text-emerald-700 hover:text-primary"
               >
                 {@finding.source_url}
               </a>
@@ -581,7 +582,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div class="space-y-2">
                 <div class="flex flex-wrap items-center gap-2">
-                  <p class="text-sm font-semibold text-zinc-900 dark:text-white">
+                  <p class="text-sm font-semibold text-base-content">
                     {finding_document.document.title}
                   </p>
                   <span class="badge badge-outline badge-sm">
@@ -608,11 +609,11 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                 </div>
                 <p
                   :if={finding_document.document.summary}
-                  class="text-sm text-zinc-600 dark:text-zinc-300"
+                  class="text-sm text-base-content/70"
                 >
                   {finding_document.document.summary}
                 </p>
-                <p :if={finding_document.notes} class="text-sm text-zinc-600 dark:text-zinc-300">
+                <p :if={finding_document.notes} class="text-sm text-base-content/70">
                   {finding_document.notes}
                 </p>
               </div>
@@ -714,7 +715,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
               :if={discovery_record_icp_matches(@finding.source_discovery_record) != []}
               id="finding-show-discovery-icp"
             >
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
                 Why It Fits
               </p>
               <div class="mt-2 flex flex-wrap gap-1">
@@ -731,7 +732,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
               :if={discovery_record_risk_flags(@finding.source_discovery_record) != []}
               id="finding-show-discovery-risks"
             >
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
                 Watchouts
               </p>
               <div class="mt-2 flex flex-wrap gap-1">
@@ -754,7 +755,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           <div class="grid gap-6">
             <div class="space-y-4">
               <div class="space-y-2">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
                   Organization
                 </p>
                 <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
@@ -769,7 +770,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                         >
                           {@finding.source_discovery_record.organization.name}
                         </.link>
-                        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                        <p class="text-sm text-base-content/50">
                           {@finding.source_discovery_record.organization.website_domain ||
                             @finding.source_discovery_record.organization.primary_region ||
                             "Linked organization"}
@@ -782,7 +783,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                       </.status_badge>
                     </div>
                   <% else %>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                    <p class="text-sm text-base-content/50">
                       No durable organization linked yet.
                     </p>
                   <% end %>
@@ -796,7 +797,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                 }
                 class="space-y-3"
               >
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
                   Candidate Organizations
                 </p>
                 <div
@@ -811,10 +812,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                       >
                         {organization.name}
                       </.link>
-                      <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                      <p class="text-sm text-base-content/50">
                         {organization.website_domain || organization.primary_region || "No domain"}
                       </p>
-                      <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                      <p class="text-xs text-base-content/40">
                         {organization.people_count} people · {organization.signal_count} signals
                       </p>
                     </div>
@@ -846,7 +847,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
             <div class="space-y-4">
               <div class="space-y-2">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
                   Contact Person
                 </p>
                 <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
@@ -861,7 +862,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                         >
                           {@finding.source_discovery_record.contact_person.full_name}
                         </.link>
-                        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                        <p class="text-sm text-base-content/50">
                           {@finding.source_discovery_record.contact_person.email ||
                             @finding.source_discovery_record.contact_person.phone ||
                             "No direct contact details"}
@@ -875,14 +876,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                     </div>
                   <% else %>
                     <div class="space-y-1">
-                      <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                      <p class="text-sm text-base-content/50">
                         No durable contact linked yet.
                       </p>
                       <p
                         :if={
                           @discovery_identity_review && @discovery_identity_review.contact_snapshot
                         }
-                        class="text-sm text-zinc-600 dark:text-zinc-300"
+                        class="text-sm text-base-content/70"
                       >
                         {format_contact_snapshot(@discovery_identity_review.contact_snapshot)}
                       </p>
@@ -895,7 +896,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                 :if={@discovery_identity_review && @discovery_identity_review.person_candidates != []}
                 class="space-y-3"
               >
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
                   Candidate People
                 </p>
                 <div
@@ -910,10 +911,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                       >
                         {person.full_name}
                       </.link>
-                      <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                      <p class="text-sm text-base-content/50">
                         {person.email || person.phone || "No direct contact details"}
                       </p>
-                      <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                      <p class="text-xs text-base-content/40">
                         {candidate_person_organizations(person)}
                       </p>
                     </div>
@@ -1010,8 +1011,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                     Confidence {evidence.confidence_score}
                   </.status_badge>
                 </div>
-                <p class="font-medium text-zinc-900 dark:text-white">{evidence.summary}</p>
-                <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                <p class="font-medium text-base-content">{evidence.summary}</p>
+                <p class="text-xs text-base-content/40">
                   {format_datetime(evidence.observed_at || evidence.inserted_at)}
                 </p>
               </div>
@@ -1035,7 +1036,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
             <p
               :if={evidence.raw_excerpt}
-              class="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300"
+              class="mt-3 whitespace-pre-wrap text-sm leading-6 text-base-content/70"
             >
               {evidence.raw_excerpt}
             </p>
@@ -1075,14 +1076,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                   <.tag color={decision_tag_color(decision.decision)}>
                     {format_review_decision(decision.decision)}
                   </.tag>
-                  <span class="text-xs text-zinc-400 dark:text-zinc-500">
+                  <span class="text-xs text-base-content/40">
                     {format_datetime(decision.recorded_at || decision.inserted_at)}
                   </span>
                 </div>
-                <p :if={decision.reason} class="text-sm text-zinc-700 dark:text-zinc-200">
+                <p :if={decision.reason} class="text-sm text-base-content/80">
                   {decision.reason}
                 </p>
-                <div class="flex flex-wrap gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <div class="flex flex-wrap gap-2 text-xs text-base-content/50">
                   <span :if={decision.reason_code}>
                     Code: {format_feedback_scope(decision.reason_code)}
                   </span>
@@ -1097,7 +1098,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                   </span>
                 </div>
               </div>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 {review_actor_name(decision)}
               </p>
             </div>
@@ -1225,10 +1226,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp provenance_item(assigns) do
     ~H"""
     <div>
-      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
         {@label}
       </p>
-      <div class="mt-1 text-sm text-zinc-700 dark:text-zinc-200">
+      <div class="mt-1 text-sm text-base-content/80">
         {render_slot(@inner_block)}
       </div>
     </div>
@@ -1242,10 +1243,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p :if={is_nil(@badge)} class="text-sm font-medium text-zinc-900 dark:text-white">
+      <p :if={is_nil(@badge)} class="text-sm font-medium text-base-content">
         {@value}
       </p>
       <.status_badge :if={@badge} status={@badge}>{@value}</.status_badge>
@@ -1273,9 +1274,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   defp prep_action_path(_finding), do: nil
 
-  defp prep_action_label(%{finding_family: :procurement}), do: "Add Document"
+  defp prep_action_label(%{finding_family: :procurement}), do: "Add Packet"
   defp prep_action_label(%{finding_family: :discovery}), do: "Add Evidence"
   defp prep_action_label(_finding), do: "Add Prep"
+
+  defp document_action_label(%{finding_family: :procurement}), do: "Add Packet"
+  defp document_action_label(%{finding_family: :discovery}), do: "Add Source Material"
+  defp document_action_label(_finding), do: "Add Material"
 
   defp substantive_procurement_document?(%{document: %{document_type: document_type}}),
     do: PromotionRules.substantive_procurement_document_type?(document_type)
@@ -1348,7 +1353,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp load_discovery_identity_review(%{source_discovery_record: nil}, _actor), do: nil
 
   defp load_discovery_identity_review(%{source_discovery_record: discovery_record}, actor) do
-    case Acquisition.get_discovery_identity_review(discovery_record, actor: actor) do
+    case Commercial.discovery_record_review_context(discovery_record, actor: actor) do
       {:ok, identity_review} -> identity_review
       {:error, error} -> raise "failed to load discovery identity review: #{inspect(error)}"
     end
@@ -1358,7 +1363,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   defp load_discovery_evidence(%{source_discovery_record_id: target_id}, actor)
        when is_binary(target_id) do
-    case Acquisition.list_discovery_evidence_for_discovery_record(
+    case Commercial.list_discovery_evidence_for_discovery_record(
            target_id,
            actor: actor,
            load: [:confidence_variant]
@@ -1376,18 +1381,11 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   end
 
   defp load_review_decisions(%{id: finding_id}, actor) do
-    opts =
-      [actor: actor]
-      |> maybe_put_load_actor(actor)
-
-    case Acquisition.list_finding_review_decisions_for_finding(finding_id, opts) do
+    case Acquisition.list_finding_review_decisions_for_finding(finding_id, actor: actor) do
       {:ok, decisions} -> decisions
       {:error, error} -> raise "failed to load finding review decisions: #{inspect(error)}"
     end
   end
-
-  defp maybe_put_load_actor(opts, nil), do: opts
-  defp maybe_put_load_actor(opts, _actor), do: Keyword.put(opts, :load, [:actor_user])
 
   defp identity_attrs_from_params(params) do
     %{}
@@ -1589,7 +1587,11 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp review_actor_name(%{actor_user: %{full_name: full_name}}) when is_binary(full_name),
     do: full_name
 
-  defp review_actor_name(%{actor_user: %{email: email}}) when is_binary(email), do: email
+  defp review_actor_name(%{actor_user: %{email: email}}), do: to_string(email)
+
+  defp review_actor_name(%{actor_user_id: actor_user_id}) when is_binary(actor_user_id),
+    do: "Operator"
+
   defp review_actor_name(_decision), do: "System"
 
   defp metadata_value(metadata, key) when is_map(metadata),

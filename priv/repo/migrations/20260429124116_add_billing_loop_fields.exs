@@ -36,7 +36,8 @@ defmodule GnomeGarden.Repo.Migrations.AddBillingLoopFields do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create unique_index(:mercury_client_bank_aliases, [:counterparty_name_fragment],

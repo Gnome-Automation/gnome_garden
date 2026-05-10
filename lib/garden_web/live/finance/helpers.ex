@@ -31,7 +31,13 @@ defmodule GnomeGardenWeb.Finance.Helpers do
   def display_email(nil, fallback), do: fallback
   def display_email(%Ash.NotLoaded{}, fallback), do: fallback
   def display_email(%{email: nil}, fallback), do: fallback
-  def display_email(%{email: email}, _fallback), do: email
+  def display_email(%{email: email}, _fallback), do: to_string(email)
+
+  def display_team_member(value, fallback \\ "-")
+  def display_team_member(nil, fallback), do: fallback
+  def display_team_member(%Ash.NotLoaded{}, fallback), do: fallback
+  def display_team_member(%{display_name: nil}, fallback), do: fallback
+  def display_team_member(%{display_name: display_name}, _fallback), do: display_name
 
   def sum_amounts(records, field) do
     Enum.reduce(records, Decimal.new(0), fn record, total ->

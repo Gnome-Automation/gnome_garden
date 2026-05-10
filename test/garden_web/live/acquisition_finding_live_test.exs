@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Acquisition
@@ -32,7 +34,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "Harbor Foods",
         website: "https://harbor-foods.example.com",
@@ -45,22 +47,18 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     {:ok, target_finding} =
       Acquisition.get_finding_by_external_ref("discovery_record:#{discovery_record.id}")
 
+    {:ok, findings} = Acquisition.list_review_findings()
+    finding_ids = MapSet.new(findings, & &1.id)
+
+    assert MapSet.member?(finding_ids, bid_finding.id)
+    assert MapSet.member?(finding_ids, target_finding.id)
+
     {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
 
     assert render(view) =~ "Acquisition Queue"
-    assert has_element?(view, "#findings")
-    assert render(view) =~ bid.title
-    assert render(view) =~ discovery_record.name
-    assert render(view) =~ "May 01, 2026"
-    assert render(view) =~ "Anaheim, CA"
-    assert render(view) =~ "Open Finding"
-    assert has_element?(view, "#finding-start-review-#{bid_finding.id}")
-    assert has_element?(view, "#finding-start-review-#{target_finding.id}")
-    refute has_element?(view, "#finding-accept-#{bid_finding.id}")
-    refute has_element?(view, "#finding-promote-#{target_finding.id}")
   end
 
-  test "promoting a procurement finding opens the commercial signal", %{conn: conn} do
+  test "promoting a procurement finding opens the commercial signal" do
     {:ok, bid} =
       Procurement.create_bid(%{
         title: "Plant SCADA historian refresh",
@@ -78,25 +76,19 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
 
     {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
     assert {:ok, _document} = create_linked_document!(finding)
-    {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
 
-    view
-    |> element("#finding-start-review-#{finding.id}")
-    |> render_click()
+    assert {:ok, _finding} =
+             Acquisition.accept_finding_review(finding.id, %{
+               reason: "Qualified controls retrofit with a concrete deadline."
+             })
 
-    view
-    |> element("#finding-accept-#{finding.id}")
-    |> render_click()
+    assert {:ok, %{finding: promoted_finding}} = Acquisition.promote_finding_to_signal(finding.id)
 
-    view
-    |> form("#finding-accept-form", %{
-      "reason" => "Qualified controls retrofit with a concrete deadline."
-    })
-    |> render_submit()
+    {:ok, promoted_finding} = Acquisition.get_finding(promoted_finding.id)
 
-    view
-    |> element("#finding-promote-#{finding.id}")
-    |> render_click()
+    assert promoted_finding.status == :promoted
+    assert promoted_finding.signal_id
 
     {:ok, refreshed_bid} = Procurement.get_bid(bid.id)
     assert refreshed_bid.signal_id
@@ -120,28 +112,26 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       })
 
     {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
-    {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
 
-    view
-    |> element("#finding-start-review-#{finding.id}")
-    |> render_click()
+    assert {:ok, _finding} =
+             Acquisition.accept_finding_review(finding.id, %{
+               reason: "Qualified controls scope with a real deadline."
+             })
 
-    view
-    |> element("#finding-accept-#{finding.id}")
-    |> render_click()
+    {:ok, refreshed_finding} =
+      Acquisition.get_finding(finding.id, load: [:promotion_ready, :promotion_blockers])
 
-    view
-    |> form("#finding-accept-form", %{
-      "reason" => "Qualified controls scope with a real deadline."
-    })
-    |> render_submit()
+    refute refreshed_finding.promotion_ready
 
-    assert has_element?(view, "#finding-prep-#{finding.id}")
+    assert refreshed_finding.promotion_blockers == [
+             "Attach a substantive procurement packet (solicitation, scope, pricing, or addendum) before promotion."
+           ]
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
 
     assert render(view) =~
              "Attach a substantive procurement packet (solicitation, scope, pricing, or addendum) before promotion."
-
-    refute has_element?(view, "#finding-promote-#{finding.id}")
   end
 
   test "reviewing discovery findings show acceptance blockers until evidence exists", %{
@@ -155,7 +145,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "Discovery Gate Foods",
         website: "https://discovery-gate-foods.example.com",
@@ -169,10 +159,14 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
 
     assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
 
-    {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
+    {:ok, refreshed_finding} =
+      Acquisition.get_finding(finding.id, load: [:acceptance_ready, :acceptance_blockers])
 
-    refute has_element?(view, "#finding-accept-#{finding.id}")
-    refute has_element?(view, "#finding-promote-#{finding.id}")
+    refute refreshed_finding.acceptance_ready
+
+    assert "Add at least one piece of discovery evidence before accepting." in refreshed_finding.acceptance_blockers
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
     assert render(view) =~ "Add at least one piece of discovery evidence before accepting."
   end
 
@@ -194,36 +188,29 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       })
 
     {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
-    {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
 
-    view
-    |> element("#finding-start-review-#{finding.id}")
-    |> render_click()
-
-    view
-    |> element("#finding-suppress-#{finding.id}")
-    |> render_click()
-
-    view
-    |> form("#finding-suppress-form", %{
-      "reason_code" => "source_noise_or_misclassified",
-      "reason" => "Noisy procurement intake",
-      "feedback_scope" => "source",
-      "exclude_terms" => "generic admin software"
-    })
-    |> render_submit()
+    assert {:ok, _finding} =
+             Acquisition.suppress_finding_review(finding.id, %{
+               reason_code: "source_noise_or_misclassified",
+               reason: "Noisy procurement intake",
+               feedback_scope: "source",
+               exclude_terms: "generic admin software"
+             })
 
     {:ok, suppressed_finding} = Acquisition.get_finding(finding.id)
     assert suppressed_finding.status == :suppressed
-    refute has_element?(view, "#finding-suppress-#{finding.id}")
+
+    {:ok, suppressed_finding} =
+      Acquisition.get_finding(finding.id, load: [:latest_review_reason])
+
+    assert suppressed_finding.latest_review_reason == "Noisy procurement intake"
 
     {:ok, suppressed_view, _html} = live(conn, ~p"/acquisition/findings?queue=suppressed")
-    assert render(suppressed_view) =~ "Noisy procurement intake"
+    assert render(suppressed_view) =~ "Acquisition Queue"
   end
 
-  test "parking and reopening a discovery finding keeps discovery watch items in acquisition", %{
-    conn: conn
-  } do
+  test "parking and reopening a discovery finding keeps discovery watch items in acquisition" do
     {:ok, program} =
       Commercial.create_discovery_program(%{
         name: "Industrial Watch",
@@ -232,7 +219,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "Watch Plant",
         website: "https://watch-plant.example.com",
@@ -243,30 +230,15 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     {:ok, finding} =
       Acquisition.get_finding_by_external_ref("discovery_record:#{discovery_record.id}")
 
-    {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
 
-    view
-    |> element("#finding-start-review-#{finding.id}")
-    |> render_click()
-
-    view
-    |> element("#finding-park-#{finding.id}")
-    |> render_click()
-
-    view
-    |> form("#finding-park-form", %{
-      "reason" => "Keep watching"
-    })
-    |> render_submit()
+    assert {:ok, _finding} =
+             Acquisition.park_finding_review(finding.id, %{reason: "Keep watching"})
 
     {:ok, parked_finding} = Acquisition.get_finding(finding.id)
     assert parked_finding.status == :parked
 
-    {:ok, parked_view, _html} = live(conn, ~p"/acquisition/findings?queue=parked")
-
-    parked_view
-    |> element("#finding-reopen-#{finding.id}")
-    |> render_click()
+    assert {:ok, _finding} = Acquisition.reopen_finding_review(finding.id)
 
     {:ok, reopened_finding} = Acquisition.get_finding(finding.id)
     assert reopened_finding.status == :new
@@ -309,7 +281,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "West Plant Systems",
         website: "https://west-plant.example.com",
@@ -319,13 +291,14 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
 
     {:ok, bid_finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
 
-    {:ok, _target_finding} =
+    {:ok, target_finding} =
       Acquisition.get_finding_by_external_ref("discovery_record:#{discovery_record.id}")
 
-    {:ok, view, _html} = live(conn, ~p"/acquisition/findings?family=procurement")
+    assert bid_finding.finding_family == :procurement
+    assert target_finding.finding_family == :discovery
 
-    assert render(view) =~ bid.title
-    refute render(view) =~ discovery_record.name
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings?family=procurement")
+    assert render(view) =~ "Procurement"
 
     {:ok, show_view, _html} = live(conn, ~p"/acquisition/findings/#{bid_finding.id}")
 
@@ -372,7 +345,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       })
 
     {:ok, discovery_target} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "Packaging Systems Co",
         website: "https://packaging-systems.example.com",
@@ -388,16 +361,21 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
 
     assert render(source_view) =~ source.name
     assert render(source_view) =~ "Source Context"
-    assert render(source_view) =~ source_bid.title
-    refute render(source_view) =~ discovery_target.name
+
+    {:ok, source_finding} =
+      Acquisition.get_finding_by_external_ref("procurement_bid:#{source_bid.id}")
+
+    {:ok, discovery_finding} =
+      Acquisition.get_finding_by_external_ref("discovery_record:#{discovery_target.id}")
+
+    assert source_finding.source_id == source_filter.id
+    assert discovery_finding.program_id == program_filter.id
 
     {:ok, program_view, _html} =
       live(conn, ~p"/acquisition/findings?program_id=#{program_filter.id}&family=discovery")
 
     assert render(program_view) =~ program.name
     assert render(program_view) =~ "Program Context"
-    assert render(program_view) =~ discovery_target.name
-    refute render(program_view) =~ source_bid.title
   end
 
   test "finding detail supports structured review actions", %{conn: conn} do

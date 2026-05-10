@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Commercial.AgreementLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Commercial.Helpers
 
@@ -7,16 +8,21 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    agreements = load_agreements(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Agreements")
-     |> assign(:agreement_count, length(agreements))
-     |> assign(:active_count, Enum.count(agreements, &(&1.status == :active)))
-     |> assign(:pending_count, Enum.count(agreements, &(&1.status == :pending_signature)))
-     |> assign(:contract_value_total, sum_amounts(agreements, :contract_value))
-     |> stream(:agreements, agreements)}
+     |> assign(:agreement_count, counts.total)
+     |> assign(:active_count, counts.active)
+     |> assign(:pending_count, counts.pending)
+     |> assign(:contract_value_total, counts.contract_value_total)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -30,10 +36,10 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/proposals"}>
-            <.icon name="hero-document-text" class="size-4" /> Proposals
+            Proposals
           </.button>
           <.button navigate={~p"/commercial/agreements/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Agreement
+            New Agreement
           </.button>
         </:actions>
       </.page_header>
@@ -68,13 +74,51 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Index do
         />
       </div>
 
-      <.section
-        title="Commercial Commitments"
-        description="Keep agreements explicit so project, service, and finance automation hangs off a durable contract record."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="agreements-table"
+        resource={GnomeGarden.Commercial.Agreement}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[
+          load: [:status_variant, :project_count, :invoice_count, organization: []]
+        ]}
+        click={fn agreement -> JS.navigate(~p"/commercial/agreements/#{agreement}") end}
       >
-        <div :if={@agreement_count == 0} class="p-6 sm:p-7">
+        <:col :let={agreement} field="name" sort search label="Agreement">
+          <div class="space-y-1">
+            <div class="font-medium text-zinc-900 dark:text-white">{agreement.name}</div>
+            <p class="text-sm text-base-content/50">
+              {agreement.reference_number || "No reference"} · {format_atom(agreement.billing_model)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={agreement} field="organization.name" sort search label="Organization">
+          {(agreement.organization && agreement.organization.name) || "-"}
+        </:col>
+
+        <:col :let={agreement} field="agreement_type" sort label="Type">
+          {format_atom(agreement.agreement_type)}
+        </:col>
+
+        <:col :let={agreement} field="contract_value" sort label="Value">
+          <div class="space-y-1">
+            <p>{format_amount(agreement.contract_value)}</p>
+            <p class="text-xs text-base-content/40">
+              {agreement.project_count || 0} projects · {agreement.invoice_count || 0} invoices
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={agreement} field="status" sort label="Status">
+          <.status_badge status={agreement.status_variant}>
+            {format_atom(agreement.status)}
+          </.status_badge>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-document-check"
             title="No agreements yet"
@@ -86,86 +130,24 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@agreement_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Agreement
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Organization
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Type
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Value
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="agreements"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, agreement} <- @streams.agreements} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/commercial/agreements/#{agreement}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {agreement.name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {agreement.reference_number || "No reference"} · {format_atom(
-                        agreement.billing_model
-                      )}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {(agreement.organization && agreement.organization.name) || "-"}
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {format_atom(agreement.agreement_type)}
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{format_amount(agreement.contract_value)}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {agreement.project_count || 0} projects · {agreement.invoice_count || 0} invoices
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={agreement.status_variant}>
-                    {format_atom(agreement.status)}
-                  </.status_badge>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_agreements(actor) do
-    case Commercial.list_agreements(
-           actor: actor,
-           query: [sort: [inserted_at: :desc]],
-           load: [:status_variant, :project_count, :invoice_count, organization: []]
-         ) do
-      {:ok, agreements} -> agreements
-      {:error, error} -> raise "failed to load agreements: #{inspect(error)}"
+  defp load_counts(actor) do
+    case Commercial.list_agreements(actor: actor) do
+      {:ok, agreements} ->
+        %{
+          total: length(agreements),
+          active: Enum.count(agreements, &(&1.status == :active)),
+          pending: Enum.count(agreements, &(&1.status == :pending_signature)),
+          contract_value_total: sum_amounts(agreements, :contract_value)
+        }
+
+      {:error, _} ->
+        %{total: 0, active: 0, pending: 0, contract_value_total: Decimal.new(0)}
     end
   end
 

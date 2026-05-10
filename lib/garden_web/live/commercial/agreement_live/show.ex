@@ -46,29 +46,29 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             <.status_badge status={@agreement.status_variant}>
               {format_atom(@agreement.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{@agreement.reference_number || "No reference number"}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/agreements"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"}>
-            <.icon name="hero-arrow-path" class="size-4" /> New Change Order
+            New Change Order
           </.button>
           <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
-            <.icon name="hero-receipt-percent" class="size-4" /> Draft Invoice
+            Draft Invoice
           </.button>
           <.button
             :if={can_create_project?(@agreement)}
             navigate={~p"/execution/projects/new?agreement_id=#{@agreement.id}"}
             variant="primary"
           >
-            <.icon name="hero-wrench-screwdriver" class="size-4" /> Create Project
+            Create Project
           </.button>
           <.button navigate={~p"/commercial/agreements/#{@agreement}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -137,7 +137,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
       </.section>
 
       <.section :if={@agreement.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@agreement.notes}
         </p>
       </.section>
@@ -161,8 +161,8 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{project.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{project.name}</p>
+              <p class="text-sm text-base-content/50">
                 {project.code || "No project code"}
               </p>
             </div>
@@ -198,8 +198,8 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{change_order.title}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{change_order.title}</p>
+              <p class="text-sm text-base-content/50">
                 {change_order.change_order_number}
               </p>
             </div>
@@ -235,10 +235,10 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">
+              <p class="font-medium text-base-content">
                 {invoice.invoice_number || "Draft Invoice"}
               </p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="text-sm text-base-content/50">
                 Due {format_date(invoice.due_on)}
               </p>
             </div>
@@ -258,10 +258,10 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end

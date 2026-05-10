@@ -35,4 +35,30 @@ defmodule GnomeGardenWeb.ConnCase do
     GnomeGarden.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  def register_and_log_in_user(%{conn: conn} = context) do
+    email = "operator-#{System.unique_integer([:positive, :monotonic])}@example.com"
+    user = Ash.Seed.seed!(GnomeGarden.Accounts.User, %{email: email})
+
+    team_member =
+      Ash.Seed.seed!(GnomeGarden.Operations.TeamMember, %{
+        user_id: user.id,
+        display_name: "Operator #{System.unique_integer([:positive, :monotonic])}",
+        role: :operator,
+        status: :active
+      })
+
+    {:ok, token, _claims} = AshAuthentication.Jwt.token_for_user(user)
+    user = Ash.Resource.put_metadata(user, :token, token)
+
+    new_conn =
+      conn
+      |> Phoenix.ConnTest.init_test_session(%{})
+      |> AshAuthentication.Plug.Helpers.store_in_session(user)
+
+    context
+    |> Map.put(:conn, new_conn)
+    |> Map.put(:current_user, user)
+    |> Map.put(:current_team_member, team_member)
+  end
 end

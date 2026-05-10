@@ -386,7 +386,7 @@ defmodule GnomeGardenWeb.CoreComponents do
         <div class="relative w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
           <div class="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
             <div>
-              <h2 :if={@title != []} class="text-lg font-semibold text-zinc-900 dark:text-white">
+              <h2 :if={@title != []} class="text-lg font-semibold text-base-content">
                 {render_slot(@title)}
               </h2>
             </div>

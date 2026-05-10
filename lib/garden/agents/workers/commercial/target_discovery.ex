@@ -347,7 +347,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
   end
 
   @doc """
-    Parse agent output and create discovery records from LEAD: formatted lines.
+    Parse agent output and create discovery records from TARGET: formatted lines.
   Call this with the result text from discover/research_company/scan_job_postings.
   """
   def create_targets_from_result(result_text, opts \\ [])
@@ -356,8 +356,8 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
       when is_binary(result_text) and is_list(opts) do
     result_text
     |> String.split("\n")
-    |> Enum.filter(&String.starts_with?(&1, "LEAD:"))
-    |> Enum.map(&parse_lead_line/1)
+    |> Enum.filter(&String.starts_with?(&1, "TARGET:"))
+    |> Enum.map(&parse_target_line/1)
     |> Enum.reject(&is_nil/1)
     |> Enum.map(&create_discovery_record(&1, opts))
   end
@@ -397,7 +397,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     CompanyProfileContext.prompt_block(opts)
   end
 
-  defp parse_lead_line("LEAD: " <> rest) do
+  defp parse_target_line("TARGET: " <> rest) do
     case String.split(rest, " | ") do
       [company | parts] ->
         %{
@@ -415,7 +415,7 @@ defmodule GnomeGarden.Agents.Workers.Commercial.TargetDiscovery do
     end
   end
 
-  defp parse_lead_line(_), do: nil
+  defp parse_target_line(_), do: nil
 
   defp create_discovery_record(parsed, opts) do
     {first, last} = split_name(parsed.contact_name)

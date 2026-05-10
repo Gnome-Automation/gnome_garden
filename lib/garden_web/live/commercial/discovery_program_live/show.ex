@@ -62,6 +62,9 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
            actor: socket.assigns.current_user
          ) do
       {:ok, %{program: refreshed_program, run: run}} ->
+        refreshed_program =
+          load_discovery_program!(refreshed_program.id, socket.assigns.current_user)
+
         acquisition_program =
           load_acquisition_program(refreshed_program.id, socket.assigns.current_user)
 
@@ -98,7 +101,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
             <.status_badge status={@discovery_program.status_variant}>
               {format_atom(@discovery_program.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{format_atom(@discovery_program.program_type)}</span>
           </span>
         </:subtitle>
@@ -108,19 +111,19 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
             phx-click="run_now"
             variant="primary"
           >
-            <.icon name="hero-play" class="size-4" /> Run Discovery
+            Run Discovery
           </.button>
           <.button
             :if={@acquisition_program_id}
             navigate={discovery_intake_path(@acquisition_program_id)}
           >
-            <.icon name="hero-inbox-stack" class="size-4" /> Discovery Intake
+            Discovery Intake
           </.button>
           <.button navigate={~p"/commercial/discovery-programs"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/commercial/discovery-programs/#{@discovery_program}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -212,13 +215,13 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
         >
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="space-y-1">
-              <p class="text-sm font-semibold text-zinc-900 dark:text-white">
+              <p class="text-sm font-semibold text-base-content">
                 Run {short_id(@latest_run.id)}
               </p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="text-xs text-base-content/50">
                 {run_deployment_label(@latest_run)}
               </p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500">
+              <p class="text-xs text-base-content/40">
                 Started {format_datetime(@latest_run.started_at || @latest_run.inserted_at)}
               </p>
             </div>
@@ -248,13 +251,13 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
       </.section>
 
       <.section :if={@discovery_program.description} title="Description">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@discovery_program.description}
         </p>
       </.section>
 
       <.section :if={@discovery_program.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@discovery_program.notes}
         </p>
       </.section>
@@ -283,11 +286,11 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
                   <.tag color={:zinc}>{format_atom(finding.finding_type)}</.tag>
                   <.tag color={:sky}>{format_atom(finding.confidence || :medium)}</.tag>
                 </div>
-                <p class="font-medium text-zinc-900 dark:text-white">{finding.title}</p>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                <p class="font-medium text-base-content">{finding.title}</p>
+                <p class="text-sm text-base-content/50">
                   {finding.summary || "No summary captured yet"}
                 </p>
-                <p class="text-xs text-zinc-400 dark:text-zinc-500">
+                <p class="text-xs text-base-content/40">
                   Intent {finding.intent_score || 0} · Fit {finding.fit_score || 0}
                 </p>
               </div>
@@ -303,18 +306,18 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
           description="Discovery programs now feed acquisition first, then commercial review, then pursuit."
         >
           <div class="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-            <p class="text-sm text-zinc-600 dark:text-zinc-300">
+            <p class="text-sm text-base-content/70">
               This page is now program context. Operators should work the actual intake in acquisition, not a separate discovery backlog.
             </p>
             <div class="flex flex-wrap gap-3">
               <.button navigate={discovery_intake_path(@acquisition_program_id)} variant="primary">
-                <.icon name="hero-inbox-stack" class="size-4" /> Open Discovery Intake
+                Open Discovery Intake
               </.button>
               <.button
                 :if={!Enum.empty?(@findings)}
                 navigate={~p"/acquisition/findings/#{List.first(@findings).id}"}
               >
-                <.icon name="hero-arrow-top-right-on-square" class="size-4" /> Open Latest Finding
+                Open Latest Finding
               </.button>
             </div>
           </div>
@@ -331,10 +334,10 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p :if={is_nil(@badge)} class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p :if={is_nil(@badge)} class="text-sm font-medium text-base-content">{@value}</p>
       <.status_badge :if={@badge} status={@badge}>{@value}</.status_badge>
     </div>
     """
@@ -358,7 +361,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
   end
 
   defp load_acquisition_program(discovery_program_id, actor) do
-    case Acquisition.get_program_by_legacy_discovery_program(
+    case Acquisition.get_program_by_discovery_program(
            discovery_program_id,
            actor: actor,
            load: [

@@ -5,7 +5,7 @@ defmodule GnomeGarden.Operations.Changes.MergePerson do
 
   use Ash.Resource.Change
 
-  alias GnomeGarden.Acquisition
+  alias GnomeGarden.Commercial
   alias GnomeGarden.Execution
   alias GnomeGarden.Operations
 
@@ -90,10 +90,10 @@ defmodule GnomeGarden.Operations.Changes.MergePerson do
   defp reassign_discovery_records(source_id, target_id, actor) do
     reassign_collection(
       fn ->
-        Acquisition.list_discovery_records_for_contact_person(source_id, actor: actor)
+        Commercial.list_discovery_records_for_contact_person(source_id, actor: actor)
       end,
       fn discovery_record ->
-        Acquisition.update_discovery_record(discovery_record, %{contact_person_id: target_id},
+        Commercial.update_discovery_record(discovery_record, %{contact_person_id: target_id},
           actor: actor
         )
       end

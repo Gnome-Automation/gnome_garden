@@ -75,7 +75,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
       </div>
 
       <%!-- Ring border --%>
-      <div class="absolute inset-0 rounded-2xl ring-1 ring-inset ring-zinc-900/[0.075] group-hover:ring-zinc-900/10 dark:ring-white/10 dark:group-hover:ring-white/20" />
+      <div class="absolute inset-0 rounded-2xl ring-1 ring-inset ring-zinc-900/[0.075] group-hover:ring-base-content/10 dark:group-hover:ring-white/20" />
 
       <%!-- Content --%>
       <div class="relative w-full rounded-2xl px-4 pb-4 pt-16">
@@ -88,7 +88,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
         </div>
 
         <%!-- Title --%>
-        <h3 class="mt-4 text-sm/7 font-semibold text-zinc-900 dark:text-white">
+        <h3 class="mt-4 text-sm/7 font-semibold text-base-content">
           <.link :if={@navigate} navigate={@navigate}>
             <span class="absolute inset-0 rounded-2xl" />
             {@title}
@@ -100,7 +100,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
         </h3>
 
         <%!-- Description --%>
-        <p :if={@description} class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <p :if={@description} class="mt-1 text-sm text-base-content/60">
           {@description}
         </p>
 
@@ -133,11 +133,10 @@ defmodule GnomeGardenWeb.Components.Protocol do
   defp variant_class(:small), do: ""
   defp variant_class(:medium), do: "rounded-lg px-1.5 ring-1 ring-inset"
 
-  defp color_class(:emerald, :small), do: "text-emerald-500 dark:text-emerald-400"
+  defp color_class(:emerald, :small), do: "text-primary"
 
   defp color_class(:emerald, :medium),
-    do:
-      "ring-emerald-300 dark:ring-emerald-400/30 bg-emerald-400/10 text-emerald-500 dark:text-emerald-400"
+    do: "ring-emerald-300 dark:ring-emerald-400/30 bg-emerald-400/10 text-primary"
 
   defp color_class(:sky, :small), do: "text-sky-500"
 
@@ -157,7 +156,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
     do:
       "ring-rose-200 bg-rose-50 text-red-500 dark:ring-rose-500/20 dark:bg-rose-400/10 dark:text-rose-400"
 
-  defp color_class(:zinc, :small), do: "text-zinc-400 dark:text-zinc-500"
+  defp color_class(:zinc, :small), do: "text-base-content/40"
 
   defp color_class(:zinc, :medium),
     do:
@@ -208,7 +207,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
   end
 
   defp button_class(:text) do
-    "inline-flex gap-0.5 justify-center overflow-hidden text-sm font-medium transition text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-500"
+    "inline-flex gap-0.5 justify-center overflow-hidden text-sm font-medium transition text-emerald-500 hover:text-primary dark:hover:text-emerald-500"
   end
 
   @doc """
@@ -242,7 +241,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
       "group relative rounded-2xl bg-zinc-50 p-4 transition-all hover:shadow-md hover:shadow-zinc-900/5 dark:bg-white/[0.025] dark:hover:shadow-black/5",
       @class
     ]}>
-      <div class="absolute inset-0 rounded-2xl ring-1 ring-inset ring-zinc-900/[0.075] transition group-hover:ring-zinc-900/10 dark:ring-white/10 dark:group-hover:ring-white/20" />
+      <div class="absolute inset-0 rounded-2xl ring-1 ring-inset ring-zinc-900/[0.075] transition group-hover:ring-base-content/10 dark:group-hover:ring-white/20" />
       <div class="relative">
         <.link :if={@navigate} navigate={@navigate} class="absolute inset-0 rounded-2xl">
           <span class="sr-only">View</span>
@@ -358,7 +357,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
             class={[
               @tag || @label,
               "mt-2 scroll-mt-32",
-              "text-2xl font-bold text-zinc-900 dark:text-white"
+              "text-2xl font-bold text-base-content"
             ]}
           >
             {render_slot(@inner_block)}
@@ -368,7 +367,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
             id={@id}
             class={[
               @tag || (@label && "mt-2 scroll-mt-32"),
-              "text-xl font-semibold text-zinc-900 dark:text-white"
+              "text-xl font-semibold text-base-content"
             ]}
           >
             {render_slot(@inner_block)}
@@ -378,7 +377,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
             id={@id}
             class={[
               @tag || (@label && "mt-2 scroll-mt-32"),
-              "text-lg font-semibold text-zinc-900 dark:text-white"
+              "text-lg font-semibold text-base-content"
             ]}
           >
             {render_slot(@inner_block)}
@@ -388,7 +387,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
             id={@id}
             class={[
               @tag || (@label && "mt-2 scroll-mt-32"),
-              "text-base font-semibold text-zinc-900 dark:text-white"
+              "text-base font-semibold text-base-content"
             ]}
           >
             {render_slot(@inner_block)}
@@ -432,11 +431,11 @@ defmodule GnomeGardenWeb.Components.Protocol do
           </code>
         </dd>
         <dt :if={@type} class="sr-only">Type</dt>
-        <dd :if={@type} class="font-mono text-xs text-zinc-400 dark:text-zinc-500">
+        <dd :if={@type} class="font-mono text-xs text-base-content/40">
           {@type}
         </dd>
         <dt class="sr-only">Description</dt>
-        <dd class="w-full flex-none text-sm text-zinc-600 dark:text-zinc-400">
+        <dd class="w-full flex-none text-sm text-base-content/60">
           {render_slot(@inner_block)}
         </dd>
       </dl>
@@ -453,7 +452,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
     ~H"""
     <div class={["relative h-8", @class]}>
       <form class="absolute inset-0 flex items-center justify-center gap-6 md:justify-start">
-        <p class="text-sm text-zinc-600 dark:text-zinc-400">
+        <p class="text-sm text-base-content/60">
           Was this helpful?
         </p>
         <div class="group grid h-8 grid-cols-[1fr_1px_1fr] overflow-hidden rounded-full border border-zinc-900/10 dark:border-white/10">
@@ -487,10 +486,10 @@ defmodule GnomeGardenWeb.Components.Protocol do
   def guide_link(assigns) do
     ~H"""
     <div>
-      <h3 class="text-sm font-semibold text-zinc-900 dark:text-white">
+      <h3 class="text-sm font-semibold text-base-content">
         {@title}
       </h3>
-      <p :if={@description} class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p :if={@description} class="mt-1 text-sm text-base-content/60">
         {@description}
       </p>
       <p class="mt-4">
@@ -522,11 +521,11 @@ defmodule GnomeGardenWeb.Components.Protocol do
   def empty_state(assigns) do
     ~H"""
     <div class={["flex flex-col items-center justify-center py-16 text-center", @class]}>
-      <div class="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+      <div class="flex h-12 w-12 items-center justify-center rounded-full bg-base-300">
         <span class={"#{@icon} h-6 w-6 text-zinc-400"} />
       </div>
-      <h3 class="mt-4 text-sm font-semibold text-zinc-900 dark:text-white">{@title}</h3>
-      <p :if={@description} class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{@description}</p>
+      <h3 class="mt-4 text-sm font-semibold text-base-content">{@title}</h3>
+      <p :if={@description} class="mt-1 text-sm text-base-content/60">{@description}</p>
       <div :if={@inner_block != []} class="mt-6">
         {render_slot(@inner_block)}
       </div>
@@ -545,18 +544,18 @@ defmodule GnomeGardenWeb.Components.Protocol do
   def stat(assigns) do
     ~H"""
     <div class="rounded-2xl bg-zinc-50 p-6 ring-1 ring-inset ring-zinc-900/[0.075] dark:bg-white/[0.025] dark:ring-white/10">
-      <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">{@label}</p>
+      <p class="text-sm font-medium text-base-content/50">{@label}</p>
       <p class="mt-2 flex items-baseline gap-2">
-        <span class="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+        <span class="text-3xl font-semibold tracking-tight text-base-content">
           {@value}
         </span>
         <span
           :if={@change}
           class={[
             "text-sm font-medium",
-            @change_type == :positive && "text-emerald-600 dark:text-emerald-400",
-            @change_type == :negative && "text-rose-600 dark:text-rose-400",
-            @change_type == :neutral && "text-zinc-500 dark:text-zinc-400"
+            @change_type == :positive && "text-primary",
+            @change_type == :negative && "text-error",
+            @change_type == :neutral && "text-base-content/50"
           ]}
         >
           {@change}
@@ -697,7 +696,7 @@ defmodule GnomeGardenWeb.Components.Protocol do
 
   def mono(assigns) do
     ~H"""
-    <span class={["font-mono text-sm/6 text-zinc-500 dark:text-zinc-400", @class]}>
+    <span class={["font-mono text-sm/6 text-base-content/50", @class]}>
       {render_slot(@inner_block)}
     </span>
     """
@@ -717,14 +716,14 @@ defmodule GnomeGardenWeb.Components.Protocol do
         <img
           src={@src}
           alt=""
-          class="size-8 rounded-full bg-zinc-100 dark:bg-zinc-800 dark:outline dark:outline-white/10"
+          class="size-8 rounded-full bg-base-300 dark:outline dark:outline-white/10"
         />
       <% else %>
         <span class="inline-flex size-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-white/10">
           <span class="text-xs font-medium">{String.first(@name) |> String.upcase()}</span>
         </span>
       <% end %>
-      <div class="truncate text-sm/6 font-medium text-zinc-900 dark:text-white">{@name}</div>
+      <div class="truncate text-sm/6 font-medium text-base-content">{@name}</div>
     </div>
     """
   end

@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Operations.SiteLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Operations.Helpers
 
@@ -7,22 +8,21 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    sites = load_sites(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Sites")
-     |> assign(:site_count, length(sites))
-     |> assign(:active_count, Enum.count(sites, &(&1.status == :active)))
-     |> assign(
-       :managed_system_count,
-       Enum.reduce(sites, 0, fn site, total -> total + (site.managed_system_count || 0) end)
-     )
-     |> assign(
-       :asset_count,
-       Enum.reduce(sites, 0, fn site, total -> total + (site.asset_count || 0) end)
-     )
-     |> stream(:sites, sites)}
+     |> assign(:site_count, counts.total)
+     |> assign(:active_count, counts.active)
+     |> assign(:managed_system_count, counts.managed_systems)
+     |> assign(:asset_count, counts.assets)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -36,10 +36,10 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/organizations"}>
-            <.icon name="hero-building-office-2" class="size-4" /> Organizations
+            Organizations
           </.button>
           <.button navigate={~p"/operations/sites/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Site
+            New Site
           </.button>
         </:actions>
       </.page_header>
@@ -74,13 +74,56 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Index do
         />
       </div>
 
-      <.section
-        title="Operating Locations"
-        description="Sites give service, delivery, and asset records a durable place context instead of burying that information in free text."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="sites-table"
+        resource={GnomeGarden.Operations.Site}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[
+          load: [:status_variant, :managed_system_count, :asset_count, organization: []]
+        ]}
+        click={fn row -> JS.navigate(~p"/operations/sites/#{row}") end}
       >
-        <div :if={@site_count == 0} class="p-6 sm:p-7">
+        <:col :let={site} field="name" sort search label="Site">
+          <div class="space-y-0.5">
+            <div class="font-medium text-base-content">{site.name}</div>
+            <div class="text-xs text-base-content/50">
+              {site.code || "No site code"}
+            </div>
+          </div>
+        </:col>
+
+        <:col :let={site} field="organization.name" sort search label="Organization">
+          {(site.organization && site.organization.name) || "-"}
+        </:col>
+
+        <:col :let={site} field="site_kind" sort label="Location">
+          <div class="space-y-0.5">
+            <p>{format_atom(site.site_kind)}</p>
+            <p class="text-xs text-base-content/40">
+              {location_label(site)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={site} field="status" sort label="Status">
+          <.status_badge status={site.status_variant}>
+            {format_atom(site.status)}
+          </.status_badge>
+        </:col>
+
+        <:col :let={site} label="Footprint">
+          <div class="space-y-0.5">
+            <p>{site.managed_system_count || 0} systems</p>
+            <p class="text-xs text-base-content/40">
+              {site.asset_count || 0} assets
+            </p>
+          </div>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-map-pin"
             title="No sites yet"
@@ -92,89 +135,28 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@site_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Site
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Organization
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Location
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Footprint
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="sites"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, site} <- @streams.sites} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/operations/sites/#{site}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {site.name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {site.code || "No site code"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {(site.organization && site.organization.name) || "-"}
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{format_atom(site.site_kind)}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {location_label(site)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={site.status_variant}>
-                    {format_atom(site.status)}
-                  </.status_badge>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{site.managed_system_count || 0} systems</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {site.asset_count || 0} assets
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_sites(actor) do
+  defp load_counts(actor) do
     case Operations.list_sites(
            actor: actor,
-           query: [sort: [name: :asc]],
-           load: [:status_variant, :managed_system_count, :asset_count, organization: []]
+           load: [:managed_system_count, :asset_count]
          ) do
-      {:ok, sites} -> sites
-      {:error, error} -> raise "failed to load sites: #{inspect(error)}"
+      {:ok, sites} ->
+        %{
+          total: length(sites),
+          active: Enum.count(sites, &(&1.status == :active)),
+          managed_systems:
+            Enum.reduce(sites, 0, fn site, total -> total + (site.managed_system_count || 0) end),
+          assets: Enum.reduce(sites, 0, fn site, total -> total + (site.asset_count || 0) end)
+        }
+
+      {:error, _} ->
+        %{total: 0, active: 0, managed_systems: 0, assets: 0}
     end
   end
 

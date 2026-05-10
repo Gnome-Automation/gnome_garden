@@ -38,6 +38,7 @@ defmodule GnomeGarden.Commercial.Changes.PromoteDiscoveryRecordToSignal do
 
   defp promote_discovery_record(discovery_record, actor) do
     with {:ok, loaded_discovery_record} <- load_discovery_record(discovery_record.id),
+         :ok <- ensure_promotable(loaded_discovery_record),
          {:ok, organization_id} <- ensure_organization_id(loaded_discovery_record),
          {:ok, signal_id} <- ensure_signal_id(loaded_discovery_record, organization_id, actor) do
       {:ok, organization_id, signal_id}
@@ -46,9 +47,20 @@ defmodule GnomeGarden.Commercial.Changes.PromoteDiscoveryRecordToSignal do
 
   defp load_discovery_record(id) do
     Commercial.get_discovery_record(id,
-      load: [:latest_evidence_at, :latest_evidence_summary, :discovery_program]
+      load: [
+        :discovery_evidence_count,
+        :latest_evidence_at,
+        :latest_evidence_summary,
+        :discovery_program
+      ]
     )
   end
+
+  defp ensure_promotable(%{discovery_evidence_count: count}) when is_integer(count) and count > 0,
+    do: :ok
+
+  defp ensure_promotable(_discovery_record),
+    do: {:error, "Add at least one piece of discovery evidence before promotion."}
 
   defp ensure_organization_id(%{organization_id: organization_id})
        when not is_nil(organization_id) do

@@ -26,10 +26,10 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Show do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/affiliations"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/operations/affiliations/#{@affiliation}/edit"} variant="primary">
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -63,7 +63,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Show do
             <.property name="Person">
               <.link
                 navigate={~p"/operations/people/#{@affiliation.person}"}
-                class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400"
+                class="text-emerald-600 hover:text-primary"
               >
                 {@affiliation.person.full_name}
               </.link>
@@ -71,7 +71,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Show do
             <.property name="Organization">
               <.link
                 navigate={~p"/operations/organizations/#{@affiliation.organization}"}
-                class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400"
+                class="text-emerald-600 hover:text-primary"
               >
                 {@affiliation.organization.name}
               </.link>
@@ -100,7 +100,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Show do
       </div>
 
       <.section :if={@affiliation.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@affiliation.notes}
         </p>
       </.section>

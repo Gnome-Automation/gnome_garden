@@ -3,7 +3,7 @@
 ## UI / Forms
 
 ### Form Styling — Tailwind Plus
-All forms MUST use Tailwind Plus stacked form patterns. Do NOT use DaisyUI form classes.
+All forms MUST use Tailwind Plus stacked form patterns. DaisyUI form classes are also OK if they fit.
 
 **Input classes:**
 ```

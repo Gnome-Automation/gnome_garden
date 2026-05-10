@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={back_path(@seed_finding)}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
         </:actions>
       </.page_header>
@@ -57,13 +57,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div :if={@seed_finding} class="col-span-full">
               <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
                   Intake Finding
                 </p>
-                <p class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">
+                <p class="mt-1 text-sm font-medium text-base-content">
                   {@seed_finding.title}
                 </p>
-                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+                <p class="mt-1 text-sm text-base-content/70">
                   {if @seed_finding.program, do: @seed_finding.program.name, else: "No program linked"}
                 </p>
               </div>
@@ -225,21 +225,21 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
   end
 
   defp load_evidence!(id, actor) do
-    case Acquisition.get_discovery_evidence(id, actor: actor) do
+    case Commercial.get_discovery_evidence(id, actor: actor) do
       {:ok, evidence} -> evidence
       {:error, error} -> raise "failed to load discovery evidence #{id}: #{inspect(error)}"
     end
   end
 
   defp load_discovery_records(actor) do
-    case Acquisition.list_discovery_records(actor: actor) do
+    case Commercial.list_discovery_records(actor: actor) do
       {:ok, targets} -> Enum.sort_by(targets, &String.downcase(&1.name || ""))
       {:error, error} -> raise "failed to load discovery records: #{inspect(error)}"
     end
   end
 
   defp load_discovery_programs(actor) do
-    case Acquisition.list_legacy_discovery_programs(actor: actor) do
+    case Commercial.list_discovery_programs(actor: actor) do
       {:ok, programs} -> Enum.sort_by(programs, &String.downcase(&1.name || ""))
       {:error, error} -> raise "failed to load discovery programs: #{inspect(error)}"
     end
@@ -265,7 +265,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
         case Acquisition.get_finding(
                params["finding_id"],
                actor: actor,
-               load: [:source_discovery_record, program: [:legacy_discovery_program]]
+               load: [:source_discovery_record, program: [:discovery_program]]
              ) do
           {:ok, finding} -> finding
           _ -> nil
@@ -275,7 +275,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
         case Acquisition.get_finding_by_source_discovery_record(
                observation.discovery_record_id,
                actor: actor,
-               load: [:source_discovery_record, program: [:legacy_discovery_program]]
+               load: [:source_discovery_record, program: [:discovery_program]]
              ) do
           {:ok, finding} -> finding
           _ -> nil
@@ -292,22 +292,22 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
     case Acquisition.get_finding(
            finding_id,
            actor: actor,
-           load: [:source_discovery_record, program: [:legacy_discovery_program]]
+           load: [:source_discovery_record, program: [:discovery_program]]
          ) do
       {:ok, finding} ->
         map
         |> maybe_put("discovery_record_id", finding.source_discovery_record_id)
-        |> maybe_put("discovery_program_id", legacy_discovery_program_id(finding))
+        |> maybe_put("discovery_program_id", discovery_program_id(finding))
 
       _ ->
         map
     end
   end
 
-  defp legacy_discovery_program_id(%{program: %{legacy_discovery_program_id: program_id}}),
+  defp discovery_program_id(%{program: %{discovery_program_id: program_id}}),
     do: program_id
 
-  defp legacy_discovery_program_id(_finding), do: nil
+  defp discovery_program_id(_finding), do: nil
 
   defp redirect_path_for_observation(observation) do
     case Acquisition.get_finding_by_source_discovery_record(observation.discovery_record_id) do

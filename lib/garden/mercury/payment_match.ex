@@ -57,10 +57,6 @@ defmodule GnomeGarden.Mercury.PaymentMatch do
     timestamps()
   end
 
-  identities do
-    identity :unique_transaction_payment_pair, [:mercury_transaction_id, :finance_payment_id]
-  end
-
   relationships do
     belongs_to :mercury_transaction, GnomeGarden.Mercury.Transaction do
       allow_nil? false
@@ -71,5 +67,9 @@ defmodule GnomeGarden.Mercury.PaymentMatch do
       allow_nil? false
       public? true
     end
+  end
+
+  identities do
+    identity :unique_transaction_payment_pair, [:mercury_transaction_id, :finance_payment_id]
   end
 end

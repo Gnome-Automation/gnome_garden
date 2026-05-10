@@ -54,7 +54,7 @@ defmodule GnomeGarden.Acquisition.Projector do
     :metadata,
     :last_run_at,
     :last_success_at,
-    :legacy_procurement_source_id,
+    :procurement_source_id,
     :organization_id
   ]
 
@@ -65,7 +65,7 @@ defmodule GnomeGarden.Acquisition.Projector do
     :scope,
     :metadata,
     :last_run_at,
-    :legacy_discovery_program_id,
+    :discovery_program_id,
     :owner_user_id
   ]
 
@@ -284,9 +284,9 @@ defmodule GnomeGarden.Acquisition.Projector do
     metadata =
       source.metadata
       |> Map.new()
-      |> Map.put("legacy_status", source.status)
-      |> Map.put("legacy_config_status", source.config_status)
-      |> Map.put("legacy_source_type", source.source_type)
+      |> Map.put("procurement_status", source.status)
+      |> Map.put("procurement_config_status", source.config_status)
+      |> Map.put("procurement_source_type", source.source_type)
       |> Map.put("portal_id", source.portal_id)
 
     Acquisition.create_source(
@@ -303,7 +303,7 @@ defmodule GnomeGarden.Acquisition.Projector do
         metadata: metadata,
         last_run_at: source.last_scanned_at,
         last_success_at: source.last_scanned_at,
-        legacy_procurement_source_id: source.id,
+        procurement_source_id: source.id,
         organization_id: source.organization_id
       },
       actor: actor,
@@ -344,11 +344,11 @@ defmodule GnomeGarden.Acquisition.Projector do
           cadence_hours: discovery_program.cadence_hours
         },
         metadata: %{
-          legacy_status: discovery_program.status,
+          discovery_program_status: discovery_program.status,
           last_run_metadata: discovery_program.metadata
         },
         last_run_at: discovery_program.last_run_at,
-        legacy_discovery_program_id: discovery_program.id,
+        discovery_program_id: discovery_program.id,
         owner_user_id: discovery_program.owner_user_id
       },
       actor: actor,
@@ -398,8 +398,8 @@ defmodule GnomeGarden.Acquisition.Projector do
       promoted_at: if(not is_nil(bid.signal_id), do: bid.updated_at, else: nil),
       metadata:
         reject_nil_values(%{
-          legacy_bid_status: bid.status,
-          legacy_procurement_source_id: bid.procurement_source_id,
+          bid_status: bid.status,
+          procurement_source_id: bid.procurement_source_id,
           external_id: bid.external_id,
           agency: bid.agency,
           location: bid.location,
@@ -471,12 +471,12 @@ defmodule GnomeGarden.Acquisition.Projector do
         ),
       metadata:
         reject_nil_values(%{
-          legacy_target_status: discovery_record.status,
+          target_status: discovery_record.status,
           discovery_feedback: metadata_value(discovery_record.metadata, "discovery_feedback"),
           market_focus: market_focus,
           website_domain: discovery_record.website_domain,
           size_bucket: discovery_record.size_bucket,
-          legacy_discovery_program_id: discovery_record.discovery_program_id
+          discovery_program_id: discovery_record.discovery_program_id
         }),
       program_id: program_id,
       organization_id: discovery_record.organization_id,
@@ -511,6 +511,14 @@ defmodule GnomeGarden.Acquisition.Projector do
   defp preserved_acquisition_status(projected_status, %{status: :accepted})
        when projected_status in [:new, :reviewing],
        do: :accepted
+
+  defp preserved_acquisition_status(projected_status, %{status: :suppressed})
+       when projected_status in [:new, :reviewing, :rejected],
+       do: :suppressed
+
+  defp preserved_acquisition_status(projected_status, %{status: :parked})
+       when projected_status in [:new, :reviewing, :rejected],
+       do: :parked
 
   defp preserved_acquisition_status(projected_status, _existing_finding), do: projected_status
 
@@ -558,6 +566,8 @@ defmodule GnomeGarden.Acquisition.Projector do
        do: :medium
 
   defp discovery_record_confidence(_discovery_record), do: :low
+
+  defp discovery_finding_type(%{record_type: :opportunity}), do: :integrator_request
 
   defp discovery_finding_type(discovery_record) do
     discovery_record.metadata

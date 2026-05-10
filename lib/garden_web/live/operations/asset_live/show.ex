@@ -26,25 +26,25 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Show do
             <.status_badge status={@asset.lifecycle_variant}>
               {format_atom(@asset.lifecycle_status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{@asset.asset_tag || "No asset tag"}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/assets"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/execution/maintenance-plans/new?asset_id=#{@asset.id}"}>
-            <.icon name="hero-arrow-path" class="size-4" /> New Maintenance Plan
+            New Maintenance Plan
           </.button>
           <.button navigate={~p"/execution/work-orders/new?asset_id=#{@asset.id}"}>
-            <.icon name="hero-wrench-screwdriver" class="size-4" /> New Work Order
+            New Work Order
           </.button>
           <.button navigate={~p"/operations/assets/new?parent_asset_id=#{@asset.id}"}>
-            <.icon name="hero-squares-plus" class="size-4" /> Add Child Asset
+            Add Child Asset
           </.button>
           <.button navigate={~p"/operations/assets/#{@asset}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -99,13 +99,13 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Show do
       </div>
 
       <.section :if={@asset.description} title="Description">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@asset.description}
         </p>
       </.section>
 
       <.section :if={@asset.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@asset.notes}
         </p>
       </.section>
@@ -135,8 +135,8 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{maintenance_plan.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{maintenance_plan.name}</p>
+              <p class="text-sm text-base-content/50">
                 {format_atom(maintenance_plan.plan_type)}
               </p>
             </div>
@@ -168,8 +168,8 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{child.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{child.name}</p>
+              <p class="text-sm text-base-content/50">
                 {child.asset_tag || "No asset tag"}
               </p>
             </div>
@@ -189,10 +189,10 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end

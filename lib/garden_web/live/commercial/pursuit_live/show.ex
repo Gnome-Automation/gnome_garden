@@ -42,7 +42,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
             <.status_badge status={@pursuit.stage_variant}>
               {format_atom(@pursuit.stage)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>
               {(@pursuit.organization && @pursuit.organization.name) || "No organization linked"}
             </span>
@@ -50,17 +50,17 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/pursuits"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button
             :if={can_create_proposal?(@pursuit)}
             navigate={~p"/commercial/proposals/new?pursuit_id=#{@pursuit.id}"}
             variant="primary"
           >
-            <.icon name="hero-document-text" class="size-4" /> Create Proposal
+            Create Proposal
           </.button>
           <.button navigate={~p"/commercial/pursuits/#{@pursuit}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -110,13 +110,13 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
       </div>
 
       <.section :if={@pursuit.description} title="Description">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@pursuit.description}
         </p>
       </.section>
 
       <.section :if={@pursuit.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@pursuit.notes}
         </p>
       </.section>
@@ -131,8 +131,8 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
           class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
         >
           <div class="space-y-1">
-            <p class="font-medium text-zinc-900 dark:text-white">{@pursuit.signal.title}</p>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+            <p class="font-medium text-base-content">{@pursuit.signal.title}</p>
+            <p class="text-sm text-base-content/50">
               {format_atom(@pursuit.signal.signal_type)}
             </p>
           </div>
@@ -161,8 +161,8 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{proposal.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{proposal.name}</p>
+              <p class="text-sm text-base-content/50">
                 {proposal.proposal_number || "No proposal number"}
               </p>
             </div>
@@ -182,10 +182,10 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end

@@ -43,6 +43,10 @@ defmodule GnomeGarden.Operations.Organization do
 
     create :create do
       primary? true
+      upsert? true
+      upsert_identity :unique_name
+
+      upsert_fields {:replace_all_except, [:id, :inserted_at, :status, :merged_into_id]}
 
       accept [
         :name,

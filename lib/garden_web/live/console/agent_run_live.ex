@@ -112,6 +112,23 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
     end
   end
 
+  def handle_event("pi_steer", %{"message" => msg}, socket) when byte_size(msg) > 0 do
+    GnomeGarden.Agents.PiRunner.steer(to_string(socket.assigns.run.id), msg)
+    {:noreply, put_flash(socket, :info, "Steer queued.")}
+  end
+
+  def handle_event("pi_steer", _, socket), do: {:noreply, socket}
+
+  def handle_event("pi_abort", _, socket) do
+    case DeploymentRunner.cancel_run(socket.assigns.run.id, actor: socket.assigns.current_user) do
+      {:ok, refreshed} ->
+        {:noreply, socket |> assign(:run, refreshed) |> put_flash(:info, "Pi run cancelled.")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, error_message(error))}
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -120,16 +137,16 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
         <div class="space-y-2">
           <.link
             navigate={~p"/console/agents"}
-            class="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
+            class="text-sm font-medium text-emerald-600 hover:text-primary dark:hover:text-emerald-300"
           >
             Back to Agents Console
           </.link>
 
           <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+            <h1 class="text-2xl font-semibold tracking-tight text-base-content">
               {@run.deployment && @run.deployment.name}
             </h1>
-            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p class="mt-1 text-sm text-base-content/60">
               Run {short_id(@run.id)} · {format_atom(@run.run_kind)} · template {template_label(@run)}
             </p>
           </div>
@@ -149,31 +166,61 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
         </div>
       </div>
 
+      <section
+        :if={@run.state == :running and pi_template?(@run)}
+        class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/30"
+      >
+        <h3 class="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+          Pi sidecar controls
+        </h3>
+        <form phx-submit="pi_steer" class="mt-3 flex gap-2">
+          <input
+            type="text"
+            name="message"
+            placeholder="Steer the agent (delivered after current tool finishes)"
+            class="flex-1 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10"
+          />
+          <button
+            type="submit"
+            class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500 dark:bg-emerald-500"
+          >
+            Steer
+          </button>
+          <button
+            type="button"
+            phx-click="pi_abort"
+            class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-500"
+          >
+            Abort
+          </button>
+        </form>
+      </section>
+
       <section class="grid gap-4 md:grid-cols-4">
         <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Requested By</p>
-          <p class="mt-2 text-base font-semibold text-zinc-900 dark:text-white">
+          <p class="text-sm font-medium text-base-content/50">Requested By</p>
+          <p class="mt-2 text-base font-semibold text-base-content">
             {requester_label(@run)}
           </p>
         </div>
 
         <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Started</p>
-          <p class="mt-2 text-base font-semibold text-zinc-900 dark:text-white">
+          <p class="text-sm font-medium text-base-content/50">Started</p>
+          <p class="mt-2 text-base font-semibold text-base-content">
             {format_datetime(@run.started_at || @run.inserted_at)}
           </p>
         </div>
 
         <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Completed</p>
-          <p class="mt-2 text-base font-semibold text-zinc-900 dark:text-white">
+          <p class="text-sm font-medium text-base-content/50">Completed</p>
+          <p class="mt-2 text-base font-semibold text-base-content">
             {format_datetime(@run.completed_at)}
           </p>
         </div>
 
         <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Usage</p>
-          <p class="mt-2 text-base font-semibold text-zinc-900 dark:text-white">
+          <p class="text-sm font-medium text-base-content/50">Usage</p>
+          <p class="mt-2 text-base font-semibold text-base-content">
             {@run.token_count || 0} tokens · {@run.tool_count || 0} tools
           </p>
         </div>
@@ -183,21 +230,21 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
         <div class="space-y-8">
           <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-              <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Task</h2>
-              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+              <h2 class="text-lg font-semibold text-base-content">Task</h2>
+              <p class="text-sm text-base-content/60">
                 The durable execution request attached to this run.
               </p>
             </div>
 
             <div class="px-5 py-4">
-              <pre class="whitespace-pre-wrap text-sm leading-6 text-zinc-700 dark:text-zinc-300">{@run.task}</pre>
+              <pre class="whitespace-pre-wrap text-sm leading-6 text-base-content/80">{@run.task}</pre>
             </div>
           </section>
 
           <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-              <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Messages</h2>
-              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+              <h2 class="text-lg font-semibold text-base-content">Messages</h2>
+              <p class="text-sm text-base-content/60">
                 Persisted run timeline from `AgentMessage`.
               </p>
             </div>
@@ -207,21 +254,21 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
               phx-update="stream"
               class="divide-y divide-zinc-200 dark:divide-zinc-800"
             >
-              <div class="hidden only:block px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+              <div class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50">
                 No persisted messages yet.
               </div>
 
               <div :for={{dom_id, message} <- @streams.messages} id={dom_id} class="px-5 py-4">
                 <div class="flex items-center gap-3">
                   <span class={message_role_badge(message.role)}>{format_atom(message.role)}</span>
-                  <span class="text-xs text-zinc-500 dark:text-zinc-400">
+                  <span class="text-xs text-base-content/50">
                     {format_datetime(message.inserted_at)}
                   </span>
                 </div>
 
                 <div
                   :if={message.content}
-                  class="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-700 dark:text-zinc-300"
+                  class="mt-3 whitespace-pre-wrap text-sm leading-6 text-base-content/80"
                 >
                   {message.content}
                 </div>
@@ -238,8 +285,8 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
 
           <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-              <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Business Outputs</h2>
-              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+              <h2 class="text-lg font-semibold text-base-content">Business Outputs</h2>
+              <p class="text-sm text-base-content/60">
                 Durable business entities created or reused by this run.
               </p>
             </div>
@@ -249,7 +296,7 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
               phx-update="stream"
               class="divide-y divide-zinc-200 dark:divide-zinc-800"
             >
-              <div class="hidden only:block px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+              <div class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50">
                 No business outputs recorded yet.
               </div>
 
@@ -259,21 +306,21 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
                     {output_type_label(output.output_type)}
                   </span>
                   <span class={output_event_badge(output.event)}>{format_atom(output.event)}</span>
-                  <span class="text-xs text-zinc-500 dark:text-zinc-400">
+                  <span class="text-xs text-base-content/50">
                     {format_datetime(output.inserted_at)}
                   </span>
                 </div>
 
                 <div class="mt-3">
-                  <p class="font-medium text-zinc-900 dark:text-white">{output.label}</p>
-                  <p :if={output.summary} class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+                  <p class="font-medium text-base-content">{output.label}</p>
+                  <p :if={output.summary} class="mt-1 text-sm text-base-content/70">
                     {output.summary}
                   </p>
                 </div>
 
                 <div
                   :if={output_summary_details(output)}
-                  class="mt-3 text-xs text-zinc-500 dark:text-zinc-400"
+                  class="mt-3 text-xs text-base-content/50"
                 >
                   {output_summary_details(output)}
                 </div>
@@ -292,13 +339,13 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
           <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div class="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
               <div>
-                <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Live Stream</h2>
-                <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                <h2 class="text-lg font-semibold text-base-content">Live Stream</h2>
+                <p class="text-sm text-base-content/60">
                   Ephemeral output from the runtime while the run is active.
                 </p>
               </div>
 
-              <span class="text-xs text-zinc-500 dark:text-zinc-400">
+              <span class="text-xs text-base-content/50">
                 Refreshed {format_datetime(@last_refreshed_at)}
               </span>
             </div>
@@ -315,7 +362,7 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
                 :if={@current_thinking}
                 class="rounded-xl bg-zinc-50 px-3 py-3 text-sm text-zinc-600 dark:bg-zinc-950/70 dark:text-zinc-300"
               >
-                <p class="mb-2 font-medium text-zinc-900 dark:text-white">Thinking</p>
+                <p class="mb-2 font-medium text-base-content">Thinking</p>
                 <pre class="whitespace-pre-wrap">{@current_thinking}</pre>
               </div>
 
@@ -343,8 +390,8 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
 
           <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-              <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Tool Activity</h2>
-              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+              <h2 class="text-lg font-semibold text-base-content">Tool Activity</h2>
+              <p class="text-sm text-base-content/60">
                 Live tool execution events from the runtime stream.
               </p>
             </div>
@@ -354,15 +401,15 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
               phx-update="stream"
               class="divide-y divide-zinc-200 dark:divide-zinc-800"
             >
-              <div class="hidden only:block px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+              <div class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50">
                 No live tool events yet.
               </div>
 
               <div :for={{dom_id, event} <- @streams.tool_events} id={dom_id} class="px-5 py-4">
                 <div class="flex items-center justify-between gap-3">
                   <div>
-                    <p class="font-medium text-zinc-900 dark:text-white">{event.tool_name}</p>
-                    <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <p class="font-medium text-base-content">{event.tool_name}</p>
+                    <p class="mt-1 text-xs text-base-content/50">
                       {tool_event_label(event)} · {format_datetime(event.inserted_at)}
                     </p>
                   </div>
@@ -370,7 +417,7 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
                   <span class={tool_event_badge(event.type)}>{format_atom(event.type)}</span>
                 </div>
 
-                <div :if={event.duration_ms} class="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <div :if={event.duration_ms} class="mt-2 text-xs text-base-content/50">
                   Duration: {event.duration_ms}ms
                 </div>
 
@@ -386,25 +433,25 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
 
           <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-              <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Runtime Metadata</h2>
+              <h2 class="text-lg font-semibold text-base-content">Runtime Metadata</h2>
             </div>
 
             <dl class="divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
               <div class="flex items-start justify-between gap-4 px-5 py-4">
-                <dt class="text-zinc-500 dark:text-zinc-400">Runtime Instance</dt>
-                <dd class="text-right font-medium text-zinc-900 dark:text-white">
+                <dt class="text-base-content/50">Runtime Instance</dt>
+                <dd class="text-right font-medium text-base-content">
                   {@run.runtime_instance_id || "-"}
                 </dd>
               </div>
               <div class="flex items-start justify-between gap-4 px-5 py-4">
-                <dt class="text-zinc-500 dark:text-zinc-400">Request ID</dt>
-                <dd class="text-right font-medium text-zinc-900 dark:text-white">
+                <dt class="text-base-content/50">Request ID</dt>
+                <dd class="text-right font-medium text-base-content">
                   {@run.request_id || "-"}
                 </dd>
               </div>
               <div class="flex items-start justify-between gap-4 px-5 py-4">
-                <dt class="text-zinc-500 dark:text-zinc-400">Deployment Visibility</dt>
-                <dd class="text-right font-medium text-zinc-900 dark:text-white">
+                <dt class="text-base-content/50">Deployment Visibility</dt>
+                <dd class="text-right font-medium text-base-content">
                   {run_visibility(@run)}
                 </dd>
               </div>
@@ -447,6 +494,9 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
 
   defp template_label(%{agent: %{template: template}}), do: template
   defp template_label(_run), do: "-"
+
+  defp pi_template?(%{agent: %{template: "pi_" <> _}}), do: true
+  defp pi_template?(_), do: false
 
   defp run_visibility(%{deployment: %{visibility: visibility}}), do: format_atom(visibility)
   defp run_visibility(_run), do: "-"

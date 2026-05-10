@@ -28,7 +28,8 @@ defmodule GnomeGarden.Repo.Migrations.AddMercuryPaymentMatches do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :finance_payment_id,
           references(:finance_payments,
@@ -37,7 +38,8 @@ defmodule GnomeGarden.Repo.Migrations.AddMercuryPaymentMatches do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create unique_index(:mercury_payment_matches, [:mercury_transaction_id, :finance_payment_id],

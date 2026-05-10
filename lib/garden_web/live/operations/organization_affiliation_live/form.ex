@@ -27,7 +27,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/affiliations"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to affiliations
+            Back to affiliations
           </.button>
         </:actions>
       </.page_header>

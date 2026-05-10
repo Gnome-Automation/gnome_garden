@@ -42,7 +42,7 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "Evidence Gate Systems",
         website: "https://evidence-gate.example.com",

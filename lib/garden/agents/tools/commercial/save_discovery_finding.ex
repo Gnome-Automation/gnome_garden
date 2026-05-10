@@ -11,10 +11,10 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding do
   use Jido.Action,
     name: "save_discovery_finding",
     description: """
-    Save a discovered company into Operations + Acquisition. Creates or updates
-    the Organization first, optionally records a Person and affiliation, then
-    creates or updates a discovery record plus supporting evidence for human
-    review. Call this for every company you find that may need
+    Save a discovered company into Operations + Commercial, then sync an
+    Acquisition finding. Creates or updates the Organization first, optionally
+    records a Person and affiliation, then creates or updates a discovery record
+    plus supporting evidence for human review. Call this for every company you find that may need
     automation, controls, service, or software work.
     """,
     schema: [
@@ -51,6 +51,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding do
     ]
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.DiscoveryIdentityResolver
   alias GnomeGarden.Commercial.MarketFocus
   alias GnomeGarden.Operations
@@ -133,7 +134,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding do
         nil
 
       website_domain ->
-        case Acquisition.get_discovery_record_by_website_domain(website_domain) do
+        case Commercial.get_discovery_record_by_website_domain(website_domain) do
           {:ok, discovery_record} -> discovery_record
           _ -> nil
         end
@@ -141,7 +142,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding do
   end
 
   defp existing_discovery_evidence(params) do
-    case Acquisition.get_discovery_evidence_by_external_ref(observation_external_ref(params)) do
+    case Commercial.get_discovery_evidence_by_external_ref(observation_external_ref(params)) do
       {:ok, observation} -> observation
       _ -> nil
     end
@@ -246,10 +247,10 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding do
 
     case discovery_record_upsert_identity(attrs) do
       nil ->
-        Acquisition.create_discovery_record(attrs)
+        Commercial.create_discovery_record(attrs)
 
       upsert_identity ->
-        Acquisition.create_discovery_record(
+        Commercial.create_discovery_record(
           attrs,
           upsert?: true,
           upsert_identity: upsert_identity,
@@ -310,7 +311,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding do
       }
     }
 
-    Acquisition.create_discovery_evidence(
+    Commercial.create_discovery_evidence(
       attrs,
       upsert?: true,
       upsert_identity: :unique_external_ref,

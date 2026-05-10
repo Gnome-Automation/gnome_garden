@@ -22,11 +22,11 @@ defmodule GnomeGarden.Acquisition.Document do
   end
 
   storage do
-    service {AshStorage.Service.Disk, root: "priv/storage", base_url: "/storage"}
-    blob_resource GnomeGarden.Acquisition.DocumentBlob
-    attachment_resource GnomeGarden.Acquisition.DocumentAttachment
+    service({AshStorage.Service.Disk, root: "priv/storage", base_url: "/storage"})
+    blob_resource(GnomeGarden.Acquisition.DocumentBlob)
+    attachment_resource(GnomeGarden.Acquisition.DocumentAttachment)
 
-    has_one_attached :file
+    has_one_attached(:file)
   end
 
   actions do

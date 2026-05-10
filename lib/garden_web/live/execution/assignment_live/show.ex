@@ -49,28 +49,28 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Show do
             <.status_badge status={@assignment.status_variant}>
               {format_atom(@assignment.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
-            <span>{display_email(@assignment.assigned_user, "No assignee")}</span>
+            <span class="text-base-content/40">/</span>
+            <span>{display_team_member(@assignment.assigned_team_member, "No assignee")}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/execution/assignments"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button
             :if={@assignment.work_item}
             navigate={~p"/execution/work-items/#{@assignment.work_item}"}
           >
-            <.icon name="hero-queue-list" class="size-4" /> Work Item
+            Work Item
           </.button>
           <.button
             :if={@assignment.work_order}
             navigate={~p"/execution/work-orders/#{@assignment.work_order}"}
           >
-            <.icon name="hero-wrench-screwdriver" class="size-4" /> Work Order
+            Work Order
           </.button>
           <.button navigate={~p"/execution/assignments/#{@assignment}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -96,8 +96,14 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Show do
           <div class="grid gap-5 sm:grid-cols-2">
             <.property_item label="Assignment Type" value={format_atom(@assignment.assignment_type)} />
             <.property_item label="Location Mode" value={format_atom(@assignment.location_mode)} />
-            <.property_item label="Assignee" value={display_email(@assignment.assigned_user)} />
-            <.property_item label="Assigned By" value={display_email(@assignment.assigned_by_user)} />
+            <.property_item
+              label="Assignee"
+              value={display_team_member(@assignment.assigned_team_member)}
+            />
+            <.property_item
+              label="Assigned By"
+              value={display_team_member(@assignment.assigned_by_team_member)}
+            />
             <.property_item
               label="Scheduled Start"
               value={format_datetime(@assignment.scheduled_start_at)}
@@ -142,7 +148,7 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Show do
       </div>
 
       <.section :if={@assignment.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@assignment.notes}
         </p>
       </.section>
@@ -156,33 +162,27 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end
 
   defp load_assignment!(id, actor) do
-    user_loads =
-      if actor do
-        [assigned_user: [], assigned_by_user: []]
-      else
-        []
-      end
-
     case Execution.get_assignment(
            id,
            actor: actor,
-           load:
-             [
-               :status_variant,
-               organization: [],
-               project: [],
-               work_item: [],
-               work_order: []
-             ] ++ user_loads
+           load: [
+             :status_variant,
+             assigned_team_member: [],
+             assigned_by_team_member: [],
+             organization: [],
+             project: [],
+             work_item: [],
+             work_order: []
+           ]
          ) do
       {:ok, assignment} -> assignment
       {:error, error} -> raise "failed to load assignment #{id}: #{inspect(error)}"

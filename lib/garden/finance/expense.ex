@@ -31,8 +31,8 @@ defmodule GnomeGarden.Finance.Expense do
       reference :agreement, on_delete: :nilify
       reference :project, on_delete: :nilify
       reference :work_order, on_delete: :nilify
-      reference :incurred_by_user, on_delete: :nilify
-      reference :approved_by_user, on_delete: :nilify
+      reference :incurred_by_team_member, on_delete: :nilify
+      reference :approved_by_team_member, on_delete: :nilify
     end
   end
 
@@ -61,7 +61,7 @@ defmodule GnomeGarden.Finance.Expense do
         :agreement_id,
         :project_id,
         :work_order_id,
-        :incurred_by_user_id,
+        :incurred_by_team_member_id,
         :incurred_on,
         :category,
         :description,
@@ -79,7 +79,7 @@ defmodule GnomeGarden.Finance.Expense do
         :agreement_id,
         :project_id,
         :work_order_id,
-        :incurred_by_user_id,
+        :incurred_by_team_member_id,
         :incurred_on,
         :category,
         :description,
@@ -98,7 +98,7 @@ defmodule GnomeGarden.Finance.Expense do
 
     update :approve do
       require_atomic? false
-      accept [:approved_by_user_id]
+      accept [:approved_by_team_member_id]
       change transition_state(:approved)
       change set_attribute(:approved_at, &DateTime.utc_now/0)
       change {GnomeGarden.Commercial.Changes.SyncExpenseEntitlementUsage, mode: :sync}
@@ -122,7 +122,7 @@ defmodule GnomeGarden.Finance.Expense do
       accept []
       change transition_state(:draft)
       change set_attribute(:approved_at, nil)
-      change set_attribute(:approved_by_user_id, nil)
+      change set_attribute(:approved_by_team_member_id, nil)
       change set_attribute(:billed_at, nil)
       change {GnomeGarden.Commercial.Changes.SyncExpenseEntitlementUsage, mode: :clear}
     end
@@ -256,12 +256,12 @@ defmodule GnomeGarden.Finance.Expense do
       public? true
     end
 
-    belongs_to :incurred_by_user, GnomeGarden.Accounts.User do
+    belongs_to :incurred_by_team_member, GnomeGarden.Operations.TeamMember do
       allow_nil? false
       public? true
     end
 
-    belongs_to :approved_by_user, GnomeGarden.Accounts.User do
+    belongs_to :approved_by_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
 

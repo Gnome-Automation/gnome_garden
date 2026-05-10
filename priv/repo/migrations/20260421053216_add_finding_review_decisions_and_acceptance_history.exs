@@ -33,7 +33,8 @@ defmodule GnomeGarden.Repo.Migrations.AddFindingReviewDecisionsAndAcceptanceHist
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :actor_user_id,
           references(:users,

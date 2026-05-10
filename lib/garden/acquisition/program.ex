@@ -25,7 +25,7 @@ defmodule GnomeGarden.Acquisition.Program do
     end
 
     references do
-      reference :legacy_discovery_program, on_delete: :nilify
+      reference :discovery_program, on_delete: :nilify
       reference :owner_user, on_delete: :nilify
     end
   end
@@ -46,7 +46,7 @@ defmodule GnomeGarden.Acquisition.Program do
         :scope,
         :metadata,
         :last_run_at,
-        :legacy_discovery_program_id,
+        :discovery_program_id,
         :owner_user_id
       ]
     end
@@ -61,7 +61,7 @@ defmodule GnomeGarden.Acquisition.Program do
         :scope,
         :metadata,
         :last_run_at,
-        :legacy_discovery_program_id,
+        :discovery_program_id,
         :owner_user_id
       ]
     end
@@ -71,9 +71,9 @@ defmodule GnomeGarden.Acquisition.Program do
       get_by [:external_ref]
     end
 
-    read :by_legacy_discovery_program do
-      argument :legacy_discovery_program_id, :uuid, allow_nil?: false
-      get_by [:legacy_discovery_program_id]
+    read :by_discovery_program do
+      argument :discovery_program_id, :uuid, allow_nil?: false
+      get_by [:discovery_program_id]
     end
 
     read :console do
@@ -158,7 +158,7 @@ defmodule GnomeGarden.Acquisition.Program do
   end
 
   relationships do
-    belongs_to :legacy_discovery_program, GnomeGarden.Commercial.DiscoveryProgram do
+    belongs_to :discovery_program, GnomeGarden.Commercial.DiscoveryProgram do
       public? true
     end
 
@@ -175,7 +175,7 @@ defmodule GnomeGarden.Acquisition.Program do
   calculations do
     calculate :runnable,
               :boolean,
-              expr(status == :active and not is_nil(legacy_discovery_program_id))
+              expr(status == :active and not is_nil(discovery_program_id))
 
     calculate :health_status,
               :atom,

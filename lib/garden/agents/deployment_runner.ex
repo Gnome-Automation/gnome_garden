@@ -433,15 +433,22 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   end
 
   defp stop_runtime(runtime_instance_id) do
-    case GnomeGarden.Jido.stop_agent(runtime_instance_id) do
+    # Pi runners aren't Jido agents — try the PiRunner registry first.
+    case GnomeGarden.Agents.PiRunner.cancel(runtime_instance_id) do
       :ok ->
         :ok
 
-      {:error, :not_found} ->
-        :ok
+      {:error, :not_running} ->
+        case GnomeGarden.Jido.stop_agent(runtime_instance_id) do
+          :ok ->
+            :ok
 
-      {:error, reason} ->
-        Logger.warning("Failed to stop runtime #{runtime_instance_id}: #{inspect(reason)}")
+          {:error, :not_found} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning("Failed to stop runtime #{runtime_instance_id}: #{inspect(reason)}")
+        end
     end
   end
 

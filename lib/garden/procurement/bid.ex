@@ -53,6 +53,19 @@ defmodule GnomeGarden.Procurement.Bid do
 
     create :create do
       primary? true
+      upsert? true
+      upsert_identity :unique_url
+
+      upsert_fields {:replace_all_except,
+                     [
+                       :id,
+                       :status,
+                       :owner_id,
+                       :signal_id,
+                       :organization_id,
+                       :inserted_at,
+                       :discovered_at
+                     ]}
 
       accept [
         :title,
@@ -90,12 +103,14 @@ defmodule GnomeGarden.Procurement.Bid do
 
       change set_attribute(:discovered_at, &DateTime.utc_now/0)
       change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
+      change {GnomeGarden.Procurement.Changes.EnqueueDocumentIngest, []}
     end
 
     update :update do
       require_atomic? false
       accept [:description, :bid_type, :due_at, :notes, :metadata, :owner_id, :organization_id]
       change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
+      change {GnomeGarden.Procurement.Changes.EnqueueDocumentIngest, []}
     end
 
     update :link_signal do
@@ -246,11 +261,6 @@ defmodule GnomeGarden.Procurement.Bid do
       filter expr(status == ^arg(:status))
     end
 
-    read :needs_review do
-      filter expr(status in [:new, :reviewing])
-      prepare build(sort: [score_total: :desc, due_at: :asc, inserted_at: :desc])
-    end
-
     read :active do
       filter expr(status in [:pursuing, :submitted])
       prepare build(sort: [due_at: :asc, score_total: :desc, updated_at: :desc])
@@ -344,7 +354,7 @@ defmodule GnomeGarden.Procurement.Bid do
     attribute :estimated_value, :decimal, public?: true
     attribute :value_range, :string, public?: true, description: "e.g., '$100K-$500K'"
 
-    # Scoring (based on lead-scoring rubric from target-customers.md)
+    # Scoring (based on target-scoring rubric from target-customers.md)
     attribute :score_service_match, :integer,
       default: 0,
       public?: true,
@@ -451,7 +461,7 @@ defmodule GnomeGarden.Procurement.Bid do
       description "Commercial pursuits created from this bid's signal"
     end
 
-    has_many :activities, GnomeGarden.Sales.Activity do
+    has_many :activities, GnomeGarden.Commercial.Activity do
       public? true
     end
   end

@@ -13,8 +13,8 @@ defmodule GnomeGarden.Acquisition.DocumentAttachment do
   end
 
   attachment do
-    blob_resource GnomeGarden.Acquisition.DocumentBlob
-    belongs_to_resource :document, GnomeGarden.Acquisition.Document
+    blob_resource(GnomeGarden.Acquisition.DocumentBlob)
+    belongs_to_resource(:document, GnomeGarden.Acquisition.Document)
   end
 
   attributes do

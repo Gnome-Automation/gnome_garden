@@ -26,6 +26,11 @@ defmodule GnomeGarden.Application do
       {Jido.Signal.Bus, name: GnomeGarden.SignalBus},
       GnomeGarden.Jido,
 
+      # Pi sidecar runtime
+      {Registry, keys: :unique, name: GnomeGarden.Agents.PiRunnerRegistry},
+      {DynamicSupervisor,
+       name: GnomeGarden.Agents.PiRunnerSupervisor, strategy: :one_for_one, max_children: 2},
+
       # Start to serve requests, typically the last entry
       GnomeGardenWeb.Endpoint,
       {AshAuthentication.Supervisor, [otp_app: :gnome_garden]}

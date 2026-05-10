@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Operations.Helpers
 
@@ -7,15 +8,20 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    affiliations = load_affiliations(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Affiliations")
-     |> assign(:affiliation_count, length(affiliations))
-     |> assign(:active_count, Enum.count(affiliations, &(&1.status == :active)))
-     |> assign(:primary_count, Enum.count(affiliations, & &1.is_primary))
-     |> stream(:affiliations, affiliations)}
+     |> assign(:affiliation_count, counts.total)
+     |> assign(:active_count, counts.active)
+     |> assign(:primary_count, counts.primary)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -25,14 +31,14 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Index do
       <.page_header eyebrow="Operations">
         Affiliations
         <:subtitle>
-          Connect durable people and organizations without collapsing them into duplicated CRM contact records.
+          Connect durable people and organizations without collapsing them into duplicated contact records.
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/organizations"}>
-            <.icon name="hero-building-office-2" class="size-4" /> Organizations
+            Organizations
           </.button>
           <.button navigate={~p"/operations/affiliations/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Affiliation
+            New Affiliation
           </.button>
         </:actions>
       </.page_header>
@@ -60,13 +66,62 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Index do
         />
       </div>
 
-      <.section
-        title="Organization Relationships"
-        description="Review who is attached to which organization, in what role, and whether the relationship is still active."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="affiliations-table"
+        resource={GnomeGarden.Operations.OrganizationAffiliation}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[load: [:status_variant, organization: [], person: [:full_name]]]}
+        click={fn row -> JS.navigate(~p"/operations/affiliations/#{row}") end}
       >
-        <div :if={@affiliation_count == 0} class="p-6 sm:p-7">
+        <:col :let={affiliation} field="person.last_name" sort search label="Person">
+          <div class="space-y-0.5">
+            <div class="font-medium text-base-content">{affiliation.person.full_name}</div>
+            <div class="text-xs text-base-content/50">
+              {affiliation.person.email || affiliation.person.phone || "No contact details"}
+            </div>
+          </div>
+        </:col>
+
+        <:col :let={affiliation} field="organization.name" sort search label="Organization">
+          <div class="space-y-0.5">
+            <div class="text-base-content">{affiliation.organization.name}</div>
+            <p class="text-sm text-base-content/50">
+              {format_roles(affiliation.contact_roles)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={affiliation} field="title" sort search label="Role">
+          <div class="space-y-0.5">
+            <p>{affiliation.title || "-"}</p>
+            <p class="text-xs text-base-content/40">
+              {affiliation.department || "No department"}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={affiliation} field="started_on" sort label="Timing">
+          <div class="space-y-0.5">
+            <p>{format_date(affiliation.started_on)}</p>
+            <p class="text-xs text-base-content/40">
+              Ends {format_date(affiliation.ended_on)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={affiliation} field="status" sort label="Status">
+          <div class="flex flex-wrap items-center gap-2">
+            <.status_badge status={affiliation.status_variant}>
+              {format_atom(affiliation.status)}
+            </.status_badge>
+            <.tag :if={affiliation.is_primary} color={:emerald}>Primary</.tag>
+          </div>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-link"
             title="No affiliations yet"
@@ -78,102 +133,23 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@affiliation_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Person
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Organization
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Role
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Timing
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="organization-affiliations"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, affiliation} <- @streams.affiliations} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/operations/affiliations/#{affiliation}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {affiliation.person.full_name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {affiliation.person.email || affiliation.person.phone || "No contact details"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/operations/organizations/#{affiliation.organization}"}
-                      class="text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {affiliation.organization.name}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {format_roles(affiliation.contact_roles)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{affiliation.title || "-"}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {affiliation.department || "No department"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{format_date(affiliation.started_on)}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      Ends {format_date(affiliation.ended_on)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <.status_badge status={affiliation.status_variant}>
-                      {format_atom(affiliation.status)}
-                    </.status_badge>
-                    <.tag :if={affiliation.is_primary} color={:emerald}>Primary</.tag>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_affiliations(actor) do
-    case Operations.list_organization_affiliations(
-           actor: actor,
-           query: [sort: [is_primary: :desc, inserted_at: :desc]],
-           load: [:status_variant, organization: [], person: [:full_name]]
-         ) do
-      {:ok, affiliations} -> affiliations
-      {:error, error} -> raise "failed to load affiliations: #{inspect(error)}"
+  defp load_counts(actor) do
+    case Operations.list_organization_affiliations(actor: actor) do
+      {:ok, affiliations} ->
+        %{
+          total: length(affiliations),
+          active: Enum.count(affiliations, &(&1.status == :active)),
+          primary: Enum.count(affiliations, & &1.is_primary)
+        }
+
+      {:error, _} ->
+        %{total: 0, active: 0, primary: 0}
     end
   end
 end

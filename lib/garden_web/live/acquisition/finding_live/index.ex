@@ -1,7 +1,11 @@
 defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
+
+  import Cinder.Refresh
 
   import GnomeGardenWeb.Commercial.Helpers, only: [format_date: 1, format_datetime: 1]
+  require Ash.Query
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial.DiscoveryFeedback
@@ -9,6 +13,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
   @queues [:review, :promoted, :rejected, :suppressed, :parked]
   @families [:all, :procurement, :discovery]
+  @table_id "acquisition-findings-table"
 
   @impl true
   def mount(_params, _session, socket) do
@@ -28,12 +33,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
      |> assign(:selected_program, nil)
      |> assign(:action_dialog, nil)
      |> assign(:queue_counts, queue_counts())
-     |> assign(:findings_empty?, true)
-     |> stream(:findings, [], reset: true)}
+     |> assign(:findings_query, build_findings_query(:review, :all, nil, nil))}
   end
 
   @impl true
-  def handle_params(params, _uri, socket) do
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+
     queue = parse_queue(Map.get(params, "queue"))
     family = parse_family(Map.get(params, "family"))
     source = load_source_filter(Map.get(params, "source_id"), socket.assigns.current_user)
@@ -45,7 +51,11 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
      |> assign(:selected_family, family)
      |> assign(:selected_source, source)
      |> assign(:selected_program, program)
-     |> refresh_queue()}
+     |> assign(:findings_query, build_findings_query(queue, family, source, program))
+     |> assign(
+       :queue_counts,
+       queue_counts(family, source, program, socket.assigns.current_user)
+     )}
   end
 
   @impl true
@@ -203,18 +213,18 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/acquisition/sources"}>
-            <.icon name="hero-globe-alt" class="size-4" /> Sources
+            Sources
           </.button>
           <.button navigate={~p"/acquisition/programs"}>
-            <.icon name="hero-radar" class="size-4" /> Programs
+            Programs
           </.button>
           <.button navigate={~p"/commercial/signals"}>
-            <.icon name="hero-inbox-stack" class="size-4" /> Signal Queue
+            Signal Queue
           </.button>
         </:actions>
       </.page_header>
 
-      <div class="grid gap-3 xl:grid-cols-3">
+      <div class="grid gap-2 sm:grid-cols-3">
         <.stat_card
           title="Review Queue"
           value={Integer.to_string(@queue_counts.review)}
@@ -239,7 +249,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
       <.section
         title="Unified Intake"
-        description="Run procurement, discovery, and future lead-finding through one queue before it becomes commercial work."
+        description="Run procurement, discovery, and future target-finding through one queue before it becomes commercial work."
         compact
         body_class="p-0"
       >
@@ -256,7 +266,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
             />
           </div>
           <div class="mt-3 flex flex-wrap items-center gap-2">
-            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
               Family
             </span>
             <.family_link
@@ -276,13 +286,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
               :if={@selected_source}
               class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200"
             >
-              <.icon name="hero-globe-alt" class="size-4" /> {@selected_source.name}
+              {@selected_source.name}
             </span>
             <span
               :if={@selected_program}
               class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-200"
             >
-              <.icon name="hero-radar" class="size-4" /> {@selected_program.name}
+              {@selected_program.name}
             </span>
             <.link
               patch={queue_path(@selected_queue, @selected_family, nil, nil)}
@@ -298,13 +308,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
             >
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="space-y-1">
-                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
                     Source Context
                   </p>
-                  <p class="text-sm font-medium text-zinc-900 dark:text-white">
+                  <p class="text-sm font-medium text-base-content">
                     {@selected_source.name}
                   </p>
-                  <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                  <p class="text-xs text-base-content/50">
                     {@selected_source.review_finding_count} review · {@selected_source.promoted_finding_count} promoted · {@selected_source.noise_finding_count} noise
                   </p>
                 </div>
@@ -317,7 +327,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
                   </.status_badge>
                 </div>
               </div>
-              <p class="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="mt-3 text-xs text-base-content/50">
                 {@selected_source.health_note}
               </p>
               <div class="mt-3 flex flex-wrap gap-2">
@@ -340,13 +350,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
             >
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="space-y-1">
-                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
                     Program Context
                   </p>
-                  <p class="text-sm font-medium text-zinc-900 dark:text-white">
+                  <p class="text-sm font-medium text-base-content">
                     {@selected_program.name}
                   </p>
-                  <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                  <p class="text-xs text-base-content/50">
                     {@selected_program.review_finding_count} review · {@selected_program.promoted_finding_count} promoted · {@selected_program.noise_finding_count} noise
                   </p>
                 </div>
@@ -359,7 +369,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
                   </.status_badge>
                 </div>
               </div>
-              <p class="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+              <p class="mt-3 text-xs text-base-content/50">
                 {@selected_program.health_note}
               </p>
               <div class="mt-3 flex flex-wrap gap-2">
@@ -378,275 +388,238 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
           </div>
         </div>
 
-        <div :if={@findings_empty?} class="p-4 sm:p-5">
-          <.empty_state
-            icon="hero-inbox-stack"
-            title={"No #{queue_label(@selected_queue)} findings"}
-            description={empty_description(@selected_queue)}
-          />
-        </div>
-
-        <div :if={!@findings_empty?} class="overflow-x-auto">
-          <table class="min-w-[102rem] divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  Finding
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  Due
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  Score
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  City / State
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  Work
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  Lane
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  Observed
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  Open
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="findings"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
+        <Cinder.collection
+          id="acquisition-findings-table"
+          query={@findings_query}
+          actor={@current_user}
+          url_state={@url_state}
+          theme={GnomeGardenWeb.CinderTheme}
+          page_size={25}
+        >
+          <:col :let={finding} field="title" search sort label="Finding">
+            <div class="space-y-1">
+              <p class="font-medium text-base-content">{finding.title}</p>
+              <p class="max-w-xl text-xs leading-5 text-base-content/50">
+                {finding.summary || "No summary yet."}
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <span class={family_badge(finding.finding_family)}>
+                  {family_label(finding.finding_family)}
+                </span>
+                <span class="badge badge-outline badge-sm">
+                  {type_label(finding.finding_type)}
+                </span>
+                <span :if={finding.confidence} class={confidence_badge(finding.confidence)}>
+                  {confidence_label(finding.confidence)}
+                </span>
+              </div>
+            </div>
+          </:col>
+          <:col :let={finding} field="due_at" sort label="Due">
+            <div class="space-y-1">
+              <p class="font-medium text-base-content">
+                {finding_due_label(finding)}
+              </p>
+              <p :if={finding.due_status_label} class="text-xs text-base-content/50">
+                {finding.due_status_label}
+              </p>
+            </div>
+          </:col>
+          <:col :let={finding} field="fit_score" sort label="Score">
+            <div class="space-y-1">
+              <p class="font-semibold text-base-content">
+                {finding_score_value(finding)}
+              </p>
+              <p :if={finding.score_note} class="text-xs text-base-content/50">
+                {finding.score_note}
+              </p>
+              <.status_badge :if={finding.score_tier} status={finding.score_tier_variant}>
+                {status_label(finding.score_tier)}
+              </.status_badge>
+            </div>
+          </:col>
+          <:col :let={finding} field="location" search label="City / State">
+            <div class="space-y-1">
+              <p class="font-medium text-base-content">
+                {finding.location || "No location"}
+              </p>
+              <p :if={finding.location_note} class="text-xs text-base-content/50">
+                {finding.location_note}
+              </p>
+            </div>
+          </:col>
+          <:col :let={finding} field="work_summary" search label="Work">
+            <div class="space-y-1">
+              <p class="font-medium text-base-content">
+                {finding.work_summary || type_label(finding.finding_type)}
+              </p>
+              <p :if={finding.work_type} class="text-xs text-base-content/50">
+                {finding.work_type}
+              </p>
+              <p
+                :if={finding.work_note}
+                class="max-w-[14rem] text-xs text-base-content/50"
+              >
+                {finding.work_note}
+              </p>
+            </div>
+          </:col>
+          <:col :let={finding} label="Lane">
+            <div class="space-y-1">
+              <p>{source_or_program_label(finding)}</p>
+              <p :if={finding.organization} class="text-xs text-base-content/50">
+                {finding.organization.name}
+              </p>
+            </div>
+          </:col>
+          <:col :let={finding} field="observed_at" sort label="Observed">
+            {format_datetime(finding.observed_at || finding.inserted_at)}
+          </:col>
+          <:col :let={finding} label="Status">
+            <div class="space-y-1">
+              <.status_badge status={finding.status_variant}>
+                {status_label(finding.status)}
+              </.status_badge>
+              <p
+                :if={finding.latest_review_reason}
+                class="max-w-xs text-xs leading-5 text-base-content/50"
+              >
+                {finding.latest_review_reason}
+              </p>
+              <p
+                :if={finding.latest_review_decision_at}
+                class="text-[11px] uppercase tracking-[0.12em] text-base-content/40"
+              >
+                {status_label(finding.latest_review_decision || finding.status)} · {format_datetime(
+                  finding.latest_review_decision_at
+                )}
+              </p>
+            </div>
+          </:col>
+          <:col :let={finding} label="Open">
+            <div class="flex flex-col items-start gap-1.5">
+              <.button
+                navigate={~p"/acquisition/findings/#{finding.id}"}
+                class="px-2.5 py-1.5 text-xs whitespace-nowrap"
+              >
+                Open Finding
+              </.button>
+              <.button
+                :if={finding.signal_id}
+                navigate={~p"/commercial/signals/#{finding.signal_id}"}
+                class="px-2.5 py-1.5 text-xs whitespace-nowrap"
+              >
+                Open Signal
+              </.button>
+            </div>
+          </:col>
+          <:col :let={finding} label="Actions">
+            <div class="flex flex-wrap gap-1.5">
+              <.button
+                :if={finding.status in [:new]}
+                id={"finding-start-review-#{finding.id}"}
+                phx-click="transition"
+                phx-value-id={finding.id}
+                phx-value-action="start_review"
+                class="px-2.5 py-1.5 text-xs"
+              >
+                Start Review
+              </.button>
+              <.button
+                :if={finding.status == :reviewing and finding.acceptance_ready}
+                id={"finding-accept-#{finding.id}"}
+                phx-click="open_dialog"
+                phx-value-id={finding.id}
+                phx-value-action="accept"
+                class="px-2.5 py-1.5 text-xs"
+              >
+                Accept
+              </.button>
+              <.button
+                :if={prep_action_path(finding)}
+                id={"finding-prep-#{finding.id}"}
+                navigate={prep_action_path(finding)}
+                class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-emerald-300 hover:text-emerald-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-emerald-400/40 dark:hover:text-emerald-300"
+              >
+                {prep_action_label(finding)}
+              </.button>
+              <.button
+                :if={
+                  finding.status == :accepted and finding.promotion_ready and
+                    is_nil(finding.signal_id)
+                }
+                id={"finding-promote-#{finding.id}"}
+                phx-click="transition"
+                phx-value-id={finding.id}
+                phx-value-action="promote"
+                variant="primary"
+                class="px-2.5 py-1.5 text-xs"
+              >
+                Promote To Signal
+              </.button>
+              <.button
+                :if={finding.status in [:reviewing, :accepted]}
+                id={"finding-reject-#{finding.id}"}
+                phx-click="open_dialog"
+                phx-value-id={finding.id}
+                phx-value-action="reject"
+                class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-rose-300 hover:text-rose-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-rose-400/40 dark:hover:text-rose-300"
+              >
+                Reject
+              </.button>
+              <.button
+                :if={finding.status in [:reviewing, :accepted]}
+                id={"finding-suppress-#{finding.id}"}
+                phx-click="open_dialog"
+                phx-value-id={finding.id}
+                phx-value-action="suppress"
+                class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-amber-300 hover:text-amber-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-amber-400/40 dark:hover:text-amber-300"
+              >
+                Suppress
+              </.button>
+              <.button
+                :if={finding.status in [:reviewing, :accepted]}
+                id={"finding-park-#{finding.id}"}
+                phx-click="open_dialog"
+                phx-value-id={finding.id}
+                phx-value-action="park"
+                class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-sky-300 hover:text-sky-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-sky-400/40 dark:hover:text-sky-300"
+              >
+                Park
+              </.button>
+              <.button
+                :if={show_reopen?(finding)}
+                id={"finding-reopen-#{finding.id}"}
+                phx-click="transition"
+                phx-value-id={finding.id}
+                phx-value-action="reopen"
+                class="px-2.5 py-1.5 text-xs"
+              >
+                Reopen
+              </.button>
+            </div>
+            <p
+              :if={finding.status == :reviewing and not finding.acceptance_ready}
+              class="mt-2 max-w-xs text-xs leading-5 text-amber-700 dark:text-amber-200"
             >
-              <tr :for={{dom_id, finding} <- @streams.findings} id={dom_id}>
-                <td class="px-3 py-2.5 align-top">
-                  <div class="space-y-1">
-                    <p class="font-medium text-zinc-900 dark:text-white">{finding.title}</p>
-                    <p class="max-w-xl text-xs leading-5 text-zinc-500 dark:text-zinc-400">
-                      {finding.summary || "No summary yet."}
-                    </p>
-                    <div class="flex flex-wrap gap-2">
-                      <span class={family_badge(finding.finding_family)}>
-                        {family_label(finding.finding_family)}
-                      </span>
-                      <span class="badge badge-outline badge-sm">
-                        {type_label(finding.finding_type)}
-                      </span>
-                      <span :if={finding.confidence} class={confidence_badge(finding.confidence)}>
-                        {confidence_label(finding.confidence)}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p class="font-medium text-zinc-900 dark:text-white">
-                      {finding_due_label(finding)}
-                    </p>
-                    <p :if={finding.due_status_label} class="text-xs text-zinc-500 dark:text-zinc-400">
-                      {finding.due_status_label}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 align-top">
-                  <div class="space-y-1">
-                    <p class="font-semibold text-zinc-900 dark:text-white">
-                      {finding_score_value(finding)}
-                    </p>
-                    <p :if={finding.score_note} class="text-xs text-zinc-500 dark:text-zinc-400">
-                      {finding.score_note}
-                    </p>
-                    <.status_badge :if={finding.score_tier} status={finding.score_tier_variant}>
-                      {status_label(finding.score_tier)}
-                    </.status_badge>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p class="font-medium text-zinc-900 dark:text-white">
-                      {finding.location || "No location"}
-                    </p>
-                    <p :if={finding.location_note} class="text-xs text-zinc-500 dark:text-zinc-400">
-                      {finding.location_note}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p class="font-medium text-zinc-900 dark:text-white">
-                      {finding.work_summary || type_label(finding.finding_type)}
-                    </p>
-                    <p :if={finding.work_type} class="text-xs text-zinc-500 dark:text-zinc-400">
-                      {finding.work_type}
-                    </p>
-                    <p
-                      :if={finding.work_note}
-                      class="max-w-[14rem] text-xs text-zinc-500 dark:text-zinc-400"
-                    >
-                      {finding.work_note}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{source_or_program_label(finding)}</p>
-                    <p :if={finding.organization} class="text-xs text-zinc-500 dark:text-zinc-400">
-                      {finding.organization.name}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 align-top text-zinc-600 dark:text-zinc-300 whitespace-nowrap">
-                  {format_datetime(finding.observed_at || finding.inserted_at)}
-                </td>
-                <td class="px-3 py-2.5 align-top">
-                  <div class="space-y-1">
-                    <.status_badge status={finding.status_variant}>
-                      {status_label(finding.status)}
-                    </.status_badge>
-                    <p
-                      :if={finding.latest_review_reason}
-                      class="max-w-xs text-xs leading-5 text-zinc-500 dark:text-zinc-400"
-                    >
-                      {finding.latest_review_reason}
-                    </p>
-                    <p
-                      :if={finding.latest_review_decision_at}
-                      class="text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500"
-                    >
-                      {status_label(finding.latest_review_decision || finding.status)} · {format_datetime(
-                        finding.latest_review_decision_at
-                      )}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 align-top">
-                  <div class="flex flex-col items-start gap-1.5">
-                    <.button
-                      navigate={~p"/acquisition/findings/#{finding.id}"}
-                      class="px-2.5 py-1.5 text-xs whitespace-nowrap"
-                    >
-                      Open Finding
-                    </.button>
-                    <.button
-                      :if={finding.signal_id}
-                      navigate={~p"/commercial/signals/#{finding.signal_id}"}
-                      class="px-2.5 py-1.5 text-xs whitespace-nowrap"
-                    >
-                      Open Signal
-                    </.button>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 align-top">
-                  <div class="flex flex-wrap gap-1.5">
-                    <.button
-                      :if={finding.status in [:new]}
-                      id={"finding-start-review-#{finding.id}"}
-                      phx-click="transition"
-                      phx-value-id={finding.id}
-                      phx-value-action="start_review"
-                      class="px-2.5 py-1.5 text-xs"
-                    >
-                      Start Review
-                    </.button>
-                    <.button
-                      :if={finding.status == :reviewing and finding.acceptance_ready}
-                      id={"finding-accept-#{finding.id}"}
-                      phx-click="open_dialog"
-                      phx-value-id={finding.id}
-                      phx-value-action="accept"
-                      class="px-2.5 py-1.5 text-xs"
-                    >
-                      Accept
-                    </.button>
-                    <.button
-                      :if={prep_action_path(finding)}
-                      id={"finding-prep-#{finding.id}"}
-                      navigate={prep_action_path(finding)}
-                      class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-emerald-300 hover:text-emerald-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-emerald-400/40 dark:hover:text-emerald-300"
-                    >
-                      {prep_action_label(finding)}
-                    </.button>
-                    <.button
-                      :if={
-                        finding.status == :accepted and finding.promotion_ready and
-                          is_nil(finding.signal_id)
-                      }
-                      id={"finding-promote-#{finding.id}"}
-                      phx-click="transition"
-                      phx-value-id={finding.id}
-                      phx-value-action="promote"
-                      variant="primary"
-                      class="px-2.5 py-1.5 text-xs"
-                    >
-                      Promote To Signal
-                    </.button>
-                    <.button
-                      :if={finding.status in [:reviewing, :accepted]}
-                      id={"finding-reject-#{finding.id}"}
-                      phx-click="open_dialog"
-                      phx-value-id={finding.id}
-                      phx-value-action="reject"
-                      class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-rose-300 hover:text-rose-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-rose-400/40 dark:hover:text-rose-300"
-                    >
-                      Reject
-                    </.button>
-                    <.button
-                      :if={finding.status in [:reviewing, :accepted]}
-                      id={"finding-suppress-#{finding.id}"}
-                      phx-click="open_dialog"
-                      phx-value-id={finding.id}
-                      phx-value-action="suppress"
-                      class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-amber-300 hover:text-amber-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-amber-400/40 dark:hover:text-amber-300"
-                    >
-                      Suppress
-                    </.button>
-                    <.button
-                      :if={finding.status in [:reviewing, :accepted]}
-                      id={"finding-park-#{finding.id}"}
-                      phx-click="open_dialog"
-                      phx-value-id={finding.id}
-                      phx-value-action="park"
-                      class="border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:border-sky-300 hover:text-sky-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-sky-400/40 dark:hover:text-sky-300"
-                    >
-                      Park
-                    </.button>
-                    <.button
-                      :if={show_reopen?(finding)}
-                      id={"finding-reopen-#{finding.id}"}
-                      phx-click="transition"
-                      phx-value-id={finding.id}
-                      phx-value-action="reopen"
-                      class="px-2.5 py-1.5 text-xs"
-                    >
-                      Reopen
-                    </.button>
-                  </div>
-                  <p
-                    :if={finding.status == :reviewing and not finding.acceptance_ready}
-                    class="mt-2 max-w-xs text-xs leading-5 text-amber-700 dark:text-amber-200"
-                  >
-                    {Enum.join(finding.acceptance_blockers, " ")}
-                  </p>
-                  <p
-                    :if={finding.status == :accepted and not finding.promotion_ready}
-                    class="mt-2 max-w-xs text-xs leading-5 text-amber-700 dark:text-amber-200"
-                  >
-                    {Enum.join(finding.promotion_blockers, " ")}
-                  </p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+              {Enum.join(finding.acceptance_blockers, " ")}
+            </p>
+            <p
+              :if={finding.status == :accepted and not finding.promotion_ready}
+              class="mt-2 max-w-xs text-xs leading-5 text-amber-700 dark:text-amber-200"
+            >
+              {Enum.join(finding.promotion_blockers, " ")}
+            </p>
+          </:col>
+
+          <:empty>
+            <.empty_state
+              icon="hero-inbox-stack"
+              title={"No #{queue_label(@selected_queue)} findings"}
+              description={empty_description(@selected_queue)}
+            />
+          </:empty>
+        </Cinder.collection>
       </.section>
 
       <dialog
@@ -764,15 +737,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   end
 
   defp refresh_queue(socket) do
-    findings =
-      load_findings(
-        socket.assigns.selected_queue,
-        socket.assigns.selected_family,
-        socket.assigns.selected_source,
-        socket.assigns.selected_program,
-        socket.assigns.current_user
-      )
-
     socket
     |> assign(
       :queue_counts,
@@ -783,70 +747,67 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         socket.assigns.current_user
       )
     )
-    |> assign(:findings_empty?, findings == [])
-    |> stream(:findings, findings, reset: true)
+    |> assign(
+      :findings_query,
+      build_findings_query(
+        socket.assigns.selected_queue,
+        socket.assigns.selected_family,
+        socket.assigns.selected_source,
+        socket.assigns.selected_program
+      )
+    )
+    |> refresh_table(@table_id)
   end
 
-  defp load_findings(:review, family, source, program, actor),
-    do:
-      list_or_raise(fn ->
-        Acquisition.list_review_findings(
-          actor: actor,
-          query: finding_query(family, source, program)
-        )
-      end)
+  defp build_findings_query(queue, family, source, program) do
+    GnomeGarden.Acquisition.Finding
+    |> Ash.Query.for_read(queue_action(queue))
+    |> apply_finding_filters(family, source, program)
+  end
 
-  defp load_findings(:promoted, family, source, program, actor),
-    do:
-      list_or_raise(fn ->
-        Acquisition.list_promoted_findings(
-          actor: actor,
-          query: finding_query(family, source, program)
-        )
-      end)
+  defp queue_action(:review), do: :review_queue
+  defp queue_action(:promoted), do: :promoted
+  defp queue_action(:rejected), do: :rejected
+  defp queue_action(:suppressed), do: :suppressed
+  defp queue_action(:parked), do: :parked
 
-  defp load_findings(:rejected, family, source, program, actor),
-    do:
-      list_or_raise(fn ->
-        Acquisition.list_rejected_findings(
-          actor: actor,
-          query: finding_query(family, source, program)
-        )
-      end)
+  defp apply_finding_filters(query, family, source, program) do
+    query
+    |> maybe_filter_family(family)
+    |> maybe_filter_source(source)
+    |> maybe_filter_program(program)
+  end
 
-  defp load_findings(:suppressed, family, source, program, actor),
-    do:
-      list_or_raise(fn ->
-        Acquisition.list_suppressed_findings(
-          actor: actor,
-          query: finding_query(family, source, program)
-        )
-      end)
+  defp maybe_filter_family(query, :all), do: query
 
-  defp load_findings(:parked, family, source, program, actor),
-    do:
-      list_or_raise(fn ->
-        Acquisition.list_parked_findings(
-          actor: actor,
-          query: finding_query(family, source, program)
-        )
-      end)
+  defp maybe_filter_family(query, family),
+    do: Ash.Query.filter(query, finding_family == ^family)
+
+  defp maybe_filter_source(query, nil), do: query
+
+  defp maybe_filter_source(query, %{id: id}),
+    do: Ash.Query.filter(query, source_id == ^id)
+
+  defp maybe_filter_program(query, nil), do: query
+
+  defp maybe_filter_program(query, %{id: id}),
+    do: Ash.Query.filter(query, program_id == ^id)
+
+  defp count_findings(queue, family, source, program, actor) do
+    case Ash.count(build_findings_query(queue, family, source, program), actor: actor) do
+      {:ok, count} -> count
+      {:error, _} -> 0
+    end
+  end
 
   defp queue_counts(family \\ :all, source \\ nil, program \\ nil, actor \\ nil) do
     %{
-      review: length(load_findings(:review, family, source, program, actor)),
-      promoted: length(load_findings(:promoted, family, source, program, actor)),
-      rejected: length(load_findings(:rejected, family, source, program, actor)),
-      suppressed: length(load_findings(:suppressed, family, source, program, actor)),
-      parked: length(load_findings(:parked, family, source, program, actor))
+      review: count_findings(:review, family, source, program, actor),
+      promoted: count_findings(:promoted, family, source, program, actor),
+      rejected: count_findings(:rejected, family, source, program, actor),
+      suppressed: count_findings(:suppressed, family, source, program, actor),
+      parked: count_findings(:parked, family, source, program, actor)
     }
-  end
-
-  defp list_or_raise(fun) do
-    case fun.() do
-      {:ok, findings} -> findings
-      {:error, error} -> raise "failed to load acquisition findings: #{inspect(error)}"
-    end
   end
 
   defp parse_queue(nil), do: :review
@@ -1018,7 +979,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
   defp prep_action_path(_finding), do: nil
 
-  defp prep_action_label(%{finding_family: :procurement}), do: "Add Document"
+  defp prep_action_label(%{finding_family: :procurement}), do: "Add Packet"
   defp prep_action_label(%{finding_family: :discovery}), do: "Add Evidence"
   defp prep_action_label(_finding), do: "Add Prep"
 
@@ -1098,20 +1059,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   defp maybe_put_param(params, _key, false, _value), do: params
   defp maybe_put_param(params, _key, _condition, nil), do: params
   defp maybe_put_param(params, key, _condition, value), do: Map.put(params, key, to_string(value))
-
-  defp finding_query(family, source, program) do
-    filters =
-      []
-      |> maybe_put_filter(:finding_family, family != :all, family)
-      |> maybe_put_filter(:source_id, is_map(source), source && source.id)
-      |> maybe_put_filter(:program_id, is_map(program), program && program.id)
-
-    if filters == [], do: [], else: [filter: filters]
-  end
-
-  defp maybe_put_filter(filters, _key, false, _value), do: filters
-  defp maybe_put_filter(filters, _key, _condition, nil), do: filters
-  defp maybe_put_filter(filters, key, _condition, value), do: Keyword.put(filters, key, value)
 
   defp build_action_dialog(finding, type) do
     %{

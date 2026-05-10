@@ -3,7 +3,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScoreBidTest do
 
   alias GnomeGarden.Agents.Tools.Procurement.ScoreBid
 
-  test "scores controller-facing water infrastructure work as a hot lead" do
+  test "scores controller-facing water infrastructure work as a hot target" do
     assert {:ok, score} =
              ScoreBid.run(
                %{

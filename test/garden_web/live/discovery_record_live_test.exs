@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Acquisition
@@ -20,7 +22,7 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: discovery_program.id,
         name: "Harbor Packaging",
         website: "https://harbor-packaging.example.com",
@@ -31,7 +33,7 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
     {:ok, finding} = Acquisition.get_finding_by_source_discovery_record(discovery_record.id)
 
     {:ok, observation} =
-      Acquisition.create_discovery_evidence(%{
+      Commercial.create_discovery_evidence(%{
         discovery_record_id: discovery_record.id,
         discovery_program_id: discovery_program.id,
         observation_type: :website_contact,
@@ -83,7 +85,7 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         name: "North Coast Packaging",
         website: "https://northcoastpackaging.com",
         fit_score: 82,
@@ -112,7 +114,7 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
     assert has_element?(view, ~s(a[href="/operations/people/#{person.id}"]))
 
     {:ok, refreshed_discovery_record} =
-      Acquisition.get_discovery_record(discovery_record.id,
+      Commercial.get_discovery_record(discovery_record.id,
         load: [:organization, :contact_person]
       )
 
@@ -167,7 +169,7 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         name: "North Coast Packaging",
         website: "https://northcoastpackaging.com",
         organization_id: duplicate_organization.id,
@@ -199,7 +201,7 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
     |> render_click()
 
     {:ok, refreshed_discovery_record} =
-      Acquisition.get_discovery_record(discovery_record.id,
+      Commercial.get_discovery_record(discovery_record.id,
         load: [:organization, :contact_person]
       )
 
@@ -224,7 +226,7 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
       })
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "County Workflow Office",
         website: "https://county-workflow.example.com",
@@ -250,6 +252,10 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
     assert render(view) =~ "Program Queue"
 
     view
+    |> element("#finding-show-start-review")
+    |> render_click()
+
+    view
     |> element("#finding-show-reject")
     |> render_click()
 
@@ -268,7 +274,7 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
     assert render(view) =~ "Wrong buyer / admin-side target"
     assert render(view) =~ "county workflow"
 
-    {:ok, refreshed_discovery_record} = Acquisition.get_discovery_record(discovery_record.id)
+    {:ok, refreshed_discovery_record} = Commercial.get_discovery_record(discovery_record.id)
 
     assert refreshed_discovery_record.status == :rejected
 

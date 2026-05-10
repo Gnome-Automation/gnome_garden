@@ -1,7 +1,6 @@
 defmodule GnomeGarden.Commercial.DiscoveryProgramTest do
   use GnomeGarden.DataCase, async: true
 
-  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
 
   test "discovery programs aggregate attached discovery records and evidence" do
@@ -25,7 +24,7 @@ defmodule GnomeGarden.Commercial.DiscoveryProgramTest do
     assert discovery_program.status == :active
 
     {:ok, discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         name: "Harbor Beverage Co",
         discovery_program_id: discovery_program.id,
         website: "https://harborbeverage.example.com",
@@ -35,7 +34,7 @@ defmodule GnomeGarden.Commercial.DiscoveryProgramTest do
       })
 
     {:ok, _observation} =
-      Acquisition.create_discovery_evidence(%{
+      Commercial.create_discovery_evidence(%{
         discovery_record_id: discovery_record.id,
         discovery_program_id: discovery_program.id,
         observation_type: :hiring,

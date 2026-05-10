@@ -1,8 +1,8 @@
 defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Accounts
   alias GnomeGarden.Execution
+  alias GnomeGarden.Operations
 
   @impl true
   def mount(params, _session, socket) do
@@ -13,7 +13,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
      socket
      |> assign(:work_item, work_item)
      |> assign(:projects, load_projects(socket.assigns.current_user))
-     |> assign(:users, load_users(socket.assigns.current_user))
+     |> assign(:team_members, load_team_members(socket.assigns.current_user))
      |> assign(:selected_project_id, selected_project_id)
      |> assign(
        :parent_work_items,
@@ -34,7 +34,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={back_path(@selected_project_id)}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
         </:actions>
       </.page_header>
@@ -96,11 +96,11 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
             </div>
             <div class="sm:col-span-3">
               <.input
-                field={@form[:owner_user_id]}
+                field={@form[:owner_team_member_id]}
                 type="select"
                 label="Owner"
                 prompt="Unassigned"
-                options={Enum.map(@users, &{&1.email, &1.id})}
+                options={Enum.map(@team_members, &{team_member_label(&1), &1.id})}
               />
             </div>
             <div class="sm:col-span-1">
@@ -196,13 +196,16 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
     end
   end
 
-  defp load_users(actor) do
+  defp load_team_members(actor) do
     if is_nil(actor) do
       []
     else
-      case Accounts.list_users(actor: actor) do
-        {:ok, users} -> Enum.sort_by(users, &String.downcase(to_string(&1.email || "")))
-        {:error, error} -> raise "failed to load users: #{inspect(error)}"
+      case Operations.list_active_team_members(actor: actor) do
+        {:ok, team_members} ->
+          Enum.sort_by(team_members, &String.downcase(team_member_label(&1)))
+
+        {:error, error} ->
+          raise "failed to load team members: #{inspect(error)}"
       end
     end
   end
@@ -235,6 +238,8 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
     |> maybe_put("project_id", params["project_id"])
     |> maybe_put("parent_work_item_id", params["parent_work_item_id"])
   end
+
+  defp team_member_label(team_member), do: team_member.display_name || "Team member"
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, ""), do: map

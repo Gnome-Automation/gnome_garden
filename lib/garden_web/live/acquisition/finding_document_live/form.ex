@@ -34,7 +34,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
     {:ok,
      socket
      |> assign(:finding, finding)
-     |> assign(:page_title, "Add Intake Document")
+     |> assign(:page_title, page_title(finding))
+     |> assign(:document_noun, document_noun(finding))
+     |> assign(:document_noun_plural, document_noun_plural(finding))
      |> assign(:existing_documents, existing_documents)
      |> assign(:existing_document_options, Enum.map(existing_documents, &document_option/1))
      |> assign(:link_params, link_params)
@@ -56,11 +58,11 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
       <.page_header eyebrow="Acquisition">
         {@page_title}
         <:subtitle>
-          Attach durable intake documents to this finding so procurement handoff is explainable and promotion-ready.
+          Attach durable {@document_noun_plural} to this finding so human review and downstream handoff remain explainable.
         </:subtitle>
         <:actions>
           <.button navigate={~p"/acquisition/findings/#{@finding.id}"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
         </:actions>
       </.page_header>
@@ -68,19 +70,19 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
       <div class="space-y-6">
         <.form_section
           title="Finding Context"
-          description="Keep uploaded files on a reusable document record while the finding-specific role stays in the intake join."
+          description="Keep uploaded files on a reusable AshStorage-backed document record while the finding-specific role stays in the intake join."
         >
           <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
               Intake Finding
             </p>
-            <p class="mt-1 text-sm font-medium text-zinc-900 dark:text-white">
+            <p class="mt-1 text-sm font-medium text-base-content">
               {@finding.title}
             </p>
-            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+            <p class="mt-1 text-sm text-base-content/70">
               {if @finding.program, do: @finding.program.name, else: "No program linked"}
             </p>
-            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+            <p class="mt-2 text-sm text-base-content/70">
               {@finding.summary || "No summary captured yet."}
             </p>
           </div>
@@ -94,8 +96,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
           class="space-y-6"
         >
           <.form_section
-            title="Upload New Document"
-            description="Create a new durable document record, upload the file once, and link it into this finding. Only solicitation, scope, pricing, and addendum documents satisfy procurement promotion readiness."
+            title={"Upload New #{String.capitalize(@document_noun)}"}
+            description="Create one durable document record, upload the file once, and link it into this finding. Only solicitation, scope, pricing, and addendum packets satisfy procurement promotion readiness."
           >
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
               <div class="sm:col-span-4">
@@ -152,10 +154,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
                       class="flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
                     >
                       <div>
-                        <p class="font-medium text-zinc-900 dark:text-white">
+                        <p class="font-medium text-base-content">
                           {entry.client_name}
                         </p>
-                        <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                        <p class="text-xs text-base-content/50">
                           {entry.progress}% uploaded
                         </p>
                       </div>
@@ -191,7 +193,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
           <.section body_class="px-6 py-5 sm:px-7">
             <.form_actions
               cancel_path={~p"/acquisition/findings/#{@finding.id}"}
-              submit_label="Upload Document"
+              submit_label={"Upload #{String.capitalize(@document_noun)}"}
             />
           </.section>
         </.form>
@@ -203,14 +205,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
           class="space-y-6"
         >
           <.form_section
-            title="Link Existing Document"
-            description="Reuse a durable acquisition document that is already in the system instead of uploading the same file again. Procurement promotion only counts substantive packet types."
+            title={"Link Existing #{String.capitalize(@document_noun)}"}
+            description="Reuse durable acquisition material that is already in the system instead of uploading the same file again. Procurement promotion only counts substantive packet types."
           >
             <div
               :if={Enum.empty?(@existing_documents)}
               class="rounded-2xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300"
             >
-              No reusable documents are available yet. Upload a new document above first.
+              No reusable {@document_noun_plural} are available yet. Upload a new {@document_noun} above first.
             </div>
 
             <div :if={!Enum.empty?(@existing_documents)} class="grid grid-cols-1 gap-6 sm:grid-cols-6">
@@ -250,7 +252,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
                 Cancel
               </.link>
               <.button type="submit" disabled={Enum.empty?(@existing_documents)}>
-                Link Existing Document
+                Link Existing {String.capitalize(@document_noun)}
               </.button>
             </div>
           </.section>
@@ -495,6 +497,18 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   defp upload_error_to_string(:too_many_files), do: "Only one file can be uploaded."
   defp upload_error_to_string(:not_accepted), do: "This file type is not accepted."
   defp upload_error_to_string(error), do: inspect(error)
+
+  defp page_title(%{finding_family: :procurement}), do: "Add Procurement Packet"
+  defp page_title(%{finding_family: :discovery}), do: "Add Source Material"
+  defp page_title(_finding), do: "Add Intake Material"
+
+  defp document_noun(%{finding_family: :procurement}), do: "packet"
+  defp document_noun(%{finding_family: :discovery}), do: "source material"
+  defp document_noun(_finding), do: "material"
+
+  defp document_noun_plural(%{finding_family: :procurement}), do: "packets"
+  defp document_noun_plural(%{finding_family: :discovery}), do: "source materials"
+  defp document_noun_plural(_finding), do: "materials"
 
   defp humanize_atom(value) when is_atom(value) do
     value

@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Execution.Helpers
 
@@ -7,27 +8,21 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    service_tickets = load_service_tickets(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Service Tickets")
-     |> assign(:ticket_count, length(service_tickets))
-     |> assign(:critical_count, Enum.count(service_tickets, &(&1.severity == :critical)))
-     |> assign(
-       :active_count,
-       Enum.count(
-         service_tickets,
-         &(&1.status in [:new, :triaged, :in_progress, :waiting_on_customer])
-       )
-     )
-     |> assign(
-       :work_order_count,
-       Enum.reduce(service_tickets, 0, fn ticket, total ->
-         total + (ticket.work_order_count || 0)
-       end)
-     )
-     |> stream(:service_tickets, service_tickets)}
+     |> assign(:ticket_count, counts.total)
+     |> assign(:critical_count, counts.critical)
+     |> assign(:active_count, counts.active)
+     |> assign(:work_order_count, counts.work_orders)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -41,10 +36,10 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/assets"}>
-            <.icon name="hero-cpu-chip" class="size-4" /> Assets
+            Assets
           </.button>
           <.button navigate={~p"/execution/service-tickets/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Service Ticket
+            New Service Ticket
           </.button>
         </:actions>
       </.page_header>
@@ -79,13 +74,66 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Index do
         />
       </div>
 
-      <.section
-        title="Service Intake Queue"
-        description="Use tickets for customer communication and triage, then drive the actual work through explicit work orders."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="service-tickets-table"
+        resource={GnomeGarden.Execution.ServiceTicket}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[
+          load: [
+            :status_variant,
+            :severity_variant,
+            :work_order_count,
+            organization: [],
+            site: [],
+            asset: []
+          ]
+        ]}
+        click={fn row -> JS.navigate(~p"/execution/service-tickets/#{row}") end}
       >
-        <div :if={@ticket_count == 0} class="p-6 sm:p-7">
+        <:col :let={ticket} field="title" search sort label="Ticket">
+          <div class="space-y-1">
+            <div class="font-medium text-base-content">{ticket.title}</div>
+            <p class="text-sm text-base-content/50">
+              {ticket.ticket_number || "No ticket number"}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={ticket} field="ticket_number" search label="Context">
+          <div class="space-y-1">
+            <p>{(ticket.organization && ticket.organization.name) || "-"}</p>
+            <p class="text-xs text-base-content/40">
+              {(ticket.asset && ticket.asset.name) || (ticket.site && ticket.site.name) ||
+                "No asset/site"}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={ticket} field="ticket_type" sort label="Type">
+          <div class="space-y-1">
+            <p>{format_atom(ticket.ticket_type)}</p>
+            <p class="text-xs text-base-content/40">
+              {ticket.work_order_count || 0} work orders
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={ticket} field="status" sort label="Status">
+          <.status_badge status={ticket.status_variant}>
+            {format_atom(ticket.status)}
+          </.status_badge>
+        </:col>
+
+        <:col :let={ticket} field="severity" sort label="Severity">
+          <.status_badge status={ticket.severity_variant}>
+            {format_atom(ticket.severity)}
+          </.status_badge>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-lifebuoy"
             title="No service tickets yet"
@@ -97,99 +145,31 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@ticket_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Ticket
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Context
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Type
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Severity
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="service-tickets"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, ticket} <- @streams.service_tickets} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/execution/service-tickets/#{ticket}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {ticket.title}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {ticket.ticket_number || "No ticket number"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{(ticket.organization && ticket.organization.name) || "-"}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {(ticket.asset && ticket.asset.name) || (ticket.site && ticket.site.name) ||
-                        "No asset/site"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{format_atom(ticket.ticket_type)}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {ticket.work_order_count || 0} work orders
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={ticket.status_variant}>
-                    {format_atom(ticket.status)}
-                  </.status_badge>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={ticket.severity_variant}>
-                    {format_atom(ticket.severity)}
-                  </.status_badge>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_service_tickets(actor) do
-    case Execution.list_service_tickets(
-           actor: actor,
-           query: [sort: [reported_at: :desc, inserted_at: :desc]],
-           load: [
-             :status_variant,
-             :severity_variant,
-             :work_order_count,
-             organization: [],
-             site: [],
-             asset: []
-           ]
-         ) do
-      {:ok, service_tickets} -> service_tickets
-      {:error, error} -> raise "failed to load service tickets: #{inspect(error)}"
+  defp load_counts(actor) do
+    case Execution.list_service_tickets(actor: actor, load: [:work_order_count]) do
+      {:ok, service_tickets} ->
+        %{
+          total: length(service_tickets),
+          critical: Enum.count(service_tickets, &(&1.severity == :critical)),
+          active:
+            Enum.count(
+              service_tickets,
+              &(&1.status in [:new, :triaged, :in_progress, :waiting_on_customer])
+            ),
+          work_orders:
+            Enum.reduce(service_tickets, 0, fn ticket, total ->
+              total + (ticket.work_order_count || 0)
+            end)
+        }
+
+      {:error, _} ->
+        %{total: 0, critical: 0, active: 0, work_orders: 0}
     end
   end
 end

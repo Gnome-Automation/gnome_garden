@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.Execution.WorkOrderLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
 
   import GnomeGardenWeb.Execution.Helpers
 
@@ -7,16 +8,21 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    work_orders = load_work_orders(socket.assigns.current_user)
+    counts = load_counts(socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Work Orders")
-     |> assign(:work_order_count, length(work_orders))
-     |> assign(:scheduled_count, Enum.count(work_orders, &(&1.status == :scheduled)))
-     |> assign(:in_progress_count, Enum.count(work_orders, &(&1.status == :in_progress)))
-     |> assign(:completed_count, Enum.count(work_orders, &(&1.status == :completed)))
-     |> stream(:work_orders, work_orders)}
+     |> assign(:work_order_count, counts.total)
+     |> assign(:scheduled_count, counts.scheduled)
+     |> assign(:in_progress_count, counts.in_progress)
+     |> assign(:completed_count, counts.completed)}
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = Cinder.UrlSync.handle_params(params, uri, socket)
+    {:noreply, socket}
   end
 
   @impl true
@@ -30,10 +36,10 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Index do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/execution/service-tickets"}>
-            <.icon name="hero-lifebuoy" class="size-4" /> Service Tickets
+            Service Tickets
           </.button>
           <.button navigate={~p"/execution/work-orders/new"} variant="primary">
-            <.icon name="hero-plus" class="size-4" /> New Work Order
+            New Work Order
           </.button>
         </:actions>
       </.page_header>
@@ -68,13 +74,71 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Index do
         />
       </div>
 
-      <.section
-        title="Execution Queue"
-        description="Keep service work and delivery-adjacent field work explicit so scheduling, billing, and reporting stay grounded."
-        compact
-        body_class="p-0"
+      <Cinder.collection
+        id="work-orders-table"
+        resource={GnomeGarden.Execution.WorkOrder}
+        actor={@current_user}
+        url_state={@url_state}
+        theme={GnomeGardenWeb.CinderTheme}
+        page_size={25}
+        query_opts={[
+          load: [
+            :status_variant,
+            :priority_variant,
+            :assignment_count,
+            organization: [],
+            asset: [],
+            service_ticket: []
+          ]
+        ]}
+        click={fn row -> JS.navigate(~p"/execution/work-orders/#{row}") end}
       >
-        <div :if={@work_order_count == 0} class="p-6 sm:p-7">
+        <:col :let={work_order} field="title" search sort label="Work Order">
+          <div class="space-y-1">
+            <div class="font-medium text-base-content">{work_order.title}</div>
+            <p class="text-sm text-base-content/50">
+              {work_order.reference_number || "No reference number"}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={work_order} label="Context">
+          <div class="space-y-1">
+            <p>{(work_order.organization && work_order.organization.name) || "-"}</p>
+            <p class="text-xs text-base-content/40">
+              {(work_order.service_ticket && work_order.service_ticket.title) ||
+                (work_order.asset && work_order.asset.name) || "No ticket/asset"}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={work_order} field="due_on" sort label="Type">
+          <div class="space-y-1">
+            <p>{format_atom(work_order.work_type)}</p>
+            <p class="text-xs text-base-content/40">
+              Due {format_date(work_order.due_on)}
+            </p>
+          </div>
+        </:col>
+
+        <:col :let={work_order} field="status" sort label="Status">
+          <.status_badge status={work_order.status_variant}>
+            {format_atom(work_order.status)}
+          </.status_badge>
+        </:col>
+
+        <:col :let={work_order} label="Priority">
+          <div class="space-y-1">
+            <.status_badge status={work_order.priority_variant}>
+              {format_atom(work_order.priority)}
+            </.status_badge>
+            <p class="text-xs text-base-content/40">
+              {work_order.assignment_count || 0} assignments
+            </p>
+          </div>
+        </:col>
+
+        <:empty>
           <.empty_state
             icon="hero-wrench-screwdriver"
             title="No work orders yet"
@@ -86,104 +150,24 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Index do
               </.button>
             </:action>
           </.empty_state>
-        </div>
-
-        <div :if={@work_order_count > 0} class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-white/10">
-            <thead class="bg-zinc-50 dark:bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Work Order
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Context
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Type
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Status
-                </th>
-                <th class="px-5 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                  Priority
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              id="work-orders"
-              phx-update="stream"
-              class="divide-y divide-zinc-200 dark:divide-white/10"
-            >
-              <tr :for={{dom_id, work_order} <- @streams.work_orders} id={dom_id}>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.link
-                      navigate={~p"/execution/work-orders/#{work_order}"}
-                      class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                    >
-                      {work_order.title}
-                    </.link>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                      {work_order.reference_number || "No reference number"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{(work_order.organization && work_order.organization.name) || "-"}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {(work_order.service_ticket && work_order.service_ticket.title) ||
-                        (work_order.asset && work_order.asset.name) || "No ticket/asset"}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  <div class="space-y-1">
-                    <p>{format_atom(work_order.work_type)}</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      Due {format_date(work_order.due_on)}
-                    </p>
-                  </div>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <.status_badge status={work_order.status_variant}>
-                    {format_atom(work_order.status)}
-                  </.status_badge>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <div class="space-y-1">
-                    <.status_badge status={work_order.priority_variant}>
-                      {format_atom(work_order.priority)}
-                    </.status_badge>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500">
-                      {work_order.assignment_count || 0} assignments
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </.section>
+        </:empty>
+      </Cinder.collection>
     </.page>
     """
   end
 
-  defp load_work_orders(actor) do
-    case Execution.list_work_orders(
-           actor: actor,
-           query: [sort: [due_on: :asc, inserted_at: :desc]],
-           load: [
-             :status_variant,
-             :priority_variant,
-             :assignment_count,
-             organization: [],
-             asset: [],
-             service_ticket: []
-           ]
-         ) do
-      {:ok, work_orders} -> work_orders
-      {:error, error} -> raise "failed to load work orders: #{inspect(error)}"
+  defp load_counts(actor) do
+    case Execution.list_work_orders(actor: actor) do
+      {:ok, work_orders} ->
+        %{
+          total: length(work_orders),
+          scheduled: Enum.count(work_orders, &(&1.status == :scheduled)),
+          in_progress: Enum.count(work_orders, &(&1.status == :in_progress)),
+          completed: Enum.count(work_orders, &(&1.status == :completed))
+        }
+
+      {:error, _} ->
+        %{total: 0, scheduled: 0, in_progress: 0, completed: 0}
     end
   end
 end

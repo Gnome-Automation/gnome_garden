@@ -16,7 +16,7 @@ defmodule GnomeGarden.Execution.Assignment do
   admin do
     table_columns [
       :id,
-      :assigned_user_id,
+      :assigned_team_member_id,
       :title,
       :assignment_type,
       :location_mode,
@@ -35,8 +35,8 @@ defmodule GnomeGarden.Execution.Assignment do
       reference :project, on_delete: :nilify
       reference :work_item, on_delete: :nilify
       reference :work_order, on_delete: :nilify
-      reference :assigned_user, on_delete: :nilify
-      reference :assigned_by_user, on_delete: :nilify
+      reference :assigned_team_member, on_delete: :nilify
+      reference :assigned_by_team_member, on_delete: :nilify
     end
   end
 
@@ -65,8 +65,8 @@ defmodule GnomeGarden.Execution.Assignment do
         :project_id,
         :work_item_id,
         :work_order_id,
-        :assigned_user_id,
-        :assigned_by_user_id,
+        :assigned_team_member_id,
+        :assigned_by_team_member_id,
         :title,
         :assignment_type,
         :location_mode,
@@ -84,8 +84,8 @@ defmodule GnomeGarden.Execution.Assignment do
         :project_id,
         :work_item_id,
         :work_order_id,
-        :assigned_user_id,
-        :assigned_by_user_id,
+        :assigned_team_member_id,
+        :assigned_by_team_member_id,
         :title,
         :assignment_type,
         :location_mode,
@@ -131,17 +131,17 @@ defmodule GnomeGarden.Execution.Assignment do
 
       prepare build(
                 sort: [scheduled_start_at: :asc, inserted_at: :asc],
-                load: [:project, :work_item, :work_order, :assigned_user]
+                load: [:project, :work_item, :work_order, :assigned_team_member]
               )
     end
 
-    read :for_assigned_user do
-      argument :assigned_user_id, :uuid, allow_nil?: false
-      filter expr(assigned_user_id == ^arg(:assigned_user_id))
+    read :for_assigned_team_member do
+      argument :assigned_team_member_id, :uuid, allow_nil?: false
+      filter expr(assigned_team_member_id == ^arg(:assigned_team_member_id))
 
       prepare build(
                 sort: [scheduled_start_at: :asc, inserted_at: :asc],
-                load: [:project, :work_item, :work_order, :assigned_user]
+                load: [:project, :work_item, :work_order, :assigned_team_member]
               )
     end
 
@@ -151,7 +151,7 @@ defmodule GnomeGarden.Execution.Assignment do
 
       prepare build(
                 sort: [scheduled_start_at: :asc, inserted_at: :asc],
-                load: [:work_item, :work_order, :assigned_user]
+                load: [:work_item, :work_order, :assigned_team_member]
               )
     end
 
@@ -161,7 +161,7 @@ defmodule GnomeGarden.Execution.Assignment do
 
       prepare build(
                 sort: [scheduled_start_at: :asc, inserted_at: :asc],
-                load: [:project, :work_order, :assigned_user]
+                load: [:project, :work_order, :assigned_team_member]
               )
     end
 
@@ -171,7 +171,7 @@ defmodule GnomeGarden.Execution.Assignment do
 
       prepare build(
                 sort: [scheduled_start_at: :asc, inserted_at: :asc],
-                load: [:project, :work_item, :assigned_user]
+                load: [:project, :work_item, :assigned_team_member]
               )
     end
   end
@@ -268,12 +268,12 @@ defmodule GnomeGarden.Execution.Assignment do
       public? true
     end
 
-    belongs_to :assigned_user, GnomeGarden.Accounts.User do
+    belongs_to :assigned_team_member, GnomeGarden.Operations.TeamMember do
       allow_nil? false
       public? true
     end
 
-    belongs_to :assigned_by_user, GnomeGarden.Accounts.User do
+    belongs_to :assigned_by_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
   end

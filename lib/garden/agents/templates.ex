@@ -79,6 +79,25 @@ defmodule GnomeGarden.Agents.Templates do
       description: "Discovers target companies and saves reviewable discovery findings",
       model: :fast,
       max_iterations: 30
+    },
+    # Pi sidecar workers (run pi --mode rpc as a managed child process)
+    "pi_bid_scanner" => %{
+      module: GnomeGarden.Agents.Workers.PiProcess,
+      description: "Pi-powered bid scanner with browser automation and PlanetBids extraction",
+      model: :fast,
+      max_iterations: 1
+    },
+    "pi_target_discovery" => %{
+      module: GnomeGarden.Agents.Workers.PiProcess,
+      description: "Pi-powered commercial target discovery across directories and job boards",
+      model: :fast,
+      max_iterations: 1
+    },
+    "pi_source_discovery" => %{
+      module: GnomeGarden.Agents.Workers.PiProcess,
+      description: "Pi-powered procurement portal discovery",
+      model: :fast,
+      max_iterations: 1
     }
   }
 

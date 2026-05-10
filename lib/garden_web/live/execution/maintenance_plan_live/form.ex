@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/execution/maintenance-plans"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to maintenance plans
+            Back to maintenance plans
           </.button>
         </:actions>
       </.page_header>

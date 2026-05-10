@@ -6,7 +6,8 @@ defmodule GnomeGarden.Mercury.PaymentMatchTest do
   alias GnomeGarden.Operations
 
   setup do
-    {:ok, org} = Operations.create_organization(%{name: "Test Org #{System.unique_integer([:positive])}"})
+    {:ok, org} =
+      Operations.create_organization(%{name: "Test Org #{System.unique_integer([:positive])}"})
 
     {:ok, payment} =
       Finance.create_payment(%{

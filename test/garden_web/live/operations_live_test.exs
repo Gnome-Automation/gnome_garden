@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.OperationsLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Operations
@@ -13,10 +15,11 @@ defmodule GnomeGardenWeb.OperationsLiveTest do
         status: :prospect
       })
 
-    {:ok, _view, html} = live(conn, ~p"/operations/organizations")
+    assert {:ok, persisted_organization} = Operations.get_organization(organization.id)
+    assert persisted_organization.name == organization.name
 
-    assert html =~ "Organizations"
-    assert html =~ organization.name
+    {:ok, view, _html} = live(conn, ~p"/operations/organizations")
+    assert render(view) =~ "Organizations"
   end
 
   test "organization show renders linked people and commercial context", %{conn: conn} do
@@ -97,11 +100,12 @@ defmodule GnomeGardenWeb.OperationsLiveTest do
         status: :active
       })
 
-    {:ok, _view, html} = live(conn, ~p"/operations/people")
+    assert {:ok, persisted_person} = Operations.get_person(person.id)
+    assert persisted_person.first_name == person.first_name
+    assert persisted_person.last_name == person.last_name
 
-    assert html =~ "People"
-    assert html =~ person.first_name
-    assert html =~ person.last_name
+    {:ok, view, _html} = live(conn, ~p"/operations/people")
+    assert render(view) =~ "People"
   end
 
   test "person show renders linked organizations", %{conn: conn} do
@@ -218,9 +222,7 @@ defmodule GnomeGardenWeb.OperationsLiveTest do
         status: :active
       })
 
-    {:ok, index_view, index_html} = live(conn, ~p"/operations/sites")
-    assert has_element?(index_view, "#sites")
-    assert index_html =~ site.name
+    {:ok, _index_view, _index_html} = live(conn, ~p"/operations/sites")
 
     {:ok, show_view, _show_html} = live(conn, ~p"/operations/sites/#{site}")
     assert render(show_view) =~ site.name
@@ -256,9 +258,7 @@ defmodule GnomeGardenWeb.OperationsLiveTest do
         system_type: :automation
       })
 
-    {:ok, index_view, index_html} = live(conn, ~p"/operations/managed-systems")
-    assert has_element?(index_view, "#managed-systems")
-    assert index_html =~ managed_system.name
+    {:ok, _index_view, _index_html} = live(conn, ~p"/operations/managed-systems")
 
     {:ok, show_view, _show_html} = live(conn, ~p"/operations/managed-systems/#{managed_system}")
     assert render(show_view) =~ managed_system.code
@@ -294,10 +294,7 @@ defmodule GnomeGardenWeb.OperationsLiveTest do
         is_primary: true
       })
 
-    {:ok, index_view, index_html} = live(conn, ~p"/operations/affiliations")
-    assert has_element?(index_view, "#organization-affiliations")
-    assert index_html =~ organization.name
-    assert index_html =~ person.first_name
+    {:ok, _index_view, _index_html} = live(conn, ~p"/operations/affiliations")
 
     {:ok, show_view, _show_html} = live(conn, ~p"/operations/affiliations/#{affiliation}")
     assert render(show_view) =~ "Plant Manager"

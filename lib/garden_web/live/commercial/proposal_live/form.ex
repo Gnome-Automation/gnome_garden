@@ -36,7 +36,7 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/proposals"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to proposals
+            Back to proposals
           </.button>
         </:actions>
       </.page_header>
@@ -48,8 +48,8 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Form do
       >
         <div class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div class="space-y-1">
-            <p class="font-medium text-zinc-900 dark:text-white">{@pursuit.name}</p>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+            <p class="font-medium text-base-content">{@pursuit.name}</p>
+            <p class="text-sm text-base-content/50">
               {(@pursuit.organization && @pursuit.organization.name) || "No organization linked"}
             </p>
           </div>

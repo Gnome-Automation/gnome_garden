@@ -45,29 +45,29 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
             <.status_badge status={@signal.status_variant}>
               {format_atom(@signal.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{format_atom(@signal.signal_type)}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/commercial/signals"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button
             :if={@finding_id}
             navigate={~p"/acquisition/findings/#{@finding_id}"}
           >
-            <.icon name="hero-inbox-stack" class="size-4" /> Open Intake Finding
+            Open Intake Finding
           </.button>
           <.button
             :if={can_create_pursuit?(@signal)}
             navigate={~p"/commercial/pursuits/new?signal_id=#{@signal.id}"}
             variant="primary"
           >
-            <.icon name="hero-arrow-trending-up" class="size-4" /> Create Pursuit
+            Create Pursuit
           </.button>
           <.button navigate={~p"/commercial/signals/#{@signal}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -156,14 +156,14 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
             :if={@signal.procurement_bid.score_recommendation}
             class="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-4 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100"
           >
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
               Procurement Recommendation
             </p>
             <p class="mt-2 leading-6">{@signal.procurement_bid.score_recommendation}</p>
           </div>
 
           <div :if={@signal.procurement_bid.score_risk_flags != []}>
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
               Procurement Watchouts
             </p>
             <div class="mt-2 flex flex-wrap gap-2">
@@ -213,7 +213,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
             :if={metadata_value(@signal.metadata, :latest_evidence_summary)}
             class="rounded-2xl border border-sky-200 bg-sky-50/70 px-4 py-4 text-sm text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100"
           >
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-300">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-info">
               Discovery Summary
             </p>
             <p class="mt-2 leading-6">
@@ -222,7 +222,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
           </div>
 
           <div :if={discovery_watchouts(@signal) != []}>
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
               Discovery Watchouts
             </p>
             <div class="mt-2 flex flex-wrap gap-2">
@@ -236,10 +236,10 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
           </div>
 
           <div :if={discovery_feedback(@signal)}>
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
               Discovery Review Feedback
             </p>
-            <p class="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+            <p class="mt-2 text-sm leading-6 text-base-content/70">
               {format_discovery_feedback(discovery_feedback(@signal))}
             </p>
           </div>
@@ -247,13 +247,13 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
       </.section>
 
       <.section :if={@signal.description} title="Description">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@signal.description}
         </p>
       </.section>
 
       <.section :if={@signal.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@signal.notes}
         </p>
       </.section>
@@ -277,8 +277,8 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{pursuit.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{pursuit.name}</p>
+              <p class="text-sm text-base-content/50">
                 {format_atom(pursuit.pursuit_type)}
               </p>
             </div>
@@ -298,10 +298,10 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end

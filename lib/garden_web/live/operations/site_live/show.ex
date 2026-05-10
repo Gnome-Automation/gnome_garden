@@ -26,22 +26,22 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Show do
             <.status_badge status={@site.status_variant}>
               {format_atom(@site.status)}
             </.status_badge>
-            <span class="text-zinc-400 dark:text-zinc-500">/</span>
+            <span class="text-base-content/40">/</span>
             <span>{@site.code || "No site code"}</span>
           </span>
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/sites"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back
+            Back
           </.button>
           <.button navigate={~p"/operations/managed-systems/new?site_id=#{@site.id}"}>
-            <.icon name="hero-circle-stack" class="size-4" /> New Managed System
+            New Managed System
           </.button>
           <.button navigate={~p"/operations/assets/new?site_id=#{@site.id}"}>
-            <.icon name="hero-cpu-chip" class="size-4" /> New Asset
+            New Asset
           </.button>
           <.button navigate={~p"/operations/sites/#{@site}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
+            Edit
           </.button>
         </:actions>
       </.page_header>
@@ -77,7 +77,7 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Show do
       </div>
 
       <.section :if={@site.notes} title="Notes">
-        <p class="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+        <p class="whitespace-pre-wrap text-sm leading-6 text-base-content/70">
           {@site.notes}
         </p>
       </.section>
@@ -101,8 +101,8 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Show do
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
-              <p class="font-medium text-zinc-900 dark:text-white">{managed_system.name}</p>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              <p class="font-medium text-base-content">{managed_system.name}</p>
+              <p class="text-sm text-base-content/50">
                 {managed_system.code || "No system code"}
               </p>
             </div>
@@ -122,10 +122,10 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Show do
   defp property_item(assigns) do
     ~H"""
     <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
         {@label}
       </p>
-      <p class="text-sm font-medium text-zinc-900 dark:text-white">{@value}</p>
+      <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
   end

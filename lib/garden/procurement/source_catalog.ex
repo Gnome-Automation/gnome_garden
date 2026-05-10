@@ -1,19 +1,19 @@
 defmodule GnomeGarden.Procurement.SourceCatalog do
   @moduledoc """
-  Canonical procurement source catalog derived from the legacy bid watchlist.
+  Canonical procurement source catalog for bid and utility discovery.
 
-  The previous watchlist was agency-centric, but `ProcurementSource` is a
-  portal-centric resource keyed by `:unique_url`. This catalog deduplicates
-  shared portals and preserves the watched agencies in source metadata.
+  `ProcurementSource` is a portal-centric resource keyed by `:unique_url`.
+  This catalog deduplicates shared portals and preserves the watched agencies
+  in source metadata.
   """
 
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
   alias GnomeGarden.Commercial.CompanyProfileContext
 
-  @standard_notes "Bootstrapped from the legacy bid watchlist as a deduped portal record."
+  @standard_notes "Bootstrapped from the default bid source catalog as a deduped portal record."
 
-  @legacy_watchlist [
+  @default_bid_sources [
     %{
       key: :irvine_irwd,
       name: "Irvine / IRWD PlanetBids",
@@ -229,19 +229,19 @@ defmodule GnomeGarden.Procurement.SourceCatalog do
           ready: [ProcurementSource.t()]
         }
 
-  @spec legacy_watchlist() :: [map()]
-  def legacy_watchlist, do: @legacy_watchlist
+  @spec default_bid_sources() :: [map()]
+  def default_bid_sources, do: @default_bid_sources
 
   @spec oc_bid_pilot() :: [map()]
   def oc_bid_pilot do
-    @legacy_watchlist
+    @default_bid_sources
     |> Enum.filter(&(&1.key in @oc_bid_pilot_keys))
     |> Enum.sort_by(&Enum.find_index(@oc_bid_pilot_keys, fn key -> key == &1.key end))
   end
 
-  @spec ensure_legacy_watchlist(keyword()) :: {:ok, bootstrap_result()} | {:error, term()}
-  def ensure_legacy_watchlist(opts \\ []) do
-    ensure_sources(legacy_watchlist(), opts)
+  @spec ensure_default_bid_sources(keyword()) :: {:ok, bootstrap_result()} | {:error, term()}
+  def ensure_default_bid_sources(opts \\ []) do
+    ensure_sources(default_bid_sources(), opts)
   end
 
   @spec ensure_oc_bid_pilot(keyword()) :: {:ok, bootstrap_result()} | {:error, term()}
@@ -359,13 +359,13 @@ defmodule GnomeGarden.Procurement.SourceCatalog do
 
   defp notes_for(%{source_type: :utility}),
     do:
-      "Bootstrapped from the legacy water and utility lead-source catalog for manual discovery and ongoing monitoring."
+      "Bootstrapped from the water and utility source catalog for manual discovery and ongoing monitoring."
 
   defp notes_for(_spec), do: @standard_notes
 
   defp catalog_name_for(%{source_type: :bidnet}), do: "bidnet_controls_pilot"
   defp catalog_name_for(%{source_type: :utility}), do: "utility_discovery_pilot"
-  defp catalog_name_for(_spec), do: "legacy_bid_watchlist"
+  defp catalog_name_for(_spec), do: "default_bid_sources"
 
   defp default_company_profile_mode(%{source_type: source_type})
        when source_type in [:planetbids, :opengov, :bidnet, :sam_gov, :custom, :utility],
@@ -431,7 +431,7 @@ defmodule GnomeGarden.Procurement.SourceCatalog do
         selector: ".pagination a"
       },
       notes:
-        "Standard PlanetBids table configuration applied from the legacy bid watchlist bootstrap."
+        "Standard PlanetBids table configuration applied from the default bid source bootstrap."
     }
   end
 

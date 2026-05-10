@@ -55,7 +55,11 @@ defmodule GnomeGarden.Finance do
       define :list_invoices, action: :read
       define :get_invoice, action: :read, get_by: [:id]
       define :create_invoice, action: :create
-      define :create_invoice_from_agreement_sources, action: :create_from_agreement_sources, args: [:agreement_id]
+
+      define :create_invoice_from_agreement_sources,
+        action: :create_from_agreement_sources,
+        args: [:agreement_id]
+
       define :update_invoice, action: :update
       define :issue_invoice, action: :issue
       define :pay_invoice, action: :mark_paid

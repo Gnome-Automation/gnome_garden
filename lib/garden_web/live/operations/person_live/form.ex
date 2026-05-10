@@ -25,7 +25,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/operations/people"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to people
+            Back to people
           </.button>
         </:actions>
       </.page_header>

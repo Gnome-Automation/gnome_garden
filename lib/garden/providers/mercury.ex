@@ -65,10 +65,10 @@ defmodule GnomeGarden.Providers.Mercury do
   def attach(request, opts \\ []) do
     request
     |> Req.Request.register_options([:mercury_api_key, :mercury_sandbox])
-    |> Req.Request.prepend_request_steps([
+    |> Req.Request.prepend_request_steps(
       mercury_put_base_url: &put_base_url/1,
       mercury_put_auth: &put_auth/1
-    ])
+    )
     |> Req.Request.append_response_steps(mercury_handle_errors: &handle_errors/1)
     |> Req.merge(opts)
   end
@@ -162,7 +162,7 @@ defmodule GnomeGarden.Providers.Mercury do
         raw_key
       else
         raise "Missing Mercury API key. Set MERCURY_API_KEY in your environment " <>
-              "or configure :mercury_api_key in application config."
+                "or configure :mercury_api_key in application config."
       end
 
     Req.merge(request, auth: {:bearer, api_key})

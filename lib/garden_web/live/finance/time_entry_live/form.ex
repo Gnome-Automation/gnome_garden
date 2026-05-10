@@ -1,7 +1,6 @@
 defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Accounts
   alias GnomeGarden.Commercial
   alias GnomeGarden.Execution
   alias GnomeGarden.Finance
@@ -19,7 +18,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:projects, load_projects(socket.assigns.current_user))
      |> assign(:work_orders, load_work_orders(socket.assigns.current_user))
-     |> assign(:users, load_users(socket.assigns.current_user))
+     |> assign(:team_members, load_team_members(socket.assigns.current_user))
      |> assign(:selected_project_id, selected_project_id)
      |> assign(
        :project_work_items,
@@ -40,7 +39,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
         </:subtitle>
         <:actions>
           <.button navigate={~p"/finance/time-entries"}>
-            <.icon name="hero-arrow-left" class="size-4" /> Back to time entries
+            Back to time entries
           </.button>
         </:actions>
       </.page_header>
@@ -69,11 +68,11 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
             </div>
             <div class="sm:col-span-3">
               <.input
-                field={@form[:member_user_id]}
+                field={@form[:member_team_member_id]}
                 type="select"
                 label="Member"
                 prompt="Select member..."
-                options={Enum.map(@users, &{&1.email, &1.id})}
+                options={Enum.map(@team_members, &{team_member_label(&1), &1.id})}
                 required
               />
             </div>
@@ -232,13 +231,16 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
     end
   end
 
-  defp load_users(actor) do
+  defp load_team_members(actor) do
     if is_nil(actor) do
       []
     else
-      case Accounts.list_users(actor: actor) do
-        {:ok, users} -> Enum.sort_by(users, &String.downcase(to_string(&1.email || "")))
-        {:error, error} -> raise "failed to load users: #{inspect(error)}"
+      case Operations.list_active_team_members(actor: actor) do
+        {:ok, team_members} ->
+          Enum.sort_by(team_members, &String.downcase(team_member_label(&1)))
+
+        {:error, error} ->
+          raise "failed to load team members: #{inspect(error)}"
       end
     end
   end
@@ -265,11 +267,20 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
     |> maybe_put("project_id", params["project_id"])
     |> maybe_put("work_item_id", params["work_item_id"])
     |> maybe_put("work_order_id", params["work_order_id"])
-    |> maybe_put("member_user_id", params["member_user_id"] || actor_id(actor))
+    |> maybe_put(
+      "member_team_member_id",
+      params["member_team_member_id"] || current_team_member_id(actor)
+    )
   end
 
-  defp actor_id(nil), do: nil
-  defp actor_id(actor), do: actor.id
+  defp current_team_member_id(nil), do: nil
+
+  defp current_team_member_id(actor) do
+    case Operations.get_team_member_by_user(actor.id, actor: actor) do
+      {:ok, team_member} -> team_member.id
+      {:error, _error} -> nil
+    end
+  end
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, ""), do: map
@@ -302,4 +313,6 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
     |> Enum.reject(&is_nil/1)
     |> Enum.join(" · ")
   end
+
+  defp team_member_label(team_member), do: team_member.display_name || "Team member"
 end

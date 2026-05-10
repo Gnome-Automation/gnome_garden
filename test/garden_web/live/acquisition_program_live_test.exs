@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.AcquisitionProgramLiveTest do
   use GnomeGardenWeb.ConnCase
 
+  setup :register_and_log_in_user
+
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Acquisition
@@ -17,7 +19,7 @@ defmodule GnomeGardenWeb.AcquisitionProgramLiveTest do
     {:ok, _program} = Commercial.activate_discovery_program(program)
 
     {:ok, _discovery_record} =
-      Acquisition.create_discovery_record(%{
+      Commercial.create_discovery_record(%{
         discovery_program_id: program.id,
         name: "Plant Floor Systems",
         website: "https://plant-floor.example.com",
@@ -29,13 +31,13 @@ defmodule GnomeGardenWeb.AcquisitionProgramLiveTest do
       Acquisition.get_program_by_external_ref("discovery_program:#{program.id}")
 
     {:ok, view, _html} = live(conn, ~p"/acquisition/programs")
+    html = render_async(view, 1_000)
 
-    assert render(view) =~ "Program Registry"
-    assert render(view) =~ program.name
-    assert has_element?(view, "#acquisition-programs")
+    assert html =~ "Program Registry"
+    assert html =~ program.name
     assert has_element?(view, "#launch-program-#{acquisition_program.id}")
-    assert render(view) =~ "1"
-    refute render(view) =~ "Legacy Discovery Programs"
+    assert html =~ "1 total"
+    refute html =~ "Legacy Discovery Programs"
   end
 
   test "program registry hides launch when a program is not runnable", %{conn: conn} do
@@ -54,8 +56,9 @@ defmodule GnomeGardenWeb.AcquisitionProgramLiveTest do
     {:ok, _program} = Acquisition.update_program(acquisition_program, %{status: :paused})
 
     {:ok, view, _html} = live(conn, ~p"/acquisition/programs")
+    html = render_async(view, 1_000)
 
     refute has_element?(view, "#launch-program-#{acquisition_program.id}")
-    assert render(view) =~ "Paused"
+    assert html =~ "Paused"
   end
 end

@@ -407,6 +407,7 @@ defmodule GnomeGarden.Acquisition.Finding do
                     :hiring_signal,
                     :expansion_signal,
                     :contact_signal,
+                    :integrator_request,
                     :research_note,
                     :other
                   ]

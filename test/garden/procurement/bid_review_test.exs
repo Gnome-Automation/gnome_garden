@@ -1,10 +1,10 @@
 defmodule GnomeGarden.Procurement.BidReviewTest do
   use GnomeGarden.DataCase, async: true
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.BidReview
-  alias GnomeGarden.Sales
 
   test "start_review transitions bid into reviewing" do
     bid = bid_fixture()
@@ -69,12 +69,12 @@ defmodule GnomeGarden.Procurement.BidReviewTest do
     assert signal.status == :archived
 
     {:ok, research_requests} =
-      Sales.list_research_requests(query: [filter: [researchable_id: bid.id]])
+      Acquisition.list_research_requests(query: [filter: [researchable_id: bid.id]])
 
     assert length(research_requests) == 1
     assert List.first(research_requests).notes =~ "cybersecurity partners"
 
-    {:ok, research_links} = Sales.list_research_links(query: [filter: [bid_id: bid.id]])
+    {:ok, research_links} = Acquisition.list_research_links(query: [filter: [bid_id: bid.id]])
     assert length(research_links) == 1
   end
 
