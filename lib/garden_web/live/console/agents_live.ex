@@ -64,42 +64,32 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
   end
 
   def handle_event("pause_deployment", %{"deployment_id" => deployment_id}, socket) do
-    case Agents.get_agent_deployment(deployment_id, actor: socket.assigns.current_user) do
-      {:ok, deployment} ->
-        case Ash.update(deployment, %{}, action: :pause, actor: socket.assigns.current_user) do
-          {:ok, _deployment} ->
-            {:noreply,
-             socket
-             |> load_console()
-             |> refresh_table("agent-deployments-table")
-             |> put_flash(:info, "Deployment paused.")}
-
-          {:error, error} ->
-            {:noreply, put_flash(socket, :error, error_message(error))}
-        end
-
-      {:error, error} ->
-        {:noreply, put_flash(socket, :error, error_message(error))}
+    with {:ok, deployment} <-
+           Agents.get_agent_deployment(deployment_id, actor: socket.assigns.current_user),
+         {:ok, _deployment} <-
+           Agents.pause_agent_deployment(deployment, actor: socket.assigns.current_user) do
+      {:noreply,
+       socket
+       |> load_console()
+       |> refresh_table("agent-deployments-table")
+       |> put_flash(:info, "Deployment paused.")}
+    else
+      {:error, error} -> {:noreply, put_flash(socket, :error, error_message(error))}
     end
   end
 
   def handle_event("resume_deployment", %{"deployment_id" => deployment_id}, socket) do
-    case Agents.get_agent_deployment(deployment_id, actor: socket.assigns.current_user) do
-      {:ok, deployment} ->
-        case Ash.update(deployment, %{}, action: :resume, actor: socket.assigns.current_user) do
-          {:ok, _deployment} ->
-            {:noreply,
-             socket
-             |> load_console()
-             |> refresh_table("agent-deployments-table")
-             |> put_flash(:info, "Deployment resumed.")}
-
-          {:error, error} ->
-            {:noreply, put_flash(socket, :error, error_message(error))}
-        end
-
-      {:error, error} ->
-        {:noreply, put_flash(socket, :error, error_message(error))}
+    with {:ok, deployment} <-
+           Agents.get_agent_deployment(deployment_id, actor: socket.assigns.current_user),
+         {:ok, _deployment} <-
+           Agents.resume_agent_deployment(deployment, actor: socket.assigns.current_user) do
+      {:noreply,
+       socket
+       |> load_console()
+       |> refresh_table("agent-deployments-table")
+       |> put_flash(:info, "Deployment resumed.")}
+    else
+      {:error, error} -> {:noreply, put_flash(socket, :error, error_message(error))}
     end
   end
 
@@ -228,7 +218,8 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
 
         <Cinder.collection
           id="agent-deployments-table"
-          query={Ash.Query.for_read(GnomeGarden.Agents.AgentDeployment, :console)}
+          resource={GnomeGarden.Agents.AgentDeployment}
+          action={:console}
           actor={@current_user}
           url_state={@url_state}
           theme={GnomeGardenWeb.CinderTheme}

@@ -283,9 +283,7 @@ defmodule GnomeGarden.Acquisition.Review do
   end
 
   defp promote_discovery_record_via_acquisition(discovery_record, actor) do
-    discovery_record
-    |> Ash.Changeset.for_update(:promote_to_signal, %{}, actor: actor)
-    |> Ash.update(domain: Commercial)
+    Commercial.promote_discovery_record_to_signal(discovery_record, actor: actor)
   end
 
   defp reject_discovery_record(discovery_record_id, reason_or_feedback, actor) do

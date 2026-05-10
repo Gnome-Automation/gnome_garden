@@ -796,7 +796,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   defp count_findings(queue, family, source, program, actor) do
     case Ash.count(build_findings_query(queue, family, source, program), actor: actor) do
       {:ok, count} -> count
-      {:error, _} -> 0
+      {:error, _error} -> 0
     end
   end
 

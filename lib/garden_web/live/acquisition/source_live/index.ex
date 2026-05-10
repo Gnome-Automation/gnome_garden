@@ -98,7 +98,8 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
       <Cinder.collection
         id="acquisition-sources-table"
-        query={Ash.Query.for_read(GnomeGarden.Acquisition.Source, :console)}
+        resource={GnomeGarden.Acquisition.Source}
+        action={:console}
         actor={@current_user}
         url_state={@url_state}
         theme={GnomeGardenWeb.CinderTheme}

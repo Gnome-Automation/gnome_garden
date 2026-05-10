@@ -98,7 +98,8 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
 
       <Cinder.collection
         id="acquisition-programs-table"
-        query={Ash.Query.for_read(GnomeGarden.Acquisition.Program, :console)}
+        resource={GnomeGarden.Acquisition.Program}
+        action={:console}
         actor={@current_user}
         url_state={@url_state}
         theme={GnomeGardenWeb.CinderTheme}

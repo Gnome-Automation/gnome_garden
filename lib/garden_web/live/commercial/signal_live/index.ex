@@ -71,7 +71,8 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Index do
 
       <Cinder.collection
         id="signals-table"
-        query={Ash.Query.for_read(GnomeGarden.Commercial.Signal, :review_queue)}
+        resource={GnomeGarden.Commercial.Signal}
+        action={:review_queue}
         actor={@current_user}
         url_state={@url_state}
         theme={GnomeGardenWeb.CinderTheme}

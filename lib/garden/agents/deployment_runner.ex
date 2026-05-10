@@ -61,7 +61,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
       AgentTracker.mark_complete(runtime_instance_id, :cancelled, "Cancelled by operator")
       _ = stop_runtime(runtime_instance_id)
 
-      case Ash.update(run, %{}, action: :cancel, actor: actor) do
+      case Agents.cancel_agent_run(run, actor: actor) do
         {:ok, cancelled_run} ->
           persist_message(%{
             agent_run_id: cancelled_run.id,
@@ -171,10 +171,9 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
         AgentTracker.register(runtime_instance_id, pid, deployment.agent.template, run.task)
 
         with {:ok, started_run} <-
-               Ash.update(
+               Agents.start_agent_run(
                  run,
                  %{runtime_instance_id: runtime_instance_id},
-                 action: :start,
                  actor: actor
                ) do
           persist_message(%{
@@ -210,10 +209,9 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
   defp start_direct_runtime(run, deployment, template, actor, runtime_instance_id) do
     with {:ok, started_run} <-
-           Ash.update(
+           Agents.start_agent_run(
              run,
              %{runtime_instance_id: runtime_instance_id},
-             action: :start,
              actor: actor
            ),
          :ok <-
@@ -329,7 +327,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
     AgentTracker.track_tokens(runtime_instance_id, usage.total_tokens)
     AgentTracker.mark_complete(runtime_instance_id, :done, result_text)
 
-    case Ash.update(
+    case Agents.complete_agent_run(
            run,
            %{
              result: result_text,
@@ -340,7 +338,6 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
              token_count: token_count,
              tool_count: tool_count
            },
-           action: :complete,
            actor: actor
          ) do
       {:ok, _completed_run} ->
@@ -368,13 +365,12 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
     AgentTracker.mark_complete(runtime_instance_id, :error, error_text)
 
-    case Ash.update(
+    case Agents.fail_agent_run(
            run,
            %{
              error: error_text,
              failure_details: failure_details(reason)
            },
-           action: :fail,
            actor: actor
          ) do
       {:ok, _failed_run} ->
@@ -401,13 +397,12 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
     AgentTracker.mark_complete(run.id, :error, error_text)
 
-    case Ash.update(
+    case Agents.fail_agent_run(
            run,
            %{
              error: error_text,
              failure_details: failure_details(reason)
            },
-           action: :fail,
            actor: actor
          ) do
       {:ok, failed_run} ->

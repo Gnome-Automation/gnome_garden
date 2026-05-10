@@ -17,18 +17,13 @@ defmodule GnomeGarden.Agents.Tools.MemorySearch do
       ]
     ]
 
-  alias GnomeGarden.Agents.Memory
-  require Ash.Query
+  alias GnomeGarden.Agents
 
   @impl true
   def run(params, _context) do
     namespace = Map.get(params, :namespace) || Map.get(params, "namespace")
 
-    ash_query =
-      Memory
-      |> Ash.Query.for_read(:search, %{namespace: namespace})
-
-    case Ash.read(ash_query) do
+    case Agents.search_memories(namespace) do
       {:ok, memories} when memories == [] ->
         {:ok,
          %{

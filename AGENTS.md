@@ -56,6 +56,23 @@ into parallel context layers. Treat helper-heavy resources, repeated domain
 helpers, or Ash logic in web modules as design pressure to add or refine
 resource actions.
 
+Do not put frontend-specific query builders in backend domain modules. For
+tables and Cinder collections, prefer passing `resource={...}` and
+`action={...}` so Cinder calls Ash read actions directly. If a table needs a
+special backend shape, model it as an Ash read action/preparation with clear
+arguments instead of adding `def some_table_query/0` helpers to a domain.
+Keep unavoidable UI query glue at the LiveView/component edge until it can be
+expressed as a real Ash action.
+
+Do not expose low-level state-machine transition actions as domain code
+interfaces when a higher-level workflow module owns the business process. For
+example, acquisition finding review transitions stay behind
+`GnomeGarden.Acquisition.Review` and its public workflow functions instead of
+raw `accept_finding` / `reject_finding` interfaces.
+
+When cleanup reveals a durable architectural rule or correction, add it to this
+file in the same pass so future agents do not have to rediscover it from chat.
+
 ### Resource Structure
 
 Resources are the core abstraction. Always structure them as:
@@ -975,8 +992,10 @@ action row should be intentionally designed for:
 
 ## Code Shape
 
-- If a file grows past roughly 500 lines, consider splitting it into focused
-  modules or components before adding more behavior.
+- If a file grows past roughly 500 lines, treat it as a design smell and look
+  for obvious extraction points before adding much more behavior.
+- If a file reaches roughly 2000 lines, that is a hard cutoff: split it into
+  focused modules or components before continuing feature work in that file.
 - Prefer domain-local folders over generic helper buckets.
 - Repeated label, filter, sorting, ownership, or status logic is usually a sign
   that the resource needs a calculation, preparation, action, or shared

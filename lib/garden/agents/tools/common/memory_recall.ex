@@ -13,18 +13,13 @@ defmodule GnomeGarden.Agents.Tools.MemoryRecall do
       query: [type: :string, required: true, doc: "Search text to find in memory keys or content"]
     ]
 
-  alias GnomeGarden.Agents.Memory
-  require Ash.Query
+  alias GnomeGarden.Agents
 
   @impl true
   def run(params, _context) do
     query = Map.get(params, :query) || Map.get(params, "query")
 
-    ash_query =
-      Memory
-      |> Ash.Query.for_read(:recall, %{query: query})
-
-    case Ash.read(ash_query) do
+    case Agents.recall_memories(query) do
       {:ok, memories} when memories == [] ->
         {:ok,
          %{

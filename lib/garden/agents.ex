@@ -65,6 +65,12 @@ defmodule GnomeGarden.Agents do
       define :create_agent_message, action: :create
     end
 
-    resource GnomeGarden.Agents.Memory
+    resource GnomeGarden.Agents.Memory do
+      define :remember_memory, action: :remember
+      define :recall_memories, action: :recall, args: [:query]
+      define :search_memories, action: :search, args: [:namespace]
+      define :get_memory_by_key, action: :by_key, args: [:key]
+      define :list_memories_by_type, action: :by_type, args: [:type]
+    end
   end
 end

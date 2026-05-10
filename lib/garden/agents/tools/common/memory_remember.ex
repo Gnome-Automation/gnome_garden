@@ -29,7 +29,7 @@ defmodule GnomeGarden.Agents.Tools.MemoryRemember do
       ]
     ]
 
-  alias GnomeGarden.Agents.Memory
+  alias GnomeGarden.Agents
 
   @impl true
   def run(params, _context) do
@@ -40,16 +40,12 @@ defmodule GnomeGarden.Agents.Tools.MemoryRemember do
 
     type = normalize_type(type_str)
 
-    case Ash.create(
-           Memory,
-           %{
-             key: key,
-             content: content,
-             type: type,
-             namespace: namespace
-           },
-           action: :remember
-         ) do
+    case Agents.remember_memory(%{
+           key: key,
+           content: content,
+           type: type,
+           namespace: namespace
+         }) do
       {:ok, memory} ->
         {:ok,
          %{

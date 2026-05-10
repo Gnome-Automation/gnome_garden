@@ -93,6 +93,8 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceDiscovery do
     """,
     max_iterations: 25
 
+  alias GnomeGarden.Procurement
+
   @default_timeout 180_000
 
   # Orange County cities to discover
@@ -289,7 +291,7 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceDiscovery do
   end
 
   defp load_existing_sources do
-    case Ash.read(GnomeGarden.Procurement.ProcurementSource) do
+    case Procurement.list_procurement_sources() do
       {:ok, sources} ->
         sources
         |> Enum.map(& &1.url)

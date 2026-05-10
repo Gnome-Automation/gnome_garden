@@ -12838,7 +12838,66 @@
           "primary_key": [
             "id"
           ],
-          "code_interfaces": [],
+          "code_interfaces": [
+            {
+              "args": [],
+              "name": "remember_memory",
+              "kind": "action",
+              "action": "remember",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [
+                "query"
+              ],
+              "name": "recall_memories",
+              "kind": "action",
+              "action": "recall",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [
+                "namespace"
+              ],
+              "name": "search_memories",
+              "kind": "action",
+              "action": "search",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [
+                "key"
+              ],
+              "name": "get_memory_by_key",
+              "kind": "action",
+              "action": "by_key",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [
+                "type"
+              ],
+              "name": "list_memories_by_type",
+              "kind": "action",
+              "action": "by_type",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            }
+          ],
           "cross_domain_relationships": []
         }
       ],
@@ -21356,6 +21415,16 @@
               "name": "review_discovery_record",
               "kind": "action",
               "action": "start_review",
+              "get?": false,
+              "get_by": null,
+              "get_by_identity": null,
+              "require_reference?": true
+            },
+            {
+              "args": [],
+              "name": "promote_discovery_record_to_signal",
+              "kind": "action",
+              "action": "promote_to_signal",
               "get?": false,
               "get_by": null,
               "get_by_identity": null,
@@ -56444,7 +56513,7 @@
       "resource_count": 2
     }
   ],
-  "generated_at": "2026-05-10T20:20:55Z",
+  "generated_at": "2026-05-10T20:41:52Z",
   "resource_count": 62,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -58102,7 +58171,66 @@
       "primary_key": [
         "id"
       ],
-      "code_interfaces": [],
+      "code_interfaces": [
+        {
+          "args": [],
+          "name": "remember_memory",
+          "kind": "action",
+          "action": "remember",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [
+            "query"
+          ],
+          "name": "recall_memories",
+          "kind": "action",
+          "action": "recall",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [
+            "namespace"
+          ],
+          "name": "search_memories",
+          "kind": "action",
+          "action": "search",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [
+            "key"
+          ],
+          "name": "get_memory_by_key",
+          "kind": "action",
+          "action": "by_key",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [
+            "type"
+          ],
+          "name": "list_memories_by_type",
+          "kind": "action",
+          "action": "by_type",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        }
+      ],
       "cross_domain_relationships": []
     },
     "GnomeGarden.Procurement.ProcurementSource": {
@@ -78606,6 +78734,16 @@
           "name": "review_discovery_record",
           "kind": "action",
           "action": "start_review",
+          "get?": false,
+          "get_by": null,
+          "get_by_identity": null,
+          "require_reference?": true
+        },
+        {
+          "args": [],
+          "name": "promote_discovery_record_to_signal",
+          "kind": "action",
+          "action": "promote_to_signal",
           "get?": false,
           "get_by": null,
           "get_by_identity": null,

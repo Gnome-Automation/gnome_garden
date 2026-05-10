@@ -6,10 +6,10 @@ defmodule GnomeGarden.Commercial.Events do
   place to thread actor context into event writes.
   """
 
-  alias GnomeGarden.Commercial.Event
+  alias GnomeGarden.Commercial
 
   def log(attrs, opts \\ []) do
-    Ash.create(Event, attrs, actor_opts(opts))
+    Commercial.log_event(attrs, actor_opts(opts))
   end
 
   defp actor_opts(opts) do

@@ -68,7 +68,8 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
 
       <Cinder.collection
         id="pursuits-table"
-        query={Ash.Query.for_read(GnomeGarden.Commercial.Pursuit, :active)}
+        resource={GnomeGarden.Commercial.Pursuit}
+        action={:active}
         actor={@current_user}
         url_state={@url_state}
         theme={GnomeGardenWeb.CinderTheme}

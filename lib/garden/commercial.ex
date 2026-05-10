@@ -57,6 +57,7 @@ defmodule GnomeGarden.Commercial do
       define :update_discovery_record, action: :update
       define :resolve_discovery_record_identity, action: :resolve_identity
       define :review_discovery_record, action: :start_review
+      define :promote_discovery_record_to_signal, action: :promote_to_signal
       define :reject_discovery_record, action: :reject
       define :archive_discovery_record, action: :archive
       define :reopen_discovery_record, action: :reopen
