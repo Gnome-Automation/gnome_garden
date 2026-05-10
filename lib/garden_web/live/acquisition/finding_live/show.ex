@@ -1020,6 +1020,17 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                     Research: {decision.metadata["research"]}
                   </span>
                 </div>
+                <div
+                  :if={decision_snapshot_summary(decision) != []}
+                  class="flex flex-wrap gap-2 text-xs text-base-content/50"
+                >
+                  <span
+                    :for={summary <- decision_snapshot_summary(decision)}
+                    class="rounded-full bg-white px-2 py-1 ring-1 ring-zinc-200 dark:bg-white/[0.04] dark:ring-white/10"
+                  >
+                    {summary}
+                  </span>
+                </div>
               </div>
               <p class="text-xs text-base-content/40">
                 {review_actor_name(decision)}
@@ -1323,6 +1334,35 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     do: "Operator"
 
   defp review_actor_name(_decision), do: "System"
+
+  defp decision_snapshot_summary(%{metadata: %{"decision_snapshot" => snapshot}})
+       when is_map(snapshot) do
+    finding = Map.get(snapshot, "finding", %{})
+    readiness = Map.get(snapshot, "readiness", %{})
+    material = Map.get(snapshot, "material", %{})
+
+    [
+      snapshot_label("State", Map.get(finding, "status")),
+      snapshot_label("Fit", Map.get(finding, "fit_score")),
+      snapshot_label("Intent", Map.get(finding, "intent_score")),
+      snapshot_label("Docs", Map.get(material, "document_count")),
+      snapshot_label("Packet Docs", Map.get(material, "promotion_document_count")),
+      snapshot_label("Evidence", Map.get(material, "discovery_evidence_count")),
+      readiness_label("Accept Ready", Map.get(readiness, "acceptance_ready")),
+      readiness_label("Promote Ready", Map.get(readiness, "promotion_ready"))
+    ]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp decision_snapshot_summary(_decision), do: []
+
+  defp snapshot_label(_label, nil), do: nil
+  defp snapshot_label(_label, 0), do: nil
+  defp snapshot_label(label, value), do: "#{label}: #{format_feedback_scope(value)}"
+
+  defp readiness_label(_label, nil), do: nil
+  defp readiness_label(label, true), do: "#{label}: Yes"
+  defp readiness_label(label, false), do: "#{label}: No"
 
   defp metadata_value(metadata, key) when is_map(metadata),
     do: Map.get(metadata, key) || Map.get(metadata, to_string(key))

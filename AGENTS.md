@@ -982,6 +982,9 @@ action row should be intentionally designed for:
 - When making UI changes, verify both:
   - visual consistency with existing shared components
   - responsive behavior at small and large widths
+- For the acquisition human-review experience, use terms like "queue",
+  "review workspace", "operator view", or "intake review". Do not call it a
+  cockpit in UI copy, docs, commit messages, or summaries.
 
 ## Development Workflow
 

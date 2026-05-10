@@ -137,6 +137,22 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
     assert Enum.map(decisions, & &1.decision) == [:promoted, :accepted, :started_review]
     assert Enum.at(decisions, 1).reason == "This is a strong fit for controls and reporting work."
     assert Enum.at(decisions, 0).reason == nil
+
+    accepted_snapshot = Enum.at(decisions, 1).metadata["decision_snapshot"]
+    promoted_snapshot = Enum.at(decisions, 0).metadata["decision_snapshot"]
+
+    assert accepted_snapshot["finding"]["status"] == "reviewing"
+    assert accepted_snapshot["finding"]["family"] == "procurement"
+    assert accepted_snapshot["finding"]["fit_score"] == 88
+    assert accepted_snapshot["readiness"]["acceptance_ready"] == true
+    assert accepted_snapshot["material"]["document_count"] == 0
+    assert accepted_snapshot["context"]["source_bid_id"] == bid.id
+
+    assert promoted_snapshot["finding"]["status"] == "accepted"
+    assert promoted_snapshot["readiness"]["promotion_ready"] == true
+    assert promoted_snapshot["material"]["document_count"] == 1
+    assert promoted_snapshot["material"]["promotion_document_count"] == 1
+    assert promoted_snapshot["history"]["prior_review_decision_count"] == 2
   end
 
   test "generic intake notes do not satisfy procurement promotion readiness" do

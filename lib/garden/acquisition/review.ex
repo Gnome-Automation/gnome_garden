@@ -2,7 +2,9 @@ defmodule GnomeGarden.Acquisition.Review do
   @moduledoc false
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.AcceptanceRules
   alias GnomeGarden.Acquisition.Finding
+  alias GnomeGarden.Acquisition.PromotionRules
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.CompanyProfileLearning
   alias GnomeGarden.Commercial.DiscoveryFeedback
@@ -16,7 +18,7 @@ defmodule GnomeGarden.Acquisition.Review do
          :ok <- ensure_status(finding, [:new], "Only new findings can be moved into review."),
          {:ok, _result} <- start_review_on_origin(finding, actor),
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
-         :ok <- record_review_decision(refreshed_finding, :started_review, %{}, actor) do
+         :ok <- record_review_decision(refreshed_finding, :started_review, %{}, actor, finding) do
       {:ok, refreshed_finding}
     end
   end
@@ -29,7 +31,7 @@ defmodule GnomeGarden.Acquisition.Review do
          :ok <- ensure_promotion_ready(finding),
          {:ok, result} <- promote_origin(finding, actor),
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
-         :ok <- record_review_decision(refreshed_finding, :promoted, %{}, actor) do
+         :ok <- record_review_decision(refreshed_finding, :promoted, %{}, actor, finding) do
       {:ok, %{finding: refreshed_finding, result: result}}
     end
   end
@@ -43,7 +45,8 @@ defmodule GnomeGarden.Acquisition.Review do
          :ok <- ensure_accept_reason(accept_feedback),
          {:ok, _accepted_finding} <- transition_finding(finding, :accept, actor),
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
-         :ok <- record_review_decision(refreshed_finding, :accepted, accept_feedback, actor) do
+         :ok <-
+           record_review_decision(refreshed_finding, :accepted, accept_feedback, actor, finding) do
       {:ok, refreshed_finding}
     end
   end
@@ -64,7 +67,8 @@ defmodule GnomeGarden.Acquisition.Review do
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
          {:ok, final_finding} <-
            ensure_finding_status(refreshed_finding, :rejected, actor, decision_feedback),
-         :ok <- record_review_decision(final_finding, :rejected, decision_feedback, actor) do
+         :ok <-
+           record_review_decision(final_finding, :rejected, decision_feedback, actor, finding) do
       {:ok, final_finding}
     end
   end
@@ -84,7 +88,7 @@ defmodule GnomeGarden.Acquisition.Review do
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
          {:ok, final_finding} <-
            ensure_finding_status(refreshed_finding, :suppressed, actor, feedback),
-         :ok <- record_review_decision(final_finding, :suppressed, feedback, actor) do
+         :ok <- record_review_decision(final_finding, :suppressed, feedback, actor, finding) do
       {:ok, final_finding}
     end
   end
@@ -106,7 +110,7 @@ defmodule GnomeGarden.Acquisition.Review do
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
          {:ok, final_finding} <-
            ensure_finding_status(refreshed_finding, :parked, actor, decision_feedback),
-         :ok <- record_review_decision(final_finding, :parked, decision_feedback, actor) do
+         :ok <- record_review_decision(final_finding, :parked, decision_feedback, actor, finding) do
       {:ok, final_finding}
     end
   end
@@ -124,7 +128,7 @@ defmodule GnomeGarden.Acquisition.Review do
          {:ok, _result} <- reopen_origin(finding, actor),
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
          {:ok, final_finding} <- ensure_finding_status(refreshed_finding, :new, actor, %{}),
-         :ok <- record_review_decision(final_finding, :reopened, %{}, actor) do
+         :ok <- record_review_decision(final_finding, :reopened, %{}, actor, finding) do
       {:ok, final_finding}
     end
   end
@@ -559,7 +563,15 @@ defmodule GnomeGarden.Acquisition.Review do
 
   defp park_origin_feedback(_finding, _raw_feedback, decision_feedback), do: decision_feedback
 
-  defp record_review_decision(%Finding{} = finding, decision, feedback, actor) do
+  defp record_review_decision(
+         %Finding{} = finding,
+         decision,
+         feedback,
+         actor,
+         %Finding{} = decision_finding
+       ) do
+    snapshot = decision_snapshot(finding, actor, decision_finding)
+
     Acquisition.record_finding_review_decision(
       %{
         finding_id: finding.id,
@@ -575,6 +587,7 @@ defmodule GnomeGarden.Acquisition.Review do
             "source_feedback_category",
             feedback_value(feedback, :source_feedback_category)
           )
+          |> Map.put("decision_snapshot", snapshot)
       },
       actor: actor
     )
@@ -589,6 +602,93 @@ defmodule GnomeGarden.Acquisition.Review do
 
   defp feedback_value(_feedback, _key), do: nil
 
+  defp decision_snapshot(%Finding{id: finding_id} = finding, actor, decision_finding) do
+    finding =
+      case Acquisition.get_finding(
+             finding_id,
+             actor: actor,
+             load: [
+               :acceptance_ready,
+               :acceptance_blockers,
+               :promotion_ready,
+               :promotion_blockers,
+               :document_count,
+               :promotion_document_count,
+               :review_decision_count,
+               :source,
+               :program,
+               :organization,
+               :person,
+               :signal,
+               source_discovery_record: [
+                 :discovery_evidence_count,
+                 :latest_evidence_at,
+                 :latest_evidence_summary,
+                 :organization,
+                 :contact_person
+               ]
+             ]
+           ) do
+        {:ok, loaded_finding} -> loaded_finding
+        {:error, _error} -> finding
+      end
+
+    finding =
+      %{
+        finding
+        | status: decision_finding.status,
+          signal_id: decision_finding.signal_id
+      }
+
+    acceptance_blockers = AcceptanceRules.blockers(finding)
+    promotion_blockers = PromotionRules.blockers(finding)
+
+    %{
+      "finding" =>
+        reject_nil_values(%{
+          "id" => finding.id,
+          "family" => atom_value(finding.finding_family),
+          "type" => atom_value(finding.finding_type),
+          "status" => atom_value(finding.status),
+          "confidence" => atom_value(finding.confidence),
+          "score_tier" => atom_value(finding.score_tier),
+          "fit_score" => finding.fit_score,
+          "intent_score" => finding.intent_score,
+          "due_at" => datetime_value(finding.due_at),
+          "observed_at" => datetime_value(finding.observed_at)
+        }),
+      "readiness" => %{
+        "acceptance_ready" => acceptance_blockers == [],
+        "acceptance_blockers" => acceptance_blockers,
+        "promotion_ready" => promotion_blockers == [],
+        "promotion_blockers" => promotion_blockers
+      },
+      "material" => %{
+        "document_count" => loaded_value(finding.document_count, 0),
+        "promotion_document_count" => loaded_value(finding.promotion_document_count, 0),
+        "discovery_evidence_count" => discovery_evidence_count(finding)
+      },
+      "context" =>
+        reject_nil_values(%{
+          "source_id" => finding.source_id,
+          "source_name" => related_name(finding.source),
+          "program_id" => finding.program_id,
+          "program_name" => related_name(finding.program),
+          "organization_id" => organization_id(finding),
+          "organization_name" => organization_name(finding),
+          "person_id" => person_id(finding),
+          "person_name" => person_name(finding),
+          "signal_id" => finding.signal_id,
+          "source_bid_id" => finding.source_bid_id,
+          "source_discovery_record_id" => finding.source_discovery_record_id,
+          "source_url" => finding.source_url
+        }),
+      "history" => %{
+        "prior_review_decision_count" => loaded_value(finding.review_decision_count, 0)
+      }
+    }
+  end
+
   defp feedback_terms(feedback) do
     feedback
     |> feedback_value(:exclude_terms)
@@ -601,6 +701,60 @@ defmodule GnomeGarden.Acquisition.Review do
   defp maybe_put_metadata(metadata, key, value), do: Map.put(metadata, key, value)
 
   defp reject_nil_values(map), do: Map.reject(map, fn {_key, value} -> is_nil(value) end)
+
+  defp atom_value(nil), do: nil
+  defp atom_value(value) when is_atom(value), do: Atom.to_string(value)
+  defp atom_value(value), do: to_string(value)
+
+  defp datetime_value(nil), do: nil
+  defp datetime_value(%DateTime{} = value), do: DateTime.to_iso8601(value)
+  defp datetime_value(%Date{} = value), do: Date.to_iso8601(value)
+  defp datetime_value(value), do: to_string(value)
+
+  defp loaded_value(%Ash.NotLoaded{}, default), do: default
+  defp loaded_value(nil, default), do: default
+  defp loaded_value(value, _default), do: value
+
+  defp related_name(%Ash.NotLoaded{}), do: nil
+  defp related_name(%{name: name}), do: name
+  defp related_name(_related), do: nil
+
+  defp discovery_evidence_count(%{source_discovery_record: %Ash.NotLoaded{}}), do: 0
+
+  defp discovery_evidence_count(%{source_discovery_record: %{discovery_evidence_count: count}}),
+    do: loaded_value(count, 0)
+
+  defp discovery_evidence_count(_finding), do: 0
+
+  defp organization_id(%{organization_id: id}) when is_binary(id), do: id
+
+  defp organization_id(%{source_discovery_record: %{organization_id: id}}) when is_binary(id),
+    do: id
+
+  defp organization_id(_finding), do: nil
+
+  defp organization_name(%{organization: %{name: name}}) when is_binary(name), do: name
+
+  defp organization_name(%{source_discovery_record: %{organization: %{name: name}}})
+       when is_binary(name),
+       do: name
+
+  defp organization_name(_finding), do: nil
+
+  defp person_id(%{person_id: id}) when is_binary(id), do: id
+
+  defp person_id(%{source_discovery_record: %{contact_person_id: id}}) when is_binary(id),
+    do: id
+
+  defp person_id(_finding), do: nil
+
+  defp person_name(%{person: %{full_name: name}}) when is_binary(name), do: name
+
+  defp person_name(%{source_discovery_record: %{contact_person: %{full_name: name}}})
+       when is_binary(name),
+       do: name
+
+  defp person_name(_finding), do: nil
 
   defp to_atom_key_map(%{} = map) do
     Map.new(map, fn {key, value} ->
