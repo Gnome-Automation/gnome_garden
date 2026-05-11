@@ -273,6 +273,36 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/finance/invoices"]
     },
+    %{
+      id: "ops-ar-aging",
+      section: "Operations",
+      icon: "hero-clock",
+      label: "AR Aging",
+      path: "/finance/ar-aging",
+      badge: 0,
+      hot: false,
+      match: ["/finance/ar-aging"]
+    },
+    %{
+      id: "ops-credit-notes",
+      section: "Operations",
+      icon: "hero-minus-circle",
+      label: "Credit Notes",
+      path: "/finance/credit-notes",
+      badge: 0,
+      hot: false,
+      match: ["/finance/credit-notes"]
+    },
+    %{
+      id: "ops-approval-queue",
+      section: "Operations",
+      icon: "hero-check-circle",
+      label: "Approvals",
+      path: "/finance/time-entries/approval-queue",
+      badge: 0,
+      hot: false,
+      match: ["/finance/time-entries/approval-queue"]
+    },
 
     # Reports
     %{
