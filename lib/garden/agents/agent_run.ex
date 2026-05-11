@@ -290,6 +290,32 @@ defmodule GnomeGarden.Agents.AgentRun do
     end
   end
 
+  calculations do
+    calculate :failure_category,
+              :atom,
+              {GnomeGarden.Calculations.AgentRunFailureInfo, return: :category} do
+      public? true
+    end
+
+    calculate :failure_label,
+              :string,
+              {GnomeGarden.Calculations.AgentRunFailureInfo, return: :label} do
+      public? true
+    end
+
+    calculate :failure_retryable,
+              :boolean,
+              {GnomeGarden.Calculations.AgentRunFailureInfo, return: :retryable} do
+      public? true
+    end
+
+    calculate :failure_recovery_hint,
+              :string,
+              {GnomeGarden.Calculations.AgentRunFailureInfo, return: :recovery_hint} do
+      public? true
+    end
+  end
+
   aggregates do
     count :output_count, :outputs do
       public? true

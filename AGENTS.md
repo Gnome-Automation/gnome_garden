@@ -834,6 +834,11 @@ end
 </div>
 ```
 
+Every direct child inside a `phx-update="stream"` container must have an `id`,
+including empty-state placeholders. LiveView tests enforce this and will fail
+with `setting phx-update to "stream" requires setting an ID on each child` if an
+empty row or placeholder is missing one.
+
 ### Authentication Routes
 
 Routes are pre-configured at:

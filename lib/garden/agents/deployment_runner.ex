@@ -10,6 +10,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
   alias GnomeGarden.Agents
   alias GnomeGarden.Agents.AgentTracker
+  alias GnomeGarden.Agents.RunFailure
   alias GnomeGarden.Agents.Templates
 
   @default_timeout_ms 180_000
@@ -367,7 +368,8 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
   defp handle_failure(run, runtime_instance_id, reason, actor) do
     tracker_entry = AgentTracker.get_agent(runtime_instance_id)
-    error_text = format_failure(reason)
+    error_text = RunFailure.format(reason)
+    failure_details = RunFailure.details(reason, phase: :runtime)
 
     AgentTracker.mark_complete(runtime_instance_id, :error, error_text)
 
@@ -375,7 +377,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
            run,
            %{
              error: error_text,
-             failure_details: failure_details(reason)
+             failure_details: failure_details
            },
            actor: actor
          ) do
@@ -385,7 +387,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
           role: :system,
           content: "Run failed: #{error_text}",
           metadata: %{
-            failure_details: failure_details(reason),
+            failure_details: failure_details,
             tool_count: (tracker_entry && tracker_entry.tool_calls) || 0
           }
         })
@@ -399,7 +401,8 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   end
 
   defp fail_pending_run(run, reason, actor) do
-    error_text = format_failure(reason)
+    error_text = RunFailure.format(reason)
+    failure_details = RunFailure.details(reason, phase: :startup)
 
     AgentTracker.mark_complete(run.id, :error, error_text)
 
@@ -407,7 +410,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
            run,
            %{
              error: error_text,
-             failure_details: failure_details(reason)
+             failure_details: failure_details
            },
            actor: actor
          ) do
@@ -416,7 +419,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
           agent_run_id: failed_run.id,
           role: :system,
           content: "Run failed before startup: #{error_text}",
-          metadata: %{failure_details: failure_details(reason)}
+          metadata: %{failure_details: failure_details}
         })
 
         {:error, error_text}
@@ -586,26 +589,4 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
       total_tokens: max(total_tokens || 0, 0)
     }
   end
-
-  defp format_failure(exception) when is_exception(exception), do: Exception.message(exception)
-  defp format_failure({kind, reason}), do: "#{kind}: #{inspect(reason, pretty: true)}"
-  defp format_failure(reason) when is_binary(reason), do: reason
-  defp format_failure(reason), do: inspect(reason, pretty: true)
-
-  defp failure_details(exception) when is_exception(exception) do
-    %{
-      type: inspect(exception.__struct__),
-      message: Exception.message(exception)
-    }
-  end
-
-  defp failure_details({kind, reason}) do
-    %{
-      kind: inspect(kind),
-      reason: inspect(reason, pretty: true)
-    }
-  end
-
-  defp failure_details(reason) when is_binary(reason), do: %{message: reason}
-  defp failure_details(reason), do: %{reason: inspect(reason, pretty: true)}
 end

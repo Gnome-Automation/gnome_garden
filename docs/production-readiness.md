@@ -52,3 +52,16 @@ Operational expectations:
 - Keep Oban running with the configured queues.
 - Treat `/oban`, `/admin`, and `/dev/dashboard` as development or explicitly gated operator routes only.
 - Do not launch overlapping manual runs for the same agent deployment; the runner rejects them while a deployment has an active run.
+
+Agent run failure triage:
+
+- Failed runs are inspected at `/console/agents/runs/:id`.
+- `AgentRun.failure_details` is the durable failure payload. New runner failures include `category`, `phase`, `message`, and `retryable`.
+- Use the failure category before rerunning:
+  - `timeout`: reduce task scope or increase deployment timeout.
+  - `runtime_start`: verify runtime startup, API keys, sidecar/service availability, and template configuration.
+  - `runtime_exit`: inspect worker or sidecar logs for an unexpected process exit.
+  - `tool_error`: inspect the tool result and repair the source, credential, or request input.
+  - `authorization`: fix the operator/service token or external credential before retrying.
+  - `validation`: repair deployment configuration or task input before retrying.
+- The run page shows the category, retryability, recovery hint, persisted messages, live stream output, and business outputs created by the run.

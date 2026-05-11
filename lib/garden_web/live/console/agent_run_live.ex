@@ -254,7 +254,10 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
               phx-update="stream"
               class="divide-y divide-zinc-200 dark:divide-zinc-800"
             >
-              <div class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50">
+              <div
+                id="run-messages-empty"
+                class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50"
+              >
                 No persisted messages yet.
               </div>
 
@@ -296,7 +299,10 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
               phx-update="stream"
               class="divide-y divide-zinc-200 dark:divide-zinc-800"
             >
-              <div class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50">
+              <div
+                id="run-outputs-empty"
+                class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50"
+              >
                 No business outputs recorded yet.
               </div>
 
@@ -372,10 +378,36 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
 
               <div
                 :if={@run.error}
-                class="rounded-xl bg-red-50 px-3 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300"
+                class="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-500/10 dark:text-red-300"
               >
-                <p class="mb-2 font-medium">Failure</p>
+                <div class="mb-3 flex flex-wrap items-center gap-2">
+                  <p class="font-medium">Failure</p>
+                  <span :if={@run.failure_label} class="badge badge-error badge-sm">
+                    {@run.failure_label}
+                  </span>
+                  <span :if={@run.failure_retryable} class="badge badge-warning badge-sm">
+                    Retryable
+                  </span>
+                </div>
+
+                <p :if={@run.failure_recovery_hint} class="mb-3 leading-6">
+                  {@run.failure_recovery_hint}
+                </p>
+
                 <pre class="whitespace-pre-wrap">{@run.error}</pre>
+
+                <dl
+                  :if={failure_detail_rows(@run) != []}
+                  class="mt-3 divide-y divide-red-200/70 rounded-lg border border-red-200/70 text-xs dark:divide-red-900/70 dark:border-red-900/70"
+                >
+                  <div
+                    :for={{label, value} <- failure_detail_rows(@run)}
+                    class="flex items-start justify-between gap-4 px-3 py-2"
+                  >
+                    <dt class="font-medium">{label}</dt>
+                    <dd class="text-right">{value}</dd>
+                  </div>
+                </dl>
               </div>
 
               <div
@@ -401,7 +433,10 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
               phx-update="stream"
               class="divide-y divide-zinc-200 dark:divide-zinc-800"
             >
-              <div class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50">
+              <div
+                id="tool-events-empty"
+                class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50"
+              >
                 No live tool events yet.
               </div>
 
@@ -472,6 +507,10 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
         :requested_by_user,
         :requested_by_team_member,
         :parent_run,
+        :failure_category,
+        :failure_label,
+        :failure_retryable,
+        :failure_recovery_hint,
         :output_count,
         :procurement_source_output_count,
         :bid_output_count,
@@ -505,6 +544,30 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
 
   defp run_visibility(%{deployment: %{visibility: visibility}}), do: format_atom(visibility)
   defp run_visibility(_run), do: "-"
+
+  defp failure_detail_rows(%{failure_details: details}) when is_map(details) do
+    [
+      {"Phase", failure_detail_value(details, :phase)},
+      {"Category", failure_detail_value(details, :category)},
+      {"Type", failure_detail_value(details, :type)},
+      {"Kind", failure_detail_value(details, :kind)}
+    ]
+    |> Enum.reject(fn {_label, value} -> is_nil(value) or value == "" end)
+  end
+
+  defp failure_detail_rows(_run), do: []
+
+  defp failure_detail_value(details, key) do
+    details
+    |> metadata_value(key)
+    |> case do
+      value when is_binary(value) -> value
+      value when is_atom(value) -> format_atom(value)
+      value when is_boolean(value) -> to_string(value)
+      nil -> nil
+      value -> inspect(value)
+    end
+  end
 
   defp short_id(id), do: String.slice(id, 0, 8)
 
