@@ -8,7 +8,7 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
     1. Resolves the bid's projected `Acquisition.Finding`.
     2. For each `%{"url", "filename", "document_type"}` descriptor:
        a. Streams the file to a temp path with a size cap.
-       b. Creates an `Acquisition.Document` via the standard create action,
+       b. Creates an `Acquisition.Document` via the upload-for-finding action,
           attaching the file and linking it to the finding in one call.
        c. Removes the temp file.
 
@@ -139,17 +139,13 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
   end
 
   defp create_document(upload, source_url, document_type, finding, filename) do
-    Acquisition.create_document(%{
+    Acquisition.upload_document_for_finding(%{
       title: filename,
       document_type: document_type,
       source_url: source_url,
       file: upload,
-      finding_documents: [
-        %{
-          finding_id: finding.id,
-          document_role: role_for_type(document_type)
-        }
-      ]
+      finding_id: finding.id,
+      document_role: role_for_type(document_type)
     })
   end
 

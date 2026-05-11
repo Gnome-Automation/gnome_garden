@@ -288,19 +288,15 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
       content_type: "application/pdf"
     }
 
-    Acquisition.create_document(%{
+    Acquisition.upload_document_for_finding(%{
       title: "Procurement Packet",
       summary: "Linked procurement packet captured during intake review.",
       document_type: :solicitation,
       source_url: finding.source_url,
       file: upload,
-      finding_documents: [
-        %{
-          finding_id: finding.id,
-          document_role: :solicitation,
-          notes: "Required before commercial handoff."
-        }
-      ]
+      finding_id: finding.id,
+      document_role: :solicitation,
+      notes: "Required before commercial handoff."
     })
   end
 

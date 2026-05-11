@@ -198,38 +198,30 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
   defp create_linked_document!(finding) do
     upload = document_upload_fixture()
 
-    Acquisition.create_document(%{
+    Acquisition.upload_document_for_finding(%{
       title: "Procurement packet",
       summary: "Downloaded intake packet for procurement review.",
       document_type: :solicitation,
       source_url: finding.source_url,
       file: upload,
-      finding_documents: [
-        %{
-          finding_id: finding.id,
-          document_role: :solicitation,
-          notes: "Required before commercial handoff."
-        }
-      ]
+      finding_id: finding.id,
+      document_role: :solicitation,
+      notes: "Required before commercial handoff."
     })
   end
 
   defp create_intake_note_document!(finding) do
     upload = document_upload_fixture()
 
-    Acquisition.create_document(%{
+    Acquisition.upload_document_for_finding(%{
       title: "Procurement intake note",
       summary: "Operator note captured during early intake review.",
       document_type: :intake_note,
       source_url: finding.source_url,
       file: upload,
-      finding_documents: [
-        %{
-          finding_id: finding.id,
-          document_role: :supporting,
-          notes: "This note should not satisfy packet readiness."
-        }
-      ]
+      finding_id: finding.id,
+      document_role: :supporting,
+      notes: "This note should not satisfy packet readiness."
     })
   end
 

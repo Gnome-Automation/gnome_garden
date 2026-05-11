@@ -26,6 +26,7 @@ defmodule GnomeGarden.Acquisition do
       define :list_documents, action: :read
       define :get_document, action: :read, get_by: [:id]
       define :create_document, action: :create
+      define :upload_document_for_finding, action: :upload_for_finding
       define :update_document, action: :update
     end
 

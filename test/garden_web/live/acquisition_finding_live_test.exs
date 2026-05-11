@@ -429,19 +429,15 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
   defp create_linked_document!(finding) do
     upload = document_upload_fixture()
 
-    Acquisition.create_document(%{
+    Acquisition.upload_document_for_finding(%{
       title: "Bid packet",
       summary: "Durable procurement packet linked from the acquisition queue.",
       document_type: :solicitation,
       source_url: finding.source_url,
       file: upload,
-      finding_documents: [
-        %{
-          finding_id: finding.id,
-          document_role: :solicitation,
-          notes: "Ready for commercial handoff."
-        }
-      ]
+      finding_id: finding.id,
+      document_role: :solicitation,
+      notes: "Ready for commercial handoff."
     })
   end
 

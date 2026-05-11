@@ -363,7 +363,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
 
     form =
       Acquisition.Document
-      |> AshPhoenix.Form.for_create(:create,
+      |> AshPhoenix.Form.for_create(:upload_for_finding,
         actor: socket.assigns.current_user,
         domain: Acquisition,
         params: seed_params
@@ -422,13 +422,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   defp normalized_params(params, link_params, finding) do
     params
     |> Map.put_new("document_type", default_document_type(finding))
-    |> Map.put("finding_documents", [
-      %{
-        "finding_id" => finding.id,
-        "document_role" => link_params["document_role"],
-        "notes" => link_params["notes"]
-      }
-    ])
+    |> Map.put("finding_id", finding.id)
+    |> Map.put("document_role", link_params["document_role"])
+    |> Map.put("notes", link_params["notes"])
   end
 
   defp default_link_params(finding) do
