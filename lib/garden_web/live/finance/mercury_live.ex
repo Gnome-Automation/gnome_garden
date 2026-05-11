@@ -87,7 +87,8 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
   defp account_status_variant(:active), do: :success
   defp account_status_variant(:frozen), do: :warning
   defp account_status_variant(:inactive), do: :default
-  defp account_status_variant(_), do: :error
+  defp account_status_variant(:deleted), do: :error
+  defp account_status_variant(_), do: :default
 
   defp match_status_variant(nil), do: :default
   defp match_status_variant(:exact), do: :success
@@ -108,7 +109,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
   end
 
   defp format_occurred_at(nil), do: "—"
-  defp format_occurred_at(%DateTime{} = dt), do: Calendar.strftime(dt, "%b %d, %Y")
+  defp format_occurred_at(%DateTime{} = dt), do: format_date(DateTime.to_date(dt))
 
   defp amount_classes(%Decimal{} = amount) do
     if Decimal.compare(amount, Decimal.new("0")) == :gt do
