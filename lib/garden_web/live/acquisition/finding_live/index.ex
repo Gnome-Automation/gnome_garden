@@ -494,6 +494,23 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
                   finding.latest_review_decision_at
                 )}
               </p>
+              <div
+                :if={finding.latest_review_reason_code || finding.latest_review_feedback_scope}
+                class="flex flex-wrap gap-1.5"
+              >
+                <span
+                  :if={finding.latest_review_reason_code}
+                  class="badge badge-outline badge-xs"
+                >
+                  {status_label(finding.latest_review_reason_code)}
+                </span>
+                <span
+                  :if={finding.latest_review_feedback_scope}
+                  class="badge badge-ghost badge-xs"
+                >
+                  Scope: {status_label(finding.latest_review_feedback_scope)}
+                </span>
+              </div>
             </div>
           </:col>
           <:col :let={finding} label="Open">

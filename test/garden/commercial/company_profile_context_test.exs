@@ -100,9 +100,14 @@ defmodule GnomeGarden.Commercial.CompanyProfileContextTest do
     resolved = CompanyProfileContext.resolve()
 
     assert "staff augmentation" in resolved.exclude_keywords
+    assert resolved.fixed_exclude_keywords == ["staff augmentation"]
+    assert resolved.learned_exclude_keywords == ["cctv", "video surveillance"]
     assert "cctv" in resolved.exclude_keywords
     assert "video surveillance" in resolved.exclude_keywords
-    assert CompanyProfileContext.prompt_block() =~ "cctv"
+
+    prompt = CompanyProfileContext.prompt_block()
+    assert prompt =~ "Mode fixed exclude keywords: staff augmentation"
+    assert prompt =~ "Learned exclusions from operator feedback: cctv, video surveillance"
   end
 
   test "bidnet query keywords drop terms excluded by the active profile mode" do

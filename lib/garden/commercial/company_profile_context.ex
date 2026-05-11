@@ -89,7 +89,9 @@ defmodule GnomeGarden.Commercial.CompanyProfileContext do
     - Voice principles: #{render_list(Map.get(profile, :voice_principles, []), "None")}
     - Active profile mode: #{resolved.company_profile_mode}
     - Mode include keywords: #{render_list(resolved.include_keywords, "None")}
-    - Mode exclude keywords: #{render_list(resolved.exclude_keywords, "None")}
+    - Mode fixed exclude keywords: #{render_list(resolved.fixed_exclude_keywords, "None")}
+    - Learned exclusions from operator feedback: #{render_list(resolved.learned_exclude_keywords, "None")}
+    - Effective exclude keywords: #{render_list(resolved.exclude_keywords, "None")}
     """
     |> String.trim()
   end
@@ -172,6 +174,8 @@ defmodule GnomeGarden.Commercial.CompanyProfileContext do
       company_profile_mode: mode,
       keyword_mode: keyword_mode,
       include_keywords: normalize_terms(Map.get(keyword_mode, "include", [])),
+      fixed_exclude_keywords: normalize_terms(Map.get(keyword_mode, "exclude", [])),
+      learned_exclude_keywords: normalize_terms(Map.get(keyword_mode, "learned_exclude", [])),
       exclude_keywords:
         normalize_terms(
           Map.get(keyword_mode, "exclude", []) ++ Map.get(keyword_mode, "learned_exclude", [])

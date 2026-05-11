@@ -202,12 +202,20 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert suppressed_finding.status == :suppressed
 
     {:ok, suppressed_finding} =
-      Acquisition.get_finding(finding.id, load: [:latest_review_reason])
+      Acquisition.get_finding(
+        finding.id,
+        load: [:latest_review_reason, :latest_review_reason_code, :latest_review_feedback_scope]
+      )
 
     assert suppressed_finding.latest_review_reason == "Noisy procurement intake"
+    assert suppressed_finding.latest_review_reason_code == "source_noise_or_misclassified"
+    assert suppressed_finding.latest_review_feedback_scope == "source"
 
     {:ok, suppressed_view, _html} = live(conn, ~p"/acquisition/findings?queue=suppressed")
-    assert render(suppressed_view) =~ "Acquisition Queue"
+    html = render_async(suppressed_view, 1_000)
+    assert html =~ "Acquisition Queue"
+    assert html =~ "Source noise or misclassified"
+    assert html =~ "Scope: Source"
   end
 
   test "parking and reopening a discovery finding keeps discovery watch items in acquisition" do

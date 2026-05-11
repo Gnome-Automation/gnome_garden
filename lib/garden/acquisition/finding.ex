@@ -222,6 +222,8 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :acceptance_ready,
                   :acceptance_blockers,
                   :latest_review_decision,
+                  :latest_review_reason_code,
+                  :latest_review_feedback_scope,
                   :latest_review_reason,
                   :latest_review_decision_at,
                   :promotion_ready,
@@ -247,6 +249,8 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :acceptance_ready,
                   :acceptance_blockers,
                   :latest_review_decision,
+                  :latest_review_reason_code,
+                  :latest_review_feedback_scope,
                   :latest_review_reason,
                   :latest_review_decision_at,
                   :promotion_ready,
@@ -268,6 +272,8 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :score_tier_variant,
                   :due_status_label,
                   :latest_review_decision,
+                  :latest_review_reason_code,
+                  :latest_review_feedback_scope,
                   :latest_review_reason,
                   :latest_review_decision_at,
                   :promotion_ready,
@@ -288,6 +294,8 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :score_tier_variant,
                   :due_status_label,
                   :latest_review_decision,
+                  :latest_review_reason_code,
+                  :latest_review_feedback_scope,
                   :latest_review_reason,
                   :latest_review_decision_at,
                   :organization
@@ -305,6 +313,8 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :score_tier_variant,
                   :due_status_label,
                   :latest_review_decision,
+                  :latest_review_reason_code,
+                  :latest_review_feedback_scope,
                   :latest_review_reason,
                   :latest_review_decision_at,
                   :organization
@@ -322,6 +332,8 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :score_tier_variant,
                   :due_status_label,
                   :latest_review_decision,
+                  :latest_review_reason_code,
+                  :latest_review_feedback_scope,
                   :latest_review_reason,
                   :latest_review_decision_at,
                   :organization
@@ -644,6 +656,16 @@ defmodule GnomeGarden.Acquisition.Finding do
     end
 
     first :latest_review_reason, :review_decisions, :reason do
+      sort recorded_at: :desc
+      public? true
+    end
+
+    first :latest_review_reason_code, :review_decisions, :reason_code do
+      sort recorded_at: :desc
+      public? true
+    end
+
+    first :latest_review_feedback_scope, :review_decisions, :feedback_scope do
       sort recorded_at: :desc
       public? true
     end
