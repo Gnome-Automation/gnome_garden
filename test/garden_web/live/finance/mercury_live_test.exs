@@ -15,14 +15,17 @@ defmodule GnomeGardenWeb.Finance.MercuryLiveTest do
 
   test "renders account balance when an account exists", %{conn: conn} do
     {:ok, _account} =
-      Mercury.create_mercury_account(%{
-        mercury_id: "acc-#{System.unique_integer([:positive])}",
-        name: "Gnome Checking",
-        status: :active,
-        kind: :checking,
-        current_balance: Decimal.new("15000.00"),
-        available_balance: Decimal.new("14500.00")
-      })
+      Mercury.create_mercury_account(
+        %{
+          mercury_id: "acc-#{System.unique_integer([:positive])}",
+          name: "Gnome Checking",
+          status: :active,
+          kind: :checking,
+          current_balance: Decimal.new("15000.00"),
+          available_balance: Decimal.new("14500.00")
+        },
+        authorize?: false
+      )
 
     {:ok, _view, html} = live(conn, ~p"/finance/mercury")
     assert html =~ "Gnome Checking"

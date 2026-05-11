@@ -71,7 +71,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
         _ -> query
       end
 
-    Ash.read!(query, actor: user)
+    Ash.read!(query, actor: user, domain: Mercury)
   end
 
   defp parse_date(nil), do: nil
@@ -101,7 +101,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
   defp match_status_label(:probable), do: "Matched"
   defp match_status_label(:possible), do: "Matched"
   defp match_status_label(:unmatched), do: "Unmatched"
-  defp match_status_label(_), do: "Unmatched"
+  defp match_status_label(_), do: "—"
 
   defp counterparty(txn) do
     txn.counterparty_name || txn.bank_description || "—"
