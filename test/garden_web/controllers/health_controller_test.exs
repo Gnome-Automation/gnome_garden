@@ -6,4 +6,16 @@ defmodule GnomeGardenWeb.HealthControllerTest do
 
     assert text_response(conn, 200) == "ok"
   end
+
+  test "GET /ready returns readiness checks", %{conn: conn} do
+    conn = get(conn, ~p"/ready")
+
+    assert %{
+             "status" => "ok",
+             "checks" => %{
+               "database" => %{"status" => "ok"},
+               "document_storage" => %{"status" => "ok"}
+             }
+           } = json_response(conn, 200)
+  end
 end

@@ -11,7 +11,7 @@ It now has four distinct responsibilities:
 - runtime orchestration
 - unified acquisition intake
 - discovery and procurement intake
-- operator visibility through the cockpit and console
+- operator visibility through the workspace and console
 
 The important architecture decision is that runtime state and durable business state are intentionally separated.
 
@@ -142,7 +142,7 @@ Implemented scheduling layers:
 - `/console/agents/runs/:id`
 - `/agent`
 
-The cockpit is for business queue pressure.
+The workspace is for business queue pressure.
 The console is for agent/runtime inspection and manual launches.
 
 ## Jido Guidance

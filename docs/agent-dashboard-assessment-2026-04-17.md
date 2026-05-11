@@ -1,18 +1,18 @@
 # Agent Dashboard Assessment
 
 Date: 2026-04-19
-Status: Updated to reflect the implemented cockpit and console
+Status: Updated to reflect the implemented workspace and console
 
 ## Summary
 
 `gnome_garden` now has two distinct operator surfaces:
 
-- the business cockpit at `/`
+- the business workspace at `/`
 - the runtime console under `/console/agents`
 
 That split is the right one.
 
-The cockpit answers:
+The workspace answers:
 - what commercial, service, and finance queues need attention now?
 
 The console answers:
@@ -20,7 +20,7 @@ The console answers:
 
 ## What Exists Today
 
-### Cockpit
+### Workspace
 
 The home page now surfaces:
 - due discovery programs
@@ -62,7 +62,7 @@ That is a much better shape than the older tracker-centric experiment.
 The earlier dashboard question assumed the main problem was how to build a first useful agent dashboard.
 
 The system now already has:
-- a cockpit for business pressure
+- a workspace for business pressure
 - a console for agent runtime
 - a durable discovery intake workflow
 
@@ -70,7 +70,7 @@ So the question is no longer "should there be a dashboard?"
 
 The question is now:
 - how much more runtime depth belongs in the console
-- how much more business summarization belongs in the cockpit
+- how much more business summarization belongs in the workspace
 
 ## Current Assessment
 
@@ -92,8 +92,8 @@ The question is now:
 
 Keep the split:
 
-### Cockpit
-Use the cockpit for:
+### Workspace
+Use the workspace for:
 - queue pressure
 - operator prioritization
 - exception handling

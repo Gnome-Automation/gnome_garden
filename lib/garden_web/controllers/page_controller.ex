@@ -27,7 +27,7 @@ defmodule GnomeGardenWeb.PageController do
 
     render(conn, :home,
       layout: {GnomeGardenWeb.Layouts, :app},
-      page_title: "Operations Cockpit",
+      page_title: "Operations Workspace",
       current_user: actor,
       current_path: conn.request_path,
       runnable_source_count: runnable_source_count(acquisition_sources),

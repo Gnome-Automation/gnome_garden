@@ -210,9 +210,13 @@ defmodule GnomeGardenWeb.Router do
   end
 
   scope "/", GnomeGardenWeb do
+    get "/health", HealthController, :show
+    get "/ready", HealthController, :ready
+  end
+
+  scope "/", GnomeGardenWeb do
     pipe_through :browser
 
-    get "/health", HealthController, :show
     get "/", PageController, :home
     auth_routes AuthController, GnomeGarden.Accounts.User, path: "/auth"
     sign_out_route AuthController
