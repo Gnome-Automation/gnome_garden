@@ -20,6 +20,17 @@ defmodule GnomeGardenWeb.Router do
     plug :load_from_session
   end
 
+  pipeline :operator_browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {GnomeGardenWeb.Layouts, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug :load_from_session
+    plug GnomeGardenWeb.Plugs.RequireUser
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
     plug :load_from_bearer
@@ -215,9 +226,14 @@ defmodule GnomeGardenWeb.Router do
   end
 
   scope "/", GnomeGardenWeb do
-    pipe_through :browser
+    pipe_through :operator_browser
 
     get "/", PageController, :home
+  end
+
+  scope "/", GnomeGardenWeb do
+    pipe_through :browser
+
     auth_routes AuthController, GnomeGarden.Accounts.User, path: "/auth"
     sign_out_route AuthController
 

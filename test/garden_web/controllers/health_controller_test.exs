@@ -14,7 +14,7 @@ defmodule GnomeGardenWeb.HealthControllerTest do
              "status" => "ok",
              "checks" => %{
                "database" => %{"status" => "ok"},
-               "document_storage" => %{"status" => "ok"}
+               "document_storage" => %{"status" => "ok", "mode" => "test"}
              }
            } = json_response(conn, 200)
   end

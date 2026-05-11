@@ -6,6 +6,8 @@ defmodule GnomeGardenWeb.PageControllerTest do
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
+  setup :register_and_log_in_user
+
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
     assert html_response(conn, 200) =~ "Operations Workspace"

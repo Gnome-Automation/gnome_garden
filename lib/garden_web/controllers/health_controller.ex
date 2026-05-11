@@ -37,23 +37,63 @@ defmodule GnomeGardenWeb.HealthController do
   end
 
   defp document_storage_check do
-    cond do
-      Application.get_env(:gnome_garden, :serve_local_storage?, false) ->
+    storage_config = document_storage_config()
+
+    case Keyword.get(storage_config, :service) do
+      {AshStorage.Service.S3, opts} ->
+        s3_storage_check(opts)
+
+      {AshStorage.Service.Test, _opts} ->
+        %{status: "ok", mode: "test"}
+
+      {AshStorage.Service.Disk, _opts} ->
         %{status: "ok", mode: "local"}
 
-      document_storage_service_configured?() ->
-        %{status: "ok", mode: "external"}
+      {_service, _opts} ->
+        %{status: "ok", mode: "configured"}
 
-      true ->
-        %{status: "error", message: "document storage service is not configured"}
+      nil ->
+        fallback_storage_check()
     end
   end
 
-  defp document_storage_service_configured? do
+  defp document_storage_config do
     :gnome_garden
     |> Application.get_env(GnomeGarden.Acquisition.Document, [])
     |> Keyword.get(:storage, [])
-    |> Keyword.has_key?(:service)
+  end
+
+  defp s3_storage_check(opts) do
+    missing =
+      [:bucket, :access_key_id, :secret_access_key]
+      |> Enum.reject(&present_option?(opts, &1))
+
+    if missing == [] do
+      %{status: "ok", mode: "external", service: "s3"}
+    else
+      %{
+        status: "error",
+        mode: "external",
+        service: "s3",
+        message: "missing S3 storage options: #{Enum.join(missing, ", ")}"
+      }
+    end
+  end
+
+  defp fallback_storage_check do
+    if Application.get_env(:gnome_garden, :serve_local_storage?, false) do
+      %{status: "ok", mode: "local"}
+    else
+      %{status: "error", message: "document storage service is not configured"}
+    end
+  end
+
+  defp present_option?(opts, key) do
+    case Keyword.get(opts, key) do
+      nil -> false
+      "" -> false
+      _value -> true
+    end
   end
 
   defp ready?(checks) do
