@@ -34,7 +34,7 @@ defmodule GnomeGarden.Acquisition do
       define :list_finding_documents, action: :read
       define :list_finding_documents_for_finding, action: :for_finding, args: [:finding_id]
       define :get_finding_document, action: :read, get_by: [:id]
-      define :create_finding_document, action: :create
+      define :link_document_to_finding, action: :link_existing
       define :update_finding_document, action: :update
       define :delete_finding_document, action: :destroy
     end

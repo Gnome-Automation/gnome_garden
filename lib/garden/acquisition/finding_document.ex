@@ -49,6 +49,18 @@ defmodule GnomeGarden.Acquisition.FindingDocument do
       change set_new_attribute(:linked_at, &DateTime.utc_now/0)
     end
 
+    create :link_existing do
+      accept [
+        :finding_id,
+        :document_id,
+        :document_role,
+        :notes,
+        :metadata
+      ]
+
+      change set_new_attribute(:linked_at, &DateTime.utc_now/0)
+    end
+
     update :update do
       accept [:document_role, :notes, :metadata]
     end

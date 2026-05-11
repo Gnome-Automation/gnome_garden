@@ -295,7 +295,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
         notes: blank_to_nil(existing_link_params["notes"])
       }
 
-      case Acquisition.create_finding_document(attrs, actor: socket.assigns.current_user) do
+      case Acquisition.link_document_to_finding(attrs, actor: socket.assigns.current_user) do
         {:ok, _finding_document} ->
           {:noreply,
            socket
