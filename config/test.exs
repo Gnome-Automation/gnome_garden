@@ -1,6 +1,10 @@
 import Config
 config :gnome_garden, Oban, testing: :manual
-config :gnome_garden, token_signing_secret: "0yKs9QpG/aUKOWcHig5mxRkK+spiI4IB"
+
+config :gnome_garden,
+  serve_local_storage?: true,
+  token_signing_secret: "0yKs9QpG/aUKOWcHig5mxRkK+spiI4IB"
+
 config :bcrypt_elixir, log_rounds: 1
 config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 

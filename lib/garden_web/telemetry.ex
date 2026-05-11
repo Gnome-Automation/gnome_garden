@@ -75,6 +75,18 @@ defmodule GnomeGardenWeb.Telemetry do
           "The time the connection spent waiting before being checked out for the query"
       ),
 
+      # Background Job Metrics
+      summary("oban.job.stop.duration",
+        tags: [:queue, :worker, :state],
+        tag_values: &oban_job_tags/1,
+        unit: {:native, :millisecond}
+      ),
+      summary("oban.job.exception.duration",
+        tags: [:queue, :worker, :state],
+        tag_values: &oban_job_tags/1,
+        unit: {:native, :millisecond}
+      ),
+
       # VM Metrics
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),
@@ -89,5 +101,13 @@ defmodule GnomeGardenWeb.Telemetry do
       # This function must call :telemetry.execute/3 and a metric must be added above.
       # {GnomeGardenWeb, :count_users, []}
     ]
+  end
+
+  defp oban_job_tags(%{job: job, state: state}) do
+    %{
+      queue: job.queue,
+      worker: job.worker,
+      state: state
+    }
   end
 end

@@ -23,6 +23,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
     with {:ok, deployment} <- fetch_deployment(deployment_id, actor),
          :ok <- ensure_enabled(deployment),
+         :ok <- ensure_no_manual_overlap(deployment),
          {:ok, template} <- Templates.get(deployment.agent.template),
          {:ok, run} <- create_run(deployment, actor, task_override, :manual, metadata: metadata) do
       start_runtime(run, deployment, template, actor)
@@ -103,6 +104,11 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   end
 
   defp ensure_no_active_run(_deployment), do: :ok
+
+  defp ensure_no_manual_overlap(%{active_run_count: count}) when is_integer(count) and count > 0,
+    do: {:error, :active_run_exists}
+
+  defp ensure_no_manual_overlap(_deployment), do: :ok
 
   defp ensure_schedule_slot_available(deployment_id, schedule_slot) do
     case Agents.list_scheduled_agent_runs_for_slot(deployment_id, schedule_slot) do
@@ -452,14 +458,20 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   end
 
   defp timeout_for(%{config: %{"timeout_ms" => timeout_ms}})
-       when is_integer(timeout_ms) and timeout_ms > 0,
-       do: timeout_ms
+       when is_integer(timeout_ms) and timeout_ms > 0 do
+    min(timeout_ms, max_agent_run_timeout_ms())
+  end
 
   defp timeout_for(%{config: %{timeout_ms: timeout_ms}})
-       when is_integer(timeout_ms) and timeout_ms > 0,
-       do: timeout_ms
+       when is_integer(timeout_ms) and timeout_ms > 0 do
+    min(timeout_ms, max_agent_run_timeout_ms())
+  end
 
   defp timeout_for(_deployment), do: @default_timeout_ms
+
+  defp max_agent_run_timeout_ms do
+    Application.get_env(:gnome_garden, :max_agent_run_timeout_ms, 600_000)
+  end
 
   defp runtime_tool_context(run, deployment, actor, runtime_instance_id) do
     %{

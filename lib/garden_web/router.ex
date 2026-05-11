@@ -6,7 +6,9 @@ defmodule GnomeGardenWeb.Router do
 
   import AshAuthentication.Plug.Helpers
 
-  forward "/storage", AshStorage.Plug.DiskServe, root: "priv/storage"
+  if Application.compile_env(:gnome_garden, :serve_local_storage?) do
+    forward "/storage", AshStorage.Plug.DiskServe, root: "priv/storage"
+  end
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -210,6 +212,7 @@ defmodule GnomeGardenWeb.Router do
   scope "/", GnomeGardenWeb do
     pipe_through :browser
 
+    get "/health", HealthController, :show
     get "/", PageController, :home
     auth_routes AuthController, GnomeGarden.Accounts.User, path: "/auth"
     sign_out_route AuthController

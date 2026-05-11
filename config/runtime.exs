@@ -61,6 +61,15 @@ if brave_api_key = System.get_env("BRAVE_API_KEY") do
     brave_api_key: brave_api_key
 end
 
+if config_env() == :prod and is_nil(System.get_env("GARAGE_ACCESS_KEY")) and
+     System.get_env("ALLOW_LOCAL_STORAGE_IN_PROD") != "true" do
+  raise """
+  environment variable GARAGE_ACCESS_KEY is missing.
+  Configure S3-compatible acquisition document storage before starting production.
+  Set ALLOW_LOCAL_STORAGE_IN_PROD=true only for a deliberate temporary emergency.
+  """
+end
+
 if garage_access_key = System.get_env("GARAGE_ACCESS_KEY") do
   garage_secret_key =
     System.get_env("GARAGE_SECRET_KEY") ||
@@ -116,7 +125,12 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST") || "example.com"
+  host =
+    System.get_env("PHX_HOST") ||
+      raise """
+      environment variable PHX_HOST is missing.
+      Set it to the public production host, for example app.example.com.
+      """
 
   config :gnome_garden, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
