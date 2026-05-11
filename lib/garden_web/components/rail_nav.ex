@@ -274,6 +274,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/invoices"]
     },
     %{
+      id: "ops-mercury",
+      section: "Operations",
+      icon: "hero-building-library",
+      label: "Mercury",
+      path: "/finance/mercury",
+      badge: 0,
+      hot: false,
+      match: ["/finance/mercury"]
+    },
+    %{
       id: "ops-ar-aging",
       section: "Operations",
       icon: "hero-clock",

@@ -233,6 +233,9 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/credit-notes", Finance.CreditNoteLive.Index, :index
       live "/finance/credit-notes/:id", Finance.CreditNoteLive.Show, :show
 
+      # Finance - Mercury Bank
+      live "/finance/mercury", Finance.MercuryLive
+
       # Agents - Procurement targeting
       live "/procurement/targeting", Agents.ProcurementTargetingLive, :index
     end
