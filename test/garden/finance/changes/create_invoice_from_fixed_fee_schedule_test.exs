@@ -142,11 +142,19 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeScheduleTest do
           email: "test-#{System.unique_integer([:positive])}@example.com"
         })
 
+      {:ok, team_member} =
+        Operations.create_team_member(%{
+          user_id: user.id,
+          display_name: "Test Member",
+          role: :operator,
+          status: :active
+        })
+
       {:ok, expense} =
         Finance.create_expense(%{
           agreement_id: agreement.id,
           organization_id: org.id,
-          incurred_by_user_id: user.id,
+          incurred_by_team_member_id: team_member.id,
           description: "Hotel",
           category: :travel,
           amount: Decimal.new("500.00"),
@@ -160,7 +168,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeScheduleTest do
         Finance.create_expense(%{
           agreement_id: agreement.id,
           organization_id: org.id,
-          incurred_by_user_id: user.id,
+          incurred_by_team_member_id: team_member.id,
           description: "Flight",
           category: :travel,
           amount: Decimal.new("300.00"),

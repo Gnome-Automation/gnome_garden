@@ -6,6 +6,8 @@ defmodule GnomeGardenWeb.Finance.ArAgingLiveTest do
   alias GnomeGarden.Finance
   alias GnomeGarden.Operations
 
+  setup :register_and_log_in_user
+
   setup do
     {:ok, org} =
       Operations.create_organization(%{

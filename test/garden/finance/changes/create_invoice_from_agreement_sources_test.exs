@@ -19,6 +19,14 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
         email: "te-#{System.unique_integer([:positive])}@example.com"
       })
 
+    {:ok, team_member} =
+      Operations.create_team_member(%{
+        user_id: user.id,
+        display_name: "Test Member",
+        role: :operator,
+        status: :active
+      })
+
     {:ok, agreement} =
       Commercial.create_agreement(%{
         organization_id: org.id,
@@ -39,7 +47,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
       Finance.create_time_entry(%{
         agreement_id: agreement.id,
         organization_id: org.id,
-        member_user_id: user.id,
+        member_team_member_id: team_member.id,
         description: "Backend dev",
         minutes: 120,
         bill_rate: Decimal.new("150.00"),
@@ -53,7 +61,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
       Finance.create_expense(%{
         agreement_id: agreement.id,
         organization_id: org.id,
-        incurred_by_user_id: user.id,
+        incurred_by_team_member_id: team_member.id,
         description: "Hotel stay",
         category: :travel,
         amount: Decimal.new("250.00"),
@@ -67,7 +75,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
       Finance.create_expense(%{
         agreement_id: agreement.id,
         organization_id: org.id,
-        incurred_by_user_id: user.id,
+        incurred_by_team_member_id: team_member.id,
         description: "Flight",
         category: :travel,
         amount: Decimal.new("400.00"),
@@ -77,7 +85,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
     {:ok, expense2} = Finance.submit_expense(expense2)
     {:ok, expense2} = Finance.approve_expense(expense2)
 
-    %{org: org, agreement: agreement, user: user, time_entry: time_entry, expense: expense, expense2: expense2}
+    %{org: org, agreement: agreement, user: user, team_member: team_member, time_entry: time_entry, expense: expense, expense2: expense2}
   end
 
   test "includes only selected expenses as invoice lines", %{
@@ -175,7 +183,8 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
 
   test "expense-only invoice generates when expense selected and no time entries exist", %{
     org: org,
-    user: user
+    user: _user,
+    team_member: team_member
   } do
     # Edge case from spec: validate_sources_present must treat selected expenses as valid
     {:ok, agreement_no_te} =
@@ -197,7 +206,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
       Finance.create_expense(%{
         agreement_id: agreement_no_te.id,
         organization_id: org.id,
-        incurred_by_user_id: user.id,
+        incurred_by_team_member_id: team_member.id,
         description: "Conference fee",
         category: :other,
         amount: Decimal.new("100.00"),

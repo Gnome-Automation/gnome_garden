@@ -8,11 +8,21 @@ defmodule GnomeGardenWeb.Commercial.AgreementLiveTest do
   alias GnomeGarden.Operations
   alias GnomeGarden.Repo
 
+  setup :register_and_log_in_user
+
   setup do
     user =
       Repo.insert!(%GnomeGarden.Accounts.User{
         id: Ecto.UUID.generate(),
         email: "test-#{System.unique_integer([:positive])}@example.com"
+      })
+
+    {:ok, team_member} =
+      Operations.create_team_member(%{
+        user_id: user.id,
+        display_name: "Test Member",
+        role: :operator,
+        status: :active
       })
 
     {:ok, org} =
@@ -51,7 +61,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLiveTest do
       Finance.create_expense(%{
         agreement_id: tm_agreement.id,
         organization_id: org.id,
-        incurred_by_user_id: user.id,
+        incurred_by_team_member_id: team_member.id,
         description: "Hotel",
         category: :travel,
         amount: Decimal.new("200.00"),
@@ -66,7 +76,8 @@ defmodule GnomeGardenWeb.Commercial.AgreementLiveTest do
       tm_agreement: tm_agreement,
       ff_agreement: ff_agreement,
       expense: expense,
-      user: user
+      user: user,
+      team_member: team_member
     }
   end
 
@@ -85,13 +96,14 @@ defmodule GnomeGardenWeb.Commercial.AgreementLiveTest do
     conn: conn,
     ff_agreement: agreement,
     org: org,
-    user: user
+    user: _user,
+    team_member: team_member
   } do
     {:ok, exp} =
       Finance.create_expense(%{
         agreement_id: agreement.id,
         organization_id: org.id,
-        incurred_by_user_id: user.id,
+        incurred_by_team_member_id: team_member.id,
         description: "Equipment rental",
         category: :equipment,
         amount: Decimal.new("150.00"),
@@ -156,13 +168,14 @@ defmodule GnomeGardenWeb.Commercial.AgreementLiveTest do
          tm_agreement: agreement,
          expense: expense,
          org: org,
-         user: user
+         user: _user,
+         team_member: team_member
        } do
     {:ok, te} =
       Finance.create_time_entry(%{
         agreement_id: agreement.id,
         organization_id: org.id,
-        member_user_id: user.id,
+        member_team_member_id: team_member.id,
         description: "Dev work",
         minutes: 60,
         bill_rate: Decimal.new("100.00"),
@@ -194,13 +207,14 @@ defmodule GnomeGardenWeb.Commercial.AgreementLiveTest do
     tm_agreement: agreement,
     expense: expense,
     org: org,
-    user: user
+    user: _user,
+    team_member: team_member
   } do
     {:ok, expense2} =
       Finance.create_expense(%{
         agreement_id: agreement.id,
         organization_id: org.id,
-        incurred_by_user_id: user.id,
+        incurred_by_team_member_id: team_member.id,
         description: "Flight",
         category: :travel,
         amount: Decimal.new("350.00"),
@@ -214,7 +228,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLiveTest do
       Finance.create_time_entry(%{
         agreement_id: agreement.id,
         organization_id: org.id,
-        member_user_id: user.id,
+        member_team_member_id: team_member.id,
         description: "Work",
         minutes: 60,
         bill_rate: Decimal.new("100.00"),

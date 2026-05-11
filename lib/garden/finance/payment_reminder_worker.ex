@@ -31,7 +31,7 @@ defmodule GnomeGarden.Finance.PaymentReminderWorker do
 
     Invoice
     |> Ash.Query.for_read(:overdue)
-    |> Ash.Query.load(organization: [:billing_contact], agreement: [:owner_user])
+    |> Ash.Query.load(organization: [:billing_contact], agreement: [owner_team_member: [:user]])
     |> Ash.read!(domain: Finance, authorize?: false)
     |> Enum.each(&maybe_send_reminder(&1, today))
 
@@ -80,8 +80,9 @@ defmodule GnomeGarden.Finance.PaymentReminderWorker do
   defp build_opts(invoice, :day_30) do
     owner_email =
       invoice.agreement &&
-        invoice.agreement.owner_user &&
-        invoice.agreement.owner_user.email
+        invoice.agreement.owner_team_member &&
+        invoice.agreement.owner_team_member.user &&
+        invoice.agreement.owner_team_member.user.email
 
     if owner_email, do: [cc: to_string(owner_email)], else: []
   end
