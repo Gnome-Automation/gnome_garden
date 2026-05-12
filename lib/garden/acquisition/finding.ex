@@ -205,6 +205,25 @@ defmodule GnomeGarden.Acquisition.Finding do
       change set_attribute(:reviewed_at, &DateTime.utc_now/0)
     end
 
+    read :queue do
+      argument :queue, :atom do
+        allow_nil? false
+        constraints one_of: [:review, :promoted, :rejected, :suppressed, :parked]
+      end
+
+      argument :family, :atom do
+        allow_nil? false
+        constraints one_of: [:all, :procurement, :discovery]
+      end
+
+      argument :source_id, :uuid
+      argument :program_id, :uuid
+
+      pagination offset?: true, countable: true, required?: false
+
+      prepare {GnomeGarden.Acquisition.Preparations.FilterFindingQueue, []}
+    end
+
     read :review_queue do
       filter expr(status in [:new, :reviewing, :accepted])
 

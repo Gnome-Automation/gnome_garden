@@ -1,26 +1,35 @@
 defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
   use GnomeGardenWeb, :live_view
-  use Cinder.UrlSync
 
-  import Cinder.Refresh
-
-  import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
+  import GnomeGardenWeb.Execution.Helpers, only: [format_datetime: 1]
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
+
+  @buckets [:all, :ready, :attention]
+  @program_limit 75
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:page_title, "Acquisition Programs")
-     |> assign(:program_counts, program_counts(socket.assigns.current_user))}
+     |> assign(:buckets, @buckets)
+     |> assign(:selected_bucket, :all)
+     |> assign(:program_counts, empty_counts())
+     |> assign(:programs, [])}
   end
 
   @impl true
-  def handle_params(params, uri, socket) do
-    socket = Cinder.UrlSync.handle_params(params, uri, socket)
-    {:noreply, socket}
+  def handle_params(params, _uri, socket) do
+    bucket = parse_bucket(Map.get(params, "bucket"))
+    programs = list_programs(socket.assigns.current_user)
+
+    {:noreply,
+     socket
+     |> assign(:selected_bucket, bucket)
+     |> assign(:program_counts, program_counts(programs))
+     |> assign(:programs, bucket_programs(programs, bucket))}
   end
 
   @impl true
@@ -33,8 +42,7 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
            ) do
       {:noreply,
        socket
-       |> assign(:program_counts, program_counts(socket.assigns.current_user))
-       |> refresh_table("acquisition-programs-table")
+       |> refresh_programs()
        |> put_flash(:info, "Launched discovery run #{run.id} for #{program.name}.")}
     else
       nil ->
@@ -96,121 +104,225 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
         />
       </div>
 
-      <Cinder.collection
-        id="acquisition-programs-table"
-        resource={GnomeGarden.Acquisition.Program}
-        action={:console}
-        actor={@current_user}
-        url_state={@url_state}
-        theme={GnomeGardenWeb.CinderTheme}
-        page_size={25}
+      <.section
+        title="Program Work Queue"
+        description="Run durable acquisition lanes from here and open the findings each lane produces."
+        compact
+        body_class="p-0"
       >
-        <:col :let={program} field="name" search sort label="Program">
-          <div class="space-y-1">
-            <p class="font-medium text-base-content">{program.name}</p>
-            <p class="text-sm text-base-content/50">
-              {program.description || "No description yet."}
-            </p>
-            <p :if={program.owner_team_member} class="text-xs text-base-content/40">
-              Owner {program.owner_team_member.display_name}
-            </p>
+        <div class="border-b border-zinc-200 px-4 py-3 dark:border-white/10">
+          <div class="flex flex-wrap items-center gap-2">
+            <.bucket_link
+              :for={bucket <- @buckets}
+              bucket={bucket}
+              selected_bucket={@selected_bucket}
+              count={bucket_count(@program_counts, bucket)}
+            />
           </div>
-        </:col>
-        <:col :let={program} label="Family">
-          <div class="space-y-2">
-            <span class="badge badge-info badge-sm">
-              {program.program_family |> to_string() |> String.capitalize()}
-            </span>
-            <span class="badge badge-outline badge-sm">
-              {program.program_type
-              |> to_string()
-              |> String.replace("_", " ")
-              |> String.capitalize()}
-            </span>
-          </div>
-        </:col>
-        <:col :let={program} field="status" sort label="Run Health">
-          <div class="space-y-2">
-            <.status_badge status={program.status_variant}>
-              {format_atom(program.status)}
-            </.status_badge>
-            <.status_badge status={program.health_variant}>
-              {format_atom(program.health_status)}
-            </.status_badge>
-            <p class="text-xs text-base-content/50">
-              {program.health_note}
-            </p>
-            <p class="text-xs text-base-content/50">
-              Last run {format_datetime(program.last_run_at)}
-            </p>
-          </div>
-        </:col>
-        <:col :let={program} label="Findings">
-          <div class="space-y-1 text-sm text-base-content/80">
-            <p>{program.finding_count} total</p>
-            <p class="text-xs text-base-content/50">
-              {program.review_finding_count} review · {program.promoted_finding_count} promoted · {program.noise_finding_count} noise
-            </p>
-          </div>
-        </:col>
-        <:col :let={program} label="Actions">
-          <div class="flex flex-wrap gap-2">
-            <.link
-              navigate={
-                ~p"/acquisition/findings?family=#{program.program_family}&program_id=#{program.id}"
-              }
-              class="btn btn-xs btn-ghost"
-            >
-              Open Queue
-            </.link>
-            <.button
-              :if={program.runnable}
-              id={"launch-program-#{program.id}"}
-              phx-click="launch_run"
-              phx-value-id={program.id}
-              class="px-2.5 py-1.5 text-xs"
-              variant="primary"
-            >
-              Launch Run
-            </.button>
-            <.link
-              :if={program.latest_run_id}
-              navigate={~p"/console/agents/runs/#{program.latest_run_id}"}
-              class="btn btn-xs btn-ghost"
-            >
-              Open Run
-            </.link>
-          </div>
-        </:col>
+        </div>
 
-        <:empty>
-          <.empty_state
-            icon="hero-radar"
-            title="No acquisition programs"
-            description="Backfilled discovery programs and future research programs will appear here."
-          />
-        </:empty>
-      </Cinder.collection>
+        <div class="bg-base-100">
+          <div
+            :if={@programs != []}
+            id="acquisition-program-cards"
+            class="divide-y divide-zinc-200 dark:divide-white/10"
+          >
+            <.program_card :for={program <- @programs} program={program} />
+          </div>
+
+          <div :if={@programs == []} class="p-4">
+            <.empty_state
+              icon="hero-radar"
+              title="No programs in this queue"
+              description="Change the program queue filter or activate more acquisition programs."
+            />
+          </div>
+        </div>
+      </.section>
     </.page>
     """
   end
 
-  defp program_counts(actor) do
-    case Acquisition.list_console_programs(actor: actor) do
-      {:ok, programs} ->
-        %{
-          total: length(programs),
-          healthy: Enum.count(programs, &(&1.health_status in [:healthy, :running])),
-          attention:
-            Enum.count(
-              programs,
-              &(&1.health_status in [:failing, :stale, :noisy, :cancelled])
-            ),
-          runnable: Enum.count(programs, & &1.runnable)
-        }
+  attr :bucket, :atom, required: true
+  attr :selected_bucket, :atom, required: true
+  attr :count, :integer, required: true
 
-      {:error, _} ->
-        %{total: 0, healthy: 0, attention: 0, runnable: 0}
+  defp bucket_link(assigns) do
+    ~H"""
+    <.link
+      patch={~p"/acquisition/programs?bucket=#{@bucket}"}
+      class={[
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition",
+        if(@selected_bucket == @bucket,
+          do: "border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/20",
+          else:
+            "border-zinc-200 bg-white text-zinc-600 hover:border-emerald-300 hover:text-emerald-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-emerald-400/40 dark:hover:text-emerald-300"
+        )
+      ]}
+    >
+      <span>{bucket_label(@bucket)}</span>
+      <span class={[
+        "rounded-full px-2 py-0.5 text-xs font-semibold",
+        if(@selected_bucket == @bucket,
+          do: "bg-white/20 text-white",
+          else: "bg-zinc-100 text-zinc-500 dark:bg-white/10 dark:text-zinc-300"
+        )
+      ]}>
+        {if @count > 99, do: "99+", else: @count}
+      </span>
+    </.link>
+    """
+  end
+
+  attr :program, :map, required: true
+
+  defp program_card(assigns) do
+    ~H"""
+    <article class="grid gap-4 px-3 py-4 sm:px-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:px-5">
+      <div class="min-w-0 space-y-3">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div class="min-w-0">
+            <div class="flex flex-wrap gap-2">
+              <span class="badge badge-info badge-sm">{@program.program_family_label}</span>
+              <span class="badge badge-outline badge-sm">{@program.program_type_label}</span>
+            </div>
+            <h3 class="mt-2 text-base font-semibold leading-6 text-base-content">
+              {@program.name}
+            </h3>
+            <p class="mt-1 text-sm leading-5 text-base-content/60">
+              {@program.description || "No description yet."}
+            </p>
+            <p :if={@program.owner_team_member} class="mt-1 text-xs text-base-content/40">
+              Owner {@program.owner_team_member.display_name}
+            </p>
+          </div>
+
+          <div class="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+            <.status_badge status={@program.status_variant}>
+              {@program.status_label}
+            </.status_badge>
+            <.status_badge status={@program.health_variant}>
+              {@program.health_label}
+            </.status_badge>
+          </div>
+        </div>
+
+        <div class="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-4">
+          <.program_fact label="Findings" value={"#{@program.finding_count} total"} />
+          <.program_fact label="Review" value={"#{@program.review_finding_count} waiting"} />
+          <.program_fact label="Promoted" value={"#{@program.promoted_finding_count} promoted"} />
+          <.program_fact label="Last Run" value={format_datetime(@program.last_run_at)} />
+        </div>
+
+        <p class="text-sm leading-6 text-base-content/60">
+          {@program.health_note}
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+        <.button
+          :if={@program.runnable}
+          id={"launch-program-#{@program.id}"}
+          phx-click="launch_run"
+          phx-value-id={@program.id}
+          class="px-3 py-2 text-sm"
+          variant="primary"
+        >
+          Launch Run
+        </.button>
+        <.link
+          navigate={
+            ~p"/acquisition/findings?family=#{@program.program_family}&program_id=#{@program.id}"
+          }
+          class="btn btn-sm btn-ghost"
+        >
+          Open Queue
+        </.link>
+        <.link
+          :if={@program.latest_run_id}
+          navigate={~p"/console/agents/runs/#{@program.latest_run_id}"}
+          class="btn btn-sm btn-ghost"
+        >
+          Open Run
+        </.link>
+      </div>
+    </article>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :value, :string, required: true
+
+  defp program_fact(assigns) do
+    ~H"""
+    <div class="rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
+        {@label}
+      </p>
+      <p class="mt-1 truncate font-medium text-base-content">{@value}</p>
+    </div>
+    """
+  end
+
+  defp refresh_programs(socket) do
+    programs = list_programs(socket.assigns.current_user)
+
+    socket
+    |> assign(:program_counts, program_counts(programs))
+    |> assign(:programs, bucket_programs(programs, socket.assigns.selected_bucket))
+  end
+
+  defp list_programs(actor) do
+    case Acquisition.list_console_programs(actor: actor) do
+      {:ok, programs} -> programs
+      {:error, _} -> []
     end
   end
+
+  defp program_counts(programs) do
+    %{
+      total: length(programs),
+      healthy: Enum.count(programs, &(&1.health_status in [:healthy, :running])),
+      attention:
+        Enum.count(
+          programs,
+          &(&1.health_status in [:failing, :stale, :noisy, :cancelled])
+        ),
+      runnable: Enum.count(programs, & &1.runnable),
+      ready: Enum.count(programs, & &1.runnable),
+      all: length(programs)
+    }
+  end
+
+  defp empty_counts, do: %{total: 0, healthy: 0, attention: 0, runnable: 0, ready: 0, all: 0}
+
+  defp bucket_programs(programs, bucket) do
+    programs
+    |> Enum.filter(&program_in_bucket?(&1, bucket))
+    |> Enum.take(@program_limit)
+  end
+
+  defp program_in_bucket?(program, :ready), do: program.runnable
+
+  defp program_in_bucket?(program, :attention),
+    do: program.health_status in [:failing, :stale, :noisy, :cancelled]
+
+  defp program_in_bucket?(_program, :all), do: true
+
+  defp bucket_count(counts, :attention), do: counts.attention
+  defp bucket_count(counts, bucket), do: Map.fetch!(counts, bucket)
+
+  defp bucket_label(:ready), do: "Ready"
+  defp bucket_label(:attention), do: "Attention"
+  defp bucket_label(:all), do: "All"
+
+  defp parse_bucket(bucket) when is_binary(bucket) do
+    bucket
+    |> String.to_existing_atom()
+    |> then(fn bucket -> if bucket in @buckets, do: bucket, else: :all end)
+  rescue
+    ArgumentError -> :all
+  end
+
+  defp parse_bucket(_bucket), do: :all
 end

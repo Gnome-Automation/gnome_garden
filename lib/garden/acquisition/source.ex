@@ -89,6 +89,11 @@ defmodule GnomeGarden.Acquisition.Source do
                   :review_finding_count,
                   :promoted_finding_count,
                   :noise_finding_count,
+                  :source_family_label,
+                  :source_kind_label,
+                  :scan_strategy_label,
+                  :status_label,
+                  :health_label,
                   :runnable,
                   :health_status,
                   :health_variant,
@@ -188,6 +193,26 @@ defmodule GnomeGarden.Acquisition.Source do
   end
 
   calculations do
+    calculate :source_family_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :source_family}
+
+    calculate :source_kind_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :source_kind}
+
+    calculate :scan_strategy_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :scan_strategy}
+
+    calculate :status_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :status}
+
+    calculate :health_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :health_status}
+
     calculate :runnable,
               :boolean,
               expr(

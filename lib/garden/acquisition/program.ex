@@ -84,6 +84,10 @@ defmodule GnomeGarden.Acquisition.Program do
                   :review_finding_count,
                   :promoted_finding_count,
                   :noise_finding_count,
+                  :program_family_label,
+                  :program_type_label,
+                  :status_label,
+                  :health_label,
                   :runnable,
                   :health_status,
                   :health_variant,
@@ -174,6 +178,22 @@ defmodule GnomeGarden.Acquisition.Program do
   end
 
   calculations do
+    calculate :program_family_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :program_family}
+
+    calculate :program_type_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :program_type}
+
+    calculate :status_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :status}
+
+    calculate :health_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :health_status}
+
     calculate :runnable,
               :boolean,
               expr(status == :active and not is_nil(discovery_program_id))

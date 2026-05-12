@@ -4,7 +4,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   import GnomeGardenWeb.Components.AcquisitionUI, only: [finding_action_bar: 1, review_dialogs: 1]
 
   import GnomeGardenWeb.Commercial.Helpers, only: [format_date: 1, format_datetime: 1]
-  require Ash.Query
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Procurement.TargetingFeedback
@@ -32,7 +31,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
      |> assign(:action_dialog, nil)
      |> assign(:queue_counts, queue_counts())
      |> assign(:findings, [])
-     |> assign(:findings_query, build_findings_query(:review, :all, nil, nil))}
+     |> assign(:findings_page, nil)}
   end
 
   @impl true
@@ -41,8 +40,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     family = parse_family(Map.get(params, "family"))
     source = load_source_filter(Map.get(params, "source_id"), socket.assigns.current_user)
     program = load_program_filter(Map.get(params, "program_id"), socket.assigns.current_user)
-    findings_query = build_findings_query(queue, family, source, program)
-    findings = list_findings(findings_query, socket.assigns.current_user)
+
+    findings_page =
+      list_findings_page(queue, family, source, program, socket.assigns.current_user)
 
     {:noreply,
      socket
@@ -50,8 +50,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
      |> assign(:selected_family, family)
      |> assign(:selected_source, source)
      |> assign(:selected_program, program)
-     |> assign(:findings_query, findings_query)
-     |> assign(:findings, findings)
+     |> assign(:findings_page, findings_page)
+     |> assign(:findings, page_results(findings_page))
      |> assign(
        :queue_counts,
        queue_counts(family, source, program, socket.assigns.current_user)
@@ -603,78 +603,63 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
       )
     )
     |> assign(
-      :findings_query,
-      build_findings_query(
+      :findings_page,
+      list_findings_page(
         socket.assigns.selected_queue,
         socket.assigns.selected_family,
         socket.assigns.selected_source,
-        socket.assigns.selected_program
-      )
-    )
-    |> assign(
-      :findings,
-      list_findings(
-        build_findings_query(
-          socket.assigns.selected_queue,
-          socket.assigns.selected_family,
-          socket.assigns.selected_source,
-          socket.assigns.selected_program
-        ),
+        socket.assigns.selected_program,
         socket.assigns.current_user
       )
     )
+    |> then(&assign(&1, :findings, page_results(&1.assigns.findings_page)))
   end
 
-  defp build_findings_query(queue, family, source, program) do
-    GnomeGarden.Acquisition.Finding
-    |> Ash.Query.for_read(queue_action(queue))
-    |> apply_finding_filters(family, source, program)
-  end
-
-  defp list_findings(query, actor) do
-    query
-    |> Ash.Query.limit(@finding_limit)
-    |> Ash.read(actor: actor)
-    |> case do
-      {:ok, findings} -> findings
-      {:error, _error} -> []
+  defp list_findings_page(queue, family, source, program, actor) do
+    case Acquisition.list_findings_queue(
+           queue,
+           family,
+           filter_id(source),
+           filter_id(program),
+           actor: actor,
+           page: [limit: @finding_limit, count: true]
+         ) do
+      {:ok, page} -> page
+      {:error, _error} -> empty_page()
     end
   end
-
-  defp queue_action(:review), do: :review_queue
-  defp queue_action(:promoted), do: :promoted
-  defp queue_action(:rejected), do: :rejected
-  defp queue_action(:suppressed), do: :suppressed
-  defp queue_action(:parked), do: :parked
-
-  defp apply_finding_filters(query, family, source, program) do
-    query
-    |> maybe_filter_family(family)
-    |> maybe_filter_source(source)
-    |> maybe_filter_program(program)
-  end
-
-  defp maybe_filter_family(query, :all), do: query
-
-  defp maybe_filter_family(query, family),
-    do: Ash.Query.filter(query, finding_family == ^family)
-
-  defp maybe_filter_source(query, nil), do: query
-
-  defp maybe_filter_source(query, %{id: id}),
-    do: Ash.Query.filter(query, source_id == ^id)
-
-  defp maybe_filter_program(query, nil), do: query
-
-  defp maybe_filter_program(query, %{id: id}),
-    do: Ash.Query.filter(query, program_id == ^id)
 
   defp count_findings(queue, family, source, program, actor) do
-    case Ash.count(build_findings_query(queue, family, source, program), actor: actor) do
-      {:ok, count} -> count
-      {:error, _error} -> 0
+    queue
+    |> list_findings_count_page(family, source, program, actor)
+    |> page_count()
+  end
+
+  defp list_findings_count_page(queue, family, source, program, actor) do
+    case Acquisition.list_findings_queue(
+           queue,
+           family,
+           filter_id(source),
+           filter_id(program),
+           actor: actor,
+           page: [limit: 1, count: true]
+         ) do
+      {:ok, page} -> page
+      {:error, _error} -> empty_page()
     end
   end
+
+  defp filter_id(%{id: id}), do: id
+  defp filter_id(_filter), do: nil
+
+  defp page_results(%{results: results}), do: results
+  defp page_results(results) when is_list(results), do: results
+  defp page_results(_page), do: []
+
+  defp page_count(%{count: count}) when is_integer(count), do: count
+  defp page_count(page), do: length(page_results(page))
+
+  defp empty_page, do: %{results: [], count: 0}
 
   defp queue_counts(family \\ :all, source \\ nil, program \\ nil, actor \\ nil) do
     %{

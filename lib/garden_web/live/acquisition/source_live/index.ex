@@ -196,9 +196,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div class="min-w-0">
             <div class="flex flex-wrap gap-2">
-              <span class="badge badge-info badge-sm">{format_atom(@source.source_family)}</span>
-              <span class="badge badge-outline badge-sm">{format_atom(@source.source_kind)}</span>
-              <span class="badge badge-ghost badge-sm">{format_atom(@source.scan_strategy)}</span>
+              <span class="badge badge-info badge-sm">{@source.source_family_label}</span>
+              <span class="badge badge-outline badge-sm">{@source.source_kind_label}</span>
+              <span class="badge badge-ghost badge-sm">{@source.scan_strategy_label}</span>
               <span :if={@source.procurement_source} class="badge badge-outline badge-sm">
                 {format_atom(@source.procurement_source.config_status)}
               </span>
@@ -213,10 +213,10 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
           <div class="flex shrink-0 flex-wrap gap-2 sm:justify-end">
             <.status_badge status={@source.status_variant}>
-              {format_atom(@source.status)}
+              {@source.status_label}
             </.status_badge>
             <.status_badge status={@source.health_variant}>
-              {format_atom(@source.health_status)}
+              {@source.health_label}
             </.status_badge>
           </div>
         </div>

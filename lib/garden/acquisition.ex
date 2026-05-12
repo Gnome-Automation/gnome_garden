@@ -66,6 +66,11 @@ defmodule GnomeGarden.Acquisition do
     resource GnomeGarden.Acquisition.Finding do
       define :list_findings, action: :read
       define :list_findings_for_program, action: :for_program, args: [:program_id]
+
+      define :list_findings_queue,
+        action: :queue,
+        args: [:queue, :family, :source_id, :program_id]
+
       define :list_review_findings, action: :review_queue
       define :list_promoted_findings, action: :promoted
       define :list_rejected_findings, action: :rejected
