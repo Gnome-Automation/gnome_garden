@@ -307,148 +307,139 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         </:actions>
       </.page_header>
 
-      <div class="grid gap-4 md:grid-cols-4">
-        <.stat_card
-          title="Family"
-          value={@finding.finding_family |> to_string() |> String.capitalize()}
-          description="Which intake lane produced this finding."
-          icon="hero-squares-2x2"
-        />
-        <.stat_card
-          title="Type"
-          value={
-            @finding.finding_type
-            |> to_string()
-            |> String.replace("_", " ")
-            |> String.capitalize()
-          }
-          description="What sort of work signal this record represents."
-          icon="hero-tag"
-          accent="sky"
-        />
-        <.stat_card
-          title="Fit"
-          value={Integer.to_string(@finding.fit_score || 0)}
-          description="Qualification score retained from the intake lane."
-          icon="hero-adjustments-horizontal"
-          accent="emerald"
-        />
-        <.stat_card
-          title="Intent"
-          value={Integer.to_string(@finding.intent_score || 0)}
-          description="Urgency or intent score when the lane provides one."
-          icon="hero-bolt"
-          accent="amber"
-        />
-      </div>
-
       <.section
-        title="Review Actions"
-        description="Work the intake record here, then move into downstream commercial review only when it is qualified."
+        title="Review Workbench"
+        description="Decide from the finding, its source, its proof, and the blockers in one place."
         compact
       >
-        <.finding_action_bar finding={@finding} id_prefix="finding-show" />
-
-        <div class="mt-4">
-          <.validation_checklist
-            finding={@finding}
-            finding_documents={@finding_documents}
-            discovery_evidence={@discovery_evidence}
-          />
-        </div>
-
-        <.blocker_panel
-          :if={@finding.status == :reviewing and not @finding.acceptance_ready}
-          title="Acceptance Prep"
-          description="Clear these blockers before accepting the finding into the refined intake set."
-          blockers={@finding.acceptance_blockers}
-        />
-        <.blocker_panel
-          :if={@finding.status == :accepted and not @finding.promotion_ready}
-          title="Promotion Prep"
-          description="Promotion stays manual. Clear these blockers before handing the finding into commercial review."
-          blockers={@finding.promotion_blockers}
-        />
-      </.section>
-
-      <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <.section title="Summary" description="What this finding is and why it surfaced.">
-          <div class="space-y-4">
-            <div class="flex flex-wrap gap-2">
-              <.status_badge status={@finding.status_variant}>
-                {@finding.status |> to_string() |> String.replace("_", " ") |> String.capitalize()}
-              </.status_badge>
-              <span :if={@finding.confidence} class={confidence_badge(@finding.confidence)}>
-                {@finding.confidence |> to_string() |> String.capitalize()} confidence
-              </span>
-            </div>
-
-            <p class="text-sm leading-6 text-base-content/70">
-              {@finding.summary || "No summary captured yet."}
-            </p>
-
-            <div
-              :if={@finding.recommendation}
-              class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
-            >
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
-                Recommendation
-              </p>
-              <p class="mt-2 text-sm text-base-content/80">
-                {@finding.recommendation}
-              </p>
-            </div>
-
-            <div
-              :if={@finding.watchouts != []}
-              class="rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-4 dark:border-amber-400/20 dark:bg-amber-400/10"
-            >
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-200">
-                Watchouts
-              </p>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <span
-                  :for={watchout <- @finding.watchouts}
-                  class="badge badge-outline badge-sm border-amber-300 bg-white/80 text-amber-700 dark:border-amber-400/30 dark:bg-transparent dark:text-amber-200"
-                >
-                  {watchout}
+        <div class="grid gap-5 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:p-5">
+          <div class="min-w-0 space-y-5">
+            <div class="space-y-3">
+              <div class="flex flex-wrap gap-2">
+                <.status_badge status={@finding.status_variant}>
+                  {@finding.status |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+                </.status_badge>
+                <span class="badge badge-info badge-sm">
+                  {@finding.finding_family |> to_string() |> String.capitalize()}
+                </span>
+                <span class="badge badge-outline badge-sm">
+                  {@finding.finding_type
+                  |> to_string()
+                  |> String.replace("_", " ")
+                  |> String.capitalize()}
+                </span>
+                <span :if={@finding.confidence} class={confidence_badge(@finding.confidence)}>
+                  {@finding.confidence |> to_string() |> String.capitalize()} confidence
                 </span>
               </div>
+
+              <p class="max-w-5xl text-sm leading-6 text-base-content/70">
+                {@finding.summary || "No summary captured yet."}
+              </p>
             </div>
-          </div>
-        </.section>
 
-        <.section
-          title="Provenance"
-          description="Where this finding came from and what it is linked to."
-        >
-          <div class="space-y-4">
-            <.provenance_item label="Observed">
-              {format_datetime(@finding.observed_at || @finding.inserted_at)}
-            </.provenance_item>
-            <.provenance_item label="Source">
-              {if @finding.source, do: @finding.source.name, else: "Direct agent intake"}
-            </.provenance_item>
-            <.provenance_item label="Program">
-              {if @finding.program, do: @finding.program.name, else: "No program linked"}
-            </.provenance_item>
-            <.provenance_item label="Organization">
-              {if @finding.organization,
-                do: @finding.organization.name,
-                else: "No organization linked"}
-            </.provenance_item>
-            <.provenance_item label="Source URL">
-              <a
-                :if={@finding.source_url}
-                href={@finding.source_url}
-                class="text-emerald-700 hover:text-primary"
+            <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <.workbench_metric label="Fit" value={Integer.to_string(@finding.fit_score || 0)} />
+              <.workbench_metric label="Intent" value={Integer.to_string(@finding.intent_score || 0)} />
+              <.workbench_metric
+                label="Observed"
+                value={format_datetime(@finding.observed_at || @finding.inserted_at)}
+              />
+              <.workbench_metric
+                label="Proof"
+                value={@finding.proof_label}
+              />
+            </div>
+
+            <div class="grid gap-3 xl:grid-cols-2">
+              <div
+                :if={@finding.recommendation}
+                class="rounded-lg border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
               >
-                {@finding.source_url}
-              </a>
-              <span :if={is_nil(@finding.source_url)}>No URL captured</span>
-            </.provenance_item>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+                  Recommendation
+                </p>
+                <p class="mt-2 text-sm leading-6 text-base-content/80">
+                  {@finding.recommendation}
+                </p>
+              </div>
 
-            <div class="flex flex-wrap gap-2 pt-2">
+              <div
+                :if={@finding.watchouts != []}
+                class="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-4 dark:border-amber-400/20 dark:bg-amber-400/10"
+              >
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-200">
+                  Watchouts
+                </p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <span
+                    :for={watchout <- @finding.watchouts}
+                    class="badge badge-outline badge-sm border-amber-300 bg-white/80 text-amber-700 dark:border-amber-400/30 dark:bg-transparent dark:text-amber-200"
+                  >
+                    {watchout}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <.validation_checklist
+              finding={@finding}
+              finding_documents={@finding_documents}
+              discovery_evidence={@discovery_evidence}
+            />
+
+            <.blocker_panel
+              :if={@finding.status == :reviewing and not @finding.acceptance_ready}
+              title="Acceptance Prep"
+              description="Clear these blockers before accepting the finding into the refined intake set."
+              blockers={@finding.acceptance_blockers}
+            />
+            <.blocker_panel
+              :if={@finding.status == :accepted and not @finding.promotion_ready}
+              title="Promotion Prep"
+              description="Promotion stays manual. Clear these blockers before handing the finding into commercial review."
+              blockers={@finding.promotion_blockers}
+            />
+          </div>
+
+          <aside class="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+                Decision
+              </p>
+              <.finding_action_bar finding={@finding} id_prefix="finding-show" />
+            </div>
+
+            <div class="h-px bg-zinc-200 dark:bg-white/10" />
+
+            <div class="space-y-3">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+                Provenance
+              </p>
+              <.provenance_item label="Source">
+                {if @finding.source, do: @finding.source.name, else: "Direct agent intake"}
+              </.provenance_item>
+              <.provenance_item label="Program">
+                {if @finding.program, do: @finding.program.name, else: "No program linked"}
+              </.provenance_item>
+              <.provenance_item label="Organization">
+                {if @finding.organization,
+                  do: @finding.organization.name,
+                  else: "No organization linked"}
+              </.provenance_item>
+              <.provenance_item label="Source URL">
+                <a
+                  :if={@finding.source_url}
+                  href={@finding.source_url}
+                  class="break-all text-emerald-700 hover:text-primary"
+                >
+                  {@finding.source_url}
+                </a>
+                <span :if={is_nil(@finding.source_url)}>No URL captured</span>
+              </.provenance_item>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-1">
               <.link
                 :if={@finding.source_id}
                 navigate={
@@ -482,9 +473,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                 Open Agent Run
               </.link>
             </div>
-          </div>
-        </.section>
-      </div>
+          </aside>
+        </div>
+      </.section>
 
       <.section
         title="Linked Documents"
@@ -1072,6 +1063,20 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   attr :label, :string, required: true
   attr :value, :string, required: true
+
+  defp workbench_metric(assigns) do
+    ~H"""
+    <div class="rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
+        {@label}
+      </p>
+      <p class="mt-1 truncate text-sm font-semibold text-base-content">{@value}</p>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :value, :string, required: true
   attr :badge, :atom, default: nil
 
   defp property_item(assigns) do
@@ -1107,6 +1112,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         :acceptance_blockers,
         :promotion_ready,
         :promotion_blockers,
+        :proof_label,
         :source,
         :program,
         :agent_run,

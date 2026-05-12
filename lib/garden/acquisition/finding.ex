@@ -633,6 +633,8 @@ defmodule GnomeGarden.Acquisition.Finding do
     calculate :promotion_blockers,
               {:array, :string},
               {GnomeGarden.Calculations.AcquisitionPromotionReadiness, return: :blockers}
+
+    calculate :proof_label, :string, GnomeGarden.Calculations.AcquisitionProofLabel
   end
 
   aggregates do
@@ -647,6 +649,10 @@ defmodule GnomeGarden.Acquisition.Finding do
     count :promotion_document_count, :documents do
       filter expr(document_type in [:solicitation, :scope, :pricing, :addendum])
 
+      public? true
+    end
+
+    count :discovery_evidence_count, [:source_discovery_record, :discovery_evidence] do
       public? true
     end
 
