@@ -324,9 +324,12 @@ defmodule GnomeGarden.Release do
     if scrape_config == %{} do
       {:ok, source}
     else
-      Procurement.configure_procurement_source(source, %{scrape_config: scrape_config},
-        authorize?: false
+      source
+      |> Procurement.configure_procurement_source(%{scrape_config: scrape_config},
+        authorize?: false,
+        return_notifications?: true
       )
+      |> unwrap_notification_result()
     end
   end
 
@@ -334,12 +337,18 @@ defmodule GnomeGarden.Release do
 
   defp maybe_restore_procurement_source_scan(source, %{"last_scanned_at" => last_scanned_at})
        when is_binary(last_scanned_at) and last_scanned_at != "" do
-    Procurement.update_procurement_source(source, %{last_scanned_at: last_scanned_at},
-      authorize?: false
+    source
+    |> Procurement.update_procurement_source(%{last_scanned_at: last_scanned_at},
+      authorize?: false,
+      return_notifications?: true
     )
+    |> unwrap_notification_result()
   end
 
   defp maybe_restore_procurement_source_scan(source, _row), do: {:ok, source}
+
+  defp unwrap_notification_result({:ok, record, _notifications}), do: {:ok, record}
+  defp unwrap_notification_result(result), do: result
 
   defp audit_admin!(env_prefix, default_display_name) do
     email = System.get_env("#{env_prefix}_EMAIL")
