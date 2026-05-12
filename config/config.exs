@@ -10,6 +10,7 @@ import Config
 config :cinder, default_theme: GnomeGardenWeb.CinderTheme
 config :ex_cldr, default_backend: GnomeGarden.Cldr
 config :ash_oban, pro?: false
+config :tzdata, :autoupdate, :disabled
 
 config :gnome_garden, :pi_service_token, System.get_env("PI_SERVICE_TOKEN", "dev-pi-token")
 config :gnome_garden, serve_local_storage?: false, max_agent_run_timeout_ms: 600_000
