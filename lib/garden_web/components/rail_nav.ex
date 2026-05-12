@@ -294,6 +294,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/ar-aging"]
     },
     %{
+      id: "ops-finance-settings",
+      section: "Operations",
+      icon: "hero-cog-6-tooth",
+      label: "Settings",
+      path: "/finance/settings",
+      badge: 0,
+      hot: false,
+      match: ["/finance/settings"]
+    },
+    %{
       id: "ops-credit-notes",
       section: "Operations",
       icon: "hero-minus-circle",

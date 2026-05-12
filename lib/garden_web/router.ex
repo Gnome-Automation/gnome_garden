@@ -229,6 +229,9 @@ defmodule GnomeGardenWeb.Router do
       # Finance - AR Aging
       live "/finance/ar-aging", Finance.ArAgingLive, :index
 
+      # Finance - Billing Settings
+      live "/finance/settings", Finance.BillingSettingsLive, :index
+
       # Finance - Credit Notes
       live "/finance/credit-notes", Finance.CreditNoteLive.Index, :index
       live "/finance/credit-notes/:id", Finance.CreditNoteLive.Show, :show
