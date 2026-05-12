@@ -131,6 +131,7 @@ defmodule GnomeGarden.MixProject do
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind gnome_garden", "esbuild gnome_garden"],
       "assets.deploy": [
+        "compile",
         "tailwind gnome_garden --minify",
         "esbuild gnome_garden --minify",
         "phx.digest"

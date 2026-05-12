@@ -211,7 +211,16 @@ config :gnome_garden, GnomeGardenWeb.Endpoint,
 config :gnome_garden, GnomeGarden.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
-config :esbuild,
+external_esbuild_path = System.get_env("MIX_ESBUILD_PATH")
+
+esbuild_external_config =
+  if external_esbuild_path do
+    [path: external_esbuild_path, version_check: false]
+  else
+    []
+  end
+
+esbuild_config = [
   version: "0.25.4",
   gnome_garden: [
     args:
@@ -219,9 +228,21 @@ config :esbuild,
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
+]
+
+config :esbuild, esbuild_config ++ esbuild_external_config
 
 # Configure tailwind (the version is required)
-config :tailwind,
+external_tailwind_path = System.get_env("MIX_TAILWIND_PATH")
+
+tailwind_external_config =
+  if external_tailwind_path do
+    [path: external_tailwind_path, version_check: false]
+  else
+    []
+  end
+
+tailwind_config = [
   version: "4.1.12",
   gnome_garden: [
     args: ~w(
@@ -230,6 +251,9 @@ config :tailwind,
     ),
     cd: Path.expand("..", __DIR__)
   ]
+]
+
+config :tailwind, tailwind_config ++ tailwind_external_config
 
 # Configure Elixir's Logger
 config :logger, :default_formatter,

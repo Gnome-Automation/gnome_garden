@@ -17,6 +17,8 @@
           elixir
           erlang
           pkgs.nodejs_22
+          pkgs.tailwindcss_4
+          pkgs.esbuild
           pkgs.postgresql_18
           pkgs.garage_2
           pkgs.awscli2
@@ -44,6 +46,8 @@
             export HEX_HOME="$PWD/.nix-hex"
             export LANG=en_US.UTF-8
             export ERL_AFLAGS="-kernel shell_history enabled"
+            export MIX_TAILWIND_PATH="${pkgs.tailwindcss_4}/bin/tailwindcss"
+            export MIX_ESBUILD_PATH="${pkgs.esbuild}/bin/esbuild"
 
             # Load .env if present
             if [ -f .env ]; then
