@@ -117,7 +117,7 @@ for attempt in $(seq 1 30); do
   sleep 1
 done
 
-if curl -k -fsS https://garden.tail6f3b43.ts.net:4443/register >/dev/null; then
+if curl -k -fs https://garden.tail6f3b43.ts.net:4443/register >/dev/null; then
   echo "Unexpected /register response." >&2
   exit 1
 fi
