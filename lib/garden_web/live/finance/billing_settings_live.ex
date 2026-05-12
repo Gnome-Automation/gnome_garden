@@ -109,7 +109,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
       |> Enum.reject(&(&1 == ""))
       |> Enum.map(fn s ->
         case Integer.parse(s) do
-          {n, ""} when n >= 1 -> {:ok, n}
+          {n, ""} when n >= 1 and n <= 365 -> {:ok, n}
           _ -> {:error, s}
         end
       end)

@@ -2,14 +2,15 @@ defmodule GnomeGarden.Finance.PaymentReminderWorker do
   @moduledoc """
   Oban cron worker that sends payment reminder emails for overdue invoices.
 
-  Runs daily at 8am UTC. For each issued or partial invoice past its due_on:
-  - Day 7 overdue  → reminder to billing contact
-  - Day 14 overdue → follow-up to billing contact
-  - Day 30 overdue → urgent notice to billing contact + CC to agreement owner
+  Runs daily at 8am UTC. For each issued or partial invoice past its due_on,
+  reads configured reminder days from BillingSettings (via Finance.get_reminder_days/0)
+  and sends an email for each overdue invoice that exactly matches a threshold day.
+
+  Note: The CC-to-agreement-owner escalation fires only at exactly day 30. If the
+  configured thresholds don't include 30, the CC will not trigger.
 
   Only fires on exact day matches to avoid duplicate sends.
-  Skips invoices where the resolved recipient has do_not_email: true (handled
-  by find_billing_email returning nil).
+  Skips invoices where the resolved recipient has do_not_email: true.
   """
 
   use Oban.Worker, queue: :finance, max_attempts: 3
