@@ -48,6 +48,9 @@ defmodule GnomeGardenWeb.Router do
 
   scope "/api/pi", GnomeGardenWeb do
     pipe_through :pi_service
+    get "/findings/:finding_id/documents", PiDocumentController, :index
+    get "/documents/:id", PiDocumentController, :show
+    get "/documents/:id/download", PiDocumentController, :download
     post "/run", PiRpcController, :run
   end
 

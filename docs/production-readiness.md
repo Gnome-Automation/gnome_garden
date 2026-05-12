@@ -37,9 +37,12 @@ ALLOW_LOCAL_STORAGE_IN_PROD=true
 
 Use that only as a temporary operational decision. The app will not expose the local `/storage` disk-serving route in production unless `:serve_local_storage?` is enabled at compile time.
 
+Garage setup and verification lives in `ops/garage/bootstrap.md`. Garage is only the blob backend for AshStorage; Pi and other automation clients should request documents through the app/Ash boundary, not by using Garage credentials directly.
+
 Deploy smoke path:
 
 ```bash
+ops/garage/smoke.sh
 mix precommit
 MIX_ENV=prod mix gnome_garden.prod_check
 MIX_ENV=prod mix assets.deploy
