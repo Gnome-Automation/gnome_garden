@@ -321,7 +321,7 @@ defmodule GnomeGarden.Release do
        when config_status in ["configured", "manual"] do
     scrape_config = Map.get(row, "scrape_config") || %{}
 
-    if scrape_config == %{} do
+    if scrape_config == %{} or source.config_status in [:configured, :manual] do
       {:ok, source}
     else
       source
