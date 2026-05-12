@@ -88,8 +88,8 @@ defmodule GnomeGardenWeb.AuthOverrides do
     set :reset_toggle_text, "Forgot password?"
     set :show_first, :sign_in
     set :hide_class, "hidden"
-    set :sign_in_form_module, AshAuthentication.Phoenix.Components.Password.SignInForm
-    set :reset_form_module, AshAuthentication.Phoenix.Components.Password.ResetForm
+    set :sign_in_form_module, GnomeGardenWeb.Auth.PasswordSignInForm
+    set :reset_form_module, GnomeGardenWeb.Auth.PasswordResetForm
   end
 
   override Components.Password.SignInForm do

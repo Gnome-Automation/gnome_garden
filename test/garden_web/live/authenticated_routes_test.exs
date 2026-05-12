@@ -29,6 +29,15 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     assert redirected_to(conn) == ~p"/sign-in"
   end
 
+  test "sign in uses operator text input", %{conn: conn} do
+    conn = get(conn, ~p"/sign-in")
+    html = html_response(conn, 200)
+
+    assert html =~ "Operator"
+    assert html =~ ~s(type="text")
+    refute html =~ ~s(type="email")
+  end
+
   test "internal operator LiveView routes require sign in", %{conn: conn} do
     for path <- @operator_live_routes do
       assert {:error, {:redirect, %{to: "/sign-in"}}} = live(conn, path)

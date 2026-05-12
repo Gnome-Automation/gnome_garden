@@ -104,7 +104,19 @@ systemd-run --wait --pipe --collect \
   "$RELEASE_DIR/bin/gnome_garden" eval "GnomeGarden.Release.audit_admins()"
 
 echo "HTTP checks..."
-curl -k -fsSI https://garden.tail6f3b43.ts.net:4443/sign-in >/dev/null
+for attempt in $(seq 1 30); do
+  if curl -k -fsSI https://garden.tail6f3b43.ts.net:4443/sign-in >/dev/null; then
+    break
+  fi
+
+  if [ "$attempt" = "30" ]; then
+    echo "Garden did not become ready at /sign-in after 30 seconds." >&2
+    exit 1
+  fi
+
+  sleep 1
+done
+
 if curl -k -fsS https://garden.tail6f3b43.ts.net:4443/register >/dev/null; then
   echo "Unexpected /register response." >&2
   exit 1
