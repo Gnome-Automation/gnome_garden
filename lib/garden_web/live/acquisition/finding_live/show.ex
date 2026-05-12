@@ -279,7 +279,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           <.button navigate={~p"/acquisition/findings"}>
             Back To Queue
           </.button>
-          <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"}>
+          <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"} variant="primary">
             {document_action_label(@finding)}
           </.button>
           <.button
@@ -490,11 +490,20 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         title="Linked Documents"
         description="Durable intake files linked to this finding before it crosses into downstream commercial work."
       >
+        <:actions>
+          <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"} variant="primary">
+            Upload Document
+          </.button>
+        </:actions>
+
         <div
           :if={Enum.empty?(@finding_documents)}
-          class="rounded-2xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300"
+          class="flex flex-col gap-3 rounded-2xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300 sm:flex-row sm:items-center sm:justify-between"
         >
-          No documents linked yet.
+          <span>No documents linked yet.</span>
+          <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"}>
+            Upload Document
+          </.button>
         </div>
 
         <div :if={!Enum.empty?(@finding_documents)} class="space-y-3">
@@ -1079,9 +1088,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     """
   end
 
-  defp document_action_label(%{finding_family: :procurement}), do: "Add Packet"
-  defp document_action_label(%{finding_family: :discovery}), do: "Add Source Material"
-  defp document_action_label(_finding), do: "Add Material"
+  defp document_action_label(%{finding_family: :procurement}), do: "Upload Packet"
+  defp document_action_label(%{finding_family: :discovery}), do: "Upload Source Material"
+  defp document_action_label(_finding), do: "Upload Document"
 
   defp substantive_procurement_document?(%{document: %{document_type: document_type}}),
     do: PromotionRules.substantive_procurement_document_type?(document_type)

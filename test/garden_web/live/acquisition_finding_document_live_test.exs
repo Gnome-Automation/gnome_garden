@@ -116,6 +116,8 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
     {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
 
     assert render(view) =~ "Linked Documents"
+    assert render(view) =~ "Upload Document"
+    assert render(view) =~ "Upload Packet"
     assert render(view) =~ "Procurement Packet"
 
     {:ok, [finding_document | _rest]} =
