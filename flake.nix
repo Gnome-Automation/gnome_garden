@@ -13,32 +13,35 @@
         beamPkgs = pkgs.beam.packages.erlang_28;
         elixir = beamPkgs.elixir_1_19;
         erlang = beamPkgs.erlang;
+        commonDevTools = [
+          elixir
+          erlang
+          pkgs.nodejs_22
+          pkgs.postgresql_18
+          pkgs.garage_2
+          pkgs.awscli2
+          pkgs.caddy
+          pkgs.curl
+          pkgs.fd
+          pkgs.git
+          pkgs.jq
+          pkgs.openssl
+          pkgs.ripgrep
+        ];
+        linuxDevTools = pkgs.lib.optionals pkgs.stdenv.isLinux [
+          pkgs.chromium
+          pkgs.inotify-tools
+          pkgs.xvfb-run
+        ];
+        devTools = commonDevTools ++ linuxDevTools;
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = [
-            elixir
-            erlang
-            pkgs.nodejs_22
-            pkgs.postgresql_18
-            pkgs.garage_2
-            pkgs.awscli2
-            pkgs.caddy
-            pkgs.chromium
-            pkgs.curl
-            pkgs.fd
-            pkgs.git
-            pkgs.jq
-            pkgs.openssl
-            pkgs.ripgrep
-            pkgs.inotify-tools
-            pkgs.xvfb-run
-          ];
+          buildInputs = devTools;
 
           shellHook = ''
             export MIX_HOME="$PWD/.nix-mix"
             export HEX_HOME="$PWD/.nix-hex"
-            export PATH="$MIX_HOME/bin:$HEX_HOME/bin:$PATH"
             export LANG=en_US.UTF-8
             export ERL_AFLAGS="-kernel shell_history enabled"
 
@@ -48,6 +51,8 @@
               source .env
               set +a
             fi
+
+            export PATH="$MIX_HOME/bin:$HEX_HOME/bin:${pkgs.lib.makeBinPath devTools}:$PATH"
 
             # Local Postgres — uses port 5433 to match dev/test defaults
             export PGDATA="$PWD/.pgdata"
