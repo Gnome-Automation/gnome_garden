@@ -75,6 +75,12 @@ defmodule GnomeGarden.Finance.PaymentReminderWorkerTest do
     issued
   end
 
+  setup do
+    # Ensure BillingSettings row exists with known thresholds for test predictability
+    {:ok, _} = Finance.upsert_billing_settings(%{reminder_days: [7, 14, 30]})
+    :ok
+  end
+
   test "sends a reminder for an invoice exactly 7 days overdue" do
     {org, _person} = create_org_with_contact("billing7@example.com")
     invoice = create_overdue_invoice(org, 7)

@@ -191,4 +191,15 @@ defmodule GnomeGarden.Finance do
   def format_credit_note_number(n) do
     "CN-" <> String.pad_leading("#{n}", 4, "0")
   end
+
+  @doc """
+  Returns the configured reminder threshold days from BillingSettings.
+  Falls back to [7, 14, 30] if no settings row exists yet.
+  """
+  def get_reminder_days do
+    case get_billing_settings() do
+      {:ok, [settings | _]} -> settings.reminder_days
+      _ -> [7, 14, 30]
+    end
+  end
 end

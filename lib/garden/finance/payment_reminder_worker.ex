@@ -23,32 +23,29 @@ defmodule GnomeGarden.Finance.PaymentReminderWorker do
   alias GnomeGarden.Mailer.InvoiceEmail
   alias GnomeGarden.Mailer.PaymentReminderEmail
 
-  @thresholds [7, 14, 30]
-
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
     today = Date.utc_today()
+    thresholds = Finance.get_reminder_days()
 
     Invoice
     |> Ash.Query.for_read(:overdue)
     |> Ash.Query.load(organization: [:billing_contact], agreement: [owner_team_member: [:user]])
     |> Ash.read!(domain: Finance, authorize?: false)
-    |> Enum.each(&maybe_send_reminder(&1, today))
+    |> Enum.each(&maybe_send_reminder(&1, today, thresholds))
 
     :ok
   end
 
-  defp maybe_send_reminder(invoice, today) do
+  defp maybe_send_reminder(invoice, today, thresholds) do
     days_overdue = Date.diff(today, invoice.due_on)
 
-    if days_overdue in @thresholds do
+    if days_overdue in thresholds do
       send_reminder(invoice, threshold_atom(days_overdue))
     end
   end
 
-  defp threshold_atom(7), do: :day_7
-  defp threshold_atom(14), do: :day_14
-  defp threshold_atom(30), do: :day_30
+  defp threshold_atom(days), do: :"day_#{days}"
 
   defp send_reminder(invoice, threshold) do
     recipient = InvoiceEmail.find_billing_email(invoice.organization || %{})
