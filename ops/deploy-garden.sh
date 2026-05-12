@@ -29,6 +29,7 @@ cd "$CHECKOUT"
 git fetch origin "$BRANCH"
 git reset --hard "origin/$BRANCH"
 GIT
+chmod 644 "$git_script"
 
 echo "Fetching $BRANCH..."
 sudo -u gnome_garden env CHECKOUT="$CHECKOUT" BRANCH="$BRANCH" DEV_ENV="$dev_env" bash "$git_script"
@@ -52,6 +53,7 @@ mix deps.get --only prod
 mix assets.deploy
 mix release --overwrite
 BUILD
+chmod 644 "$build_script"
 
 echo "Building release..."
 sudo -u gnome_garden env CHECKOUT="$CHECKOUT" DEV_ENV="$dev_env" bash "$build_script"
