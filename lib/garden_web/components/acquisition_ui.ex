@@ -9,6 +9,60 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
 
   alias GnomeGarden.Acquisition.PromotionRules
 
+  attr :label, :string, required: true
+  attr :value, :string, required: true
+
+  def context_fact(assigns) do
+    ~H"""
+    <div class="rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
+        {@label}
+      </p>
+      <p class="mt-1 text-sm font-medium text-base-content">{@value}</p>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :value, :atom, required: true
+  attr :active, :boolean, default: false
+
+  def packet_type_hint(assigns) do
+    ~H"""
+    <div class={[
+      "rounded-lg border px-3 py-2 text-sm",
+      @active &&
+        "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200",
+      !@active &&
+        "border-zinc-200 bg-zinc-50/70 text-zinc-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300"
+    ]}>
+      <div class="flex items-center gap-2">
+        <.icon name={if(@active, do: "hero-check-circle", else: "hero-document-text")} class="size-4" />
+        <span class="font-medium">{@label}</span>
+      </div>
+      <p class="mt-1 text-xs opacity-75">Counts for promotion</p>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :tone, :atom, default: :success
+
+  def checklist_rule(assigns) do
+    ~H"""
+    <div class={[
+      "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm",
+      @tone == :info &&
+        "border-sky-200 bg-sky-50/70 text-sky-800 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200",
+      @tone != :info &&
+        "border-emerald-200 bg-emerald-50/70 text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200"
+    ]}>
+      <.icon name="hero-check" class="size-4" />
+      <span>{@label}</span>
+    </div>
+    """
+  end
+
   attr :finding, :map, required: true
   attr :id_prefix, :string, required: true
   attr :target_id, :string, default: nil

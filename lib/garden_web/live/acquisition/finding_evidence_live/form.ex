@@ -1,6 +1,8 @@
 defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.AcquisitionUI, only: [checklist_rule: 1, context_fact: 1]
+
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
 
@@ -210,10 +212,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
 
           <.section title="Evidence Quality">
             <div class="space-y-2">
-              <.quality_rule label="Specific source URL" />
-              <.quality_rule label="Short summary" />
-              <.quality_rule label="Raw excerpt when available" />
-              <.quality_rule label="One point per line" />
+              <.checklist_rule label="Specific source URL" tone={:info} />
+              <.checklist_rule label="Short summary" tone={:info} />
+              <.checklist_rule label="Raw excerpt when available" tone={:info} />
+              <.checklist_rule label="One point per line" tone={:info} />
             </div>
           </.section>
         </aside>
@@ -260,31 +262,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
          |> assign(:evidence_points_text, evidence_points_text)
          |> assign(:form, to_form(form))}
     end
-  end
-
-  attr :label, :string, required: true
-  attr :value, :string, required: true
-
-  defp context_fact(assigns) do
-    ~H"""
-    <div class="rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
-        {@label}
-      </p>
-      <p class="mt-1 text-sm font-medium text-base-content">{@value}</p>
-    </div>
-    """
-  end
-
-  attr :label, :string, required: true
-
-  defp quality_rule(assigns) do
-    ~H"""
-    <div class="flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50/70 px-3 py-2 text-sm text-sky-800 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200">
-      <.icon name="hero-check" class="size-4" />
-      <span>{@label}</span>
-    </div>
-    """
   end
 
   defp assign_form(

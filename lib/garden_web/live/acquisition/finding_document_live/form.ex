@@ -1,6 +1,9 @@
 defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.AcquisitionUI,
+    only: [checklist_rule: 1, context_fact: 1, packet_type_hint: 1]
+
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.PromotionRules
 
@@ -300,10 +303,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
             description="Procurement findings need one substantive packet before promotion."
           >
             <div class="space-y-2">
-              <.promotion_rule label="Solicitation" />
-              <.promotion_rule label="Scope" />
-              <.promotion_rule label="Pricing" />
-              <.promotion_rule label="Addendum" />
+              <.checklist_rule label="Solicitation" />
+              <.checklist_rule label="Scope" />
+              <.checklist_rule label="Pricing" />
+              <.checklist_rule label="Addendum" />
             </div>
           </.section>
         </aside>
@@ -406,53 +409,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
          |> assign(:link_params, link_params)
          |> put_flash(:error, message)}
     end
-  end
-
-  attr :label, :string, required: true
-  attr :value, :atom, required: true
-  attr :active, :boolean, default: false
-
-  defp packet_type_hint(assigns) do
-    ~H"""
-    <div class={[
-      "rounded-lg border px-3 py-2 text-sm",
-      @active &&
-        "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200",
-      !@active &&
-        "border-zinc-200 bg-zinc-50/70 text-zinc-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300"
-    ]}>
-      <div class="flex items-center gap-2">
-        <.icon name={if(@active, do: "hero-check-circle", else: "hero-document-text")} class="size-4" />
-        <span class="font-medium">{@label}</span>
-      </div>
-      <p class="mt-1 text-xs opacity-75">Counts for promotion</p>
-    </div>
-    """
-  end
-
-  attr :label, :string, required: true
-  attr :value, :string, required: true
-
-  defp context_fact(assigns) do
-    ~H"""
-    <div class="rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
-        {@label}
-      </p>
-      <p class="mt-1 text-sm font-medium text-base-content">{@value}</p>
-    </div>
-    """
-  end
-
-  attr :label, :string, required: true
-
-  defp promotion_rule(assigns) do
-    ~H"""
-    <div class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">
-      <.icon name="hero-check" class="size-4" />
-      <span>{@label}</span>
-    </div>
-    """
   end
 
   defp assign_form(socket, form_params, link_params) do
