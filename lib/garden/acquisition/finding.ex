@@ -216,6 +216,12 @@ defmodule GnomeGarden.Acquisition.Finding do
                   inserted_at: :desc
                 ],
                 load: [
+                  :finding_family_label,
+                  :finding_family_variant,
+                  :finding_type_label,
+                  :status_label,
+                  :confidence_label,
+                  :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
                   :due_status_label,
@@ -243,6 +249,12 @@ defmodule GnomeGarden.Acquisition.Finding do
       prepare build(
                 sort: [observed_at: :desc, inserted_at: :desc],
                 load: [
+                  :finding_family_label,
+                  :finding_family_variant,
+                  :finding_type_label,
+                  :status_label,
+                  :confidence_label,
+                  :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
                   :due_status_label,
@@ -268,6 +280,12 @@ defmodule GnomeGarden.Acquisition.Finding do
       prepare build(
                 sort: [promoted_at: :desc, reviewed_at: :desc, updated_at: :desc],
                 load: [
+                  :finding_family_label,
+                  :finding_family_variant,
+                  :finding_type_label,
+                  :status_label,
+                  :confidence_label,
+                  :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
                   :due_status_label,
@@ -290,6 +308,12 @@ defmodule GnomeGarden.Acquisition.Finding do
       prepare build(
                 sort: [updated_at: :desc],
                 load: [
+                  :finding_family_label,
+                  :finding_family_variant,
+                  :finding_type_label,
+                  :status_label,
+                  :confidence_label,
+                  :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
                   :due_status_label,
@@ -309,6 +333,12 @@ defmodule GnomeGarden.Acquisition.Finding do
       prepare build(
                 sort: [updated_at: :desc],
                 load: [
+                  :finding_family_label,
+                  :finding_family_variant,
+                  :finding_type_label,
+                  :status_label,
+                  :confidence_label,
+                  :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
                   :due_status_label,
@@ -328,6 +358,12 @@ defmodule GnomeGarden.Acquisition.Finding do
       prepare build(
                 sort: [updated_at: :desc],
                 load: [
+                  :finding_family_label,
+                  :finding_family_variant,
+                  :finding_type_label,
+                  :status_label,
+                  :confidence_label,
+                  :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
                   :due_status_label,
@@ -581,6 +617,44 @@ defmodule GnomeGarden.Acquisition.Finding do
   end
 
   calculations do
+    calculate :finding_family_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :finding_family}
+
+    calculate :finding_type_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :finding_type}
+
+    calculate :confidence_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :confidence, suffix: " confidence"}
+
+    calculate :status_label,
+              :string,
+              {GnomeGarden.Calculations.EnumLabel, field: :status}
+
+    calculate :finding_family_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :finding_family,
+               mapping: [
+                 procurement: :warning,
+                 discovery: :info,
+                 research: :default
+               ],
+               default: :default}
+
+    calculate :confidence_variant,
+              :atom,
+              {GnomeGarden.Calculations.EnumVariant,
+               field: :confidence,
+               mapping: [
+                 high: :success,
+                 medium: :warning,
+                 low: :default
+               ],
+               default: :default}
+
     calculate :status_variant,
               :atom,
               {GnomeGarden.Calculations.EnumVariant,

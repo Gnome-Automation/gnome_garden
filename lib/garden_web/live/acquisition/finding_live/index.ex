@@ -421,17 +421,17 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div class="min-w-0 space-y-2">
             <div class="flex flex-wrap gap-2">
-              <span class={family_badge(@finding.finding_family)}>
-                {family_label(@finding.finding_family)}
-              </span>
+              <.status_badge status={@finding.finding_family_variant}>
+                {@finding.finding_family_label}
+              </.status_badge>
               <span class="badge badge-outline badge-sm">
-                {type_label(@finding.finding_type)}
+                {@finding.finding_type_label}
               </span>
-              <span :if={@finding.confidence} class={confidence_badge(@finding.confidence)}>
-                {confidence_label(@finding.confidence)}
-              </span>
+              <.status_badge :if={@finding.confidence} status={@finding.confidence_variant}>
+                {@finding.confidence_label}
+              </.status_badge>
               <.status_badge status={@finding.status_variant}>
-                {status_label(@finding.status)}
+                {@finding.status_label}
               </.status_badge>
             </div>
 
@@ -777,38 +777,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     """
   end
 
-  defp family_badge(:procurement), do: "badge badge-warning badge-sm"
-  defp family_badge(:discovery), do: "badge badge-info badge-sm"
-  defp family_badge(:research), do: "badge badge-secondary badge-sm"
-  defp family_badge(_), do: "badge badge-ghost badge-sm"
-
-  defp family_label(family), do: family |> to_string() |> String.capitalize()
-
-  defp type_label(type) do
-    type
-    |> to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
-  end
-
-  defp confidence_badge(:high), do: "badge badge-success badge-sm"
-  defp confidence_badge(:medium), do: "badge badge-warning badge-sm"
-  defp confidence_badge(:low), do: "badge badge-ghost badge-sm"
-  defp confidence_badge(_), do: "badge badge-ghost badge-sm"
-
-  defp confidence_label(confidence) do
-    confidence
-    |> to_string()
-    |> String.capitalize()
-  end
-
-  defp status_label(status) do
-    status
-    |> to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
-  end
-
   defp source_or_program_label(%{source: %{name: name}}) when is_binary(name), do: name
   defp source_or_program_label(%{program: %{name: name}}) when is_binary(name), do: name
   defp source_or_program_label(_finding), do: "Direct agent intake"
@@ -831,6 +799,20 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   defp family_filter_label(:all), do: "All"
   defp family_filter_label(:procurement), do: "Procurement"
   defp family_filter_label(:discovery), do: "Discovery"
+
+  defp type_label(type) do
+    type
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
+
+  defp status_label(status) do
+    status
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
 
   defp parse_dialog_action("accept"), do: :accept
   defp parse_dialog_action("reject"), do: :reject

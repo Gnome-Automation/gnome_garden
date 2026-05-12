@@ -317,20 +317,17 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
             <div class="space-y-3">
               <div class="flex flex-wrap gap-2">
                 <.status_badge status={@finding.status_variant}>
-                  {@finding.status |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+                  {@finding.status_label}
                 </.status_badge>
-                <span class="badge badge-info badge-sm">
-                  {@finding.finding_family |> to_string() |> String.capitalize()}
-                </span>
+                <.status_badge status={@finding.finding_family_variant}>
+                  {@finding.finding_family_label}
+                </.status_badge>
                 <span class="badge badge-outline badge-sm">
-                  {@finding.finding_type
-                  |> to_string()
-                  |> String.replace("_", " ")
-                  |> String.capitalize()}
+                  {@finding.finding_type_label}
                 </span>
-                <span :if={@finding.confidence} class={confidence_badge(@finding.confidence)}>
-                  {@finding.confidence |> to_string() |> String.capitalize()} confidence
-                </span>
+                <.status_badge :if={@finding.confidence} status={@finding.confidence_variant}>
+                  {@finding.confidence_label}
+                </.status_badge>
               </div>
 
               <p class="max-w-5xl text-sm leading-6 text-base-content/70">
@@ -1108,6 +1105,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       actor: actor,
       load: [
         :status_variant,
+        :status_label,
+        :finding_family_label,
+        :finding_family_variant,
+        :finding_type_label,
+        :confidence_label,
+        :confidence_variant,
         :acceptance_ready,
         :acceptance_blockers,
         :promotion_ready,
@@ -1142,11 +1145,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   defp format_error(error) when is_binary(error), do: error
   defp format_error(error), do: inspect(error)
-
-  defp confidence_badge(:high), do: "badge badge-success badge-sm"
-  defp confidence_badge(:medium), do: "badge badge-warning badge-sm"
-  defp confidence_badge(:low), do: "badge badge-ghost badge-sm"
-  defp confidence_badge(_), do: "badge badge-ghost badge-sm"
 
   defp refresh_finding(socket) do
     assign_finding_context(
