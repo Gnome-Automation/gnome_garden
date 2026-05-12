@@ -36,7 +36,7 @@ cp .env.example .env
 ```bash
 # AI Models - Z.AI (Zhipu AI) for GLM models
 # Get API key from https://open.bigmodel.cn
-ZAI_CODING_PLAN_API_KEY=your_zai_api_key
+ZAI_API_KEY=your_zai_api_key
 
 # Web Search - Brave Search API
 # Get API key from https://brave.com/search/api/
@@ -130,4 +130,24 @@ recompile()
 # Generate Ash migrations
 mix ash.codegen migration_name
 mix ash.migrate
+```
+
+## Production Operations
+
+Run the production environment check before building or deploying:
+
+```bash
+MIX_ENV=prod mix gnome_garden.prod_check
+```
+
+Inside a release, run migrations and idempotent defaults with:
+
+```bash
+bin/gnome_garden eval "GnomeGarden.Release.setup()"
+```
+
+To migrate only:
+
+```bash
+bin/gnome_garden eval "GnomeGarden.Release.migrate()"
 ```

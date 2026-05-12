@@ -42,13 +42,17 @@ Deploy smoke path:
 ```bash
 mix precommit
 MIX_ENV=prod mix gnome_garden.prod_check
+MIX_ENV=prod mix assets.deploy
+MIX_ENV=prod mix release
+_build/prod/rel/gnome_garden/bin/gnome_garden eval "GnomeGarden.Release.setup()"
 curl -fsS https://$PHX_HOST/health
 curl -fsS https://$PHX_HOST/ready
 ```
 
 Operational expectations:
 
-- Run Ash migrations with `mix ash.migrate`.
+- In production releases, run migrations with `bin/gnome_garden eval "GnomeGarden.Release.migrate()"` or run both migrations and idempotent defaults with `bin/gnome_garden eval "GnomeGarden.Release.setup()"`.
+- In local/dev workflows, continue to use `mix ash.migrate`.
 - Keep Oban running with the configured queues.
 - Treat `/oban`, `/admin`, and `/dev/dashboard` as development or explicitly gated operator routes only.
 - Do not launch overlapping manual runs for the same agent deployment; the runner rejects them while a deployment has an active run.
