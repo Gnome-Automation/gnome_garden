@@ -30,7 +30,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <.page max_width="max-w-5xl" class="pb-8">
+    <.page class="pb-8">
       <.page_header eyebrow="Acquisition">
         {@page_title}
         <:subtitle>
@@ -43,123 +43,181 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
         </:actions>
       </.page_header>
 
-      <.form
-        for={@form}
-        id="finding-evidence-form"
-        phx-change="validate"
-        phx-submit="save"
-        class="space-y-6"
-      >
-        <.form_section
-          title="Evidence Context"
-          description="Treat evidence as durable context that supports one acquisition finding before it becomes owned commercial work."
+      <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <.form
+          for={@form}
+          id="finding-evidence-form"
+          phx-change="validate"
+          phx-submit="save"
+          class="space-y-5"
         >
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
-            <div :if={@seed_finding} class="col-span-full">
-              <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
-                  Intake Finding
-                </p>
-                <p class="mt-1 text-sm font-medium text-base-content">
-                  {@seed_finding.title}
-                </p>
-                <p class="mt-1 text-sm text-base-content/70">
-                  {if @seed_finding.program, do: @seed_finding.program.name, else: "No program linked"}
-                </p>
+          <.section
+            title="Evidence Capture"
+            description="Attach durable source observations that explain why this discovery finding exists."
+          >
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
+              <div :if={@seed_finding} class="col-span-full">
+                <.input field={@form[:discovery_record_id]} type="hidden" />
+                <.input field={@form[:discovery_program_id]} type="hidden" />
               </div>
-              <.input field={@form[:discovery_record_id]} type="hidden" />
-              <.input field={@form[:discovery_program_id]} type="hidden" />
-            </div>
-            <div :if={is_nil(@seed_finding)} class="sm:col-span-3">
-              <.input
-                field={@form[:discovery_record_id]}
-                type="select"
-                label="Discovery Record"
-                prompt="Select record..."
-                options={Enum.map(@discovery_records, &{&1.name, &1.id})}
-              />
-            </div>
-            <div :if={is_nil(@seed_finding)} class="sm:col-span-3">
-              <.input
-                field={@form[:discovery_program_id]}
-                type="select"
-                label="Program"
-                prompt="Select program..."
-                options={Enum.map(@discovery_programs, &{&1.name, &1.id})}
-              />
-            </div>
-            <div class="sm:col-span-3">
-              <.input
-                field={@form[:observation_type]}
-                type="select"
-                label="Evidence Type"
-                options={[
-                  {"Hiring", :hiring},
-                  {"Expansion", :expansion},
-                  {"Legacy Stack", :legacy_stack},
-                  {"Directory", :directory},
-                  {"News", :news},
-                  {"Referral", :referral},
-                  {"Website Contact", :website_contact},
-                  {"Bid Notice", :bid_notice},
-                  {"Manual", :manual},
-                  {"Other", :other}
-                ]}
-              />
-            </div>
-            <div class="sm:col-span-3">
-              <.input
-                field={@form[:source_channel]}
-                type="select"
-                label="Source Channel"
-                options={[
-                  {"Company Website", :company_website},
-                  {"Job Board", :job_board},
-                  {"Directory", :directory},
-                  {"News Site", :news_site},
-                  {"Referral", :referral},
-                  {"Agent Discovery", :agent_discovery},
-                  {"Manual", :manual},
-                  {"Other", :other}
-                ]}
-              />
-            </div>
-            <div class="sm:col-span-4">
-              <.input field={@form[:summary]} label="Summary" required />
-            </div>
-            <div class="sm:col-span-2">
-              <.input field={@form[:confidence_score]} type="number" label="Confidence Score" />
-            </div>
-            <div class="sm:col-span-3">
-              <.input field={@form[:source_url]} label="Source URL" />
-            </div>
-            <div class="sm:col-span-3">
-              <.input field={@form[:external_ref]} label="External Ref" />
-            </div>
-            <div class="sm:col-span-3">
-              <.input field={@form[:observed_at]} type="datetime-local" label="Observed At" />
-            </div>
-            <div class="col-span-full">
-              <.input field={@form[:raw_excerpt]} type="textarea" label="Raw Excerpt" />
-            </div>
-            <div class="col-span-full">
-              <.input
-                type="textarea"
-                name="observation[evidence_points_text]"
-                value={@evidence_points_text}
-                label="Evidence Points"
-              />
-            </div>
-          </div>
-        </.form_section>
 
-        <.section body_class="px-6 py-5 sm:px-7">
-          <.form_actions
-            cancel_path={back_path(@seed_finding)}
-            submit_label={if @observation, do: "Update Evidence", else: "Create Evidence"}
-          />
-        </.section>
-      </.form>
+              <div :if={is_nil(@seed_finding)} class="sm:col-span-3">
+                <.input
+                  field={@form[:discovery_record_id]}
+                  type="select"
+                  label="Discovery Record"
+                  prompt="Select record..."
+                  options={Enum.map(@discovery_records, &{&1.name, &1.id})}
+                />
+              </div>
+
+              <div :if={is_nil(@seed_finding)} class="sm:col-span-3">
+                <.input
+                  field={@form[:discovery_program_id]}
+                  type="select"
+                  label="Program"
+                  prompt="Select program..."
+                  options={Enum.map(@discovery_programs, &{&1.name, &1.id})}
+                />
+              </div>
+
+              <div class="sm:col-span-3">
+                <.input
+                  field={@form[:observation_type]}
+                  type="select"
+                  label="Evidence Type"
+                  options={[
+                    {"Hiring", :hiring},
+                    {"Expansion", :expansion},
+                    {"Legacy Stack", :legacy_stack},
+                    {"Directory", :directory},
+                    {"News", :news},
+                    {"Referral", :referral},
+                    {"Website Contact", :website_contact},
+                    {"Bid Notice", :bid_notice},
+                    {"Manual", :manual},
+                    {"Other", :other}
+                  ]}
+                />
+              </div>
+
+              <div class="sm:col-span-3">
+                <.input
+                  field={@form[:source_channel]}
+                  type="select"
+                  label="Source Channel"
+                  options={[
+                    {"Company Website", :company_website},
+                    {"Job Board", :job_board},
+                    {"Directory", :directory},
+                    {"News Site", :news_site},
+                    {"Referral", :referral},
+                    {"Agent Discovery", :agent_discovery},
+                    {"Manual", :manual},
+                    {"Other", :other}
+                  ]}
+                />
+              </div>
+
+              <div class="sm:col-span-4">
+                <.input field={@form[:summary]} label="Summary" required />
+              </div>
+
+              <div class="sm:col-span-2">
+                <.input field={@form[:confidence_score]} type="number" label="Confidence Score" />
+              </div>
+
+              <div class="sm:col-span-3">
+                <.input field={@form[:source_url]} label="Source URL" />
+              </div>
+
+              <div class="sm:col-span-3">
+                <.input field={@form[:external_ref]} label="External Ref" />
+              </div>
+
+              <div class="sm:col-span-3">
+                <.input field={@form[:observed_at]} type="datetime-local" label="Observed At" />
+              </div>
+
+              <div class="col-span-full">
+                <.input field={@form[:raw_excerpt]} type="textarea" label="Raw Excerpt" />
+              </div>
+
+              <div class="col-span-full">
+                <.input
+                  type="textarea"
+                  name="observation[evidence_points_text]"
+                  value={@evidence_points_text}
+                  label="Evidence Points"
+                />
+              </div>
+            </div>
+          </.section>
+
+          <.section body_class="px-4 py-4 sm:px-5">
+            <.form_actions
+              cancel_path={back_path(@seed_finding)}
+              submit_label={if @observation, do: "Update Evidence", else: "Create Evidence"}
+            />
+          </.section>
+        </.form>
+
+        <aside class="space-y-5">
+          <.section title="Finding Context">
+            <div class="space-y-3">
+              <%= if @seed_finding do %>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+                    Intake Finding
+                  </p>
+                  <p class="mt-1 text-sm font-semibold text-base-content">
+                    {@seed_finding.title}
+                  </p>
+                  <p class="mt-1 text-sm text-base-content/70">
+                    {@seed_finding.summary || "No summary captured yet."}
+                  </p>
+                </div>
+
+                <div class="grid gap-2 text-sm">
+                  <.context_fact
+                    label="Program"
+                    value={
+                      if @seed_finding.program,
+                        do: @seed_finding.program.name,
+                        else: "No program linked"
+                    }
+                  />
+                  <.context_fact
+                    label="Discovery Record"
+                    value={
+                      if @seed_finding.source_discovery_record,
+                        do: @seed_finding.source_discovery_record.name,
+                        else: "No discovery record linked"
+                    }
+                  />
+                  <.context_fact
+                    label="Family"
+                    value={format_context_atom(@seed_finding.finding_family)}
+                  />
+                </div>
+              <% else %>
+                <p class="text-sm leading-6 text-base-content/65">
+                  Choose a discovery record or program in the form. Evidence created here will sync back into the acquisition finding for that discovery record.
+                </p>
+              <% end %>
+            </div>
+          </.section>
+
+          <.section title="Evidence Quality">
+            <div class="space-y-2">
+              <.quality_rule label="Specific source URL" />
+              <.quality_rule label="Short summary" />
+              <.quality_rule label="Raw excerpt when available" />
+              <.quality_rule label="One point per line" />
+            </div>
+          </.section>
+        </aside>
+      </div>
     </.page>
     """
   end
@@ -202,6 +260,31 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
          |> assign(:evidence_points_text, evidence_points_text)
          |> assign(:form, to_form(form))}
     end
+  end
+
+  attr :label, :string, required: true
+  attr :value, :string, required: true
+
+  defp context_fact(assigns) do
+    ~H"""
+    <div class="rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
+        {@label}
+      </p>
+      <p class="mt-1 text-sm font-medium text-base-content">{@value}</p>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+
+  defp quality_rule(assigns) do
+    ~H"""
+    <div class="flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50/70 px-3 py-2 text-sm text-sky-800 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200">
+      <.icon name="hero-check" class="size-4" />
+      <span>{@label}</span>
+    </div>
+    """
   end
 
   defp assign_form(
@@ -328,4 +411,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingEvidenceLive.Form do
 
   defp back_path(nil), do: ~p"/acquisition/findings?family=discovery"
   defp back_path(%{id: finding_id}), do: ~p"/acquisition/findings/#{finding_id}"
+
+  defp format_context_atom(nil), do: "-"
+
+  defp format_context_atom(value) do
+    value
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
 end

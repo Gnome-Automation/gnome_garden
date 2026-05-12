@@ -54,7 +54,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <.page max_width="max-w-5xl" class="pb-8">
+    <.page class="pb-8">
       <.page_header eyebrow="Acquisition">
         {@page_title}
         <:subtitle>
@@ -67,196 +67,246 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
         </:actions>
       </.page_header>
 
-      <div class="space-y-6">
-        <.form_section
-          title="Finding Context"
-          description="Keep uploaded files on a reusable document record while the finding-specific role stays in the intake link."
-        >
-          <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
-              Intake Finding
-            </p>
-            <p class="mt-1 text-sm font-medium text-base-content">
-              {@finding.title}
-            </p>
-            <p class="mt-1 text-sm text-base-content/70">
-              {if @finding.program, do: @finding.program.name, else: "No program linked"}
-            </p>
-            <p class="mt-2 text-sm text-base-content/70">
-              {@finding.summary || "No summary captured yet."}
-            </p>
-          </div>
-        </.form_section>
-
-        <.form
-          for={@form}
-          id="finding-document-form"
-          phx-change="validate"
-          phx-submit="save"
-          class="space-y-6"
-        >
-          <.form_section
-            title={"Upload New #{String.capitalize(@document_noun)}"}
-            description="Create one durable document record, upload the file once, and link it into this finding. Only solicitation, scope, pricing, and addendum packets satisfy procurement promotion readiness."
+      <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div class="space-y-5">
+          <.form
+            for={@form}
+            id="finding-document-form"
+            phx-change="validate"
+            phx-submit="save"
+            class="space-y-5"
           >
-            <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
-              <div class="sm:col-span-4">
-                <.input field={@form[:title]} label="Title" required />
-              </div>
-              <div class="sm:col-span-2">
-                <.input
-                  field={@form[:document_type]}
-                  type="select"
-                  label="Document Type"
-                  options={@document_type_options}
+            <.section
+              title={"Upload New #{String.capitalize(@document_noun)}"}
+              description="Create one durable document record, upload the file once, and link it into this finding."
+            >
+              <div class="mb-4 grid gap-2 sm:grid-cols-4">
+                <.packet_type_hint
+                  :for={{label, value} <- promotion_counting_document_types()}
+                  label={label}
+                  value={value}
+                  active={
+                    to_string(@form[:document_type].value || default_document_type(@finding)) ==
+                      to_string(value)
+                  }
                 />
               </div>
-              <div class="sm:col-span-3">
-                <.input
-                  name="finding_document[document_role]"
-                  id="finding-document-role"
-                  type="select"
-                  label="Finding Role"
-                  options={@document_role_options}
-                  value={@link_params["document_role"]}
-                />
-              </div>
-              <div class="sm:col-span-3">
-                <.input field={@form[:source_url]} label="Source URL" />
-              </div>
-              <div class="col-span-full">
-                <.input field={@form[:summary]} type="textarea" label="Document Summary" />
-              </div>
-              <div class="col-span-full">
-                <.input
-                  name="finding_document[notes]"
-                  id="finding-document-notes"
-                  type="textarea"
-                  label="Finding Notes"
-                  value={@link_params["notes"]}
-                />
-              </div>
-              <div class="col-span-full space-y-3">
-                <label
-                  class="block text-sm/6 font-medium text-gray-900 dark:text-white"
-                  for={@uploads.file.ref}
-                >
-                  File
-                </label>
-                <div class="rounded-2xl border border-dashed border-zinc-300 bg-white/70 px-4 py-5 dark:border-white/15 dark:bg-white/[0.03]">
-                  <.live_file_input
-                    upload={@uploads.file}
-                    class="file-input file-input-bordered w-full"
+
+              <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
+                <div class="sm:col-span-4">
+                  <.input field={@form[:title]} label="Title" required />
+                </div>
+                <div class="sm:col-span-2">
+                  <.input
+                    field={@form[:document_type]}
+                    type="select"
+                    label="Document Type"
+                    options={@document_type_options}
                   />
-                  <div :if={@uploads.file.entries != []} class="mt-3 space-y-2">
-                    <div
-                      :for={entry <- @uploads.file.entries}
-                      class="flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
-                    >
-                      <div>
-                        <p class="font-medium text-base-content">
-                          {entry.client_name}
-                        </p>
-                        <p class="text-xs text-base-content/50">
-                          {entry.progress}% uploaded
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-                        phx-click="cancel-upload"
-                        phx-value-ref={entry.ref}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                  <p
-                    :for={error <- upload_errors(@uploads.file)}
-                    class="mt-2 text-sm text-red-600 dark:text-red-300"
+                </div>
+                <div class="sm:col-span-3">
+                  <.input
+                    name="finding_document[document_role]"
+                    id="finding-document-role"
+                    type="select"
+                    label="Finding Role"
+                    options={@document_role_options}
+                    value={@link_params["document_role"]}
+                  />
+                </div>
+                <div class="sm:col-span-3">
+                  <.input field={@form[:source_url]} label="Source URL" />
+                </div>
+                <div class="col-span-full">
+                  <.input field={@form[:summary]} type="textarea" label="Document Summary" />
+                </div>
+                <div class="col-span-full">
+                  <.input
+                    name="finding_document[notes]"
+                    id="finding-document-notes"
+                    type="textarea"
+                    label="Finding Notes"
+                    value={@link_params["notes"]}
+                  />
+                </div>
+                <div class="col-span-full space-y-3">
+                  <label
+                    class="block text-sm/6 font-medium text-gray-900 dark:text-white"
+                    for={@uploads.file.ref}
                   >
-                    {upload_error_to_string(error)}
-                  </p>
-                  <div :for={entry <- @uploads.file.entries}>
+                    File
+                  </label>
+                  <div class="rounded-2xl border border-dashed border-zinc-300 bg-white/70 px-4 py-5 dark:border-white/15 dark:bg-white/[0.03]">
+                    <.live_file_input
+                      upload={@uploads.file}
+                      class="file-input file-input-bordered w-full"
+                    />
+                    <div :if={@uploads.file.entries != []} class="mt-3 space-y-2">
+                      <div
+                        :for={entry <- @uploads.file.entries}
+                        class="flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
+                      >
+                        <div>
+                          <p class="font-medium text-base-content">
+                            {entry.client_name}
+                          </p>
+                          <p class="text-xs text-base-content/50">
+                            {entry.progress}% uploaded
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                          phx-click="cancel-upload"
+                          phx-value-ref={entry.ref}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
                     <p
-                      :for={error <- upload_errors(@uploads.file, entry)}
+                      :for={error <- upload_errors(@uploads.file)}
                       class="mt-2 text-sm text-red-600 dark:text-red-300"
                     >
                       {upload_error_to_string(error)}
                     </p>
+                    <div :for={entry <- @uploads.file.entries}>
+                      <p
+                        :for={error <- upload_errors(@uploads.file, entry)}
+                        class="mt-2 text-sm text-red-600 dark:text-red-300"
+                      >
+                        {upload_error_to_string(error)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </.form_section>
+            </.section>
 
-          <.section body_class="px-6 py-5 sm:px-7">
-            <.form_actions
-              cancel_path={~p"/acquisition/findings/#{@finding.id}"}
-              submit_label={"Upload #{String.capitalize(@document_noun)}"}
-            />
-          </.section>
-        </.form>
+            <.section body_class="px-4 py-4 sm:px-5">
+              <.form_actions
+                cancel_path={~p"/acquisition/findings/#{@finding.id}"}
+                submit_label={"Upload #{String.capitalize(@document_noun)}"}
+              />
+            </.section>
+          </.form>
 
-        <.form
-          for={@existing_link_form}
-          id="finding-document-link-form"
-          phx-submit="link_existing"
-          class="space-y-6"
-        >
-          <.form_section
-            title={"Link Existing #{String.capitalize(@document_noun)}"}
-            description="Reuse durable acquisition material that is already in the system instead of uploading the same file again. Procurement promotion only counts substantive packet types."
+          <.form
+            for={@existing_link_form}
+            id="finding-document-link-form"
+            phx-submit="link_existing"
+            class="space-y-5"
           >
-            <div
-              :if={Enum.empty?(@existing_documents)}
-              class="rounded-2xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300"
+            <.section
+              title={"Link Existing #{String.capitalize(@document_noun)}"}
+              description="Reuse durable acquisition material that is already in the system instead of uploading the same file again."
             >
-              No reusable {@document_noun_plural} are available yet. Upload a new {@document_noun} above first.
-            </div>
-
-            <div :if={!Enum.empty?(@existing_documents)} class="grid grid-cols-1 gap-6 sm:grid-cols-6">
-              <div class="sm:col-span-4">
-                <.input
-                  field={@existing_link_form[:document_id]}
-                  type="select"
-                  label="Existing Document"
-                  prompt="Select a document"
-                  options={@existing_document_options}
-                />
-              </div>
-              <div class="sm:col-span-2">
-                <.input
-                  field={@existing_link_form[:document_role]}
-                  type="select"
-                  label="Finding Role"
-                  options={@document_role_options}
-                />
-              </div>
-              <div class="col-span-full">
-                <.input
-                  field={@existing_link_form[:notes]}
-                  type="textarea"
-                  label="Finding Notes"
-                />
-              </div>
-            </div>
-          </.form_section>
-
-          <.section body_class="px-6 py-5 sm:px-7">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <.link
-                navigate={~p"/acquisition/findings/#{@finding.id}"}
-                class="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/[0.05] dark:hover:text-white"
+              <div
+                :if={Enum.empty?(@existing_documents)}
+                class="rounded-2xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300"
               >
-                Cancel
-              </.link>
-              <.button type="submit" disabled={Enum.empty?(@existing_documents)}>
-                Link Existing {String.capitalize(@document_noun)}
-              </.button>
+                No reusable {@document_noun_plural} are available yet. Upload a new {@document_noun} above first.
+              </div>
+
+              <div
+                :if={!Enum.empty?(@existing_documents)}
+                class="grid grid-cols-1 gap-6 sm:grid-cols-6"
+              >
+                <div class="sm:col-span-4">
+                  <.input
+                    field={@existing_link_form[:document_id]}
+                    type="select"
+                    label="Existing Document"
+                    prompt="Select a document"
+                    options={@existing_document_options}
+                  />
+                </div>
+                <div class="sm:col-span-2">
+                  <.input
+                    field={@existing_link_form[:document_role]}
+                    type="select"
+                    label="Finding Role"
+                    options={@document_role_options}
+                  />
+                </div>
+                <div class="col-span-full">
+                  <.input
+                    field={@existing_link_form[:notes]}
+                    type="textarea"
+                    label="Finding Notes"
+                  />
+                </div>
+              </div>
+            </.section>
+
+            <.section body_class="px-4 py-4 sm:px-5">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <.link
+                  navigate={~p"/acquisition/findings/#{@finding.id}"}
+                  class="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/[0.05] dark:hover:text-white"
+                >
+                  Cancel
+                </.link>
+                <.button type="submit" disabled={Enum.empty?(@existing_documents)}>
+                  Link Existing {String.capitalize(@document_noun)}
+                </.button>
+              </div>
+            </.section>
+          </.form>
+        </div>
+
+        <aside class="space-y-5">
+          <.section title="Finding Context">
+            <div class="space-y-3">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+                  Intake Finding
+                </p>
+                <p class="mt-1 text-sm font-semibold text-base-content">
+                  {@finding.title}
+                </p>
+                <p class="mt-1 text-sm text-base-content/70">
+                  {@finding.summary || "No summary captured yet."}
+                </p>
+              </div>
+
+              <div class="grid gap-2 text-sm">
+                <.context_fact
+                  label="Program"
+                  value={if @finding.program, do: @finding.program.name, else: "No program linked"}
+                />
+                <.context_fact
+                  label="Source"
+                  value={if @finding.source, do: @finding.source.name, else: "No source linked"}
+                />
+                <.context_fact
+                  label="Organization"
+                  value={
+                    if @finding.organization,
+                      do: @finding.organization.name,
+                      else: "No organization linked"
+                  }
+                />
+                <.context_fact
+                  label="Linked Documents"
+                  value={Integer.to_string(@finding.document_count || 0)}
+                />
+              </div>
             </div>
           </.section>
-        </.form>
+
+          <.section
+            title="Promotion Rules"
+            description="Procurement findings need one substantive packet before promotion."
+          >
+            <div class="space-y-2">
+              <.promotion_rule label="Solicitation" />
+              <.promotion_rule label="Scope" />
+              <.promotion_rule label="Pricing" />
+              <.promotion_rule label="Addendum" />
+            </div>
+          </.section>
+        </aside>
       </div>
     </.page>
     """
@@ -356,6 +406,53 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
          |> assign(:link_params, link_params)
          |> put_flash(:error, message)}
     end
+  end
+
+  attr :label, :string, required: true
+  attr :value, :atom, required: true
+  attr :active, :boolean, default: false
+
+  defp packet_type_hint(assigns) do
+    ~H"""
+    <div class={[
+      "rounded-lg border px-3 py-2 text-sm",
+      @active &&
+        "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200",
+      !@active &&
+        "border-zinc-200 bg-zinc-50/70 text-zinc-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300"
+    ]}>
+      <div class="flex items-center gap-2">
+        <.icon name={if(@active, do: "hero-check-circle", else: "hero-document-text")} class="size-4" />
+        <span class="font-medium">{@label}</span>
+      </div>
+      <p class="mt-1 text-xs opacity-75">Counts for promotion</p>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :value, :string, required: true
+
+  defp context_fact(assigns) do
+    ~H"""
+    <div class="rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
+        {@label}
+      </p>
+      <p class="mt-1 text-sm font-medium text-base-content">{@value}</p>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+
+  defp promotion_rule(assigns) do
+    ~H"""
+    <div class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">
+      <.icon name="hero-check" class="size-4" />
+      <span>{@label}</span>
+    </div>
+    """
   end
 
   defp assign_form(socket, form_params, link_params) do
@@ -525,6 +622,15 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   defp default_document_role(%{finding_family: :procurement}), do: "solicitation"
   defp default_document_role(%{finding_family: :discovery}), do: "research_note"
   defp default_document_role(_finding), do: "supporting"
+
+  defp promotion_counting_document_types do
+    [
+      {"Solicitation", :solicitation},
+      {"Scope", :scope},
+      {"Pricing", :pricing},
+      {"Addendum", :addendum}
+    ]
+  end
 
   defp humanize_atom(value) when is_atom(value) do
     value

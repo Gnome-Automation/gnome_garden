@@ -52,7 +52,7 @@ defmodule GnomeGardenWeb.DiscoveryRecordLiveTest do
     assert has_element?(form_view, "#finding-evidence-form")
     assert render(form_view) =~ "Intake Finding"
     assert render(form_view) =~ discovery_program.name
-    assert render(form_view) =~ "Evidence Context"
+    assert render(form_view) =~ "Evidence Capture"
 
     {:ok, edit_view, _edit_html} = live(conn, ~p"/acquisition/evidence/#{observation}/edit")
     assert has_element?(edit_view, "#finding-evidence-form")
