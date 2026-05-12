@@ -59,7 +59,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           Finance.create_invoices_from_fixed_fee_schedule(agreement.id, selected_ids)
 
         _ ->
-          case Finance.create_invoice_from_agreement_sources(agreement.id,
+          case Finance.draft_invoice_from_agreement_sources(agreement.id,
                  expense_ids: selected_ids,
                  actor: actor
                ) do

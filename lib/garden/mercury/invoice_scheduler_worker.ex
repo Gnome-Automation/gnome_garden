@@ -45,7 +45,7 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
   defp process_agreement(agreement) do
     Logger.info("InvoiceSchedulerWorker: processing agreement #{agreement.id}")
 
-    case Finance.create_invoice_from_agreement_sources(agreement.id) do
+    case Finance.draft_invoice_from_agreement_sources(agreement.id) do
       {:ok, invoice} ->
         case Finance.issue_invoice(invoice) do
           {:ok, issued} ->

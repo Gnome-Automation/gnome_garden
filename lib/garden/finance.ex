@@ -55,6 +55,9 @@ defmodule GnomeGarden.Finance do
       define :list_invoices, action: :read
       define :get_invoice, action: :read, get_by: [:id]
       define :create_invoice, action: :create
+      define :create_invoice_from_agreement_sources,
+        action: :create_from_agreement_sources,
+        args: [:agreement_id]
       define :update_invoice, action: :update
       define :issue_invoice, action: :issue
       define :pay_invoice, action: :mark_paid
@@ -155,7 +158,7 @@ defmodule GnomeGarden.Finance do
   Accepts `expense_ids: [string]` to selectively include only those expenses.
   If omitted or empty, no expense lines are added.
   """
-  def create_invoice_from_agreement_sources(agreement_id, opts \\ []) do
+  def draft_invoice_from_agreement_sources(agreement_id, opts \\ []) do
     {expense_ids, ash_opts} = Keyword.pop(opts, :expense_ids, [])
 
     GnomeGarden.Finance.Invoice

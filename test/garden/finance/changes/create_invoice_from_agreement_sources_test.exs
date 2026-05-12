@@ -93,7 +93,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
     expense: expense
   } do
     assert {:ok, invoice} =
-             Finance.create_invoice_from_agreement_sources(agreement.id,
+             Finance.draft_invoice_from_agreement_sources(agreement.id,
                expense_ids: [to_string(expense.id)],
                authorize?: false
              )
@@ -109,7 +109,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
     expense2: expense2
   } do
     assert {:ok, invoice} =
-             Finance.create_invoice_from_agreement_sources(agreement.id,
+             Finance.draft_invoice_from_agreement_sources(agreement.id,
                expense_ids: [to_string(expense.id)],
                authorize?: false
              )
@@ -125,7 +125,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
     expense2: expense2
   } do
     assert {:ok, _invoice} =
-             Finance.create_invoice_from_agreement_sources(agreement.id,
+             Finance.draft_invoice_from_agreement_sources(agreement.id,
                expense_ids: [to_string(expense.id)],
                authorize?: false
              )
@@ -142,7 +142,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
     expense: _expense
   } do
     assert {:ok, invoice} =
-             Finance.create_invoice_from_agreement_sources(agreement.id,
+             Finance.draft_invoice_from_agreement_sources(agreement.id,
                expense_ids: [],
                authorize?: false
              )
@@ -157,7 +157,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
     time_entry: time_entry
   } do
     assert {:ok, invoice} =
-             Finance.create_invoice_from_agreement_sources(agreement.id,
+             Finance.draft_invoice_from_agreement_sources(agreement.id,
                expense_ids: [],
                authorize?: false
              )
@@ -173,7 +173,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
   } do
     # time_entry: 120 min * $150/hr = $300, expense: $250 → total $550
     assert {:ok, invoice} =
-             Finance.create_invoice_from_agreement_sources(agreement.id,
+             Finance.draft_invoice_from_agreement_sources(agreement.id,
                expense_ids: [to_string(expense.id)],
                authorize?: false
              )
@@ -218,7 +218,7 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
 
     # No time entries — should succeed because selected expense satisfies source check
     assert {:ok, invoice} =
-             Finance.create_invoice_from_agreement_sources(agreement_no_te.id,
+             Finance.draft_invoice_from_agreement_sources(agreement_no_te.id,
                expense_ids: [to_string(exp.id)],
                authorize?: false
              )
