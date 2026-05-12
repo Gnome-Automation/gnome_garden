@@ -23,9 +23,14 @@
             pkgs.postgresql_18
             pkgs.garage_2
             pkgs.awscli2
+            pkgs.caddy
+            pkgs.chromium
             pkgs.curl
+            pkgs.fd
+            pkgs.git
             pkgs.jq
             pkgs.openssl
+            pkgs.ripgrep
             pkgs.inotify-tools
             pkgs.xvfb-run
           ];
