@@ -25,7 +25,12 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   @impl true
   def handle_event("launch_run", %{"id" => id}, socket) do
-    with {:ok, source} <- Acquisition.get_source(id, actor: socket.assigns.current_user),
+    with {:ok, source} <-
+           Acquisition.get_source(id,
+             actor: socket.assigns.current_user,
+             load: [:procurement_source, :runnable]
+           ),
+         true <- scan_ready?(source),
          source_id when is_binary(source_id) <- source.procurement_source_id,
          {:ok, %{run: run}} <-
            Procurement.launch_procurement_source_scan(source_id,
@@ -37,6 +42,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
        |> refresh_table("acquisition-sources-table")
        |> put_flash(:info, "Launched source scan #{run.id} for #{source.name}.")}
     else
+      false ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "Configure this source before launching a scan."
+         )}
+
       nil ->
         {:noreply,
          put_flash(
@@ -57,7 +70,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
       <.page_header eyebrow="Acquisition">
         Source Registry
         <:subtitle>
-          Durable registry of scan targets across procurement and future discovery families. This is the acquisition-native view of source health and scan ownership.
+          Durable registry of scan targets across procurement and future discovery families. Configure sources first, then launch scans from here.
         </:subtitle>
         <:actions>
           <.button navigate={~p"/acquisition/findings"}>
@@ -90,7 +103,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         <.stat_card
           title="Runnable"
           value={Integer.to_string(@source_counts.runnable)}
-          description="Acquisition sources that can launch right now."
+          description="Configured sources that can launch right now."
           icon="hero-bolt"
           accent="amber"
         />
@@ -128,6 +141,12 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
             <span class="badge badge-ghost badge-sm">
               {source.scan_strategy |> to_string() |> String.capitalize()}
             </span>
+            <span :if={source.procurement_source} class="badge badge-outline badge-sm">
+              {source.procurement_source.config_status
+              |> to_string()
+              |> String.replace("_", " ")
+              |> String.capitalize()}
+            </span>
           </div>
         </:col>
         <:col :let={source} field="status" sort label="Run Health">
@@ -160,6 +179,20 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         <:col :let={source} label="Actions">
           <div class="flex flex-wrap gap-2">
             <.link
+              :if={needs_configuration?(source)}
+              navigate={~p"/acquisition/sources/#{source.id}/configure"}
+              class="btn btn-xs btn-primary"
+            >
+              Configure
+            </.link>
+            <.link
+              :if={configured_source?(source)}
+              navigate={~p"/acquisition/sources/#{source.id}/configure"}
+              class="btn btn-xs btn-ghost"
+            >
+              Edit Config
+            </.link>
+            <.link
               navigate={
                 ~p"/acquisition/findings?family=#{source.source_family}&source_id=#{source.id}"
               }
@@ -168,7 +201,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
               Open Queue
             </.link>
             <.button
-              :if={source.runnable}
+              :if={scan_ready?(source)}
               id={"launch-source-#{source.id}"}
               phx-click="launch_run"
               phx-value-id={source.id}
@@ -210,11 +243,27 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
               sources,
               &(&1.health_status in [:blocked, :failing, :stale, :noisy, :cancelled])
             ),
-          runnable: Enum.count(sources, & &1.runnable)
+          runnable: Enum.count(sources, &scan_ready?/1)
         }
 
       {:error, _} ->
         %{total: 0, healthy: 0, attention: 0, runnable: 0}
     end
   end
+
+  defp scan_ready?(source) do
+    source.runnable && configured_source?(source)
+  end
+
+  defp needs_configuration?(%{procurement_source: %{config_status: status}})
+       when status in [:found, :pending, :config_failed, :manual],
+       do: true
+
+  defp needs_configuration?(_source), do: false
+
+  defp configured_source?(%{procurement_source: %{config_status: status}})
+       when status in [:configured, :scan_failed],
+       do: true
+
+  defp configured_source?(_source), do: false
 end

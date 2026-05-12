@@ -79,6 +79,7 @@ defmodule GnomeGardenWeb.Router do
 
       live "/acquisition/evidence/:id/edit", Acquisition.FindingEvidenceLive.Form, :edit
       live "/acquisition/sources", Acquisition.SourceLive.Index, :index
+      live "/acquisition/sources/:id/configure", Acquisition.SourceLive.Configure, :configure
       live "/acquisition/programs", Acquisition.ProgramLive.Index, :index
 
       # Operations - Organizations

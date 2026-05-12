@@ -48,6 +48,8 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources")
 
     assert render(view) =~ "Source Registry"
+    assert render(view) =~ "Configure"
+    refute render(view) =~ "Launch Scan"
   end
 
   test "source registry hides launch when a source is not runnable", %{conn: conn} do
@@ -75,5 +77,41 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources")
 
     assert render(view) =~ "Source Registry"
+  end
+
+  test "source configuration saves selectors through procurement action", %{conn: conn} do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Configured County Portal",
+        url: "https://example.com/configured-county",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
+
+    view
+    |> form("#source-config-form",
+      config: %{
+        listing_url: "https://example.com/configured-county/bids",
+        listing_selector: ".bid-row",
+        title_selector: ".bid-title",
+        link_selector: "a",
+        pagination_type: "none"
+      }
+    )
+    |> render_submit()
+
+    assert_redirect(view, ~p"/acquisition/sources")
+
+    {:ok, updated_source} = Procurement.get_procurement_source(source.id)
+
+    assert updated_source.config_status == :configured
+    assert Map.get(updated_source.scrape_config, "listing_selector") == ".bid-row"
   end
 end

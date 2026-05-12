@@ -94,7 +94,8 @@ defmodule GnomeGarden.Acquisition.Source do
                   :health_variant,
                   :health_note,
                   :status_variant,
-                  :latest_run_id
+                  :latest_run_id,
+                  :procurement_source
                 ]
               )
     end
