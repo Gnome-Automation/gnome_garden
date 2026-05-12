@@ -57,6 +57,36 @@ Operational expectations:
 - Treat `/oban`, `/admin`, and `/dev/dashboard` as development or explicitly gated operator routes only.
 - Do not launch overlapping manual runs for the same agent deployment; the runner rejects them while a deployment has an active run.
 
+Backup expectations:
+
+- Back up Postgres and acquisition document storage together. A database-only backup is incomplete because `Acquisition.Document` records point at AshStorage blobs.
+- Use custom-format Postgres dumps so restores can be targeted and verified:
+
+```bash
+pg_dump --format=custom --file=backup/gnome_garden_$(date +%Y%m%d%H%M).dump "$DATABASE_URL"
+```
+
+- Back up the configured Garage/S3 bucket or prefix with the storage provider's native snapshot, replication, or object-copy tooling.
+- If local storage is temporarily enabled, back up `priv/storage` with the same timestamp as the database dump.
+
+Restore drill:
+
+1. Stop web and worker traffic or put the app in maintenance mode.
+2. Restore Postgres into a fresh database:
+
+```bash
+pg_restore --clean --if-exists --dbname "$DATABASE_URL" backup/gnome_garden_TIMESTAMP.dump
+```
+
+3. Restore the matching Garage/S3 objects or local `priv/storage` snapshot.
+4. Run release setup to apply any newer migrations and idempotent defaults:
+
+```bash
+bin/gnome_garden eval "GnomeGarden.Release.setup()"
+```
+
+5. Start the release and verify `GET /health`, `GET /ready`, sign-in, `/acquisition/findings`, and a known document download.
+
 Agent run failure triage:
 
 - Failed runs are inspected at `/console/agents/runs/:id`.
