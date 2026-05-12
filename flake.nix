@@ -21,6 +21,11 @@
             erlang
             pkgs.nodejs_22
             pkgs.postgresql_18
+            pkgs.garage_2
+            pkgs.awscli2
+            pkgs.curl
+            pkgs.jq
+            pkgs.openssl
             pkgs.inotify-tools
             pkgs.xvfb-run
           ];
