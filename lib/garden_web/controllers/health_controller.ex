@@ -11,7 +11,8 @@ defmodule GnomeGardenWeb.HealthController do
   def ready(conn, _params) do
     checks = %{
       database: database_check(),
-      document_storage: document_storage_check()
+      document_storage: document_storage_check(),
+      background_jobs: background_jobs_check()
     }
 
     status =
@@ -56,6 +57,30 @@ defmodule GnomeGardenWeb.HealthController do
         fallback_storage_check()
     end
   end
+
+  defp background_jobs_check do
+    case Oban.Registry.whereis(Oban) do
+      pid when is_pid(pid) ->
+        queue_names = oban_queue_names()
+
+        %{status: "ok"}
+        |> maybe_put_non_empty(:queues, queue_names)
+
+      nil ->
+        %{status: "error", message: "Oban supervisor is not running"}
+    end
+  end
+
+  defp oban_queue_names do
+    Oban
+    |> Oban.config()
+    |> Map.get(:queues, [])
+    |> Keyword.keys()
+    |> Enum.map(&to_string/1)
+  end
+
+  defp maybe_put_non_empty(map, _key, []), do: map
+  defp maybe_put_non_empty(map, key, value), do: Map.put(map, key, value)
 
   defp document_storage_config do
     :gnome_garden

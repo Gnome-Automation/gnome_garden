@@ -3,7 +3,7 @@
 This app has two unauthenticated platform probes:
 
 - `GET /health` is a cheap liveness check. It returns `ok` without touching dependencies.
-- `GET /ready` is a readiness check. It verifies database access and document storage posture.
+- `GET /ready` is a readiness check. It verifies database access, document storage posture, and the Oban background job supervisor.
 
 Run this before deploys or release builds:
 
