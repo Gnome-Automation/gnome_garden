@@ -17,16 +17,21 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorkerTest do
       })
       |> Ash.create!(domain: GnomeGarden.Operations)
 
-    user =
-      Ash.Seed.seed!(GnomeGarden.Accounts.User, %{
-        email: "worker-#{System.unique_integer([:positive])}@example.com"
+    email = "worker-#{System.unique_integer([:positive])}@example.com"
+    password = "valid-password-#{System.unique_integer([:positive])}"
+
+    {:ok, user} =
+      GnomeGarden.Accounts.create_user_with_password(%{
+        email: email,
+        password: password,
+        password_confirmation: password
       })
 
     team_member =
       Ash.Seed.seed!(GnomeGarden.Operations.TeamMember, %{
         user_id: user.id,
         display_name: "Scheduler Worker #{System.unique_integer([:positive])}",
-        role: :operator,
+        role: :admin,
         status: :active
       })
 

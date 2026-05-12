@@ -33,4 +33,14 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
       assert {:error, {:redirect, %{to: "/sign-in"}}} = live(conn, path)
     end
   end
+
+  @tag team_member_role: :operator
+  test "internal routes require an active admin team member", %{conn: conn} do
+    %{conn: conn} = register_and_log_in_user(%{conn: conn, team_member_role: :operator})
+
+    conn = get(conn, ~p"/")
+    assert redirected_to(conn) == ~p"/access-denied"
+
+    assert {:error, {:redirect, %{to: "/access-denied"}}} = live(conn, "/acquisition/findings")
+  end
 end

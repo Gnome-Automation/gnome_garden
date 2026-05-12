@@ -22,12 +22,14 @@ defmodule GnomeGarden.Accounts.User do
     end
 
     strategies do
-      magic_link do
+      password :password do
         identity_field :email
-        registration_enabled? true
-        require_interaction? true
+        hashed_password_field :hashed_password
+        registration_enabled? false
 
-        sender GnomeGarden.Accounts.User.Senders.SendMagicLinkEmail
+        resettable do
+          sender GnomeGarden.Accounts.User.Senders.SendPasswordResetEmail
+        end
       end
 
       remember_me :remember_me
@@ -54,40 +56,46 @@ defmodule GnomeGarden.Accounts.User do
       get_by :email
     end
 
-    create :sign_in_with_magic_link do
-      description "Sign in or register a user with magic link."
+    create :create_with_password do
+      description "Create an operator sign-in account with a password."
+      accept [:email]
 
-      argument :token, :string do
-        description "The token from the magic link that was sent to the user"
+      argument :password, :string do
         allow_nil? false
+        constraints min_length: 8
+        sensitive? true
       end
 
-      argument :remember_me, :boolean do
-        description "Whether to generate a remember me token"
-        allow_nil? true
-      end
-
-      upsert? true
-      upsert_identity :unique_email
-      upsert_fields [:email]
-
-      # Uses the information from the token to create or sign in the user
-      change AshAuthentication.Strategy.MagicLink.SignInChange
-
-      change {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange,
-              strategy_name: :remember_me}
-
-      metadata :token, :string do
+      argument :password_confirmation, :string do
         allow_nil? false
+        constraints min_length: 8
+        sensitive? true
       end
+
+      change set_context(%{strategy_name: :password})
+      validate AshAuthentication.Strategy.Password.PasswordConfirmationValidation
+      change AshAuthentication.Strategy.Password.HashPasswordChange
     end
 
-    action :request_magic_link do
-      argument :email, :ci_string do
+    update :set_password do
+      description "Set or rotate a user's password."
+      accept []
+
+      argument :password, :string do
         allow_nil? false
+        constraints min_length: 8
+        sensitive? true
       end
 
-      run AshAuthentication.Strategy.MagicLink.Request
+      argument :password_confirmation, :string do
+        allow_nil? false
+        constraints min_length: 8
+        sensitive? true
+      end
+
+      change set_context(%{strategy_name: :password})
+      validate AshAuthentication.Strategy.Password.PasswordConfirmationValidation
+      change AshAuthentication.Strategy.Password.HashPasswordChange
     end
   end
 
@@ -96,7 +104,18 @@ defmodule GnomeGarden.Accounts.User do
       authorize_if always()
     end
 
-    policy action_type(:read) do
+    policy action [
+             :create_with_password,
+             :set_password,
+             :sign_in_with_password,
+             :sign_in_with_token,
+             :request_password_reset_with_password,
+             :password_reset_with_password
+           ] do
+      authorize_if always()
+    end
+
+    policy action [:read, :get_by_subject, :get_by_email] do
       authorize_if actor_present()
     end
   end
@@ -107,6 +126,11 @@ defmodule GnomeGarden.Accounts.User do
     attribute :email, :ci_string do
       allow_nil? false
       public? true
+    end
+
+    attribute :hashed_password, :string do
+      allow_nil? false
+      sensitive? true
     end
   end
 

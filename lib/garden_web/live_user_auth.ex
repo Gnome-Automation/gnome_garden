@@ -24,16 +24,22 @@ defmodule GnomeGardenWeb.LiveUserAuth do
   def on_mount(:live_user_required, _params, _session, socket) do
     socket = assign_new(socket, :current_user, fn -> nil end)
 
-    if socket.assigns.current_user do
-      socket =
-        socket
-        |> assign_new(:current_path, fn -> "/" end)
-        |> assign_nav_counts()
-        |> Phoenix.LiveView.attach_hook(:set_current_path, :handle_params, &set_current_path/3)
+    case GnomeGardenWeb.AdminAccess.admin_team_member(socket.assigns.current_user) do
+      {:ok, team_member} ->
+        socket =
+          socket
+          |> assign(:current_team_member, team_member)
+          |> assign_new(:current_path, fn -> "/" end)
+          |> assign_nav_counts()
+          |> Phoenix.LiveView.attach_hook(:set_current_path, :handle_params, &set_current_path/3)
 
-      {:cont, socket}
-    else
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+        {:cont, socket}
+
+      {:error, :not_signed_in} ->
+        {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+
+      {:error, :not_admin} ->
+        {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/access-denied")}
     end
   end
 

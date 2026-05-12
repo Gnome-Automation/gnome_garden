@@ -123,6 +123,313 @@
 /* This file is for your main application CSS */
 
 /* =============================================================================
+   Ash Authentication - Garden Sign In
+   ============================================================================= */
+
+.gg-auth-page {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 22%, rgb(61 220 138 / 0.2), transparent 28rem),
+    radial-gradient(circle at 82% 82%, rgb(34 197 94 / 0.16), transparent 30rem),
+    linear-gradient(145deg, #f7fbf5 0%, #edf8ee 43%, #f8faf6 100%);
+  padding: 1rem;
+  color: #10231b;
+}
+
+.gg-auth-page::before,
+.gg-auth-page::after {
+  position: absolute;
+  inset: -12rem;
+  pointer-events: none;
+  content: "";
+}
+
+.gg-auth-page::before {
+  background:
+    radial-gradient(ellipse at 8% 0%, transparent 35%, rgb(21 128 61 / 0.3) 36%, transparent 37%),
+    radial-gradient(ellipse at 94% 16%, transparent 36%, rgb(22 101 52 / 0.26) 37%, transparent 38%),
+    radial-gradient(ellipse at 12% 92%, transparent 38%, rgb(21 128 61 / 0.22) 39%, transparent 40%),
+    linear-gradient(118deg, transparent 0 31%, rgb(22 101 52 / 0.22) 31.3% 31.8%, transparent 32.1%),
+    linear-gradient(64deg, transparent 0 62%, rgb(21 128 61 / 0.18) 62.3% 62.8%, transparent 63.1%);
+  transform: rotate(-4deg);
+}
+
+.gg-auth-page::after {
+  background:
+    radial-gradient(circle at 12% 19%, rgb(34 197 94 / 0.18) 0 0.35rem, transparent 0.42rem),
+    radial-gradient(circle at 22% 12%, rgb(21 128 61 / 0.16) 0 0.28rem, transparent 0.34rem),
+    radial-gradient(circle at 86% 22%, rgb(34 197 94 / 0.18) 0 0.4rem, transparent 0.46rem),
+    radial-gradient(circle at 77% 78%, rgb(22 163 74 / 0.16) 0 0.32rem, transparent 0.4rem),
+    radial-gradient(circle at 18% 84%, rgb(34 197 94 / 0.14) 0 0.3rem, transparent 0.38rem);
+}
+
+.gg-auth-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 29rem);
+  border: 1px solid rgb(21 128 61 / 0.18);
+  border-radius: 1.25rem;
+  background: rgb(255 255 255 / 0.84);
+  box-shadow: 0 1.5rem 4rem rgb(15 23 42 / 0.16);
+  backdrop-filter: blur(18px);
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+.gg-auth-panel::before {
+  position: absolute;
+  top: -0.85rem;
+  right: 2.2rem;
+  width: 5.5rem;
+  height: 2.2rem;
+  border-top: 0.18rem solid rgb(22 101 52 / 0.5);
+  border-radius: 999px;
+  content: "";
+  transform: rotate(-10deg);
+}
+
+.gg-auth-panel::after {
+  position: absolute;
+  top: -1.3rem;
+  right: 1.3rem;
+  width: 0.95rem;
+  height: 1.65rem;
+  border-radius: 999px 0;
+  background: rgb(22 163 74 / 0.5);
+  content: "";
+  transform: rotate(37deg);
+}
+
+.gg-auth-banner {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 1.25rem;
+}
+
+.gg-auth-brand-link {
+  text-decoration: none;
+}
+
+.gg-auth-brand {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #123524;
+  font-size: 1.6rem;
+  font-weight: 750;
+  line-height: 1.1;
+}
+
+.gg-auth-brand::before {
+  width: 1.05rem;
+  height: 1.55rem;
+  border-radius: 999px 0;
+  background: linear-gradient(135deg, #22c55e, #0f766e);
+  content: "";
+  transform: rotate(-30deg);
+}
+
+.gg-auth-strategy,
+.gg-auth-magic,
+.gg-auth-password,
+.gg-auth-form-wrap,
+.gg-auth-form {
+  width: 100%;
+}
+
+.gg-auth-title {
+  margin-bottom: 1rem;
+  color: #123524;
+  font-size: 1.25rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.gg-auth-form-slot {
+  margin: 1rem 0;
+}
+
+.gg-auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.9rem;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.gg-auth-link {
+  color: #166534;
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.gg-auth-link:hover {
+  color: #0f766e;
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
+
+.gg-auth-field {
+  margin-bottom: 1rem;
+}
+
+.gg-auth-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #244236;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.gg-auth-input {
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid rgb(21 128 61 / 0.28);
+  border-radius: 0.85rem;
+  background: rgb(255 255 255 / 0.9);
+  color: #10231b;
+  font-size: 1rem;
+  outline: none;
+  padding: 0.75rem 0.95rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.gg-auth-input:focus {
+  border-color: rgb(16 185 129 / 0.8);
+  box-shadow: 0 0 0 4px rgb(16 185 129 / 0.14);
+}
+
+.gg-auth-input-error {
+  border-color: rgb(225 29 72 / 0.75);
+  box-shadow: 0 0 0 4px rgb(225 29 72 / 0.1);
+}
+
+.gg-auth-submit {
+  width: 100%;
+  min-height: 3rem;
+  border: 0;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, #166534, #0f766e);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 750;
+  padding: 0.8rem 1rem;
+  transition: filter 160ms ease, transform 160ms ease;
+}
+
+.gg-auth-submit:hover {
+  filter: brightness(1.07);
+}
+
+.gg-auth-submit:active {
+  transform: translateY(1px);
+}
+
+.gg-auth-remember {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.gg-auth-checkbox {
+  accent-color: #15803d;
+  width: 1rem;
+  height: 1rem;
+}
+
+.gg-auth-checkbox-label {
+  color: #3f5c4f;
+  font-size: 0.9rem;
+  font-weight: 550;
+}
+
+.gg-auth-errors {
+  margin-top: 0.45rem;
+  color: #be123c;
+  font-size: 0.85rem;
+}
+
+.gg-auth-error,
+.gg-auth-error-text,
+.gg-auth-error-item {
+  color: #be123c;
+}
+
+.gg-auth-flash {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  width: min(calc(100vw - 2rem), 24rem);
+  border-radius: 0.85rem;
+  box-shadow: 0 1rem 2.5rem rgb(15 23 42 / 0.16);
+  font-size: 0.92rem;
+  padding: 0.9rem 1rem;
+}
+
+.gg-auth-flash-info {
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.gg-auth-flash-error {
+  background: #ffe4e6;
+  color: #9f1239;
+}
+
+[data-theme="dark"] .gg-auth-page {
+  background:
+    radial-gradient(circle at 18% 22%, rgb(61 220 138 / 0.16), transparent 28rem),
+    radial-gradient(circle at 82% 82%, rgb(20 184 166 / 0.13), transparent 30rem),
+    linear-gradient(145deg, #071311 0%, #0d211c 48%, #081714 100%);
+  color: #e5f3ef;
+}
+
+[data-theme="dark"] .gg-auth-panel {
+  border-color: rgb(61 220 138 / 0.18);
+  background: rgb(11 22 20 / 0.86);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 0.32);
+}
+
+[data-theme="dark"] .gg-auth-brand,
+[data-theme="dark"] .gg-auth-title,
+[data-theme="dark"] .gg-auth-label {
+  color: #e5f3ef;
+}
+
+[data-theme="dark"] .gg-auth-link {
+  color: #86efac;
+}
+
+[data-theme="dark"] .gg-auth-input {
+  border-color: rgb(61 220 138 / 0.24);
+  background: rgb(15 31 28 / 0.92);
+  color: #e5f3ef;
+}
+
+[data-theme="dark"] .gg-auth-checkbox-label {
+  color: rgb(229 243 239 / 0.75);
+}
+
+@media (max-width: 640px) {
+  .gg-auth-page {
+    align-items: start;
+    padding-top: 4rem;
+  }
+
+  .gg-auth-panel {
+    border-radius: 1rem;
+  }
+}
+
+/* =============================================================================
    Responsive Layout Helpers
    Show/hide elements based on screen size for table vs card views
    ============================================================================= */

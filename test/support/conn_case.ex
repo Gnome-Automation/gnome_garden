@@ -38,13 +38,22 @@ defmodule GnomeGardenWeb.ConnCase do
 
   def register_and_log_in_user(%{conn: conn} = context) do
     email = "operator-#{System.unique_integer([:positive, :monotonic])}@example.com"
-    user = Ash.Seed.seed!(GnomeGarden.Accounts.User, %{email: email})
+    password = "valid-password-#{System.unique_integer([:positive, :monotonic])}"
+
+    {:ok, user} =
+      GnomeGarden.Accounts.create_user_with_password(%{
+        email: email,
+        password: password,
+        password_confirmation: password
+      })
+
+    team_member_role = Map.get(context, :team_member_role, :admin)
 
     team_member =
       Ash.Seed.seed!(GnomeGarden.Operations.TeamMember, %{
         user_id: user.id,
         display_name: "Operator #{System.unique_integer([:positive, :monotonic])}",
-        role: :operator,
+        role: team_member_role,
         status: :active
       })
 

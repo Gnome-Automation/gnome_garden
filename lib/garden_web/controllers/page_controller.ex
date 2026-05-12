@@ -6,6 +6,12 @@ defmodule GnomeGardenWeb.PageController do
   alias GnomeGarden.Execution
   alias GnomeGarden.Finance
 
+  def access_denied(conn, _params) do
+    conn
+    |> put_status(:forbidden)
+    |> text("Admin access required")
+  end
+
   def home(conn, _params) do
     actor = conn.assigns[:current_user]
 

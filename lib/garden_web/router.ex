@@ -237,12 +237,12 @@ defmodule GnomeGardenWeb.Router do
   scope "/", GnomeGardenWeb do
     pipe_through :browser
 
+    get "/access-denied", PageController, :access_denied
+
     auth_routes AuthController, GnomeGarden.Accounts.User, path: "/auth"
     sign_out_route AuthController
 
-    # Remove these if you'd like to use your own authentication views
-    sign_in_route register_path: "/register",
-                  reset_path: "/reset",
+    sign_in_route reset_path: "/reset",
                   auth_routes_prefix: "/auth",
                   on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_no_user}],
                   overrides: [
@@ -264,15 +264,6 @@ defmodule GnomeGardenWeb.Router do
         GnomeGardenWeb.AuthOverrides,
         Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI
       ]
-
-    # Remove this if you do not use the magic link strategy.
-    magic_sign_in_route(GnomeGarden.Accounts.User, :magic_link,
-      auth_routes_prefix: "/auth",
-      overrides: [
-        GnomeGardenWeb.AuthOverrides,
-        Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI
-      ]
-    )
   end
 
   scope "/webhooks", GnomeGardenWeb do

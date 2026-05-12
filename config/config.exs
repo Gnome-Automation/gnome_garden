@@ -186,8 +186,7 @@ config :gnome_garden,
     GnomeGarden.Finance,
     GnomeGarden.Operations,
     GnomeGarden.Procurement
-  ],
-  ash_authentication: [return_error_on_invalid_magic_link_token?: true]
+  ]
 
 config :gnome_garden, :payment_matching, underpayment_tolerance: "1.00"
 
