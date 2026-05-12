@@ -105,7 +105,7 @@ systemd-run --wait --pipe --collect \
 
 echo "HTTP checks..."
 for attempt in $(seq 1 30); do
-  if curl -k -fsSI https://garden.tail6f3b43.ts.net:4443/sign-in >/dev/null; then
+  if curl -k -fsI https://garden.tail6f3b43.ts.net:4443/sign-in >/dev/null; then
     break
   fi
 
