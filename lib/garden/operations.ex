@@ -18,6 +18,7 @@ defmodule GnomeGarden.Operations do
     resource GnomeGarden.Operations.TeamMember do
       define :list_team_members, action: :read
       define :list_active_team_members, action: :active
+      define :list_admin_team_members, action: :admin_index
       define :get_team_member, action: :read, get_by: [:id]
       define :get_team_member_by_user, action: :by_user, args: [:user_id]
       define :create_team_member, action: :create

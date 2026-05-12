@@ -296,6 +296,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       badge: 0,
       hot: false,
       match: ["/console/agents"]
+    },
+    %{
+      id: "set-users",
+      section: "Settings",
+      icon: "hero-users",
+      label: "Users",
+      path: "/settings/users",
+      badge: 0,
+      hot: false,
+      match: ["/settings/users"]
     }
   ]
 
@@ -323,6 +333,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
       String.starts_with?(path, "/execution") -> "Operations"
       String.starts_with?(path, "/finance") -> "Operations"
       String.starts_with?(path, "/console") -> "Settings"
+      String.starts_with?(path, "/settings") -> "Settings"
       true -> "Workspace"
     end
   end

@@ -70,6 +70,44 @@ defmodule GnomeGarden.Release do
     :ok
   end
 
+  @doc """
+  Prints the configured fixed admin accounts and their team-member state.
+
+  This is intentionally release-safe: it starts only the repo through
+  `Ecto.Migrator.with_repo/2`, so it can run while the web server is already
+  bound to the production port.
+  """
+  @spec audit_admins() :: :ok
+  def audit_admins do
+    [repo | _repos] = repos()
+
+    {:ok, _result, _apps} =
+      Ecto.Migrator.with_repo(repo, fn _repo ->
+        IO.puts("Garden admin accounts:")
+
+        "GARDEN_ADMIN_PC"
+        |> audit_admin!("PC")
+        |> IO.puts()
+
+        "GARDEN_ADMIN_BHAMMOUD"
+        |> audit_admin!("Bhammoud")
+        |> IO.puts()
+
+        :ok
+      end)
+
+    :ok
+  end
+
+  @doc """
+  Rotates the fixed admin passwords to the values currently in the environment.
+
+  This is a semantic alias for `bootstrap_admins/0`: the bootstrap path is
+  already idempotent and updates existing users to the supplied password.
+  """
+  @spec rotate_admin_passwords() :: :ok
+  def rotate_admin_passwords, do: bootstrap_admins()
+
   defp seed_data do
     company_profile = DefaultCompanyProfiles.ensure_default()
     deployments = DefaultDeployments.ensure_defaults()
@@ -139,6 +177,42 @@ defmodule GnomeGarden.Release do
         if not_found_error?(error) do
           {:ok, team_member} = Operations.create_team_member(params)
           team_member
+        else
+          raise "Failed to load admin team member for #{user.email}: #{Exception.message(error)}"
+        end
+    end
+  end
+
+  defp audit_admin!(env_prefix, default_display_name) do
+    email = System.get_env("#{env_prefix}_EMAIL")
+
+    cond do
+      is_nil(email) or email == "" ->
+        "#{default_display_name}: missing #{env_prefix}_EMAIL"
+
+      true ->
+        case Accounts.get_user_by_email(email, authorize?: false) do
+          {:ok, user} ->
+            describe_admin_user(default_display_name, user)
+
+          {:error, error} ->
+            if not_found_error?(error) do
+              "#{default_display_name}: user #{email} is missing"
+            else
+              raise "Failed to load admin user #{email}: #{Exception.message(error)}"
+            end
+        end
+    end
+  end
+
+  defp describe_admin_user(default_display_name, user) do
+    case Operations.get_team_member_by_user(user.id) do
+      {:ok, team_member} ->
+        "#{default_display_name}: #{user.email} -> #{team_member.role}, #{team_member.status}, #{team_member.display_name}"
+
+      {:error, error} ->
+        if not_found_error?(error) do
+          "#{default_display_name}: #{user.email} has no team member"
         else
           raise "Failed to load admin team member for #{user.email}: #{Exception.message(error)}"
         end

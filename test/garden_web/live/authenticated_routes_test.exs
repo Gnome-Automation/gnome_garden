@@ -8,6 +8,7 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     "/console/agents",
     "/console/agents/deployments/new",
     "/console/agents/runs/00000000-0000-0000-0000-000000000000",
+    "/settings/users",
     "/acquisition/findings",
     "/acquisition/findings/00000000-0000-0000-0000-000000000000",
     "/acquisition/sources",
@@ -32,6 +33,14 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     for path <- @operator_live_routes do
       assert {:error, {:redirect, %{to: "/sign-in"}}} = live(conn, path)
     end
+  end
+
+  test "admins can view user settings", %{conn: conn} do
+    %{conn: conn} = register_and_log_in_user(%{conn: conn})
+
+    assert {:ok, _view, html} = live(conn, "/settings/users")
+    assert html =~ "Users"
+    assert html =~ "Admin"
   end
 
   @tag team_member_role: :operator

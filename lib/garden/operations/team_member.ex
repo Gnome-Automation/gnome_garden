@@ -60,6 +60,10 @@ defmodule GnomeGarden.Operations.TeamMember do
       prepare build(sort: [display_name: :asc, inserted_at: :asc], load: [:user, :person])
     end
 
+    read :admin_index do
+      prepare build(sort: [display_name: :asc, inserted_at: :asc], load: [:user])
+    end
+
     read :by_user do
       argument :user_id, :uuid, allow_nil?: false
       get_by [:user_id]

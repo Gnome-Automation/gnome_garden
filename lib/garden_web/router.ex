@@ -65,6 +65,7 @@ defmodule GnomeGardenWeb.Router do
       live "/console/agents/deployments/new", Console.AgentDeploymentFormLive
       live "/console/agents/deployments/:id/edit", Console.AgentDeploymentFormLive
       live "/console/agents/runs/:id", Console.AgentRunLive
+      live "/settings/users", Settings.UserLive.Index, :index
       live "/acquisition/findings", Acquisition.FindingLive.Index, :index
       live "/acquisition/findings/:id", Acquisition.FindingLive.Show, :show
 

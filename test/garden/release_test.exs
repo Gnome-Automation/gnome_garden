@@ -52,6 +52,19 @@ defmodule GnomeGarden.ReleaseTest do
              Accounts.sign_in_user(%{email: pc_email, password: "first-valid-password"})
   end
 
+  test "audits bootstrapped admin accounts" do
+    pc_email = "pc-audit-#{System.unique_integer([:positive])}@example.com"
+    bhammoud_email = "bhammoud-audit-#{System.unique_integer([:positive])}@example.com"
+
+    put_admin_env(pc_email, "first-valid-password", bhammoud_email, "second-valid-password")
+
+    assert :ok = Release.bootstrap_admins()
+
+    assert ExUnit.CaptureIO.capture_io(fn ->
+             assert :ok = Release.audit_admins()
+           end) =~ "PC: #{pc_email} -> admin, active, PC"
+  end
+
   defp put_admin_env(pc_email, pc_password, bhammoud_email, bhammoud_password) do
     System.put_env("GARDEN_ADMIN_PC_EMAIL", pc_email)
     System.put_env("GARDEN_ADMIN_PC_PASSWORD", pc_password)
