@@ -1,7 +1,8 @@
 defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   use GnomeGardenWeb, :live_view
 
-  import GnomeGardenWeb.Components.AcquisitionUI, only: [finding_action_bar: 1, review_dialogs: 1]
+  import GnomeGardenWeb.Components.AcquisitionUI,
+    only: [finding_action_bar: 1, format_error: 1, parse_dialog_action: 1, review_dialogs: 1]
 
   import GnomeGardenWeb.Commercial.Helpers, only: [format_date: 1, format_datetime: 1]
 
@@ -799,12 +800,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     |> String.capitalize()
   end
 
-  defp parse_dialog_action("accept"), do: :accept
-  defp parse_dialog_action("reject"), do: :reject
-  defp parse_dialog_action("suppress"), do: :suppress
-  defp parse_dialog_action("park"), do: :park
-  defp parse_dialog_action(_), do: nil
-
   defp load_source_filter(nil, _actor), do: nil
   defp load_source_filter("", _actor), do: nil
 
@@ -850,15 +845,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
       {:error, _error} -> nil
     end
   end
-
-  defp format_error(%{errors: [error | _]}) do
-    Exception.message(error)
-  rescue
-    _ -> inspect(error)
-  end
-
-  defp format_error(error) when is_binary(error), do: error
-  defp format_error(error), do: inspect(error)
 
   defp queue_path(queue, family, source, program) do
     %{"queue" => to_string(queue)}

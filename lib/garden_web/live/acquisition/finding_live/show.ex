@@ -2,7 +2,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   use GnomeGardenWeb, :live_view
 
   import GnomeGardenWeb.Components.AcquisitionUI,
-    only: [finding_review_workbench: 1, review_dialogs: 1]
+    only: [
+      finding_review_workbench: 1,
+      format_error: 1,
+      parse_dialog_action: 1,
+      review_dialogs: 1
+    ]
 
   import GnomeGardenWeb.Commercial.Helpers, only: [format_atom: 1, format_datetime: 1]
 
@@ -946,15 +951,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     )
   end
 
-  defp format_error(%{errors: [error | _]}) do
-    Exception.message(error)
-  rescue
-    _ -> inspect(error)
-  end
-
-  defp format_error(error) when is_binary(error), do: error
-  defp format_error(error), do: inspect(error)
-
   defp refresh_finding(socket) do
     assign_finding_context(
       socket,
@@ -1019,12 +1015,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp maybe_put_identity_attr(attrs, _key, nil), do: attrs
   defp maybe_put_identity_attr(attrs, _key, ""), do: attrs
   defp maybe_put_identity_attr(attrs, key, value), do: Map.put(attrs, key, value)
-
-  defp parse_dialog_action("accept"), do: :accept
-  defp parse_dialog_action("reject"), do: :reject
-  defp parse_dialog_action("suppress"), do: :suppress
-  defp parse_dialog_action("park"), do: :park
-  defp parse_dialog_action(_), do: nil
 
   defp build_action_dialog(finding, type) do
     %{

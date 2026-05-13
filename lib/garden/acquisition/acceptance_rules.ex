@@ -1,6 +1,8 @@
 defmodule GnomeGarden.Acquisition.AcceptanceRules do
   @moduledoc false
 
+  import GnomeGarden.Acquisition.RuleChecks, only: [blank?: 1, maybe_block: 3]
+
   @required_load [
     :summary,
     :source_url,
@@ -43,9 +45,4 @@ defmodule GnomeGarden.Acquisition.AcceptanceRules do
        do: count
 
   defp discovery_evidence_count(_finding), do: 0
-
-  defp maybe_block(blockers, true, message), do: blockers ++ [message]
-  defp maybe_block(blockers, false, _message), do: blockers
-
-  defp blank?(value), do: is_nil(value) or String.trim(to_string(value)) == ""
 end

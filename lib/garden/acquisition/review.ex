@@ -214,8 +214,8 @@ defmodule GnomeGarden.Acquisition.Review do
 
     BidReview.park_bid(
       bid_id,
-      params["reason"] || params[:reason],
-      params["research"] || params[:research],
+      params["reason"],
+      params["research"],
       actor
     )
   end

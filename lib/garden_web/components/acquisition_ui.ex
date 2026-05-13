@@ -12,6 +12,21 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
 
   alias GnomeGarden.Acquisition.PromotionRules
 
+  def parse_dialog_action("accept"), do: :accept
+  def parse_dialog_action("reject"), do: :reject
+  def parse_dialog_action("suppress"), do: :suppress
+  def parse_dialog_action("park"), do: :park
+  def parse_dialog_action(_action), do: nil
+
+  def format_error(%{errors: [error | _]}) do
+    Exception.message(error)
+  rescue
+    _ -> inspect(error)
+  end
+
+  def format_error(error) when is_binary(error), do: error
+  def format_error(error), do: inspect(error)
+
   attr :finding, :map, required: true
   attr :finding_documents, :list, default: []
   attr :discovery_evidence, :list, default: []

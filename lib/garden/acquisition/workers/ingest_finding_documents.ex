@@ -45,7 +45,7 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
   end
 
   defp list_documents(%{metadata: metadata}) when is_map(metadata) do
-    case Map.get(metadata, "documents") || Map.get(metadata, :documents) do
+    case metadata |> stringify_keys() |> Map.get("documents") do
       list when is_list(list) -> list
       _ -> []
     end
@@ -54,16 +54,13 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
   defp list_documents(_bid), do: []
 
   defp ingest_document(descriptor, finding) when is_map(descriptor) do
-    url = Map.get(descriptor, "url") || Map.get(descriptor, :url)
+    descriptor = stringify_keys(descriptor)
+    url = Map.get(descriptor, "url")
 
     if is_binary(url) and url != "" do
-      filename =
-        Map.get(descriptor, "filename") || Map.get(descriptor, :filename) || basename(url)
+      filename = Map.get(descriptor, "filename") || basename(url)
 
-      document_type =
-        parse_document_type(
-          Map.get(descriptor, "document_type") || Map.get(descriptor, :document_type)
-        )
+      document_type = parse_document_type(Map.get(descriptor, "document_type"))
 
       with {:ok, temp_path, content_type} <- download(url),
            upload <- %Plug.Upload{
@@ -88,6 +85,10 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
   end
 
   defp ingest_document(_, _), do: :ok
+
+  defp stringify_keys(map) do
+    Map.new(map, fn {key, value} -> {to_string(key), value} end)
+  end
 
   defp download(url) do
     case Req.get(url,

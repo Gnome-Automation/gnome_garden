@@ -2,7 +2,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   use GnomeGardenWeb, :live_view
 
   import GnomeGardenWeb.Components.AcquisitionUI,
-    only: [checklist_rule: 1, context_fact: 1, packet_type_hint: 1]
+    only: [checklist_rule: 1, context_fact: 1, format_error: 1, packet_type_hint: 1]
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.PromotionRules
@@ -598,13 +598,4 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   defp blank?(value), do: is_nil(value) or String.trim(to_string(value)) == ""
   defp blank_to_nil(value) when is_binary(value) and value == "", do: nil
   defp blank_to_nil(value), do: value
-
-  defp format_error(%{errors: [error | _]}) do
-    Exception.message(error)
-  rescue
-    _ -> inspect(error)
-  end
-
-  defp format_error(error) when is_binary(error), do: error
-  defp format_error(error), do: inspect(error)
 end

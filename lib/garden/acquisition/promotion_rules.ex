@@ -1,6 +1,8 @@
 defmodule GnomeGarden.Acquisition.PromotionRules do
   @moduledoc false
 
+  import GnomeGarden.Acquisition.RuleChecks, only: [blank?: 1, maybe_block: 3]
+
   @procurement_promotion_document_types [:solicitation, :scope, :pricing, :addendum]
 
   @required_load [
@@ -71,9 +73,4 @@ defmodule GnomeGarden.Acquisition.PromotionRules do
     do: count
 
   defp promotion_document_count(_finding), do: 0
-
-  defp maybe_block(blockers, true, message), do: blockers ++ [message]
-  defp maybe_block(blockers, false, _message), do: blockers
-
-  defp blank?(value), do: is_nil(value) or String.trim(to_string(value)) == ""
 end

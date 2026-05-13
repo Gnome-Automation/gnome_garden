@@ -71,6 +71,8 @@ defmodule GnomeGarden.MixProject do
       {:oban, "~> 2.0"},
       {:ash_money, "~> 0.2"},
       {:usage_rules, "~> 1.0", only: [:dev]},
+      {:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:ex_slop, "~> 0.1", only: [:dev, :test], runtime: false},
       {:ash_ai, "~> 0.5"},
       {:tidewave, "~> 0.5", only: [:dev]},
       {:live_debugger, "~> 0.7", only: [:dev]},
