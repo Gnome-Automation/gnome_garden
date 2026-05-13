@@ -70,7 +70,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
         </:actions>
       </.page_header>
 
-      <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div class="space-y-5">
           <.form
             for={@form}
@@ -80,8 +80,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
             class="space-y-5"
           >
             <.section
-              title={"Upload New #{String.capitalize(@document_noun)}"}
-              description="Create one durable document record, upload the file once, and link it into this finding."
+              title={"Upload #{String.capitalize(@document_noun)}"}
+              description="Store one durable file through AshStorage, then attach finding-specific role and notes."
             >
               <div class="mb-4 grid gap-2 sm:grid-cols-4">
                 <.packet_type_hint
@@ -139,7 +139,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
                   >
                     File
                   </label>
-                  <div class="rounded-2xl border border-dashed border-zinc-300 bg-white/70 px-4 py-5 dark:border-white/15 dark:bg-white/[0.03]">
+                  <div class="rounded-lg border border-dashed border-zinc-300 bg-zinc-50/80 px-4 py-5 dark:border-white/15 dark:bg-white/[0.03]">
                     <.live_file_input
                       upload={@uploads.file}
                       class="file-input file-input-bordered w-full"
@@ -202,11 +202,11 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
           >
             <.section
               title={"Link Existing #{String.capitalize(@document_noun)}"}
-              description="Reuse durable acquisition material that is already in the system instead of uploading the same file again."
+              description="Reuse a durable acquisition file that is already in the system."
             >
               <div
                 :if={Enum.empty?(@existing_documents)}
-                class="rounded-2xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300"
+                class="rounded-lg border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300"
               >
                 No reusable {@document_noun_plural} are available yet. Upload a new {@document_noun} above first.
               </div>
@@ -258,7 +258,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
           </.form>
         </div>
 
-        <aside class="space-y-5">
+        <aside class="space-y-4">
           <.section title="Finding Context">
             <div class="space-y-3">
               <div>
@@ -299,14 +299,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
           </.section>
 
           <.section
-            title="Promotion Rules"
-            description="Procurement findings need one substantive packet before promotion."
+            title="What Counts"
+            description={document_rule_description(@finding)}
           >
             <div class="space-y-2">
-              <.checklist_rule label="Solicitation" />
-              <.checklist_rule label="Scope" />
-              <.checklist_rule label="Pricing" />
-              <.checklist_rule label="Addendum" />
+              <.checklist_rule
+                :for={label <- document_rule_labels(@finding)}
+                label={label}
+              />
             </div>
           </.section>
         </aside>
@@ -570,6 +570,23 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   defp document_noun_plural(%{finding_family: :procurement}), do: "packets"
   defp document_noun_plural(%{finding_family: :discovery}), do: "source materials"
   defp document_noun_plural(_finding), do: "materials"
+
+  defp document_rule_description(%{finding_family: :procurement}),
+    do: "Promotion needs at least one substantive procurement packet."
+
+  defp document_rule_description(%{finding_family: :discovery}),
+    do: "Discovery findings need source material or evidence that explains the signal."
+
+  defp document_rule_description(_finding),
+    do: "Attach material that explains why this finding should stay in the queue."
+
+  defp document_rule_labels(%{finding_family: :procurement}),
+    do: ["Solicitation", "Scope", "Pricing", "Addendum"]
+
+  defp document_rule_labels(%{finding_family: :discovery}),
+    do: ["Research note", "Website evidence", "Contact signal", "Source excerpt"]
+
+  defp document_rule_labels(_finding), do: ["Source file", "Operator note", "Supporting context"]
 
   defp default_document_type(%{finding_family: :procurement}), do: "solicitation"
   defp default_document_type(%{finding_family: :discovery}), do: "intake_note"

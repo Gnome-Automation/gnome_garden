@@ -320,7 +320,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
       <.section
         title="Linked Documents"
-        description="Durable intake files linked to this finding before it crosses into downstream commercial work."
+        description="Files that make the finding explainable before it crosses into downstream commercial work."
+        compact
+        body_class="p-0"
       >
         <:actions>
           <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"} variant="primary">
@@ -330,7 +332,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
         <div
           :if={Enum.empty?(@finding_documents)}
-          class="flex flex-col gap-3 rounded-2xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300 sm:flex-row sm:items-center sm:justify-between"
+          class="m-3 flex flex-col gap-3 rounded-lg border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300 sm:m-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <span>No documents linked yet.</span>
           <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"}>
@@ -338,76 +340,74 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           </.button>
         </div>
 
-        <div :if={!Enum.empty?(@finding_documents)} class="space-y-3">
+        <div
+          :if={!Enum.empty?(@finding_documents)}
+          class="divide-y divide-zinc-200 dark:divide-white/10"
+        >
           <div
             :for={finding_document <- @finding_documents}
-            class="rounded-2xl border border-zinc-200 bg-white/80 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
+            class="grid gap-3 px-3 py-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_18rem]"
           >
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div class="space-y-2">
-                <div class="flex flex-wrap items-center gap-2">
-                  <p class="text-sm font-semibold text-base-content">
-                    {finding_document.document.title}
-                  </p>
-                  <span class="badge badge-outline badge-sm">
-                    {format_atom(finding_document.document_role)}
-                  </span>
-                  <span class="badge badge-outline badge-sm">
-                    {format_atom(finding_document.document.document_type)}
-                  </span>
-                  <span
-                    :if={substantive_procurement_document?(finding_document)}
-                    class="badge badge-success badge-sm"
-                  >
-                    Counts for promotion
-                  </span>
-                  <span
-                    :if={
-                      @finding.finding_family == :procurement and
-                        not substantive_procurement_document?(finding_document)
-                    }
-                    class="badge badge-ghost badge-sm"
-                  >
-                    Reference only
-                  </span>
-                </div>
-                <p
-                  :if={finding_document.document.summary}
-                  class="text-sm text-base-content/70"
+            <div class="min-w-0 space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="text-sm font-semibold text-base-content">
+                  {finding_document.document.title}
+                </p>
+                <span class="badge badge-outline badge-sm">
+                  {format_atom(finding_document.document_role)}
+                </span>
+                <span class="badge badge-outline badge-sm">
+                  {format_atom(finding_document.document.document_type)}
+                </span>
+                <span
+                  :if={substantive_procurement_document?(finding_document)}
+                  class="badge badge-success badge-sm"
                 >
-                  {finding_document.document.summary}
-                </p>
-                <p :if={finding_document.notes} class="text-sm text-base-content/70">
-                  {finding_document.notes}
-                </p>
+                  Counts for promotion
+                </span>
+                <span
+                  :if={
+                    @finding.finding_family == :procurement and
+                      not substantive_procurement_document?(finding_document)
+                  }
+                  class="badge badge-ghost badge-sm"
+                >
+                  Reference only
+                </span>
               </div>
+              <p :if={finding_document.document.summary} class="text-sm text-base-content/70">
+                {finding_document.document.summary}
+              </p>
+              <p :if={finding_document.notes} class="text-sm text-base-content/70">
+                {finding_document.notes}
+              </p>
+            </div>
 
-              <div class="flex flex-wrap gap-2">
-                <.link
-                  :if={finding_document.document.file_url}
-                  href={finding_document.document.file_url}
-                  target="_blank"
-                  class="btn btn-sm btn-ghost"
-                >
-                  Open File
-                </.link>
-                <.link
-                  :if={finding_document.document.source_url}
-                  href={finding_document.document.source_url}
-                  target="_blank"
-                  class="btn btn-sm btn-ghost"
-                >
-                  Open Source
-                </.link>
-                <.button
-                  id={"finding-document-remove-#{finding_document.id}"}
-                  phx-click="remove_document"
-                  phx-value-id={finding_document.id}
-                  class="btn btn-sm btn-ghost text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-200"
-                >
-                  Remove Link
-                </.button>
-              </div>
+            <div class="flex flex-wrap items-start gap-2 lg:justify-end">
+              <.link
+                :if={finding_document.document.file_url}
+                href={finding_document.document.file_url}
+                target="_blank"
+                class="btn btn-sm btn-ghost"
+              >
+                Open File
+              </.link>
+              <.link
+                :if={finding_document.document.source_url}
+                href={finding_document.document.source_url}
+                target="_blank"
+                class="btn btn-sm btn-ghost"
+              >
+                Open Source
+              </.link>
+              <.button
+                id={"finding-document-remove-#{finding_document.id}"}
+                phx-click="remove_document"
+                phx-value-id={finding_document.id}
+                class="btn btn-sm btn-ghost text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-200"
+              >
+                Remove Link
+              </.button>
             </div>
           </div>
         </div>

@@ -225,185 +225,82 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         </:actions>
       </.page_header>
 
-      <div class="grid gap-2 sm:grid-cols-3">
-        <.stat_card
-          title="Review Queue"
-          value={Integer.to_string(@queue_counts.review)}
-          description="New or actively reviewed findings waiting on an operator decision."
-          icon="hero-inbox-stack"
-        />
-        <.stat_card
-          title="Promoted"
-          value={Integer.to_string(@queue_counts.promoted)}
-          description="Findings already advanced into formal commercial review."
-          icon="hero-arrow-up-right"
-          accent="sky"
-        />
-        <.stat_card
-          title="Suppressed Noise"
-          value={Integer.to_string(@queue_counts.suppressed + @queue_counts.rejected)}
-          description="Low-value or out-of-scope intake that should not clog the queue."
-          icon="hero-no-symbol"
-          accent="amber"
-        />
-      </div>
-
       <.section
-        title="Unified Intake"
-        description="Run procurement, discovery, and future target-finding through one queue before it becomes commercial work."
+        title="Review Surface"
+        description="Work the queue from left to right: scope the lane, scan the evidence, decide the next state."
         compact
         body_class="p-0"
       >
-        <div class="border-b border-zinc-200 px-5 py-4 dark:border-white/10">
-          <div class="flex flex-wrap items-center gap-2">
-            <.queue_link
-              :for={queue <- @queues}
-              queue={queue}
-              selected_queue={@selected_queue}
-              selected_family={@selected_family}
-              selected_source={@selected_source}
-              selected_program={@selected_program}
-              count={Map.fetch!(@queue_counts, queue)}
-            />
-          </div>
-          <div class="mt-3 flex flex-wrap items-center gap-2">
-            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
-              Family
-            </span>
-            <.family_link
-              :for={family <- @families}
-              family={family}
-              selected_family={@selected_family}
-              selected_queue={@selected_queue}
-              selected_source={@selected_source}
-              selected_program={@selected_program}
-            />
-          </div>
-          <div
-            :if={@selected_source || @selected_program}
-            class="mt-3 flex flex-wrap items-center gap-2"
-          >
-            <span
-              :if={@selected_source}
-              class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200"
-            >
-              {@selected_source.name}
-            </span>
-            <span
-              :if={@selected_program}
-              class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-200"
-            >
-              {@selected_program.name}
-            </span>
-            <.link
-              patch={queue_path(@selected_queue, @selected_family, nil, nil)}
-              class="btn btn-xs btn-ghost"
-            >
-              Clear Filter
-            </.link>
-          </div>
-          <div :if={@selected_source || @selected_program} class="mt-3 grid gap-2 lg:grid-cols-2">
-            <div
-              :if={@selected_source}
-              class="rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 dark:border-white/10 dark:bg-white/[0.03]"
-            >
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="space-y-1">
-                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
-                    Source Context
-                  </p>
-                  <p class="text-sm font-medium text-base-content">
-                    {@selected_source.name}
-                  </p>
-                  <p class="text-xs text-base-content/50">
-                    {@selected_source.review_finding_count} review · {@selected_source.promoted_finding_count} promoted · {@selected_source.noise_finding_count} noise
-                  </p>
-                </div>
-                <div class="space-y-2 text-right">
-                  <.status_badge status={@selected_source.status_variant}>
-                    {status_label(@selected_source.status)}
-                  </.status_badge>
-                  <.status_badge status={@selected_source.health_variant}>
-                    {status_label(@selected_source.health_status)}
-                  </.status_badge>
-                </div>
-              </div>
-              <p class="mt-3 text-xs text-base-content/50">
-                {@selected_source.health_note}
+        <div class="grid min-h-[34rem] lg:grid-cols-[17rem_minmax(0,1fr)]">
+          <aside class="border-b border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] lg:border-b-0 lg:border-r">
+            <div class="grid gap-2 sm:grid-cols-5 lg:grid-cols-1">
+              <.queue_link
+                :for={queue <- @queues}
+                queue={queue}
+                selected_queue={@selected_queue}
+                selected_family={@selected_family}
+                selected_source={@selected_source}
+                selected_program={@selected_program}
+                count={Map.fetch!(@queue_counts, queue)}
+              />
+            </div>
+
+            <div class="mt-4">
+              <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+                Lane
               </p>
-              <div class="mt-3 flex flex-wrap gap-2">
-                <.link navigate={~p"/acquisition/sources"} class="btn btn-xs btn-ghost">
-                  Source Registry
-                </.link>
-                <.link
-                  :if={@selected_source.latest_run_id}
-                  navigate={~p"/console/agents/runs/#{@selected_source.latest_run_id}"}
-                  class="btn btn-xs btn-ghost"
-                >
-                  Open Run
-                </.link>
+              <div class="grid grid-cols-3 gap-2 lg:grid-cols-1">
+                <.family_link
+                  :for={family <- @families}
+                  family={family}
+                  selected_family={@selected_family}
+                  selected_queue={@selected_queue}
+                  selected_source={@selected_source}
+                  selected_program={@selected_program}
+                />
+              </div>
+            </div>
+
+            <.filter_context
+              source={@selected_source}
+              program={@selected_program}
+              queue={@selected_queue}
+              family={@selected_family}
+            />
+          </aside>
+
+          <div class="min-w-0">
+            <div class="flex flex-col gap-3 border-b border-zinc-200 px-3 py-3 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-base-content">
+                  {status_label(@selected_queue)} · {family_filter_label(@selected_family)}
+                </p>
+                <p class="mt-0.5 text-xs text-base-content/50">
+                  Showing {length(@findings)} of {page_count(@findings_page)} findings
+                </p>
+              </div>
+              <div class="grid grid-cols-3 gap-2 sm:w-[22rem]">
+                <.queue_count label="Review" value={@queue_counts.review} />
+                <.queue_count label="Promoted" value={@queue_counts.promoted} />
+                <.queue_count label="Noise" value={@queue_counts.rejected + @queue_counts.suppressed} />
               </div>
             </div>
 
             <div
-              :if={@selected_program}
-              class="rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 dark:border-white/10 dark:bg-white/[0.03]"
+              :if={@findings != []}
+              id="acquisition-finding-cards"
+              class="divide-y divide-zinc-200 bg-base-100 dark:divide-white/10"
             >
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="space-y-1">
-                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
-                    Program Context
-                  </p>
-                  <p class="text-sm font-medium text-base-content">
-                    {@selected_program.name}
-                  </p>
-                  <p class="text-xs text-base-content/50">
-                    {@selected_program.review_finding_count} review · {@selected_program.promoted_finding_count} promoted · {@selected_program.noise_finding_count} noise
-                  </p>
-                </div>
-                <div class="space-y-2 text-right">
-                  <.status_badge status={@selected_program.status_variant}>
-                    {status_label(@selected_program.status)}
-                  </.status_badge>
-                  <.status_badge status={@selected_program.health_variant}>
-                    {status_label(@selected_program.health_status)}
-                  </.status_badge>
-                </div>
-              </div>
-              <p class="mt-3 text-xs text-base-content/50">
-                {@selected_program.health_note}
-              </p>
-              <div class="mt-3 flex flex-wrap gap-2">
-                <.link navigate={~p"/acquisition/programs"} class="btn btn-xs btn-ghost">
-                  Program Registry
-                </.link>
-                <.link
-                  :if={@selected_program.latest_run_id}
-                  navigate={~p"/console/agents/runs/#{@selected_program.latest_run_id}"}
-                  class="btn btn-xs btn-ghost"
-                >
-                  Open Run
-                </.link>
-              </div>
+              <.finding_card :for={finding <- @findings} finding={finding} />
             </div>
-          </div>
-        </div>
 
-        <div class="bg-base-100">
-          <div
-            :if={@findings != []}
-            id="acquisition-finding-cards"
-            class="divide-y divide-zinc-200 dark:divide-white/10"
-          >
-            <.finding_card :for={finding <- @findings} finding={finding} />
-          </div>
-
-          <div :if={@findings == []} class="p-4">
-            <.empty_state
-              icon="hero-inbox-stack"
-              title={"No #{queue_label(@selected_queue)} findings"}
-              description={empty_description(@selected_queue)}
-            />
+            <div :if={@findings == []} class="p-4">
+              <.empty_state
+                icon="hero-inbox-stack"
+                title={"No #{queue_label(@selected_queue)} findings"}
+                description={empty_description(@selected_queue)}
+              />
+            </div>
           </div>
         </div>
       </.section>
@@ -417,7 +314,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
   defp finding_card(assigns) do
     ~H"""
-    <article class="grid gap-4 px-3 py-4 sm:px-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:px-5">
+    <article class="grid gap-3 px-3 py-3 transition hover:bg-zinc-50/80 dark:hover:bg-white/[0.025] sm:px-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
       <div class="min-w-0 space-y-3">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div class="min-w-0 space-y-2">
@@ -437,9 +334,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
             </div>
 
             <div>
-              <h3 class="text-base font-semibold leading-6 text-base-content">
+              <.link
+                navigate={~p"/acquisition/findings/#{@finding.id}"}
+                class="text-base font-semibold leading-6 text-base-content hover:text-emerald-700 dark:hover:text-emerald-300"
+              >
                 {@finding.title}
-              </h3>
+              </.link>
               <p class="mt-1 max-w-4xl text-sm leading-6 text-base-content/65">
                 {@finding.summary || "No summary yet."}
               </p>
@@ -492,7 +392,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
         <div
           :if={@finding.latest_review_reason || @finding.latest_review_decision_at}
-          class="rounded-lg border border-zinc-200 bg-zinc-50/70 px-3 py-2 text-xs leading-5 text-base-content/60 dark:border-white/10 dark:bg-white/[0.03]"
+          class="rounded-md border border-zinc-200 bg-zinc-50/70 px-3 py-2 text-xs leading-5 text-base-content/60 dark:border-white/10 dark:bg-white/[0.03]"
         >
           <p :if={@finding.latest_review_reason}>
             {@finding.latest_review_reason}
@@ -519,8 +419,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         </div>
       </div>
 
-      <div class="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03]">
-        <div class="flex flex-wrap gap-2">
+      <div class="flex flex-col gap-3 border-t border-zinc-200 pt-3 dark:border-white/10 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+        <div class="flex flex-wrap gap-1.5">
           <.button
             navigate={~p"/acquisition/findings/#{@finding.id}"}
             class="px-2.5 py-1.5 text-xs whitespace-nowrap"
@@ -563,9 +463,113 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   attr :label, :string, required: true
   attr :value, :string, required: true
 
+  defp queue_count(assigns) do
+    ~H"""
+    <div class="rounded-md border border-base-content/10 bg-base-200/70 px-2.5 py-2">
+      <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
+        {@label}
+      </p>
+      <p class="mt-0.5 text-sm font-semibold tabular-nums text-base-content">{@value}</p>
+    </div>
+    """
+  end
+
+  attr :source, :map, default: nil
+  attr :program, :map, default: nil
+  attr :queue, :atom, required: true
+  attr :family, :atom, required: true
+
+  defp filter_context(assigns) do
+    ~H"""
+    <div :if={@source || @program} class="mt-4 space-y-3">
+      <.context_panel
+        :if={@source}
+        label="Source Context"
+        name={@source.name}
+        status={status_label(@source.status)}
+        status_variant={@source.status_variant}
+        health={status_label(@source.health_status)}
+        health_variant={@source.health_variant}
+        note={@source.health_note}
+        review_count={@source.review_finding_count}
+        promoted_count={@source.promoted_finding_count}
+        noise_count={@source.noise_finding_count}
+        registry_path={~p"/acquisition/sources"}
+        latest_run_id={@source.latest_run_id}
+      />
+      <.context_panel
+        :if={@program}
+        label="Program Context"
+        name={@program.name}
+        status={status_label(@program.status)}
+        status_variant={@program.status_variant}
+        health={status_label(@program.health_status)}
+        health_variant={@program.health_variant}
+        note={@program.health_note}
+        review_count={@program.review_finding_count}
+        promoted_count={@program.promoted_finding_count}
+        noise_count={@program.noise_finding_count}
+        registry_path={~p"/acquisition/programs"}
+        latest_run_id={@program.latest_run_id}
+      />
+      <.link patch={queue_path(@queue, @family, nil, nil)} class="btn btn-xs btn-ghost w-full">
+        Clear Filter
+      </.link>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :name, :string, required: true
+  attr :status, :string, required: true
+  attr :status_variant, :atom, required: true
+  attr :health, :string, required: true
+  attr :health_variant, :atom, required: true
+  attr :note, :string, default: nil
+  attr :review_count, :integer, default: 0
+  attr :promoted_count, :integer, default: 0
+  attr :noise_count, :integer, default: 0
+  attr :registry_path, :string, required: true
+  attr :latest_run_id, :string, default: nil
+
+  defp context_panel(assigns) do
+    ~H"""
+    <div class="rounded-lg border border-zinc-200 bg-white/80 p-3 dark:border-white/10 dark:bg-zinc-950/20">
+      <div class="space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+          {@label}
+        </p>
+        <p class="text-sm font-semibold leading-5 text-base-content">{@name}</p>
+        <div class="flex flex-wrap gap-1.5">
+          <.status_badge status={@status_variant}>{@status}</.status_badge>
+          <.status_badge status={@health_variant}>{@health}</.status_badge>
+        </div>
+      </div>
+      <p class="mt-3 text-xs leading-5 text-base-content/55">
+        {@review_count} review · {@promoted_count} promoted · {@noise_count} noise
+      </p>
+      <p :if={@note} class="mt-2 text-xs leading-5 text-base-content/50">
+        {@note}
+      </p>
+      <div class="mt-3 flex flex-wrap gap-1.5">
+        <.link navigate={@registry_path} class="btn btn-xs btn-ghost">
+          Registry
+        </.link>
+        <.link
+          :if={@latest_run_id}
+          navigate={~p"/console/agents/runs/#{@latest_run_id}"}
+          class="btn btn-xs btn-ghost"
+        >
+          Open Run
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
   defp finding_metric(assigns) do
     ~H"""
-    <div class="rounded-lg border border-base-content/10 bg-base-200 px-3 py-2">
+    <div class="rounded-md border border-base-content/10 bg-base-200/70 px-3 py-2">
       <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
         {@label}
       </p>
@@ -580,7 +584,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
   defp finding_fact(assigns) do
     ~H"""
-    <div class="flex min-w-0 items-start gap-2 rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2">
+    <div class="flex min-w-0 items-start gap-2 rounded-md border border-base-content/10 bg-base-200/60 px-3 py-2">
       <.icon name={@icon} class="mt-0.5 size-4 shrink-0 text-base-content/45" />
       <div class="min-w-0">
         <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
@@ -717,15 +721,15 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     <.link
       patch={queue_path(@queue, @selected_family, @selected_source, @selected_program)}
       class={[
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition",
+        "inline-flex min-w-0 items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm font-medium transition",
         if(@selected_queue == @queue,
-          do: "border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/20",
+          do: "border-emerald-600 bg-emerald-600 text-white shadow-sm shadow-emerald-600/20",
           else:
             "border-zinc-200 bg-white text-zinc-600 hover:border-emerald-300 hover:text-emerald-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-emerald-400/40 dark:hover:text-emerald-300"
         )
       ]}
     >
-      <span>{status_label(@queue)}</span>
+      <span class="truncate">{status_label(@queue)}</span>
       <span class={[
         "rounded-full px-2 py-0.5 text-xs font-semibold",
         if(@selected_queue == @queue,
@@ -750,9 +754,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     <.link
       patch={queue_path(@selected_queue, @family, @selected_source, @selected_program)}
       class={[
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition",
+        "inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition",
         if(@selected_family == @family,
-          do: "border-sky-500 bg-sky-500 text-white shadow-sm shadow-sky-500/20",
+          do: "border-sky-600 bg-sky-600 text-white shadow-sm shadow-sky-600/20",
           else:
             "border-zinc-200 bg-white text-zinc-600 hover:border-sky-300 hover:text-sky-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-sky-400/40 dark:hover:text-sky-300"
         )
