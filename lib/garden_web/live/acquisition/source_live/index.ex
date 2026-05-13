@@ -87,68 +87,61 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         </:actions>
       </.page_header>
 
-      <div class="grid gap-4 md:grid-cols-4">
-        <.stat_card
-          title="Sources"
-          value={Integer.to_string(@source_counts.total)}
-          description="Total registered scan targets."
-          icon="hero-globe-alt"
-        />
-        <.stat_card
-          title="Healthy"
-          value={Integer.to_string(@source_counts.healthy)}
-          description="Sources running cleanly or already in flight."
-          icon="hero-play-circle"
-          accent="emerald"
-        />
-        <.stat_card
-          title="Attention"
-          value={Integer.to_string(@source_counts.attention)}
-          description="Sources that are stale, failing, noisy, or blocked."
-          icon="hero-shield-exclamation"
-          accent="rose"
-        />
-        <.stat_card
-          title="Runnable"
-          value={Integer.to_string(@source_counts.runnable)}
-          description="Configured sources that can launch right now."
-          icon="hero-bolt"
-          accent="amber"
-        />
-      </div>
-
       <.section
         title="Source Work Queue"
-        description="Start with sources that need configuration. Configured sources can launch scans and feed the review queue."
+        description="Configure and launch source lanes that feed reviewable findings into acquisition."
         compact
         body_class="p-0"
       >
-        <div class="border-b border-zinc-200 px-4 py-3 dark:border-white/10">
-          <div class="flex flex-wrap items-center gap-2">
-            <.bucket_link
-              :for={bucket <- @buckets}
-              bucket={bucket}
-              selected_bucket={@selected_bucket}
-              count={bucket_count(@source_counts, bucket)}
-            />
-          </div>
-        </div>
+        <div class="grid min-h-[34rem] lg:grid-cols-[17rem_minmax(0,1fr)]">
+          <aside class="border-b border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] lg:border-b-0 lg:border-r">
+            <div class="grid gap-2 sm:grid-cols-4 lg:grid-cols-1">
+              <.bucket_link
+                :for={bucket <- @buckets}
+                bucket={bucket}
+                selected_bucket={@selected_bucket}
+                count={bucket_count(@source_counts, bucket)}
+              />
+            </div>
 
-        <div class="bg-base-100">
-          <div
-            :if={@sources != []}
-            id="acquisition-source-cards"
-            class="divide-y divide-zinc-200 dark:divide-white/10"
-          >
-            <.source_card :for={source <- @sources} source={source} />
-          </div>
+            <div class="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-1">
+              <.registry_count label="Total" value={@source_counts.total} />
+              <.registry_count label="Healthy" value={@source_counts.healthy} />
+              <.registry_count label="Attention" value={@source_counts.attention} />
+              <.registry_count label="Runnable" value={@source_counts.runnable} />
+            </div>
+          </aside>
 
-          <div :if={@sources == []} class="p-4">
-            <.empty_state
-              icon="hero-globe-alt"
-              title="No sources in this queue"
-              description="Change the source queue filter or import/configure more sources."
-            />
+          <div class="min-w-0">
+            <div class="flex flex-col gap-3 border-b border-zinc-200 px-3 py-3 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-base-content">
+                  {bucket_label(@selected_bucket)}
+                </p>
+                <p class="mt-0.5 text-xs text-base-content/50">
+                  Showing {length(@sources)} of {bucket_count(@source_counts, @selected_bucket)} sources
+                </p>
+              </div>
+              <.link navigate={~p"/acquisition/findings"} class="btn btn-sm btn-ghost">
+                Open Review Queue
+              </.link>
+            </div>
+
+            <div
+              :if={@sources != []}
+              id="acquisition-source-cards"
+              class="divide-y divide-zinc-200 bg-base-100 dark:divide-white/10"
+            >
+              <.source_card :for={source <- @sources} source={source} />
+            </div>
+
+            <div :if={@sources == []} class="p-4">
+              <.empty_state
+                icon="hero-globe-alt"
+                title="No sources in this queue"
+                description="Change the source queue filter or import/configure more sources."
+              />
+            </div>
           </div>
         </div>
       </.section>
@@ -165,15 +158,15 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     <.link
       patch={~p"/acquisition/sources?bucket=#{@bucket}"}
       class={[
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition",
+        "inline-flex min-w-0 items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm font-medium transition",
         if(@selected_bucket == @bucket,
-          do: "border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/20",
+          do: "border-emerald-600 bg-emerald-600 text-white shadow-sm shadow-emerald-600/20",
           else:
             "border-zinc-200 bg-white text-zinc-600 hover:border-emerald-300 hover:text-emerald-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-emerald-400/40 dark:hover:text-emerald-300"
         )
       ]}
     >
-      <span>{bucket_label(@bucket)}</span>
+      <span class="truncate">{bucket_label(@bucket)}</span>
       <span class={[
         "rounded-full px-2 py-0.5 text-xs font-semibold",
         if(@selected_bucket == @bucket,
@@ -191,7 +184,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   defp source_card(assigns) do
     ~H"""
-    <article class="grid gap-4 px-3 py-4 sm:px-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:px-5">
+    <article class="grid gap-3 px-3 py-3 transition hover:bg-zinc-50/80 dark:hover:bg-white/[0.025] sm:px-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
       <div class="min-w-0 space-y-3">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div class="min-w-0">
@@ -233,7 +226,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         </p>
       </div>
 
-      <div class="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+      <div class="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-white/10 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
         <.link
           :if={needs_configuration?(@source)}
           navigate={~p"/acquisition/sources/#{@source.id}/configure"}
@@ -279,9 +272,20 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   attr :label, :string, required: true
   attr :value, :string, required: true
 
+  defp registry_count(assigns) do
+    ~H"""
+    <div class="rounded-md border border-base-content/10 bg-base-200/70 px-2.5 py-2">
+      <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
+        {@label}
+      </p>
+      <p class="mt-0.5 text-sm font-semibold tabular-nums text-base-content">{@value}</p>
+    </div>
+    """
+  end
+
   defp source_fact(assigns) do
     ~H"""
-    <div class="rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2">
+    <div class="rounded-md border border-base-content/10 bg-base-200/60 px-3 py-2">
       <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
         {@label}
       </p>
