@@ -287,9 +287,42 @@ defmodule GnomeGardenWeb.Router do
       ]
   end
 
+  # Portal — public routes (no auth required)
+  scope "/portal", GnomeGardenWeb do
+    pipe_through :browser
+
+    get "/login", ClientPortal.SessionController, :new
+    post "/login", ClientPortal.SessionController, :create
+
+    # AshAuthentication magic link callback for ClientUser
+    # IMPORTANT: path is "/sign-in" (not "/portal/sign-in") because this scope
+    # already prefixes all routes with "/portal". The resolved URL is /portal/sign-in,
+    # which matches the URL generated in the sender module (~p"/portal/sign-in/#{token}").
+    magic_sign_in_route GnomeGarden.Accounts.ClientUser, :magic_link,
+      path: "/sign-in",
+      as: :portal
+  end
+
+  # Portal — authenticated routes (ClientUser session required)
+  scope "/", GnomeGardenWeb do
+    pipe_through :browser
+
+    ash_authentication_live_session :client_portal,
+      layout: {GnomeGardenWeb.Layouts, :portal_app},
+      on_mount: [{GnomeGardenWeb.ClientPortalAuth, :require_client_user}] do
+
+      live "/portal", ClientPortal.DashboardLive, :index
+      live "/portal/invoices", ClientPortal.InvoiceLive.Index, :index
+      live "/portal/invoices/:id", ClientPortal.InvoiceLive.Show, :show
+      live "/portal/agreements", ClientPortal.AgreementLive.Index, :index
+      live "/portal/agreements/:id", ClientPortal.AgreementLive.Show, :show
+    end
+  end
+
   scope "/webhooks", GnomeGardenWeb do
     pipe_through :webhooks
     post "/mercury", MercuryWebhookController, :receive
+    post "/stripe", StripeWebhookController, :receive
   end
 
   # Other scopes may use custom stacks.

@@ -1,0 +1,19 @@
+<header class="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-900 dark:border-gray-800">
+  <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-emerald-600 font-semibold text-lg">Gnome Automation</span>
+      <span class="text-gray-400 text-sm">Client Portal</span>
+    </div>
+    <div class="text-sm text-gray-500 dark:text-gray-400">
+      <%= if assigns[:current_client_user] do %>
+        <%= @current_client_user.email %>
+      <% end %>
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
+  <.flash kind={:info} flash={@flash} />
+  <.flash kind={:error} flash={@flash} />
+  {@inner_content}
+</main>

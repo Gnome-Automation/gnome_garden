@@ -1,0 +1,35 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center py-12 px-4">
+  <div class="max-w-md w-full">
+    <div class="text-center mb-8">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Client Portal</h1>
+      <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Sign in by entering your email to receive a sign-in link.</p>
+    </div>
+
+    <.flash kind={:info} flash={@flash} />
+    <.flash kind={:error} flash={@flash} />
+
+    <div class="bg-white dark:bg-gray-900 shadow rounded-lg p-6">
+      <form action={~p"/portal/login"} method="post">
+        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+        <div class="mb-4">
+          <label class="block text-sm/6 font-medium text-gray-900 dark:text-white mb-1">
+            Email address
+          </label>
+          <input
+            type="email"
+            name="email"
+            required
+            placeholder="you@example.com"
+            class="rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500 w-full"
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+        >
+          Send sign-in link
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
