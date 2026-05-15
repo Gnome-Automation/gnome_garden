@@ -194,9 +194,7 @@ defmodule GnomeGarden.Acquisition.Program do
               :string,
               {GnomeGarden.Calculations.EnumLabel, field: :health_status}
 
-    calculate :runnable,
-              :boolean,
-              expr(status == :active and not is_nil(discovery_program_id))
+    calculate :runnable, :boolean, GnomeGarden.Calculations.AcquisitionProgramRunnable
 
     calculate :health_status,
               :atom,

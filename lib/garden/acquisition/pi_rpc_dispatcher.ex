@@ -13,6 +13,7 @@ defmodule GnomeGarden.Acquisition.PiRpcDispatcher do
     "save_source" => {GnomeGarden.Procurement, :create_procurement_source},
     "save_organization" => {GnomeGarden.Operations, :create_organization},
     "save_discovery_record" => {GnomeGarden.Commercial, :create_discovery_record},
+    "save_prospect" => {GnomeGarden.Commercial, :create_prospect_discovery_record},
     "save_target" => {GnomeGarden.Commercial, :create_prospect_discovery_record},
     "save_opportunity" => {GnomeGarden.Commercial, :create_opportunity_discovery_record},
     "save_source_config" => {GnomeGarden.Procurement, :save_source_config},

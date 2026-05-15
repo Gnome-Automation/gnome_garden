@@ -17,6 +17,15 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
         status: :approved
       })
 
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          listing_selector: ".listing",
+          title_selector: ".title",
+          listing_url: procurement_source.url
+        }
+      })
+
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
 
@@ -37,6 +46,26 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     assert source.health_status == :failing
     assert source.health_variant == :error
     assert source.health_note =~ "Last run failed"
+  end
+
+  test "console sources do not mark unconfigured procurement sources runnable" do
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Unconfigured Source",
+        url: "https://example.com/procurement/unconfigured-source",
+        source_type: :utility,
+        portal_id: "unconfigured-source",
+        region: :ca,
+        priority: :high,
+        status: :approved
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, source} = Acquisition.get_source(acquisition_source.id, load: [:runnable])
+
+    refute source.runnable
   end
 
   test "console sources detect noisy finding mixes" do

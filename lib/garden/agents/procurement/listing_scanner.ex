@@ -171,6 +171,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   end
 
   defp complete_scan(source, bids, excluded, scored, saved, enriched) do
+    source = current_source(source)
+
     Procurement.mark_procurement_source_scanned!(
       source,
       %{metadata: scan_metadata(source, bids, excluded, scored, saved, enriched)}
@@ -186,6 +188,13 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
        enriched: enriched,
        bids: saved
      }}
+  end
+
+  defp current_source(source) do
+    case Procurement.get_procurement_source(source.id) do
+      {:ok, current_source} -> current_source
+      {:error, _error} -> source
+    end
   end
 
   defp scan_metadata(source, bids, excluded, scored, saved, enriched) do

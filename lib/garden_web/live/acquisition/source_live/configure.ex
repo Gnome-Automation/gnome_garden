@@ -92,35 +92,92 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
       <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <.section title={@source.name} description={@source.url}>
+          <div class="mb-4 rounded-lg border border-info/20 bg-info/10 p-3 text-sm text-base-content">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div class="space-y-1">
+                <p class="font-semibold">If you do not know these selectors, use discovery first.</p>
+                <p class="leading-5 text-base-content/70">
+                  Selectors tell the scanner which parts of the portal are bid listings. For example,
+                  <code class="rounded bg-base-100 px-1 py-0.5 text-xs">.bid-row</code>
+                  could mean one listing, and
+                  <code class="rounded bg-base-100 px-1 py-0.5 text-xs">.bid-title</code>
+                  could mean the title inside it. Browser discovery is the safer path when nobody has inspected this portal yet.
+                </p>
+              </div>
+              <div class="flex shrink-0 flex-wrap gap-2">
+                <.button
+                  :if={discoverable?(@source.procurement_source)}
+                  type="button"
+                  variant="primary"
+                  phx-click="start_discovery"
+                  phx-disable-with="Starting..."
+                >
+                  Start Discovery
+                </.button>
+                <.link
+                  href={@source.url}
+                  target="_blank"
+                  class="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:hover:border-white/20 dark:hover:bg-white/[0.08]"
+                >
+                  Open Source
+                </.link>
+              </div>
+            </div>
+          </div>
+
           <.form for={@form} id="source-config-form" phx-change="validate" phx-submit="save">
             <div class="grid gap-4 md:grid-cols-2">
-              <.input
+              <.config_input
                 field={@form[:listing_url]}
                 type="url"
                 label="Listing URL"
+                hint="The exact page where bid listings appear. This can be different from the portal home page."
                 required
               />
-              <.input
+              <.config_input
                 field={@form[:listing_selector]}
                 type="text"
                 label="Listing Selector"
+                hint="The repeated wrapper for one bid or opportunity row. Example: .bid-row, tr.notice, .solicitation-card."
                 required
               />
-              <.input
+              <.config_input
                 field={@form[:title_selector]}
                 type="text"
                 label="Title Selector"
+                hint="Inside each listing, the element containing the bid title. Example: .title, h3 a, td:nth-child(2)."
                 required
               />
-              <.input field={@form[:link_selector]} type="text" label="Link Selector" />
-              <.input field={@form[:date_selector]} type="text" label="Date Selector" />
-              <.input field={@form[:agency_selector]} type="text" label="Agency Selector" />
-              <.input
+              <.config_input
+                field={@form[:link_selector]}
+                type="text"
+                label="Link Selector"
+                hint="Inside each listing, the link to the bid detail page. Often just a or .title a."
+              />
+              <.config_input
+                field={@form[:date_selector]}
+                type="text"
+                label="Date Selector"
+                hint="Optional due-date or posted-date element inside the listing row."
+              />
+              <.config_input
+                field={@form[:agency_selector]}
+                type="text"
+                label="Agency Selector"
+                hint="Optional agency or buyer name inside the listing row."
+              />
+              <.config_input
                 field={@form[:description_selector]}
                 type="text"
                 label="Description Selector"
+                hint="Optional short description or scope text inside the listing row."
               />
-              <.input field={@form[:search_selector]} type="text" label="Search Selector" />
+              <.config_input
+                field={@form[:search_selector]}
+                type="text"
+                label="Search Selector"
+                hint="Optional search box selector if this source needs a keyword search before listings appear."
+              />
               <.input
                 field={@form[:pagination_type]}
                 type="select"
@@ -136,9 +193,15 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
                 field={@form[:pagination_selector]}
                 type="text"
                 label="Pagination Selector"
+                placeholder=".next, button.load-more"
               />
               <div class="md:col-span-2">
-                <.input field={@form[:notes]} type="textarea" label="Notes" />
+                <.config_input
+                  field={@form[:notes]}
+                  type="textarea"
+                  label="Notes"
+                  hint="Capture what you learned about the source, why selectors were chosen, or why discovery is needed."
+                />
               </div>
             </div>
 
@@ -258,6 +321,26 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   end
 
   defp value(map, key), do: Map.get(map, key) || Map.get(map, config_key_atom(key))
+
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :type, :string, default: "text"
+  attr :label, :string, required: true
+  attr :hint, :string, required: true
+
+  attr :rest, :global,
+    include: ~w(autocomplete cols disabled form list max maxlength min minlength pattern
+                placeholder readonly required rows size step)
+
+  defp config_input(assigns) do
+    ~H"""
+    <div>
+      <.input field={@field} type={@type} label={@label} {@rest} />
+      <p class="mt-1.5 text-xs leading-5 text-base-content/55">
+        {@hint}
+      </p>
+    </div>
+    """
+  end
 
   defp config_key_atom("listing_url"), do: :listing_url
   defp config_key_atom("listing_selector"), do: :listing_selector

@@ -4,7 +4,6 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Procurement
 
   @buckets [:needs_configuration, :ready, :attention, :all]
   @source_limit 75
@@ -40,9 +39,8 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
              load: [:procurement_source, :runnable]
            ),
          true <- scan_ready?(source),
-         source_id when is_binary(source_id) <- source.procurement_source_id,
          {:ok, %{run: run}} <-
-           Procurement.launch_procurement_source_scan(source_id,
+           Acquisition.launch_source_run(source,
              actor: socket.assigns.current_user
            ) do
       {:noreply,
@@ -56,14 +54,6 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
            socket,
            :error,
            "Configure this source before launching a scan."
-         )}
-
-      nil ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "Only procurement-backed sources can be launched from here today."
          )}
 
       {:error, error} ->
@@ -362,7 +352,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp parse_bucket(_bucket), do: :needs_configuration
 
   defp scan_ready?(source) do
-    source.runnable && configured_source?(source)
+    source.runnable && (configured_source?(source) || agentic_source?(source))
   end
 
   defp needs_configuration?(%{procurement_source: %{config_status: status}})
@@ -376,4 +366,12 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
        do: true
 
   defp configured_source?(_source), do: false
+
+  defp agentic_source?(%{procurement_source_id: source_id}) when is_binary(source_id), do: false
+
+  defp agentic_source?(%{scan_strategy: strategy})
+       when strategy in [:agentic, :deterministic],
+       do: true
+
+  defp agentic_source?(_source), do: false
 end

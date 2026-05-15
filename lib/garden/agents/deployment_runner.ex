@@ -164,6 +164,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
   defp start_runtime(run, deployment, template, actor) do
     runtime_instance_id = run.id
+    _ = Code.ensure_loaded(template.module)
 
     if function_exported?(template.module, :execute_run, 1) do
       start_direct_runtime(run, deployment, template, actor, runtime_instance_id)

@@ -213,12 +213,7 @@ defmodule GnomeGarden.Acquisition.Source do
               :string,
               {GnomeGarden.Calculations.EnumLabel, field: :health_status}
 
-    calculate :runnable,
-              :boolean,
-              expr(
-                enabled == true and status in [:active, :candidate] and
-                  not is_nil(procurement_source_id)
-              )
+    calculate :runnable, :boolean, GnomeGarden.Calculations.AcquisitionSourceRunnable
 
     calculate :health_status,
               :atom,

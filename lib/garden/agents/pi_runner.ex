@@ -114,12 +114,18 @@ defmodule GnomeGarden.Agents.PiRunner do
 
   @impl true
   def handle_continue(:open_port, state) do
-    sidecar = Path.join(File.cwd!(), "sidecar")
+    runtime_config = Application.get_env(:gnome_garden, :pi_runtime, [])
+
+    sidecar =
+      runtime_config |> Keyword.get(:sidecar_dir, "sidecar") |> then(&Path.join(File.cwd!(), &1))
+
     skill_path = "skills/#{state.skill}.md"
+    provider = Keyword.get(runtime_config, :provider, "zai")
+    model = Keyword.get(runtime_config, :model, "glm-5")
 
     cmd =
-      "xvfb-run --auto-servernum npx pi --mode rpc --no-session " <>
-        "--provider zai --model glm-5 --skill #{skill_path}"
+      "xvfb-run --auto-servernum npm exec -- pi --mode rpc --no-session " <>
+        "--provider #{provider} --model #{model} --skill #{skill_path}"
 
     port =
       Port.open({:spawn, cmd}, [
