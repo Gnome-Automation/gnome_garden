@@ -77,7 +77,7 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Show do
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <tr :for={line <- @invoice.invoice_lines}>
+            <tr :for={line <- (if is_list(@invoice.invoice_lines), do: @invoice.invoice_lines, else: [])}>
               <td class="px-6 py-4 text-sm text-gray-900 dark:text-white"><%= line.description %></td>
               <td class="px-6 py-4 text-sm text-gray-500 text-right"><%= Decimal.to_string(line.quantity) %></td>
               <td class="px-6 py-4 text-sm text-gray-500 text-right">$<%= Decimal.to_string(line.unit_price) %></td>

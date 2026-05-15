@@ -51,12 +51,12 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Index do
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issued</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Balance Due</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Invoice #</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Issued</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Due</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Balance Due</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -68,8 +68,8 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Index do
               </td>
               <td class="px-6 py-4 text-sm text-gray-500"><%= if inv.issued_on, do: Date.to_string(inv.issued_on), else: "—" %></td>
               <td class="px-6 py-4 text-sm text-gray-500"><%= if inv.due_on, do: Date.to_string(inv.due_on), else: "—" %></td>
-              <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">$<%= inv.total_amount %></td>
-              <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">$<%= inv.balance_amount %></td>
+              <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">$<%= Decimal.to_string(inv.total_amount) %></td>
+              <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">$<%= Decimal.to_string(inv.balance_amount) %></td>
               <td class="px-6 py-4">
                 <span class={"inline-flex items-center rounded-full px-2 py-1 text-xs font-medium #{status_badge_class(inv.status)}"}>
                   <%= inv.status %>
