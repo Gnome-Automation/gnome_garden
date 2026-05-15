@@ -67,6 +67,8 @@ defmodule GnomeGarden.Finance do
       define :reopen_invoice, action: :reopen
       define :list_open_invoices, action: :open
       define :list_overdue_invoices, action: :overdue
+      define :list_portal_invoices, action: :portal_index
+      define :get_portal_invoice, action: :portal_show, get_by: [:id]
     end
 
     resource GnomeGarden.Finance.InvoiceLine do

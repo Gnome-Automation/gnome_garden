@@ -10,6 +10,7 @@ defmodule GnomeGarden.Finance.Invoice do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Finance,
     data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshAdmin.Resource, AshStateMachine]
 
   admin do
@@ -51,6 +52,16 @@ defmodule GnomeGarden.Finance.Invoice do
       transition :void, from: [:draft, :issued], to: :void
       transition :reopen, from: [:void, :paid], to: :draft
       transition :write_off, from: [:issued, :partial], to: :write_off
+    end
+  end
+
+  policies do
+    policy action([:portal_index, :portal_show]) do
+      authorize_if always()
+    end
+
+    policy always() do
+      authorize_if always()
     end
   end
 
@@ -181,6 +192,19 @@ defmodule GnomeGarden.Finance.Invoice do
                 ]
               )
     end
+
+    read :portal_index do
+      description "Portal-scoped invoice list — returns only invoices for actor's organization."
+      filter expr(organization_id == ^actor(:organization_id))
+      prepare build(load: [:invoice_lines, :agreement, :organization])
+    end
+
+    read :portal_show do
+      description "Portal-scoped invoice detail — returns a single invoice for actor's organization."
+      filter expr(organization_id == ^actor(:organization_id))
+      get? true
+      prepare build(load: [:invoice_lines, :agreement, :organization])
+    end
   end
 
   attributes do
@@ -240,6 +264,12 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     attribute :notes, :string do
+      public? true
+    end
+
+    attribute :stripe_payment_url, :string do
+      allow_nil? true
+      description "Stripe Payment Link URL. Generated on invoice issue. Nil if Stripe is unavailable."
       public? true
     end
 

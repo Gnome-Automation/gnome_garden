@@ -10,6 +10,7 @@ defmodule GnomeGarden.Commercial.Agreement do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Commercial,
     data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshAdmin.Resource, AshStateMachine]
 
   admin do
@@ -58,6 +59,16 @@ defmodule GnomeGarden.Commercial.Agreement do
         to: :terminated
 
       transition :reopen, from: [:suspended, :terminated], to: :active
+    end
+  end
+
+  policies do
+    policy action([:portal_index, :portal_show]) do
+      authorize_if always()
+    end
+
+    policy always() do
+      authorize_if always()
     end
   end
 
@@ -215,6 +226,19 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :payments
                 ]
               )
+    end
+
+    read :portal_index do
+      description "Portal-scoped agreement list — returns only active agreements for actor's organization."
+      filter expr(organization_id == ^actor(:organization_id) and status == :active)
+      prepare build(load: [:invoices])
+    end
+
+    read :portal_show do
+      description "Portal-scoped agreement detail — returns a single agreement for actor's organization."
+      filter expr(organization_id == ^actor(:organization_id))
+      get? true
+      prepare build(load: [:payment_schedule_items, :invoices])
     end
   end
 

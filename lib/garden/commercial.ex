@@ -201,6 +201,8 @@ defmodule GnomeGarden.Commercial do
       define :reopen_agreement, action: :reopen
       define :list_active_agreements, action: :active
       define :list_expiring_agreements, action: :expiring_soon
+      define :list_portal_agreements, action: :portal_index
+      define :get_portal_agreement, action: :portal_show, get_by: [:id]
     end
 
     resource GnomeGarden.Commercial.ChangeOrder do
