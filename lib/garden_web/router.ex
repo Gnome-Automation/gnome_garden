@@ -266,6 +266,7 @@ defmodule GnomeGardenWeb.Router do
     sign_in_route reset_path: "/reset",
                   auth_routes_prefix: "/auth",
                   on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_no_user}],
+                  resources: [GnomeGarden.Accounts.User],
                   overrides: [
                     GnomeGardenWeb.AuthOverrides,
                     Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI

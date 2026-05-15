@@ -101,7 +101,7 @@ defmodule GnomeGardenWeb.InvoiceExportControllerTest do
 
     GnomeGarden.Repo.insert_all(
       "users",
-      [%{id: user_id_bin, email: "test-#{user_id}@example.com"}],
+      [%{id: user_id_bin, email: "test-#{user_id}@example.com", hashed_password: "$2b$12$placeholder_hash_for_test_only_do_not_use_in_prod"}],
       on_conflict: :nothing
     )
 

@@ -16,7 +16,8 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSourcesTest do
     user =
       Repo.insert!(%GnomeGarden.Accounts.User{
         id: Ecto.UUID.generate(),
-        email: "te-#{System.unique_integer([:positive])}@example.com"
+        email: "te-#{System.unique_integer([:positive])}@example.com",
+        hashed_password: "$2b$12$placeholder_hash_for_test_only_do_not_use_in_prod"
       })
 
     {:ok, team_member} =
