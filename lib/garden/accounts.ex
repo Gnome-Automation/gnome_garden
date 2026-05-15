@@ -8,6 +8,14 @@ defmodule GnomeGarden.Accounts do
   resources do
     resource GnomeGarden.Accounts.Token
 
+    resource GnomeGarden.Accounts.ClientUserToken
+
+    resource GnomeGarden.Accounts.ClientUser do
+      define :get_client_user, action: :read, get_by: [:id]
+      define :invite_client_user, action: :invite, args: [:email, :organization_id]
+      define :request_client_portal_access, action: :request_magic_link, args: [:email]
+    end
+
     resource GnomeGarden.Accounts.User do
       define :list_users, action: :read
       define :get_user, action: :read, get_by: [:id]
