@@ -27,6 +27,7 @@ defmodule GnomeGarden.Accounts.ClientUser do
       magic_link do
         identity_field :email
         registration_enabled? true
+        require_interaction? true
         sender GnomeGarden.Accounts.ClientUser.Senders.SendMagicLinkEmail
       end
     end
@@ -35,6 +36,10 @@ defmodule GnomeGarden.Accounts.ClientUser do
   postgres do
     table "client_users"
     repo GnomeGarden.Repo
+
+    references do
+      reference :organization, on_delete: :delete
+    end
   end
 
   actions do
@@ -72,7 +77,7 @@ defmodule GnomeGarden.Accounts.ClientUser do
       accept [:email, :organization_id]
       upsert? true
       upsert_identity :unique_email_per_org
-      upsert_fields [:email]
+      upsert_fields []
     end
   end
 
@@ -98,12 +103,15 @@ defmodule GnomeGarden.Accounts.ClientUser do
       public? true
     end
 
-    attribute :organization_id, :uuid do
+    timestamps()
+  end
+
+  relationships do
+    belongs_to :organization, GnomeGarden.Operations.Organization do
+      source_attribute :organization_id
       allow_nil? false
       public? true
     end
-
-    timestamps()
   end
 
   identities do

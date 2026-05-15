@@ -23,7 +23,8 @@ defmodule GnomeGarden.Accounts.ClientUserTest do
   test "same email can belong to two different orgs" do
     org2 = Ash.Seed.seed!(GnomeGarden.Operations.Organization, %{name: "Other Org"})
     org3 = Ash.Seed.seed!(GnomeGarden.Operations.Organization, %{name: "Third Org"})
-    assert {:ok, _} = Accounts.invite_client_user("shared@example.com", org2.id)
-    assert {:ok, _} = Accounts.invite_client_user("shared@example.com", org3.id)
+    assert {:ok, cu_a} = Accounts.invite_client_user("shared@example.com", org2.id)
+    assert {:ok, cu_b} = Accounts.invite_client_user("shared@example.com", org3.id)
+    assert cu_a.id != cu_b.id
   end
 end
