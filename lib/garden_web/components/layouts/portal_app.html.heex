@@ -1,18 +1,20 @@
-<header class="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-900 dark:border-gray-800">
-  <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <span class="text-emerald-600 font-semibold text-lg">Gnome Automation</span>
-      <span class="text-gray-400 text-sm">Client Portal</span>
+<div class="min-h-screen bg-base-200">
+  <header class="sticky top-0 z-10 border-b border-base-content/10 bg-base-100/95 backdrop-blur">
+    <div class="mx-auto max-w-4xl px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-base-content">Gnome Automation</span>
+        <span class="text-base-content/40 text-sm">/ Client Portal</span>
+      </div>
+      <div class="text-sm text-base-content/60">
+        <%= if assigns[:current_client_user] do %>
+          <%= @current_client_user.email %>
+        <% end %>
+      </div>
     </div>
-    <div class="text-sm text-gray-500 dark:text-gray-400">
-      <%= if assigns[:current_client_user] do %>
-        <%= @current_client_user.email %>
-      <% end %>
-    </div>
-  </div>
-</header>
+  </header>
 
-<main class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
-  <.flash_group flash={@flash} />
-  {@inner_content}
-</main>
+  <main class="mx-auto max-w-4xl px-4 sm:px-6 py-6">
+    <.flash_group flash={@flash} />
+    {@inner_content}
+  </main>
+</div>

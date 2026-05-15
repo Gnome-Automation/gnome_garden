@@ -29,57 +29,66 @@ defmodule GnomeGardenWeb.ClientPortal.DashboardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Dashboard</h1>
+    <.page max_width="max-w-full" class="pb-8">
+      <.page_header eyebrow="Client Portal">
+        Dashboard
+        <:subtitle>Overview of your outstanding balances and recent activity.</:subtitle>
+      </.page_header>
 
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 mb-8">
-        <div class="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Outstanding Balance</p>
-          <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
-            $<%= Decimal.to_string(Decimal.round(@outstanding_balance, 2)) %>
-          </p>
-        </div>
-        <div class="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Active Agreements</p>
-          <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white"><%= @active_agreements_count %></p>
-        </div>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
+        <.stat_card
+          title="Outstanding Balance"
+          value={"$#{Decimal.to_string(Decimal.round(@outstanding_balance, 2))}"}
+          description="Across open invoices"
+          icon="hero-banknotes"
+        />
+        <.stat_card
+          title="Active Agreements"
+          value={to_string(@active_agreements_count)}
+          description="Current service agreements"
+          icon="hero-document-text"
+        />
       </div>
 
-      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Recent Invoices</h2>
-      <div class="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Invoice</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Due</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <tr :for={inv <- @recent_invoices}>
-              <td class="px-6 py-4">
-                <.link navigate={~p"/portal/invoices/#{inv.id}"} class="text-emerald-600 hover:text-emerald-500">
-                  <%= inv.invoice_number %>
-                </.link>
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                <%= if inv.due_on, do: Date.to_string(inv.due_on), else: "—" %>
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">$<%= inv.total_amount %></td>
-              <td class="px-6 py-4">
-                <span class={"inline-flex items-center rounded-full px-2 py-1 text-xs font-medium #{status_badge_class(inv.status)}"}>
-                  <%= inv.status %>
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div :if={@recent_invoices == []} class="px-6 py-8 text-center text-sm text-gray-500">
-          No invoices yet.
+      <.section title="Recent Invoices" body_class="p-0">
+        <div :if={@recent_invoices != []} class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-base-content/10">
+            <thead>
+              <tr class="bg-base-200/50">
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Invoice</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Due</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Amount</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-base-content/5">
+              <tr :for={inv <- @recent_invoices} class="hover:bg-base-200/30 transition-colors">
+                <td class="px-4 py-3 text-sm text-base-content">
+                  <.link navigate={~p"/portal/invoices/#{inv.id}"} class="text-emerald-600 hover:text-emerald-500 font-medium">
+                    <%= inv.invoice_number %>
+                  </.link>
+                </td>
+                <td class="px-4 py-3 text-sm text-base-content/60">
+                  <%= if inv.due_on, do: Date.to_string(inv.due_on), else: "—" %>
+                </td>
+                <td class="px-4 py-3 text-sm text-base-content">$<%= inv.total_amount %></td>
+                <td class="px-4 py-3">
+                  <.status_badge status={invoice_status_variant(inv.status)}>
+                    <%= String.capitalize(to_string(inv.status)) %>
+                  </.status_badge>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
-    </div>
+        <.empty_state
+          :if={@recent_invoices == []}
+          icon="hero-receipt-percent"
+          title="No invoices yet"
+          description="Your invoices will appear here once they are issued."
+        />
+      </.section>
+    </.page>
     """
   end
 
@@ -97,8 +106,10 @@ defmodule GnomeGardenWeb.ClientPortal.DashboardLive do
     end
   end
 
-  defp status_badge_class(:issued), do: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
-  defp status_badge_class(:partial), do: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-  defp status_badge_class(:paid), do: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400"
-  defp status_badge_class(_), do: "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+  defp invoice_status_variant(:issued), do: :warning
+  defp invoice_status_variant(:partial), do: :info
+  defp invoice_status_variant(:paid), do: :success
+  defp invoice_status_variant(:void), do: :error
+  defp invoice_status_variant(:write_off), do: :error
+  defp invoice_status_variant(_), do: :default
 end
