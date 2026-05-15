@@ -4,7 +4,6 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
   import GnomeGardenWeb.Execution.Helpers, only: [format_datetime: 1]
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Commercial
 
   @buckets [:all, :ready, :attention]
   @program_limit 75
@@ -34,10 +33,11 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
 
   @impl true
   def handle_event("launch_run", %{"id" => id}, socket) do
-    with {:ok, program} <- Acquisition.get_program(id, actor: socket.assigns.current_user),
-         discovery_program_id when is_binary(discovery_program_id) <- program.discovery_program_id,
+    with {:ok, program} <-
+           Acquisition.get_program(id, actor: socket.assigns.current_user, load: [:runnable]),
+         true <- program.runnable,
          {:ok, %{run: run}} <-
-           Commercial.launch_discovery_program(discovery_program_id,
+           Acquisition.launch_program_run(program,
              actor: socket.assigns.current_user
            ) do
       {:noreply,
@@ -45,13 +45,8 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
        |> refresh_programs()
        |> put_flash(:info, "Launched discovery run #{run.id} for #{program.name}.")}
     else
-      nil ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "Only discovery-backed programs can be launched from here today."
-         )}
+      false ->
+        {:noreply, put_flash(socket, :error, "Program is not launchable yet.")}
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not launch program run: #{inspect(error)}")}

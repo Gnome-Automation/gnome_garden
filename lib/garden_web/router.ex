@@ -290,6 +290,7 @@ defmodule GnomeGardenWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
+      get "/sign-in", GnomeGardenWeb.DevAuthController, :sign_in
       live_dashboard "/dashboard", metrics: GnomeGardenWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end

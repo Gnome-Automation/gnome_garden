@@ -43,7 +43,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
 
     assert acquisition_source.name == source.name
     assert acquisition_source.finding_count == 1
-    assert acquisition_source.runnable
+    refute acquisition_source.runnable
 
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources")
 
@@ -94,6 +94,9 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
       Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
 
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
+
+    assert render(view) =~ "If you do not know these selectors, use discovery first."
+    assert render(view) =~ "The repeated wrapper for one bid or opportunity row."
 
     view
     |> form("#source-config-form",

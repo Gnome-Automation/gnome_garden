@@ -5,6 +5,19 @@ if File.exists?(".env") do
   Dotenvy.source!(".env")
 end
 
+blank_to_nil = fn
+  value when is_binary(value) ->
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+
+  _value ->
+    nil
+end
+
+present? = fn value -> not is_nil(blank_to_nil.(value)) end
+
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
 # system starts, so it is typically used to load production configuration
@@ -61,7 +74,9 @@ if brave_api_key = System.get_env("BRAVE_API_KEY") do
     brave_api_key: brave_api_key
 end
 
-if config_env() == :prod and is_nil(System.get_env("GARAGE_ACCESS_KEY")) and
+garage_access_key = System.get_env("GARAGE_ACCESS_KEY")
+
+if config_env() == :prod and not present?.(garage_access_key) and
      System.get_env("ALLOW_LOCAL_STORAGE_IN_PROD") != "true" do
   raise """
   environment variable GARAGE_ACCESS_KEY is missing.
@@ -70,9 +85,9 @@ if config_env() == :prod and is_nil(System.get_env("GARAGE_ACCESS_KEY")) and
   """
 end
 
-if garage_access_key = System.get_env("GARAGE_ACCESS_KEY") do
+if present?.(garage_access_key) do
   garage_secret_key =
-    System.get_env("GARAGE_SECRET_KEY") ||
+    blank_to_nil.(System.get_env("GARAGE_SECRET_KEY")) ||
       raise "Missing environment variable `GARAGE_SECRET_KEY` for acquisition document storage."
 
   config :gnome_garden, GnomeGarden.Acquisition.Document,

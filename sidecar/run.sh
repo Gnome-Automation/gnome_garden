@@ -64,7 +64,8 @@ echo "Provider: zai / glm-5"
 echo "=========================="
 echo ""
 
-xvfb-run --auto-servernum npx pi \
+xvfb-run --auto-servernum npm exec -- pi \
+  --offline \
   --provider zai \
   --model glm-5 \
   --append-system-prompt "$SKILL" \

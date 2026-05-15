@@ -20,6 +20,8 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
              %{source_id: source_id},
              %{tool_context: tool_context, agent_run_id: run.id}
            ) do
+      _ = mark_run_state(source, run, :completed)
+
       {:ok,
        %{
          text: summary_text(source, result),
@@ -31,6 +33,10 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
            saved: value(result, :saved)
          }
        }}
+    else
+      {:error, reason} = error ->
+        _ = mark_run_state_for_error(run, deployment, reason)
+        error
     end
   end
 
@@ -47,6 +53,23 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
   defp track_execution(run_id) do
     AgentTracker.track_tool(run_id, "run_source_scan")
     :ok
+  end
+
+  defp mark_run_state_for_error(run, deployment, _reason) do
+    with {:ok, source_id} <- source_id(run, deployment),
+         {:ok, source} <- Procurement.get_procurement_source(source_id) do
+      mark_run_state(source, run, :failed)
+    end
+  end
+
+  defp mark_run_state(source, run, state) do
+    metadata =
+      source.metadata
+      |> Map.new()
+      |> Map.put("last_agent_run_id", run.id)
+      |> Map.put("last_agent_run_state", state)
+
+    Procurement.update_procurement_source(source, %{metadata: metadata}, authorize?: false)
   end
 
   defp summary_text(source, result) do

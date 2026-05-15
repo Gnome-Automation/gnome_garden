@@ -150,8 +150,8 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerTool({
-    name: "save_prospect",
-    label: "Save Prospect",
+    name: "save_target",
+    label: "Save Target",
     description:
       "Persist a prospect — company hiring controls/automation talent or otherwise signaling demand. " +
       "Creates Organization + DiscoveryRecord transactionally. Idempotent on website domain.",
@@ -170,7 +170,7 @@ export default function (pi: ExtensionAPI) {
       metadata: Type.Optional(Type.Any()),
     }),
     async execute(_id, params) {
-      const r = await call("save_prospect", {
+      const r = await call("save_target", {
         name: params.name,
         website: params.website,
         location: params.location,
@@ -188,8 +188,8 @@ export default function (pi: ExtensionAPI) {
 
       return reply(
         r.success
-          ? `✓ Saved prospect "${params.name}" (fit:${params.fit_score ?? 50} intent:${params.intent_score ?? 50})`
-          : `✗ save_prospect failed: ${summarizeErrors(r.errors)} — queued for retry`,
+          ? `✓ Saved target "${params.name}" (fit:${params.fit_score ?? 50} intent:${params.intent_score ?? 50})`
+          : `✗ save_target failed: ${summarizeErrors(r.errors)} — queued for retry`,
         r,
       );
     },
@@ -239,6 +239,65 @@ export default function (pi: ExtensionAPI) {
         r.success
           ? `✓ Saved OPPORTUNITY "${params.name}" (fit:${params.fit_score ?? 70} intent:${params.intent_score ?? 80})`
           : `✗ save_opportunity failed: ${summarizeErrors(r.errors)} — queued for retry`,
+        r,
+      );
+    },
+  });
+
+  pi.registerTool({
+    name: "save_source_config",
+    label: "Save Source Config",
+    description:
+      "Persist CSS selectors for a procurement source so future scans can use deterministic scraping.",
+    parameters: Type.Object({
+      procurement_source_id: Type.Optional(Type.String()),
+      source_id: Type.Optional(Type.String()),
+      url: Type.Optional(Type.String()),
+      listing_url: Type.String(),
+      listing_selector: Type.String({
+        description: "CSS selector for each listing row or card",
+      }),
+      title_selector: Type.String({
+        description: "CSS selector for the title inside each listing row",
+      }),
+      date_selector: Type.Optional(Type.String()),
+      link_selector: Type.Optional(Type.String()),
+      description_selector: Type.Optional(Type.String()),
+      agency_selector: Type.Optional(Type.String()),
+      pagination_type: Type.Optional(Type.String()),
+      pagination_selector: Type.Optional(Type.String()),
+      search_selector: Type.Optional(Type.String()),
+      notes: Type.Optional(Type.String()),
+      scrape_config: Type.Optional(Type.Any()),
+    }),
+    async execute(_id, params) {
+      const r = await call("save_source_config", params as Record<string, unknown>);
+      return reply(
+        r.success
+          ? "✓ Saved source config for deterministic scans"
+          : `✗ save_source_config failed: ${summarizeErrors(r.errors)} — queued for retry`,
+        r,
+      );
+    },
+  });
+
+  pi.registerTool({
+    name: "run_source_scan",
+    label: "Run Source Scan",
+    description:
+      "Run the deterministic scanner for one configured procurement source by ID or URL.",
+    parameters: Type.Object({
+      procurement_source_id: Type.Optional(Type.String()),
+      source_id: Type.Optional(Type.String()),
+      url: Type.Optional(Type.String()),
+      source_url: Type.Optional(Type.String()),
+    }),
+    async execute(_id, params) {
+      const r = await call("run_source_scan", params as Record<string, unknown>);
+      return reply(
+        r.success
+          ? "✓ Source scan completed"
+          : `✗ run_source_scan failed: ${summarizeErrors(r.errors)} — queued for retry`,
         r,
       );
     },

@@ -12,7 +12,7 @@ defmodule GnomeGarden.Acquisition do
     otp_app: :gnome_garden,
     extensions: [AshAdmin.Domain]
 
-  alias GnomeGarden.Acquisition.{Projector, Review}
+  alias GnomeGarden.Acquisition.{Projector, Review, Runner}
 
   admin do
     show? true
@@ -122,6 +122,11 @@ defmodule GnomeGarden.Acquisition do
   def sync_program(program_or_id, opts \\ []), do: Projector.sync_program(program_or_id, opts)
 
   def backfill_intake(opts \\ []), do: Projector.backfill(opts)
+
+  def launch_source_run(source_or_id, opts \\ []), do: Runner.launch_source(source_or_id, opts)
+
+  def launch_program_run(program_or_id, opts \\ []),
+    do: Runner.launch_program(program_or_id, opts)
 
   def start_review_for_finding(finding_or_id, opts \\ []),
     do: Review.start_review(finding_or_id, opts)
