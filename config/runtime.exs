@@ -154,6 +154,17 @@ if config_env() == :prod do
       System.get_env("TOKEN_SIGNING_SECRET") ||
         raise("Missing environment variable `TOKEN_SIGNING_SECRET`!")
 
+  stripe_secret_key =
+    System.get_env("STRIPE_SECRET_KEY") ||
+      raise "environment variable STRIPE_SECRET_KEY is missing"
+
+  stripe_webhook_secret =
+    System.get_env("STRIPE_WEBHOOK_SECRET") ||
+      raise "environment variable STRIPE_WEBHOOK_SECRET is missing"
+
+  config :stripity_stripe, api_key: stripe_secret_key
+  config :gnome_garden, stripe_webhook_secret: stripe_webhook_secret
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key

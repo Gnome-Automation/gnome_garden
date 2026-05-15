@@ -127,6 +127,8 @@ defmodule GnomeGarden.Finance.Invoice do
         total_amount = Ash.Changeset.get_attribute(changeset, :total_amount)
         Ash.Changeset.change_attribute(changeset, :balance_amount, total_amount)
       end
+
+      change GnomeGarden.Finance.Changes.GenerateStripePaymentLink
     end
 
     update :mark_paid do
