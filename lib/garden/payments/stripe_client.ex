@@ -17,6 +17,14 @@ defmodule GnomeGarden.Payments.StripeClient do
   Returns {:ok, url} on success, {:error, reason} on failure.
   """
   def create_payment_link(invoice) do
+    if is_nil(invoice.total_amount) do
+      {:error, :total_amount_nil}
+    else
+      do_create_payment_link(invoice)
+    end
+  end
+
+  defp do_create_payment_link(invoice) do
     with {:ok, _api_key} <- get_api_key(),
          {:ok, price_id} <- create_price(invoice),
          {:ok, fee_price_id} <- create_fee_price(invoice),
@@ -28,6 +36,7 @@ defmodule GnomeGarden.Payments.StripeClient do
         {:error, reason}
     end
   end
+
 
   defp get_api_key do
     case Application.get_env(:stripity_stripe, :api_key) do

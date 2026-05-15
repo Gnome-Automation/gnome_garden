@@ -113,7 +113,8 @@ defmodule GnomeGarden.Finance.Invoice do
         :total_amount,
         :balance_amount,
         :due_on,
-        :notes
+        :notes,
+        :stripe_payment_url
       ]
     end
 

@@ -1,8 +1,6 @@
 defmodule GnomeGardenWeb.StripeWebhookControllerTest do
   use GnomeGardenWeb.ConnCase, async: true
 
-  alias GnomeGarden.Finance
-
   @webhook_secret "test_webhook_secret"
 
   setup do

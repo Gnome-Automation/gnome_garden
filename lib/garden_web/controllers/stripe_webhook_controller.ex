@@ -18,9 +18,15 @@ defmodule GnomeGardenWeb.StripeWebhookController do
 
     case verify_signature(raw_body, signature, secret) do
       :ok ->
-        payload = Jason.decode!(raw_body)
-        handle_event(payload["type"], payload)
-        send_resp(conn, 200, "ok")
+        case Jason.decode(raw_body) do
+          {:ok, payload} ->
+            handle_event(payload["type"], payload)
+            send_resp(conn, 200, "ok")
+
+          {:error, _} ->
+            Logger.warning("StripeWebhookController: invalid JSON body")
+            send_resp(conn, 400, "bad request")
+        end
 
       {:error, reason} ->
         Logger.warning("StripeWebhookController: invalid signature — #{inspect(reason)}")
@@ -33,7 +39,8 @@ defmodule GnomeGardenWeb.StripeWebhookController do
 
   defp verify_signature(body, signature, secret) do
     with [timestamp] <- Regex.run(~r/t=(\d+)/, signature, capture: :all_but_first),
-         [expected_sig] <- Regex.run(~r/v1=([a-f0-9]+)/, signature, capture: :all_but_first) do
+         [expected_sig] <- Regex.run(~r/v1=([a-f0-9]+)/, signature, capture: :all_but_first),
+         :ok <- check_timestamp(timestamp) do
       signed_payload = "#{timestamp}.#{body}"
       computed = :crypto.mac(:hmac, :sha256, secret, signed_payload) |> Base.encode16(case: :lower)
 
@@ -47,11 +54,22 @@ defmodule GnomeGardenWeb.StripeWebhookController do
     end
   end
 
+  defp check_timestamp(timestamp) do
+    case Integer.parse(timestamp) do
+      {ts, ""} ->
+        now = System.system_time(:second)
+        if abs(now - ts) <= 300, do: :ok, else: {:error, :timestamp_too_old}
+
+      _ ->
+        {:error, :invalid_timestamp}
+    end
+  end
+
   defp handle_event("checkout.session.completed", payload) do
     invoice_id = get_in(payload, ["data", "object", "metadata", "invoice_id"])
 
     if invoice_id do
-      case Finance.get_invoice(invoice_id) do
+      case Finance.get_invoice(invoice_id, authorize?: false) do
         {:ok, invoice} when invoice.status in [:issued, :partial] ->
           case Finance.pay_invoice(invoice, authorize?: false) do
             {:ok, _} -> Logger.info("StripeWebhookController: marked invoice #{invoice_id} as paid")
