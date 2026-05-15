@@ -9,4 +9,13 @@ defmodule GnomeGarden.Secrets do
       ) do
     Application.fetch_env(:gnome_garden, :token_signing_secret)
   end
+
+  def secret_for(
+        [:authentication, :tokens, :signing_secret],
+        GnomeGarden.Accounts.ClientUser,
+        _opts,
+        _context
+      ) do
+    Application.fetch_env(:gnome_garden, :token_signing_secret)
+  end
 end
