@@ -58,7 +58,7 @@ defmodule GnomeGarden.Accounts.ClientUser do
 
       upsert? true
       upsert_identity :unique_email_per_org
-      upsert_fields [:email]
+      upsert_fields []
 
       change AshAuthentication.Strategy.MagicLink.SignInChange
 
