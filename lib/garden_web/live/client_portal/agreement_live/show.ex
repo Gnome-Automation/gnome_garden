@@ -59,7 +59,7 @@ defmodule GnomeGardenWeb.ClientPortal.AgreementLive.Show do
               </span>
             </dd>
           </div>
-          <div>
+          <div :if={@agreement.payment_terms_days}>
             <dt class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Payment Terms</dt>
             <dd class="mt-1 text-sm text-gray-900 dark:text-white">Net <%= @agreement.payment_terms_days %></dd>
           </div>

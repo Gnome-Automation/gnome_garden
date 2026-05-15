@@ -42,7 +42,7 @@ defmodule GnomeGardenWeb.ClientPortal.AgreementLive.Index do
                   <%= ag.name %>
                 </.link>
               </td>
-              <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 capitalize"><%= ag.agreement_type %></td>
+              <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 capitalize"><%= ag.agreement_type || "—" %></td>
               <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 capitalize"><%= ag.billing_model %></td>
               <td class="px-6 py-4">
                 <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400">
