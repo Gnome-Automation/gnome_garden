@@ -71,6 +71,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           Work the source backlog from configuration to scanning. The restored catalog starts here before it creates reviewable findings.
         </:subtitle>
         <:actions>
+          <.button navigate={~p"/acquisition/dashboard"}>
+            Dashboard
+          </.button>
           <.button navigate={~p"/acquisition/findings"}>
             Queue
           </.button>

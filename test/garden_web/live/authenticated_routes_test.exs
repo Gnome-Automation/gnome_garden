@@ -9,6 +9,7 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     "/console/agents/deployments/new",
     "/console/agents/runs/00000000-0000-0000-0000-000000000000",
     "/settings/users",
+    "/acquisition/dashboard",
     "/acquisition/findings",
     "/acquisition/findings/00000000-0000-0000-0000-000000000000",
     "/acquisition/sources",
