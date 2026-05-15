@@ -5,8 +5,9 @@ defmodule GnomeGardenWeb.ClientPortalAuth do
   Usage in ash_authentication_live_session:
     on_mount: [{GnomeGardenWeb.ClientPortalAuth, :require_client_user}]
 
-  Sets `current_client_user` from session. Redirects unauthenticated
-  visitors to /portal/login.
+  Expects `current_client_user` to be assigned by `ash_authentication_live_session`
+  (which decodes the session cookie for the ClientUser resource). Redirects
+  unauthenticated visitors to /portal/login if the assign is nil.
   """
 
   import Phoenix.Component
