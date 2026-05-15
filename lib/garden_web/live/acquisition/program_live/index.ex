@@ -63,6 +63,9 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
           Durable acquisition programs define why the platform is scanning. This is the acquisition-native view of lane ownership, cadence, and output volume.
         </:subtitle>
         <:actions>
+          <.button navigate={~p"/acquisition/dashboard"}>
+            Dashboard
+          </.button>
           <.button navigate={~p"/acquisition/findings"}>
             Queue
           </.button>

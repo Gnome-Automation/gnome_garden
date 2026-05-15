@@ -372,33 +372,102 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
     error_text = RunFailure.format(reason)
     failure_details = RunFailure.details(reason, phase: :runtime)
 
-    AgentTracker.mark_complete(runtime_instance_id, :error, error_text)
+    if timeout_with_saved_outputs?(failure_details, run.id) do
+      complete_timed_out_run_with_outputs(run, runtime_instance_id, tracker_entry, actor)
+    else
+      AgentTracker.mark_complete(runtime_instance_id, :error, error_text)
 
-    case Agents.fail_agent_run(
+      case Agents.fail_agent_run(
+             run,
+             %{
+               error: error_text,
+               failure_details: failure_details
+             },
+             actor: actor
+           ) do
+        {:ok, _failed_run} ->
+          persist_message(%{
+            agent_run_id: run.id,
+            role: :system,
+            content: "Run failed: #{error_text}",
+            metadata: %{
+              failure_details: failure_details,
+              tool_count: (tracker_entry && tracker_entry.tool_calls) || 0
+            }
+          })
+
+          :ok
+
+        {:error, error} ->
+          Logger.error("Failed to mark run #{run.id} as failed: #{inspect(error)}")
+          :error
+      end
+    end
+  end
+
+  defp timeout_with_saved_outputs?(%{"category" => "timeout"}, run_id) do
+    case Agents.list_agent_run_outputs_for_run(run_id) do
+      {:ok, [_output | _]} -> true
+      _ -> false
+    end
+  end
+
+  defp timeout_with_saved_outputs?(_failure_details, _run_id), do: false
+
+  defp complete_timed_out_run_with_outputs(run, runtime_instance_id, tracker_entry, actor) do
+    outputs =
+      case Agents.list_agent_run_outputs_for_run(run.id) do
+        {:ok, outputs} -> outputs
+        {:error, _error} -> []
+      end
+
+    output_count = length(outputs)
+    result_text = timeout_recovery_result(output_count)
+    tool_count = (tracker_entry && tracker_entry.tool_calls) || output_count
+    token_count = (tracker_entry && tracker_entry.tokens) || 0
+
+    AgentTracker.mark_complete(runtime_instance_id, :done, result_text)
+
+    case Agents.complete_agent_run(
            run,
            %{
-             error: error_text,
-             failure_details: failure_details
+             result: result_text,
+             result_summary: %{
+               preview: result_text,
+               recovered_from_timeout: true,
+               output_count: output_count
+             },
+             token_count: token_count,
+             tool_count: tool_count
            },
            actor: actor
          ) do
-      {:ok, _failed_run} ->
+      {:ok, _completed_run} ->
         persist_message(%{
           agent_run_id: run.id,
           role: :system,
-          content: "Run failed: #{error_text}",
+          content: result_text,
           metadata: %{
-            failure_details: failure_details,
-            tool_count: (tracker_entry && tracker_entry.tool_calls) || 0
+            recovered_from_timeout: true,
+            output_count: output_count,
+            tool_count: tool_count
           }
         })
 
         :ok
 
       {:error, error} ->
-        Logger.error("Failed to mark run #{run.id} as failed: #{inspect(error)}")
+        Logger.error("Failed to complete timed-out run #{run.id}: #{inspect(error)}")
         :error
     end
+  end
+
+  defp timeout_recovery_result(1) do
+    "Run timed out after saving 1 reviewable output. The saved output is ready for operator review."
+  end
+
+  defp timeout_recovery_result(output_count) do
+    "Run timed out after saving #{output_count} reviewable outputs. The saved outputs are ready for operator review."
   end
 
   defp fail_pending_run(run, reason, actor) do
