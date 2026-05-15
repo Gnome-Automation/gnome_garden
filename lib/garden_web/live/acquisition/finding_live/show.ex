@@ -101,6 +101,24 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     {:noreply, assign(socket, :action_dialog, nil)}
   end
 
+  def handle_event("validate_review_notes", %{"review_notes" => params}, socket) do
+    form = AshPhoenix.Form.validate(socket.assigns.review_notes_form, params)
+    {:noreply, assign(socket, :review_notes_form, to_form(form))}
+  end
+
+  def handle_event("save_review_notes", %{"review_notes" => params}, socket) do
+    case AshPhoenix.Form.submit(socket.assigns.review_notes_form, params: params) do
+      {:ok, _finding} ->
+        {:noreply,
+         socket
+         |> refresh_finding()
+         |> put_flash(:info, "Review notes saved")}
+
+      {:error, form} ->
+        {:noreply, assign(socket, :review_notes_form, to_form(form))}
+    end
+  end
+
   def handle_event("submit_accept", params, socket) do
     case Acquisition.accept_finding_review(
            socket.assigns.finding.id,
@@ -317,6 +335,39 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         finding_documents={@finding_documents}
         discovery_evidence={@discovery_evidence}
       />
+
+      <.section
+        title="Review Notes"
+        description="Fill in the minimum explanation needed to accept or promote this finding without leaving the review page."
+      >
+        <.form
+          for={@review_notes_form}
+          id="finding-review-notes-form"
+          phx-change="validate_review_notes"
+          phx-submit="save_review_notes"
+          class="space-y-4"
+        >
+          <div class="grid gap-4 lg:grid-cols-2">
+            <.input
+              field={@review_notes_form[:summary]}
+              type="textarea"
+              label="Finding Summary"
+            />
+            <.input
+              field={@review_notes_form[:work_summary]}
+              type="textarea"
+              label="Work Summary"
+            />
+            <div class="lg:col-span-2">
+              <.input field={@review_notes_form[:source_url]} label="Source URL" />
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <.button variant="primary">Save Review Notes</.button>
+          </div>
+        </.form>
+      </.section>
 
       <.section
         title="Linked Documents"
@@ -961,12 +1012,23 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp assign_finding_context(socket, finding) do
     assign(socket,
       finding: finding,
+      review_notes_form: build_review_notes_form(finding, socket.assigns.current_user),
       finding_documents: load_finding_documents(finding, socket.assigns.current_user),
       review_decisions: load_review_decisions(finding, socket.assigns.current_user),
       discovery_identity_review:
         load_discovery_identity_review(finding, socket.assigns.current_user),
       discovery_evidence: load_discovery_evidence(finding, socket.assigns.current_user)
     )
+  end
+
+  defp build_review_notes_form(finding, actor) do
+    finding
+    |> AshPhoenix.Form.for_update(:update,
+      actor: actor,
+      domain: Acquisition,
+      as: "review_notes"
+    )
+    |> to_form()
   end
 
   defp load_discovery_identity_review(%{source_discovery_record: nil}, _actor), do: nil

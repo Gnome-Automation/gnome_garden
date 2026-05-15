@@ -151,6 +151,8 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
               <a
                 :if={@finding.source_url}
                 href={@finding.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
                 class="break-all text-emerald-700 hover:text-primary"
               >
                 {@finding.source_url}
