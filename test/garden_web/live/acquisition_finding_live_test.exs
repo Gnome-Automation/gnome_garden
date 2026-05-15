@@ -170,6 +170,43 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert render(view) =~ "Add at least one piece of discovery evidence before accepting."
   end
 
+  test "finding detail can save review notes to clear acceptance prep", %{conn: conn} do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Review Notes Controls Work",
+        url: "https://example.com/bids/review-notes-controls-work",
+        external_id: "REVIEW-NOTES-CONTROLS-WORK",
+        agency: "Regional Utility",
+        location: "Anaheim, CA",
+        region: :oc,
+        score_total: 76,
+        score_tier: :hot
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
+
+    assert render(view) =~ "Add a summary before accepting."
+
+    view
+    |> form("#finding-review-notes-form", %{
+      "review_notes" => %{
+        "summary" => "Controls work with a live source URL and enough context for review."
+      }
+    })
+    |> render_submit()
+
+    {:ok, refreshed_finding} =
+      Acquisition.get_finding(finding.id, load: [:acceptance_ready, :acceptance_blockers])
+
+    assert refreshed_finding.acceptance_ready
+    assert refreshed_finding.acceptance_blockers == []
+    assert render(view) =~ "Review notes saved"
+    assert has_element?(view, "#finding-show-accept")
+  end
+
   test "suppressing a procurement finding removes noisy intake from the review queue", %{
     conn: conn
   } do
@@ -309,10 +346,14 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert render(view) =~ "Procurement"
 
     {:ok, show_view, _html} = live(conn, ~p"/acquisition/findings/#{bid_finding.id}")
+    show_html = render(show_view)
 
-    assert render(show_view) =~ bid.title
-    assert render(show_view) =~ "Provenance"
-    assert render(show_view) =~ "Open Source Queue"
+    assert show_html =~ bid.title
+    assert show_html =~ "Provenance"
+    assert show_html =~ "Open Source Queue"
+    assert show_html =~ ~s(href="#{bid.url}")
+    assert show_html =~ ~s(target="_blank")
+    assert show_html =~ ~s(rel="noopener noreferrer")
   end
 
   test "source and program filters scope the acquisition queue from registries", %{conn: conn} do
