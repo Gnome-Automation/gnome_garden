@@ -15,7 +15,9 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
      socket
      |> assign(:page_title, organization.name)
      |> assign(:organization, organization)
-     |> assign(:merge_review, merge_review)}
+     |> assign(:merge_review, merge_review)
+     |> assign(:invite_ok, false)
+     |> assign(:invite_error, nil)}
   end
 
   @impl true
@@ -37,6 +39,20 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not merge organization: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("invite_to_portal", %{"invite" => %{"email" => email}}, socket) do
+    org_id = socket.assigns.organization.id
+
+    case GnomeGarden.Accounts.invite_client_user(email, org_id) do
+      {:ok, _client_user} ->
+        GnomeGarden.Accounts.request_client_portal_access(email)
+        {:noreply, assign(socket, :invite_ok, true)}
+
+      {:error, error} ->
+        {:noreply, assign(socket, :invite_error, "Could not invite: #{inspect(error)}")}
     end
   end
 
@@ -308,6 +324,28 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
             </span>
           </.link>
         </div>
+      </.section>
+      <.section
+        title="Client Portal"
+        description="Invite a contact to view their invoices and agreements in the client portal."
+      >
+        <form id="invite-portal-form" phx-submit="invite_to_portal" class="flex gap-3 items-end">
+          <div class="flex-1">
+            <label class="block text-sm/6 font-medium text-gray-900 dark:text-white mb-1">Email address</label>
+            <input
+              type="email"
+              name="invite[email]"
+              placeholder="client@example.com"
+              required
+              class="rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500 w-full"
+            />
+          </div>
+          <button type="submit" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500">
+            Invite to portal
+          </button>
+        </form>
+        <div :if={@invite_ok} class="mt-2 text-sm text-emerald-600">Contact invited — they'll receive a sign-in link by email.</div>
+        <div :if={@invite_error} class="mt-2 text-sm text-red-600"><%= @invite_error %></div>
       </.section>
     </.page>
     """
