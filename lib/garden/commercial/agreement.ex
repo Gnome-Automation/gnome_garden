@@ -67,7 +67,7 @@ defmodule GnomeGarden.Commercial.Agreement do
       authorize_if always()
     end
 
-    policy always() do
+    bypass always() do
       authorize_if always()
     end
   end

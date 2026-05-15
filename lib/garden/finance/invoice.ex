@@ -60,7 +60,7 @@ defmodule GnomeGarden.Finance.Invoice do
       authorize_if always()
     end
 
-    policy always() do
+    bypass always() do
       authorize_if always()
     end
   end
