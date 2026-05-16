@@ -385,12 +385,12 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
   def rail(assigns) do
     ~H"""
-    <div class="flex w-14 flex-col items-center gap-1 border-r border-base-content/10 bg-base-200 py-3">
+    <div class="flex w-16 flex-col items-center gap-1.5 border-r border-base-content/10 bg-base-200 py-3">
       <.link
         navigate="/"
-        class="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-content"
+        class="mb-2 flex size-11 items-center justify-center rounded-lg bg-primary text-primary-content"
       >
-        <.leaf_icon class="size-5" />
+        <.leaf_icon class="size-7" />
       </.link>
 
       <div :for={a <- rail_areas()} class="relative">
@@ -398,12 +398,12 @@ defmodule GnomeGardenWeb.Components.RailNav do
           navigate={first_path_in_area(a.id)}
           title={a.label}
           class={[
-            "flex h-10 w-10 items-center justify-center rounded-lg border transition",
+            "flex size-12 items-center justify-center rounded-lg border transition",
             @area == a.id && "border-primary/30 bg-primary/10 text-primary",
             @area != a.id && "border-transparent text-base-content/60 hover:bg-base-300"
           ]}
         >
-          <.icon name={a.icon} class="size-5" />
+          <.icon name={a.icon} class="size-7" />
         </.link>
 
         <span
@@ -416,10 +416,10 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
       <button
         type="button"
-        class="flex h-10 w-10 items-center justify-center rounded-lg text-base-content/60 hover:bg-base-300"
+        class="flex size-12 items-center justify-center rounded-lg text-base-content/60 hover:bg-base-300"
         title="Search"
       >
-        <.icon name="hero-magnifying-glass" class="size-5" />
+        <.icon name="hero-magnifying-glass" class="size-7" />
       </button>
     </div>
     """
