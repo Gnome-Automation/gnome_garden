@@ -392,6 +392,8 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
 
     {:ok, _view, html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
 
+    assert html =~ "Disposition"
+    assert html =~ "Rejection reason"
     assert html =~ "Expired before review."
     assert html =~ "Closed"
     assert html =~ "No further action unless you reopen it."
