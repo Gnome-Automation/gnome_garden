@@ -301,8 +301,11 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   defp sam_request_options(query_params) do
     [
       params: query_params,
+      retry: false,
+      receive_timeout: 15_000,
+      pool_timeout: 5_000,
       headers: [{"accept", "application/json"}, {"user-agent", "GnomeGarden SAM Scanner/1.0"}],
-      connect_options: [transport_opts: [versions: [:"tlsv1.2"]]]
+      connect_options: [timeout: 8_000, transport_opts: [versions: [:"tlsv1.2"]]]
     ]
   end
 end
