@@ -17,17 +17,57 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
   alias GnomeGarden.Procurement.ProcurementSource
   alias GnomeGarden.Procurement.TargetingFilter
 
-  @default_limit 100
+  @default_limit 5
 
   def scan(%ProcurementSource{} = source, context \\ %{}) do
     profile_context = profile_context_for_source(source)
 
-    with {:ok, query_result} <- QuerySamGov.run(query_params(source, profile_context), context),
+    with {:ok, query_result} <- query_sam_gov(source, profile_context, context),
          bids = Map.get(query_result, :bids, []),
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, query_result)
+    end
+  end
+
+  defp query_sam_gov(source, profile_context, context) do
+    source
+    |> query_param_sets(profile_context)
+    |> Enum.reduce_while({:ok, []}, fn params, {:ok, results} ->
+      case QuerySamGov.run(params, context) do
+        {:ok, result} -> {:cont, {:ok, [result | results]}}
+        {:error, error} -> {:halt, {:error, error}}
+      end
+    end)
+    |> case do
+      {:ok, results} ->
+        bids =
+          results
+          |> Enum.flat_map(&Map.get(&1, :bids, []))
+          |> Enum.uniq_by(&bid_identity/1)
+
+        {:ok,
+         %{
+           source_type: :sam_gov,
+           query: query_summary(results),
+           bids_found: length(bids),
+           bids: bids,
+           query_count: length(results)
+         }}
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  defp query_param_sets(source, profile_context) do
+    base = query_params(source, profile_context)
+    codes = List.wrap(Map.get(base, :naics_codes))
+
+    case codes do
+      [] -> [base]
+      codes -> Enum.map(codes, &Map.put(base, :naics_codes, [&1]))
     end
   end
 
@@ -199,6 +239,7 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
       "enriched" => 0,
       "diagnosis" => diagnostics["diagnosis"],
       "query" => Map.get(query_result, :query),
+      "query_count" => Map.get(query_result, :query_count),
       "top_unsaved" => diagnostics["top_unsaved"],
       "saved_examples" => diagnostics["saved_examples"],
       "excluded_examples" => Enum.take(excluded, 5),
@@ -286,6 +327,18 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
       %{"score_total" => total} when is_number(total) -> total
       _ -> 0
     end
+  end
+
+  defp bid_identity(bid) do
+    bid_value(bid, :external_id) || bid_value(bid, :url) || bid_value(bid, :title)
+  end
+
+  defp query_summary(results) do
+    results
+    |> Enum.map(&Map.get(&1, :query))
+    |> Enum.reject(&blank?/1)
+    |> Enum.uniq()
+    |> Enum.join(", ")
   end
 
   defp estimated_value_for_scoring(%Decimal{} = value), do: Decimal.to_float(value)

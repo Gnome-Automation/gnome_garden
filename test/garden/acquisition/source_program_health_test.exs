@@ -211,15 +211,19 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
       Procurement.configure_procurement_source(procurement_source, %{
         scrape_config: %{
           keywords: "SCADA PLC controls",
-          naics_codes: ["541330"],
+          naics_codes: ["541330", "238210"],
           limit: 10
         }
       })
 
+    test_pid = self()
+
     http_get = fn _url, opts ->
       assert opts[:params][:api_key] == "test-sam-key"
       assert opts[:params][:title] == "SCADA PLC controls"
-      assert opts[:params][:ncode] == "541330"
+      assert opts[:params][:ncode] in ["541330", "238210"]
+
+      send(test_pid, {:sam_request, opts[:params][:ncode]})
 
       {:ok,
        %{
@@ -235,7 +239,7 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
                "uiLink" => "https://sam.gov/opp/SAM-PLC-1/view",
                "postedDate" => "2026-05-01",
                "responseDeadLine" => "2026-06-01T17:00:00-05:00",
-               "naicsCode" => "541330",
+               "naicsCode" => opts[:params][:ncode],
                "placeOfPerformance" => %{
                  "city" => %{"name" => "Oak Ridge"},
                  "state" => %{"code" => "TN", "name" => "Tennessee"}
@@ -259,6 +263,8 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
 
     assert result.metadata.saved == 1
     assert result.text =~ "Scanned SAM Source: 1 saved, 0 excluded, 1 extracted."
+    assert_received {:sam_request, "541330"}
+    assert_received {:sam_request, "238210"}
 
     assert {:ok, bid} = Procurement.get_bid_by_url("https://sam.gov/opp/SAM-PLC-1/view")
     assert bid.procurement_source_id == procurement_source.id
