@@ -1152,6 +1152,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
        when is_binary(reason) and reason != "",
        do: reason
 
+  defp disposition_reason(%{status: :rejected, finding_family: :procurement} = finding) do
+    if expired?(finding),
+      do: "Deadline passed before review.",
+      else: "Rejected by operator review."
+  end
+
   defp disposition_reason(%{status: :promoted}), do: "Already promoted into commercial review."
   defp disposition_reason(%{status: :parked}), do: "Parked for later review."
   defp disposition_reason(%{status: :suppressed}), do: "Suppressed as source or profile noise."
