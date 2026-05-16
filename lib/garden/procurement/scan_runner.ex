@@ -147,12 +147,15 @@ defmodule GnomeGarden.Procurement.ScanRunner do
   end
 
   defp persist_launch(source, deployment, run, actor) do
+    started_at = DateTime.utc_now()
+
     metadata =
       source.metadata
       |> Map.new()
       |> Map.put("last_agent_run_id", run.id)
       |> Map.put("last_agent_deployment_id", deployment.id)
       |> Map.put("last_agent_run_state", run.state)
+      |> Map.put("last_agent_run_started_at", DateTime.to_iso8601(started_at))
       |> Map.put("last_agent_triggered_by_user_id", actor && actor.id)
 
     with {:ok, refreshed_source} <-

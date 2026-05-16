@@ -123,6 +123,31 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert has_element?(view, "button", "Launch Next Scan")
   end
 
+  test "source registry exposes batch launch when multiple sources are ready", %{conn: conn} do
+    for suffix <- ["one", "two"] do
+      {:ok, _source} =
+        Acquisition.create_source(%{
+          name: "Ready batch source #{suffix}",
+          external_ref: "test:ready-batch-source-#{suffix}",
+          url: "https://example.com/ready-batch-source-#{suffix}",
+          source_family: :discovery,
+          source_kind: :directory,
+          status: :active,
+          enabled: true,
+          scan_strategy: :agentic
+        })
+    end
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=ready")
+
+    html = render(view)
+
+    assert html =~ "Ready batch source one"
+    assert html =~ "Ready batch source two"
+    assert has_element?(view, "button", "Launch Next Scan")
+    assert has_element?(view, "button", "Launch Ready")
+  end
+
   test "source registry shows durable run status and run link", %{conn: conn} do
     {:ok, _source} =
       Acquisition.create_source(%{
