@@ -11,7 +11,8 @@ defmodule GnomeGarden.Acquisition.FindingDocument do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Acquisition,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource],
+    notifiers: [Ash.Notifier.PubSub]
 
   admin do
     table_columns [:finding_id, :document_id, :document_role, :linked_at]
@@ -74,6 +75,16 @@ defmodule GnomeGarden.Acquisition.FindingDocument do
                 load: [document: [:file_url, file: :blob]]
               )
     end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "finding_document"
+
+    publish :create, "created"
+    publish :link_existing, "created"
+    publish :update, "updated"
+    publish :destroy, "destroyed"
   end
 
   attributes do

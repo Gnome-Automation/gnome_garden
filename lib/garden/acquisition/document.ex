@@ -10,7 +10,8 @@ defmodule GnomeGarden.Acquisition.Document do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Acquisition,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource, AshStorage]
+    extensions: [AshAdmin.Resource, AshStorage],
+    notifiers: [Ash.Notifier.PubSub]
 
   admin do
     table_columns [:title, :document_type, :uploaded_at, :source_url]
@@ -120,6 +121,16 @@ defmodule GnomeGarden.Acquisition.Document do
 
       change {AshStorage.Changes.HandleFileArgument, argument: :file, attachment: :file}
     end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "document"
+
+    publish :create, "created"
+    publish :upload_for_finding, "created"
+    publish :update, "updated"
+    publish :destroy, "destroyed"
   end
 
   attributes do

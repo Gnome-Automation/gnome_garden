@@ -25,6 +25,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     if connected?(socket) do
       GnomeGardenWeb.Endpoint.subscribe("finding:created")
       GnomeGardenWeb.Endpoint.subscribe("finding:updated")
+      GnomeGardenWeb.Endpoint.subscribe("document:created")
+      GnomeGardenWeb.Endpoint.subscribe("document:updated")
+      GnomeGardenWeb.Endpoint.subscribe("document:destroyed")
+      GnomeGardenWeb.Endpoint.subscribe("document_blob:updated")
+      GnomeGardenWeb.Endpoint.subscribe("document_blob:destroyed")
+      GnomeGardenWeb.Endpoint.subscribe("finding_document:created")
+      GnomeGardenWeb.Endpoint.subscribe("finding_document:updated")
+      GnomeGardenWeb.Endpoint.subscribe("finding_document:destroyed")
     end
 
     {:ok,
@@ -36,6 +44,18 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   @impl true
   def handle_info(%{topic: "finding:" <> _event}, socket) do
+    {:noreply, refresh_finding(socket)}
+  end
+
+  def handle_info(%{topic: "document:" <> _event}, socket) do
+    {:noreply, refresh_finding(socket)}
+  end
+
+  def handle_info(%{topic: "document_blob:" <> _event}, socket) do
+    {:noreply, refresh_finding(socket)}
+  end
+
+  def handle_info(%{topic: "finding_document:" <> _event}, socket) do
     {:noreply, refresh_finding(socket)}
   end
 
