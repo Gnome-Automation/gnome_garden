@@ -953,9 +953,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       <div class="grid gap-0 divide-y divide-base-content/10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0">
         <div class={["p-4", operator_brief_tone_class(@brief.tone)]}>
           <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
-            Recommended action
+            {@brief.action_label}
           </p>
           <p class="mt-2 text-lg font-semibold leading-6">{@brief.action}</p>
+          <p class="mt-4 text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
+            {@brief.reason_label}
+          </p>
           <p class="mt-2 text-sm leading-6 opacity-80">{@brief.reason}</p>
         </div>
 
@@ -1004,7 +1007,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp build_operator_brief(%{status: status} = finding)
        when status in [:rejected, :suppressed, :parked, :promoted] do
     %{
+      action_label: "Disposition",
       action: finding.status_label,
+      reason_label: disposition_reason_label(status),
       reason: disposition_reason(finding),
       tone: disposition_tone(status),
       deadline: deadline_label(finding),
@@ -1018,7 +1023,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     cond do
       expired?(finding) ->
         %{
+          action_label: "Recommended action",
           action: "Reject as expired",
+          reason_label: "Why",
           reason:
             "The opportunity deadline has passed. Keep the source pattern, but do not spend review time promoting this bid.",
           tone: :error,
@@ -1082,7 +1089,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   defp brief(finding, action, reason, tone) do
     %{
+      action_label: "Recommended action",
       action: action,
+      reason_label: "Why",
       reason: reason,
       tone: tone,
       deadline: deadline_label(finding),
@@ -1154,6 +1163,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp disposition_tone(:suppressed), do: :warning
   defp disposition_tone(:rejected), do: :error
   defp disposition_tone(_status), do: :default
+
+  defp disposition_reason_label(:rejected), do: "Rejection reason"
+  defp disposition_reason_label(:suppressed), do: "Suppression reason"
+  defp disposition_reason_label(:parked), do: "Parking reason"
+  defp disposition_reason_label(:promoted), do: "Promotion note"
+  defp disposition_reason_label(_status), do: "Reason"
 
   defp terminal_readiness_label(:promoted), do: "Commercial review"
   defp terminal_readiness_label(:parked), do: "Parked"
