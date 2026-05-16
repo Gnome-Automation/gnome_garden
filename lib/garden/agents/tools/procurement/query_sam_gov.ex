@@ -51,7 +51,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
 
       request = context_value(context, [:http_get]) || (&Req.get/2)
 
-      case request.(@sam_api_base, params: query_params) do
+      case request.(@sam_api_base, sam_request_options(query_params)) do
         {:ok, %{status: 200, body: body}} ->
           opportunities = parse_response(body)
           Logger.info("[QuerySamGov] Found #{length(opportunities)} opportunities")
@@ -66,6 +66,10 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
 
         {:ok, %{status: 429}} ->
           {:error, "SAM.gov rate limit exceeded (1000/day)"}
+
+        {:ok, %{status: 401}} ->
+          {:error,
+           "SAM.gov API key was rejected. Generate a public API key in SAM.gov and update SAM_GOV_API_KEY."}
 
         {:ok, %{status: status, body: body}} ->
           Logger.warning("[QuerySamGov] API returned status #{status}: #{inspect(body)}")
@@ -93,7 +97,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
 
     # Add optional filters
     base
-    |> maybe_add(:keywords, Map.get(params, :keywords))
+    |> maybe_add(:title, Map.get(params, :keywords))
     |> maybe_add(:ncode, format_naics(default_naics_codes(params, context)))
     |> maybe_add(:state, Map.get(params, :state))
   end
@@ -292,5 +296,13 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
 
   defp context_value(context, path) do
     nested_value(context, path) || nested_value(context, [:tool_context | path])
+  end
+
+  defp sam_request_options(query_params) do
+    [
+      params: query_params,
+      headers: [{"accept", "application/json"}, {"user-agent", "GnomeGarden SAM Scanner/1.0"}],
+      connect_options: [transport_opts: [versions: [:"tlsv1.2"]]]
+    ]
   end
 end
