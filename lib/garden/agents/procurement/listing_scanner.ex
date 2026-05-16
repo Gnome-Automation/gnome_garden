@@ -133,13 +133,15 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
              Process.sleep(2500)
              :ok
            ),
-         {:ok, bids} <- extract_bids(config),
+         {:ok, bids, extraction} <- extract_bids(config),
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, prepared} <-
            prepare_bids_for_final_scoring(filtered.kept, source, listing_url, profile_context),
          {:ok, scored} <- score_bids(prepared, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
-      complete_scan(source, bids, filtered.excluded, scored, saved, enrich_bids(saved))
+      complete_scan(source, bids, filtered.excluded, scored, saved, enrich_bids(saved),
+        extraction: extraction
+      )
     end
   end
 
@@ -186,9 +188,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     end
   end
 
-  defp complete_scan(source, bids, excluded, scored, saved, enriched) do
+  defp complete_scan(source, bids, excluded, scored, saved, enriched, opts \\ []) do
     source = current_source(source)
-    diagnostics = scan_diagnostics(scored, saved, excluded)
+    diagnostics = scan_diagnostics(scored, saved, excluded, opts)
 
     Procurement.mark_procurement_source_scanned!(
       source,
@@ -223,6 +225,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       "saved" => length(saved),
       "enriched" => enriched,
       "diagnosis" => diagnostics["diagnosis"],
+      "extraction" => diagnostics["extraction"],
       "top_unsaved" => diagnostics["top_unsaved"],
       "saved_examples" => diagnostics["saved_examples"],
       "excluded_examples" =>
@@ -237,7 +240,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     |> Map.put("last_scan_summary", summary)
   end
 
-  defp scan_diagnostics(scored, saved, excluded) do
+  defp scan_diagnostics(scored, saved, excluded, opts) do
+    extraction = Keyword.get(opts, :extraction, %{})
+
     saved_keys =
       saved
       |> Enum.flat_map(fn result ->
@@ -263,7 +268,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       |> Enum.reject(&is_nil/1)
 
     %{
-      "diagnosis" => scan_diagnosis(scored, saved, excluded, top_unsaved),
+      "diagnosis" => scan_diagnosis(scored, saved, excluded, top_unsaved, extraction),
+      "extraction" => extraction,
       "top_unsaved" => top_unsaved,
       "saved_examples" => saved_examples
     }
@@ -337,14 +343,21 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       is_binary(packet_status)
   end
 
-  defp scan_diagnosis(_scored, [_ | _], _excluded, _top_unsaved),
+  defp scan_diagnosis(_scored, [_ | _], _excluded, _top_unsaved, _extraction),
     do: "saved_qualified_leads"
 
-  defp scan_diagnosis([], _saved, [_ | _], _top_unsaved),
+  defp scan_diagnosis([], _saved, [_ | _], _top_unsaved, _extraction),
     do: "all_candidates_filtered_before_scoring"
 
-  defp scan_diagnosis(scored, _saved, _excluded, top_unsaved) do
+  defp scan_diagnosis(scored, _saved, _excluded, top_unsaved, extraction) do
     cond do
+      extraction_count(extraction, "row_count") == 0 ->
+        "listing_selector_matched_no_rows"
+
+      extraction_count(extraction, "row_count") > 0 and
+          extraction_count(extraction, "title_count") == 0 ->
+        "title_selector_matched_no_titles"
+
       Enum.any?(top_unsaved, &(&1["score_tier"] == :rejected or &1["score_tier"] == "rejected")) ->
         "candidates_rejected_by_scoring"
 
@@ -366,7 +379,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
     # Build JavaScript to extract bids using saved selectors
     js = """
-    Array.from(document.querySelectorAll('#{escape_js(listing_selector)}')).map(row => {
+    (() => {
+    const rows = Array.from(document.querySelectorAll('#{escape_js(listing_selector)}'));
+    const extracted = rows.map(row => {
       const title = row.querySelector('#{escape_js(title_selector)}')?.innerText?.trim() || '';
       const date = #{if date_selector, do: "row.querySelector('#{escape_js(date_selector)}')?.innerText?.trim() || ''", else: "''"};
       const linkEl = #{if link_selector, do: "row.querySelector('#{escape_js(link_selector)}')", else: "null"};
@@ -376,18 +391,66 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       const description = #{if description_selector, do: "row.querySelector('#{escape_js(description_selector)}')?.innerText?.trim() || ''", else: "''"};
       const agency = #{if agency_selector, do: "row.querySelector('#{escape_js(agency_selector)}')?.innerText?.trim() || ''", else: "''"};
       return { title, date, link, description, agency };
-    }).filter(b => b.title && b.title.length > 0)
+    });
+
+    return {
+      bids: extracted.filter(b => b.title && b.title.length > 0),
+      extraction: {
+        listing_selector: '#{escape_js(listing_selector)}',
+        title_selector: '#{escape_js(title_selector)}',
+        row_count: rows.length,
+        title_count: extracted.filter(b => b.title && b.title.length > 0).length,
+        link_count: extracted.filter(b => b.link && b.link.length > 0).length,
+        row_text_samples: rows.slice(0, 3).map(row => (row.innerText || '').trim().slice(0, 180)).filter(Boolean)
+      }
+    };
+    })()
     """
 
     case Extract.run(%{js: js}, %{}) do
+      {:ok, %{data: %{"bids" => bids, "extraction" => extraction}}} when is_list(bids) ->
+        {:ok, bids, normalize_extraction(extraction)}
+
+      {:ok, %{data: %{bids: bids, extraction: extraction}}} when is_list(bids) ->
+        {:ok, bids, normalize_extraction(extraction)}
+
       {:ok, %{data: bids}} when is_list(bids) ->
-        {:ok, bids}
+        {:ok, bids, %{}}
 
       {:ok, %{data: _}} ->
-        {:ok, []}
+        {:ok, [], %{}}
 
       {:error, reason} ->
         {:error, "Extraction failed: #{reason}"}
+    end
+  end
+
+  defp normalize_extraction(extraction) when is_map(extraction) do
+    %{
+      "listing_selector" => extraction_value(extraction, "listing_selector"),
+      "title_selector" => extraction_value(extraction, "title_selector"),
+      "row_count" => extraction_count(extraction, "row_count"),
+      "title_count" => extraction_count(extraction, "title_count"),
+      "link_count" => extraction_count(extraction, "link_count"),
+      "row_text_samples" => extraction_value(extraction, "row_text_samples") || []
+    }
+  end
+
+  defp normalize_extraction(_extraction), do: %{}
+
+  defp extraction_value(extraction, key) when is_map(extraction) do
+    Map.get(extraction, key) || Map.get(extraction, String.to_existing_atom(key))
+  rescue
+    ArgumentError -> nil
+  end
+
+  defp extraction_value(_extraction, _key), do: nil
+
+  defp extraction_count(extraction, key) do
+    case extraction_value(extraction, key) do
+      value when is_integer(value) -> value
+      value when is_float(value) -> trunc(value)
+      _ -> 0
     end
   end
 

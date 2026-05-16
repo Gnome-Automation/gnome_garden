@@ -60,6 +60,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       scan_issue(source) == :login_required -> :needs_login
       scan_issue(source) == :document_capture_failed -> :document_capture_failed
       scan_issue(source) == :selector_failed -> :selector_failed
+      scan_issue(source) == :scanner_not_implemented -> :failing
       scan_issue(source) == :no_results -> :no_results
       scan_issue(source) == :zero_saved -> :zero_saved
       noisy?(source) -> :noisy
@@ -81,8 +82,13 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp health_note(source, :no_results, _opts), do: scan_issue_note(source)
   defp health_note(source, :zero_saved, _opts), do: scan_issue_note(source)
 
-  defp health_note(source, :failing, _opts),
-    do: timestamp_note("Last run failed", source.last_run_at)
+  defp health_note(source, :failing, _opts) do
+    if scan_issue(source) == :scanner_not_implemented do
+      scan_issue_note(source)
+    else
+      timestamp_note("Last run failed", source.last_run_at)
+    end
+  end
 
   defp health_note(source, :cancelled, _opts),
     do: timestamp_note("Last run was cancelled", source.last_run_at)
@@ -157,8 +163,15 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       packet_status == "download_failed" ->
         :document_capture_failed
 
-      diagnosis == "selector_failed" ->
+      diagnosis in [
+        "selector_failed",
+        "listing_selector_matched_no_rows",
+        "title_selector_matched_no_titles"
+      ] ->
         :selector_failed
+
+      diagnosis == "scanner_not_implemented" ->
+        :scanner_not_implemented
 
       diagnosis in ["all_candidates_filtered_before_scoring", "no_candidates_extracted"] ->
         :no_results
@@ -177,6 +190,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp scan_issue_note(source) do
     summary = metadata_value(source.metadata, "last_scan_summary") || %{}
     diagnosis = metadata_value(summary, "diagnosis")
+    extraction = metadata_value(summary, "extraction") || %{}
     extracted = metadata_integer(summary, "extracted") || 0
     scored = metadata_integer(summary, "scored") || 0
     saved = metadata_integer(summary, "saved") || 0
@@ -189,7 +203,10 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
         "Last scan found packet links but document capture failed. Check portal access or expired links."
 
       :selector_failed ->
-        "Last scan could not read the configured selectors. Recheck source configuration."
+        selector_issue_note(diagnosis, extraction)
+
+      :scanner_not_implemented ->
+        scanner_failure_note(diagnosis, summary)
 
       :no_results ->
         "Last scan produced no reviewable candidates. Extracted #{extracted}, scored #{scored}, saved #{saved}."
@@ -209,6 +226,28 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
     do: "Top candidates were rejected by scoring."
 
   defp diagnosis_note(_diagnosis), do: "Review scan diagnostics."
+
+  defp selector_issue_note("listing_selector_matched_no_rows", extraction) do
+    selector = metadata_value(extraction, "listing_selector") || "listing selector"
+    "Configured listing selector matched 0 rows (#{selector}). Recheck source configuration."
+  end
+
+  defp selector_issue_note("title_selector_matched_no_titles", extraction) do
+    row_count = metadata_integer(extraction, "row_count") || 0
+    selector = metadata_value(extraction, "title_selector") || "title selector"
+
+    "Listing selector matched #{row_count} rows, but title selector matched 0 titles (#{selector}). Recheck title/link selectors."
+  end
+
+  defp selector_issue_note(_diagnosis, _extraction),
+    do: "Last scan could not read the configured selectors. Recheck source configuration."
+
+  defp scanner_failure_note("scanner_not_implemented", summary) do
+    reason = metadata_value(summary, "reason") || "scanner not implemented"
+    "This source is configured, but no scanner is implemented for it yet: #{reason}."
+  end
+
+  defp scanner_failure_note(_diagnosis, _summary), do: "Last run failed."
 
   defp needs_login?(source) do
     source_type = metadata_value(source.metadata, "procurement_source_type")

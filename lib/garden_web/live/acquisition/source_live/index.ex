@@ -299,6 +299,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         <p class="text-sm leading-6 text-base-content/60">
           {@source.health_note}
         </p>
+        <p :if={extraction_summary(@source)} class="text-xs leading-5 text-base-content/45">
+          {extraction_summary(@source)}
+        </p>
       </div>
 
       <div class="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-white/10 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
@@ -442,6 +445,22 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     "#{source.promoted_finding_count || 0} promoted / #{source.noise_finding_count || 0} noise"
   end
 
+  defp extraction_summary(%{metadata: metadata}) when is_map(metadata) do
+    extraction =
+      metadata
+      |> metadata_value("last_scan_summary")
+      |> metadata_value("extraction")
+
+    if is_map(extraction) do
+      rows = metadata_value(extraction, "row_count") || 0
+      titles = metadata_value(extraction, "title_count") || 0
+      links = metadata_value(extraction, "link_count") || 0
+      "Last extraction: #{rows} rows / #{titles} titles / #{links} links"
+    end
+  end
+
+  defp extraction_summary(_source), do: nil
+
   defp source_in_bucket?(source, :needs_configuration), do: needs_configuration?(source)
   defp source_in_bucket?(source, :ready), do: scan_ready?(source)
 
@@ -523,4 +542,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
        do: true
 
   defp agentic_source?(_source), do: false
+
+  defp metadata_value(nil, _key), do: nil
+
+  defp metadata_value(map, key) when is_map(map) do
+    Map.get(map, key) || Map.get(map, String.to_existing_atom(key))
+  rescue
+    ArgumentError -> nil
+  end
+
+  defp metadata_value(_value, _key), do: nil
 end

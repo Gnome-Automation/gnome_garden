@@ -2,6 +2,7 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
   use GnomeGarden.DataCase, async: false
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Agents.Workers.Procurement.SourceScan
   alias GnomeGarden.Commercial
   alias GnomeGarden.Procurement
 
@@ -112,6 +113,120 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
 
     assert refreshed_source.last_run_at == started_at
     assert is_nil(refreshed_source.last_success_at)
+  end
+
+  test "console sources explain listing selector misses from scan diagnostics" do
+    {:ok, source} =
+      Acquisition.create_source(%{
+        name: "Broken Listing Selector",
+        external_ref: "test:broken-listing-selector",
+        url: "https://example.com/broken-listing-selector",
+        source_family: :procurement,
+        source_kind: :portal,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic,
+        metadata: %{
+          "last_scan_summary" => %{
+            "diagnosis" => "listing_selector_matched_no_rows",
+            "extracted" => 0,
+            "scored" => 0,
+            "saved" => 0,
+            "extraction" => %{
+              "listing_selector" => ".bid-row",
+              "row_count" => 0,
+              "title_count" => 0
+            }
+          }
+        }
+      })
+
+    {:ok, loaded_source} =
+      Acquisition.get_source(source.id, load: [:health_status, :health_variant, :health_note])
+
+    assert loaded_source.health_status == :selector_failed
+    assert loaded_source.health_variant == :error
+    assert loaded_source.health_note =~ "matched 0 rows"
+    assert loaded_source.health_note =~ ".bid-row"
+  end
+
+  test "console sources explain title selector misses from scan diagnostics" do
+    {:ok, source} =
+      Acquisition.create_source(%{
+        name: "Broken Title Selector",
+        external_ref: "test:broken-title-selector",
+        url: "https://example.com/broken-title-selector",
+        source_family: :procurement,
+        source_kind: :portal,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic,
+        metadata: %{
+          "last_scan_summary" => %{
+            "diagnosis" => "title_selector_matched_no_titles",
+            "extracted" => 0,
+            "scored" => 0,
+            "saved" => 0,
+            "extraction" => %{
+              "listing_selector" => "table tbody tr",
+              "title_selector" => ".title",
+              "row_count" => 12,
+              "title_count" => 0
+            }
+          }
+        }
+      })
+
+    {:ok, loaded_source} =
+      Acquisition.get_source(source.id, load: [:health_status, :health_variant, :health_note])
+
+    assert loaded_source.health_status == :selector_failed
+    assert loaded_source.health_variant == :error
+    assert loaded_source.health_note =~ "matched 12 rows"
+    assert loaded_source.health_note =~ ".title"
+  end
+
+  test "unsupported procurement scanners are recorded as repairable source failures" do
+    run_id = Ecto.UUID.generate()
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Unsupported SAM Source",
+        url: "https://sam.gov/opportunities",
+        source_type: :sam_gov,
+        portal_id: "sam",
+        region: :national,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          listing_url: procurement_source.url,
+          listing_selector: ".result",
+          title_selector: ".title"
+        }
+      })
+
+    assert {:ok, result} =
+             SourceScan.execute_run(%{
+               run: %{id: run_id, metadata: %{procurement_source_id: procurement_source.id}},
+               deployment: %{},
+               tool_context: %{agent_run_id: run_id}
+             })
+
+    assert result.metadata.saved == nil
+    assert result.text =~ "Skipped Unsupported SAM Source"
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}",
+        load: [:health_status, :health_variant, :health_note]
+      )
+
+    assert acquisition_source.health_status == :failing
+    assert acquisition_source.health_variant == :error
+    assert acquisition_source.health_note =~ "no scanner is implemented"
   end
 
   test "planetbids sources show needs login health when credentials are missing" do
