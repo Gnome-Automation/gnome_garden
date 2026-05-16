@@ -187,6 +187,13 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
   end
 
   test "sam.gov source scans query the API and save qualified bids" do
+    previous_sam_key = System.get_env("SAM_GOV_API_KEY")
+    System.put_env("SAM_GOV_API_KEY", "test-sam-key")
+
+    on_exit(fn ->
+      restore_env("SAM_GOV_API_KEY", previous_sam_key)
+    end)
+
     run_id = Ecto.UUID.generate()
 
     {:ok, procurement_source} =
@@ -263,6 +270,49 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
       )
 
     assert acquisition_source.health_note =~ "Last successful scan"
+  end
+
+  test "sam.gov sources show needs login health when API key is missing" do
+    previous_sam_key = System.get_env("SAM_GOV_API_KEY")
+    System.delete_env("SAM_GOV_API_KEY")
+
+    on_exit(fn ->
+      restore_env("SAM_GOV_API_KEY", previous_sam_key)
+    end)
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Credentialed SAM Source",
+        url: "https://sam.gov/opportunities",
+        source_type: :sam_gov,
+        portal_id: "sam-missing-key",
+        region: :national,
+        priority: :high,
+        status: :approved
+      })
+
+    {:ok, _procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          keywords: "SCADA PLC controls",
+          naics_codes: ["541330"],
+          limit: 10
+        }
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:runnable, :health_label, :health_note, :health_status, :health_variant]
+      )
+
+    refute source.runnable
+    assert source.health_status == :needs_login
+    assert source.health_variant == :warning
+    assert source.health_label == "Needs login"
+    assert source.health_note =~ "SAM.gov API key is missing"
   end
 
   test "planetbids sources show needs login health when credentials are missing" do

@@ -27,6 +27,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       :metadata,
       :noise_finding_count,
       :promoted_finding_count,
+      :procurement_source,
       :review_finding_count,
       :scan_strategy,
       :status
@@ -34,7 +35,13 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   end
 
   @impl true
-  def calculate(records, opts, _context) do
+  def calculate(records, opts, context) do
+    records =
+      Ash.load!(records, [:procurement_source],
+        actor: Map.get(context, :actor),
+        authorize?: false
+      )
+
     Enum.map(records, fn record ->
       health_status = health_status(record, opts)
 
@@ -262,22 +269,38 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp scanner_failure_note(_diagnosis, _summary), do: "Last run failed."
 
   defp needs_login?(source) do
-    source_type = metadata_value(source.metadata, "procurement_source_type")
+    source_type =
+      procurement_source_value(source, :source_type) ||
+        metadata_value(source.metadata, "procurement_source_type")
 
-    credentialed_source?(source.metadata, source_type) and
+    requires_login = procurement_source_value(source, :requires_login)
+
+    credentialed_source?(source.metadata, source_type, requires_login) and
       not GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type)
   end
 
-  defp credentialed_source?(metadata, source_type) do
-    metadata_value(metadata, "procurement_requires_login") in [true, "true"] or
-      normalize_source_type(source_type) == :planetbids
+  defp credentialed_source?(metadata, source_type, requires_login) do
+    requires_login == true or
+      metadata_value(metadata, "procurement_requires_login") in [true, "true"] or
+      normalize_source_type(source_type) in [:planetbids, :sam_gov]
   end
 
   defp missing_credentials_note(source) do
-    source.metadata
-    |> metadata_value("procurement_source_type")
+    source_type =
+      procurement_source_value(source, :source_type) ||
+        metadata_value(source.metadata, "procurement_source_type")
+
+    source_type
     |> GnomeGarden.Procurement.SourceCredentials.missing_credentials_message()
   end
+
+  defp procurement_source_value(%{procurement_source: %Ash.NotLoaded{}}, _key), do: nil
+  defp procurement_source_value(%{procurement_source: nil}, _key), do: nil
+
+  defp procurement_source_value(%{procurement_source: procurement_source}, key)
+       when is_map(procurement_source), do: Map.get(procurement_source, key)
+
+  defp procurement_source_value(_source, _key), do: nil
 
   defp metadata_value(metadata, key) when is_map(metadata) do
     Map.get(metadata, key) || Map.get(metadata, String.to_existing_atom(key))

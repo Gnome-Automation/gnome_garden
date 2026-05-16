@@ -5,6 +5,7 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
 
   @planetbids_username "PLANETBIDS_USERNAME"
   @planetbids_password "PLANETBIDS_PASSWORD"
+  @sam_gov_api_key "SAM_GOV_API_KEY"
 
   def planetbids_configured? do
     present?(System.get_env(@planetbids_username)) and
@@ -24,8 +25,13 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
 
   def planetbids_env_names, do: [@planetbids_username, @planetbids_password]
 
+  def sam_gov_configured?, do: present?(System.get_env(@sam_gov_api_key))
+  def sam_gov_env_names, do: [@sam_gov_api_key]
+
   def credentials_configured?(:planetbids), do: planetbids_configured?()
   def credentials_configured?("planetbids"), do: planetbids_configured?()
+  def credentials_configured?(:sam_gov), do: sam_gov_configured?()
+  def credentials_configured?("sam_gov"), do: sam_gov_configured?()
   def credentials_configured?(_source_type), do: true
 
   def missing_credentials_message(:planetbids) do
@@ -33,6 +39,12 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
   end
 
   def missing_credentials_message("planetbids"), do: missing_credentials_message(:planetbids)
+
+  def missing_credentials_message(:sam_gov) do
+    "SAM.gov API key is missing. Set #{Enum.join(sam_gov_env_names(), " and ")} and restart the app."
+  end
+
+  def missing_credentials_message("sam_gov"), do: missing_credentials_message(:sam_gov)
 
   def missing_credentials_message(_source_type), do: "Required source credentials are missing."
 
