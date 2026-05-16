@@ -24,9 +24,6 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Procurement
 
-  @max_bytes 50 * 1024 * 1024
-  @timeout_ms 30_000
-
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"bid_id" => bid_id}}) when is_binary(bid_id) do
     with {:ok, bid} <- Procurement.get_bid(bid_id),
@@ -64,7 +61,7 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
 
       document_type = parse_document_type(Map.get(descriptor, "document_type"))
 
-      case download(url) do
+      case downloader().download(descriptor) do
         {:ok, temp_path, content_type} ->
           try do
             upload = %Plug.Upload{
@@ -106,70 +103,13 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
     Map.new(map, fn {key, value} -> {to_string(key), value} end)
   end
 
-  defp download(url) do
-    case Req.get(url,
-           receive_timeout: @timeout_ms,
-           connect_options: [timeout: @timeout_ms],
-           max_redirects: 5,
-           headers: [{"user-agent", "GnomeGarden DocumentIngest/1.0"}]
-         ) do
-      {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
-        if login_page?(response) do
-          {:error, :login_required}
-        else
-          write_response_to_temp(response)
-        end
-
-      {:ok, %Req.Response{status: status}} when status in [401, 403] ->
-        {:error, :login_required}
-
-      {:ok, %Req.Response{status: status}} ->
-        {:error, {:http_status, status}}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  rescue
-    e -> {:error, Exception.message(e)}
+  defp downloader do
+    Application.get_env(
+      :gnome_garden,
+      :acquisition_document_downloader,
+      GnomeGarden.Acquisition.DocumentDownloader
+    )
   end
-
-  defp write_response_to_temp(%Req.Response{} = response) do
-    temp_path =
-      Path.join(
-        System.tmp_dir!(),
-        "gnome-doc-#{Ecto.UUID.generate()}"
-      )
-
-    body = response.body
-
-    cond do
-      is_binary(body) and byte_size(body) <= @max_bytes ->
-        File.write!(temp_path, body)
-        {:ok, temp_path, content_type_for(response)}
-
-      is_binary(body) ->
-        {:error, :too_large}
-
-      true ->
-        {:error, {:unsupported_body, response}}
-    end
-  end
-
-  defp content_type_for(%Req.Response{} = response) do
-    case Req.Response.get_header(response, "content-type") do
-      [type | _] -> type
-      _ -> "application/octet-stream"
-    end
-  end
-
-  defp login_page?(%Req.Response{body: body} = response) when is_binary(body) do
-    content_type = content_type_for(response)
-
-    String.contains?(content_type, "text/html") and
-      String.match?(body, ~r/login|sign in|password/i)
-  end
-
-  defp login_page?(_response), do: false
 
   defp create_document(upload, source_url, document_type, finding, filename) do
     Acquisition.upload_document_for_finding(%{
