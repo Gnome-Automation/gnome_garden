@@ -60,7 +60,6 @@ defmodule GnomeGardenWeb.Router do
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_required}] do
-      live "/agent", AgentLive
       live "/console/agents", Console.AgentsLive
       live "/console/agents/deployments/new", Console.AgentDeploymentFormLive
       live "/console/agents/deployments/:id/edit", Console.AgentDeploymentFormLive
@@ -235,6 +234,7 @@ defmodule GnomeGardenWeb.Router do
     pipe_through :operator_browser
 
     get "/", PageController, :home
+    get "/agent", PageController, :agent_redirect
   end
 
   scope "/", GnomeGardenWeb do

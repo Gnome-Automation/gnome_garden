@@ -12,6 +12,10 @@ defmodule GnomeGardenWeb.PageController do
     |> text("Admin access required")
   end
 
+  def agent_redirect(conn, _params) do
+    redirect(conn, to: ~p"/console/agents")
+  end
+
   def home(conn, _params) do
     actor = conn.assigns[:current_user]
 
