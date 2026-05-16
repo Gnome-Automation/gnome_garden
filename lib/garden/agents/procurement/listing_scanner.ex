@@ -123,7 +123,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
     Logger.info("Scanning #{source.name} at #{listing_url}")
 
-    with {:ok, _} <- Navigate.run(%{url: listing_url}, %{}),
+    with :ok <- maybe_login(source, listing_url),
+         {:ok, _} <- Navigate.run(%{url: listing_url}, %{}),
          # Wait for SPA content to load
          :ok <-
            (
@@ -147,7 +148,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
              %{
                portal_id: source.portal_id,
                portal_name: source.name,
-               max_results: 100
+               max_results: 100,
+               source_url: source.url
              },
              %{}
            ),
@@ -351,8 +353,11 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
               source_type: source.source_type,
               source_name: source.name,
               listing_url: listing_url,
-              source_url: source.url
+              source_url: source.url,
+              agent_run_id: agent_run_id_from_context(context)
             },
+            documents: documents_for_bid(bid),
+            packet: packet_metadata_for_bid(bid),
             scoring: %{
               recommendation: score.recommendation,
               company_profile_key: Map.get(score, :company_profile_key),
@@ -431,8 +436,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   defp enrich_bid(bid_id) do
     case Procurement.get_bid(bid_id) do
       {:ok, bid} ->
-        if String.contains?(bid.url || "", "bo-detail") &&
-             (is_nil(bid.description) || String.length(bid.description || "") < 20) do
+        if String.contains?(bid.url || "", "bo-detail") do
           do_enrich_bid(bid)
         else
           :skip
@@ -454,6 +458,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         %{}
         |> maybe_enrich(:description, data["description"], bid.description)
         |> maybe_enrich_bid_type(data["bid_type"], bid.bid_type)
+        |> maybe_enrich_metadata(bid.metadata, data)
 
       if map_size(updates) > 0 do
         Procurement.update_bid(bid, updates)
@@ -499,7 +504,104 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       }
       var bidType = typeIdx > -1 && lines[typeIdx + 1] ? lines[typeIdx + 1].trim() : '';
 
-      return { description: desc, bid_type: bidType };
+      var docs = Array.from(document.querySelectorAll('a[href]')).map(function(a) {
+        var text = (a.innerText || a.getAttribute('aria-label') || a.getAttribute('title') || '').trim();
+        var href = a.href || '';
+        var combined = (text + ' ' + href).toLowerCase();
+        if (!href || !/(document|download|attachment|addend|scope|spec|plan|bid|packet|pdf)/.test(combined)) return null;
+
+        var type = 'other';
+        if (/(addendum|addenda)/.test(combined)) type = 'addendum';
+        else if (/(scope|spec|plans?)/.test(combined)) type = 'scope';
+        else if (/(price|pricing|bid form|proposal form)/.test(combined)) type = 'pricing';
+        else if (/(solicitation|rfp|rfq|ifb|packet|document|pdf)/.test(combined)) type = 'solicitation';
+
+        var filename = text || href.split('/').pop() || 'document';
+        return {
+          url: href,
+          filename: filename.replace(/\s+/g, ' ').trim(),
+          document_type: type,
+          source_type: 'planetbids',
+          requires_login: true,
+          captured_from: window.location.href
+        };
+      }).filter(Boolean);
+
+      var unique = [];
+      var seen = {};
+      docs.forEach(function(doc) {
+        if (!seen[doc.url]) {
+          seen[doc.url] = true;
+          unique.push(doc);
+        }
+      });
+
+      var loginRequired = /login|sign in|password/i.test(document.body.innerText || '') && unique.length === 0;
+
+      return {
+        description: desc,
+        bid_type: bidType,
+        documents: unique,
+        packet_status: unique.length > 0 ? 'present' : (loginRequired ? 'login_required' : 'missing')
+      };
+    })()
+    """
+  end
+
+  defp maybe_login(%{source_type: :planetbids}, listing_url) do
+    with {:ok, credentials} <- GnomeGarden.Procurement.SourceCredentials.planetbids_credentials(),
+         {:ok, _} <- Navigate.run(%{url: listing_url}, %{}),
+         {:ok, %{data: %{"submitted" => submitted?}}} <-
+           Extract.run(%{js: planetbids_login_js(credentials)}, %{}) do
+      if submitted?, do: Process.sleep(3500)
+      :ok
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> :ok
+    end
+  end
+
+  defp maybe_login(_source, _listing_url), do: :ok
+
+  defp planetbids_login_js(%{username: username, password: password}) do
+    encoded_username = Jason.encode!(username)
+    encoded_password = Jason.encode!(password)
+
+    """
+    (function() {
+      var username = #{encoded_username};
+      var password = #{encoded_password};
+      var userInput = document.querySelector('input[type="email"], input[name*="email" i], input[id*="email" i], input[name*="user" i], input[id*="user" i]');
+      var passInput = document.querySelector('input[type="password"], input[name*="password" i], input[id*="password" i]');
+
+      if (!userInput || !passInput) {
+        return {submitted: false, reason: 'no_login_form'};
+      }
+
+      userInput.focus();
+      userInput.value = username;
+      userInput.dispatchEvent(new Event('input', {bubbles: true}));
+      userInput.dispatchEvent(new Event('change', {bubbles: true}));
+
+      passInput.focus();
+      passInput.value = password;
+      passInput.dispatchEvent(new Event('input', {bubbles: true}));
+      passInput.dispatchEvent(new Event('change', {bubbles: true}));
+
+      var form = passInput.closest('form') || userInput.closest('form');
+      var button = document.querySelector('button[type="submit"], input[type="submit"], button[id*="login" i], button[class*="login" i]');
+
+      if (form && form.requestSubmit) {
+        form.requestSubmit();
+      } else if (button) {
+        button.click();
+      } else if (form) {
+        form.submit();
+      } else {
+        return {submitted: false, reason: 'no_submit_control'};
+      }
+
+      return {submitted: true};
     })()
     """
   end
@@ -523,6 +625,92 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       Map.put(map, :bid_type, parse_bid_type(type_str))
     else
       map
+    end
+  end
+
+  defp maybe_enrich_metadata(map, existing_metadata, data) do
+    documents = normalize_documents(data["documents"])
+    packet_status = data["packet_status"] || packet_status(documents)
+
+    metadata =
+      (existing_metadata || %{})
+      |> deep_merge(%{
+        "documents" => documents,
+        "packet" => %{
+          "status" => packet_status,
+          "captured_at" =>
+            DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+        }
+      })
+
+    if metadata == (existing_metadata || %{}), do: map, else: Map.put(map, :metadata, metadata)
+  end
+
+  defp documents_for_bid(bid), do: normalize_documents(bid_value(bid, :documents))
+
+  defp packet_metadata_for_bid(bid) do
+    documents = documents_for_bid(bid)
+
+    %{
+      status: packet_status(documents),
+      captured_at: DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+    }
+  end
+
+  defp normalize_documents(documents) when is_list(documents) do
+    documents
+    |> Enum.filter(&is_map/1)
+    |> Enum.map(fn document ->
+      document
+      |> Map.new(fn {key, value} -> {to_string(key), value} end)
+      |> Map.take([
+        "url",
+        "filename",
+        "document_type",
+        "source_type",
+        "requires_login",
+        "captured_from"
+      ])
+    end)
+    |> Enum.filter(&(is_binary(&1["url"]) and &1["url"] != ""))
+    |> Enum.uniq_by(& &1["url"])
+  end
+
+  defp normalize_documents(_documents), do: []
+
+  defp packet_status([_ | _]), do: "present"
+  defp packet_status(_documents), do: "missing"
+
+  defp deep_merge(left, right) when is_map(left) and is_map(right) do
+    Map.merge(left, right, fn _key, left_value, right_value ->
+      deep_merge(left_value, right_value)
+    end)
+  end
+
+  defp deep_merge(_left, right), do: right
+
+  defp agent_run_id_from_context(context) when is_map(context) do
+    [
+      nested_value(context, [:tool_context, :agent_run_id]),
+      nested_value(context, [:tool_context, :runtime_instance_id]),
+      nested_value(context, [:tool_context, :run_id]),
+      nested_value(context, [:agent_run_id]),
+      nested_value(context, [:runtime_instance_id]),
+      nested_value(context, [:run_id])
+    ]
+    |> Enum.find(&is_binary/1)
+  end
+
+  defp agent_run_id_from_context(_context), do: nil
+
+  defp nested_value(map, [key]) when is_map(map) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp nested_value(map, [key | rest]) when is_map(map) do
+    case nested_value(map, [key]) do
+      %{} = nested -> nested_value(nested, rest)
+      _ -> nil
     end
   end
 

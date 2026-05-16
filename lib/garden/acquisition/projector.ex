@@ -416,9 +416,12 @@ defmodule GnomeGarden.Acquisition.Projector do
           score_company_profile_mode: bid.score_company_profile_mode,
           score_recommendation: bid.score_recommendation,
           score_total: bid.score_total,
-          score_source_confidence: bid.score_source_confidence
+          score_source_confidence: bid.score_source_confidence,
+          documents: metadata_value(bid.metadata, "documents"),
+          packet: metadata_value(bid.metadata, "packet")
         }),
       source_id: source_id,
+      agent_run_id: bid_agent_run_id(bid),
       organization_id: bid.organization_id,
       signal_id: bid.signal_id,
       source_bid_id: bid.id
@@ -562,6 +565,14 @@ defmodule GnomeGarden.Acquisition.Projector do
 
   defp discovery_record_finding_status(%{status: :archived}), do: :suppressed
   defp discovery_record_finding_status(_discovery_record), do: :new
+
+  defp bid_agent_run_id(%{metadata: metadata}) when is_map(metadata) do
+    metadata
+    |> metadata_value("source")
+    |> metadata_value("agent_run_id")
+  end
+
+  defp bid_agent_run_id(_bid), do: nil
 
   defp bid_confidence(:direct), do: :high
   defp bid_confidence(:aggregated), do: :medium

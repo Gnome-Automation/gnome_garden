@@ -41,12 +41,14 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
     # Check if bid already exists
     case find_existing(params) do
       {:ok, existing} ->
+        existing = maybe_refresh_existing(existing, params, context)
         log_output(context, :existing, existing)
 
         {:ok,
          %{
            id: existing.id,
            title: existing.title,
+           url: existing.url,
            already_exists: true,
            message: "Bid already exists: #{existing.title}"
          }}
@@ -96,7 +98,11 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
         score_source_confidence: Map.get(params, :score_source_confidence),
         keywords_matched: Map.get(params, :keywords_matched, []),
         keywords_rejected: Map.get(params, :keywords_rejected, []),
-        metadata: Map.get(params, :metadata, %{})
+        metadata:
+          params
+          |> metadata_param()
+          |> Map.new()
+          |> put_incoming_agent_run_id(agent_run_id_from_context(context))
       }
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()
@@ -113,6 +119,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
          %{
            id: bid.id,
            title: bid.title,
+           url: bid.url,
            score_total: bid.score_total,
            score_tier: bid.score_tier,
            message: "Saved bid: #{bid.title}"
@@ -120,6 +127,69 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
 
       {:error, error} ->
         {:error, "Failed to save bid: #{inspect(error)}"}
+    end
+  end
+
+  defp maybe_refresh_existing(existing, params, context) do
+    updates =
+      %{}
+      |> maybe_put_if_missing(:description, existing.description, Map.get(params, :description))
+      |> maybe_put_if_missing(:due_at, existing.due_at, parse_datetime(Map.get(params, :due_at)))
+      |> maybe_put_metadata(existing.metadata, params, agent_run_id_from_context(context))
+
+    if map_size(updates) == 0 do
+      existing
+    else
+      case Procurement.update_bid(existing, updates) do
+        {:ok, bid} -> bid
+        {:error, _error} -> existing
+      end
+    end
+  end
+
+  defp maybe_put_if_missing(updates, _key, existing, _value) when not is_nil(existing),
+    do: updates
+
+  defp maybe_put_if_missing(updates, _key, _existing, nil), do: updates
+  defp maybe_put_if_missing(updates, _key, _existing, ""), do: updates
+  defp maybe_put_if_missing(updates, key, _existing, value), do: Map.put(updates, key, value)
+
+  defp maybe_put_metadata(updates, existing_metadata, params, agent_run_id) do
+    incoming_metadata =
+      params
+      |> metadata_param()
+      |> Map.new()
+      |> put_incoming_agent_run_id(agent_run_id)
+
+    existing_metadata = existing_metadata || %{}
+    merged_metadata = deep_merge(existing_metadata, incoming_metadata)
+
+    if merged_metadata == existing_metadata do
+      updates
+    else
+      Map.put(updates, :metadata, merged_metadata)
+    end
+  end
+
+  defp put_incoming_agent_run_id(metadata, nil), do: metadata
+
+  defp put_incoming_agent_run_id(metadata, agent_run_id) do
+    source =
+      metadata
+      |> Map.get(:source, Map.get(metadata, "source", %{}))
+      |> case do
+        source when is_map(source) -> source
+        _ -> %{}
+      end
+      |> Map.put(:agent_run_id, agent_run_id)
+
+    Map.put(metadata, :source, source)
+  end
+
+  defp metadata_param(params) do
+    case Map.get(params, :metadata) do
+      metadata when is_map(metadata) -> metadata
+      _ -> %{}
     end
   end
 
@@ -134,6 +204,45 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
   end
 
   defp parse_datetime(_), do: nil
+
+  defp deep_merge(left, right) when is_map(left) and is_map(right) do
+    Map.merge(left, right, fn _key, left_value, right_value ->
+      deep_merge(left_value, right_value)
+    end)
+  end
+
+  defp deep_merge(_left, right), do: right
+
+  defp agent_run_id_from_context(context) when is_map(context) do
+    [
+      nested_value(context, [:tool_context, :agent_run_id]),
+      nested_value(context, [:tool_context, :runtime_instance_id]),
+      nested_value(context, [:tool_context, :run_id]),
+      nested_value(context, [:agent_run_id]),
+      nested_value(context, [:runtime_instance_id]),
+      nested_value(context, [:run_id])
+    ]
+    |> Enum.find(&persisted_run_id?/1)
+  end
+
+  defp agent_run_id_from_context(_context), do: nil
+
+  defp persisted_run_id?(run_id) when is_binary(run_id) do
+    match?({:ok, _run}, GnomeGarden.Agents.get_agent_run(run_id))
+  end
+
+  defp persisted_run_id?(_run_id), do: false
+
+  defp nested_value(map, [key]) when is_map(map) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp nested_value(map, [key | rest]) when is_map(map) do
+    case nested_value(map, [key]) do
+      %{} = nested -> nested_value(nested, rest)
+      _ -> nil
+    end
+  end
 
   defp log_output(context, event, bid) do
     RunOutputLogger.log(context, %{

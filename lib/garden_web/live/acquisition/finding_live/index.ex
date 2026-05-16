@@ -30,6 +30,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
      |> assign(:selected_family, :all)
      |> assign(:selected_source, nil)
      |> assign(:selected_program, nil)
+     |> assign(:selected_run_id, nil)
      |> assign(:action_dialog, nil)
      |> assign(:queue_counts, queue_counts())
      |> assign(:findings, [])
@@ -42,9 +43,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     family = parse_family(Map.get(params, "family"))
     source = load_source_filter(Map.get(params, "source_id"), socket.assigns.current_user)
     program = load_program_filter(Map.get(params, "program_id"), socket.assigns.current_user)
+    run_id = blank_to_nil(Map.get(params, "run_id"))
 
     findings_page =
-      list_findings_page(queue, family, source, program, socket.assigns.current_user)
+      list_findings_page(queue, family, source, program, run_id, socket.assigns.current_user)
 
     {:noreply,
      socket
@@ -52,11 +54,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
      |> assign(:selected_family, family)
      |> assign(:selected_source, source)
      |> assign(:selected_program, program)
+     |> assign(:selected_run_id, run_id)
      |> assign(:findings_page, findings_page)
      |> assign(:findings, page_results(findings_page))
      |> assign(
        :queue_counts,
-       queue_counts(family, source, program, socket.assigns.current_user)
+       queue_counts(family, source, program, run_id, socket.assigns.current_user)
      )}
   end
 
@@ -242,6 +245,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
                 selected_family={@selected_family}
                 selected_source={@selected_source}
                 selected_program={@selected_program}
+                selected_run_id={@selected_run_id}
                 count={Map.fetch!(@queue_counts, queue)}
               />
             </div>
@@ -258,6 +262,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
                   selected_queue={@selected_queue}
                   selected_source={@selected_source}
                   selected_program={@selected_program}
+                  selected_run_id={@selected_run_id}
                 />
               </div>
             </div>
@@ -641,6 +646,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         socket.assigns.selected_family,
         socket.assigns.selected_source,
         socket.assigns.selected_program,
+        socket.assigns.selected_run_id,
         socket.assigns.current_user
       )
     )
@@ -651,18 +657,20 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         socket.assigns.selected_family,
         socket.assigns.selected_source,
         socket.assigns.selected_program,
+        socket.assigns.selected_run_id,
         socket.assigns.current_user
       )
     )
     |> then(&assign(&1, :findings, page_results(&1.assigns.findings_page)))
   end
 
-  defp list_findings_page(queue, family, source, program, actor) do
+  defp list_findings_page(queue, family, source, program, run_id, actor) do
     case Acquisition.list_findings_queue(
            queue,
            family,
            filter_id(source),
            filter_id(program),
+           run_id,
            actor: actor,
            page: [limit: @finding_limit, count: true]
          ) do
@@ -671,18 +679,19 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     end
   end
 
-  defp count_findings(queue, family, source, program, actor) do
+  defp count_findings(queue, family, source, program, run_id, actor) do
     queue
-    |> list_findings_count_page(family, source, program, actor)
+    |> list_findings_count_page(family, source, program, run_id, actor)
     |> page_count()
   end
 
-  defp list_findings_count_page(queue, family, source, program, actor) do
+  defp list_findings_count_page(queue, family, source, program, run_id, actor) do
     case Acquisition.list_findings_queue(
            queue,
            family,
            filter_id(source),
            filter_id(program),
+           run_id,
            actor: actor,
            page: [limit: 1, count: true]
          ) do
@@ -703,13 +712,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
   defp empty_page, do: %{results: [], count: 0}
 
-  defp queue_counts(family \\ :all, source \\ nil, program \\ nil, actor \\ nil) do
+  defp queue_counts(family \\ :all, source \\ nil, program \\ nil, run_id \\ nil, actor \\ nil) do
     %{
-      review: count_findings(:review, family, source, program, actor),
-      promoted: count_findings(:promoted, family, source, program, actor),
-      rejected: count_findings(:rejected, family, source, program, actor),
-      suppressed: count_findings(:suppressed, family, source, program, actor),
-      parked: count_findings(:parked, family, source, program, actor)
+      review: count_findings(:review, family, source, program, run_id, actor),
+      promoted: count_findings(:promoted, family, source, program, run_id, actor),
+      rejected: count_findings(:rejected, family, source, program, run_id, actor),
+      suppressed: count_findings(:suppressed, family, source, program, run_id, actor),
+      parked: count_findings(:parked, family, source, program, run_id, actor)
     }
   end
 
@@ -756,7 +765,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   defp queue_link(assigns) do
     ~H"""
     <.link
-      patch={queue_path(@queue, @selected_family, @selected_source, @selected_program)}
+      patch={
+        queue_path(@queue, @selected_family, @selected_source, @selected_program, @selected_run_id)
+      }
       class={[
         "inline-flex min-w-0 items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm font-medium transition",
         if(@selected_queue == @queue,
@@ -785,11 +796,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   attr :selected_queue, :atom, required: true
   attr :selected_source, :map, default: nil
   attr :selected_program, :map, default: nil
+  attr :selected_run_id, :string, default: nil
 
   defp family_link(assigns) do
     ~H"""
     <.link
-      patch={queue_path(@selected_queue, @family, @selected_source, @selected_program)}
+      patch={
+        queue_path(@selected_queue, @family, @selected_source, @selected_program, @selected_run_id)
+      }
       class={[
         "inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition",
         if(@selected_family == @family,
@@ -896,11 +910,19 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     end
   end
 
-  defp queue_path(queue, family, source, program) do
+  defp blank_to_nil(nil), do: nil
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(value), do: value
+
+  defp queue_path(queue, family, source, program),
+    do: queue_path(queue, family, source, program, nil)
+
+  defp queue_path(queue, family, source, program, run_id) do
     %{"queue" => to_string(queue)}
     |> maybe_put_param("family", family != :all, family)
     |> maybe_put_param("source_id", is_map(source), source && source.id)
     |> maybe_put_param("program_id", is_map(program), program && program.id)
+    |> maybe_put_param("run_id", is_binary(run_id), run_id)
     |> then(&("/acquisition/findings?" <> URI.encode_query(&1)))
   end
 

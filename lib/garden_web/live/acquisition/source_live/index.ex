@@ -308,6 +308,15 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         >
           Open Queue
         </.link>
+        <.link
+          :if={@source.latest_run_id}
+          navigate={
+            ~p"/acquisition/findings?family=#{@source.source_family}&source_id=#{@source.id}&run_id=#{@source.latest_run_id}"
+          }
+          class="btn btn-sm btn-ghost"
+        >
+          Last Run Findings
+        </.link>
       </div>
     </article>
     """
