@@ -21,6 +21,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
      |> assign(:buckets, @buckets)
      |> assign(:selected_bucket, :needs_configuration)
      |> assign(:source_counts, empty_counts())
+     |> assign(:next_runnable_source, nil)
      |> assign(:sources, [])}
   end
 
@@ -32,12 +33,26 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     {:noreply,
      socket
      |> assign(:selected_bucket, bucket)
-     |> assign(:source_counts, source_counts(sources))
-     |> assign(:sources, bucket_sources(sources, bucket))}
+     |> assign_sources(sources)}
   end
 
   @impl true
   def handle_event("launch_run", %{"id" => id}, socket) do
+    launch_source(socket, id)
+  end
+
+  @impl true
+  def handle_event("launch_next_run", _params, socket) do
+    case socket.assigns.next_runnable_source do
+      %{id: id} ->
+        launch_source(socket, id)
+
+      nil ->
+        {:noreply, put_flash(socket, :error, "No ready source is available to scan.")}
+    end
+  end
+
+  defp launch_source(socket, id) do
     with {:ok, source} <-
            Acquisition.get_source(id,
              actor: socket.assigns.current_user,
@@ -125,9 +140,19 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                   Showing {length(@sources)} of {bucket_count(@source_counts, @selected_bucket)} sources
                 </p>
               </div>
-              <.link navigate={~p"/acquisition/findings"} class="btn btn-sm btn-ghost">
-                Open Review Queue
-              </.link>
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                <.button
+                  :if={@next_runnable_source}
+                  phx-click="launch_next_run"
+                  variant="primary"
+                  class="px-3 py-2 text-sm"
+                >
+                  Launch Next Scan
+                </.button>
+                <.link navigate={~p"/acquisition/findings"} class="btn btn-sm btn-ghost">
+                  Open Review Queue
+                </.link>
+              </div>
             </div>
 
             <div
@@ -300,8 +325,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp refresh_sources(socket) do
     sources = list_sources(socket.assigns.current_user)
 
+    assign_sources(socket, sources)
+  end
+
+  defp assign_sources(socket, sources) do
     socket
     |> assign(:source_counts, source_counts(sources))
+    |> assign(:next_runnable_source, next_runnable_source(sources))
     |> assign(:sources, bucket_sources(sources, socket.assigns.selected_bucket))
   end
 
@@ -337,6 +367,16 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     |> Enum.filter(&source_in_bucket?(&1, bucket))
     |> Enum.take(@source_limit)
   end
+
+  defp next_runnable_source(sources) do
+    sources
+    |> Enum.filter(&scan_ready?/1)
+    |> Enum.sort_by(&run_sort_key/1, DateTime)
+    |> List.first()
+  end
+
+  defp run_sort_key(%{last_run_at: nil}), do: DateTime.from_unix!(0)
+  defp run_sort_key(%{last_run_at: last_run_at}), do: last_run_at
 
   defp source_in_bucket?(source, :needs_configuration), do: needs_configuration?(source)
   defp source_in_bucket?(source, :ready), do: scan_ready?(source)

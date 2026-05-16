@@ -104,6 +104,25 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert render(view) =~ "Manual directory intake updated"
   end
 
+  test "source registry exposes a launch next action when a source is ready", %{conn: conn} do
+    {:ok, _source} =
+      Acquisition.create_source(%{
+        name: "Ready company signal scan",
+        external_ref: "test:ready-company-signal-scan",
+        url: "https://example.com/ready-company-signal-scan",
+        source_family: :discovery,
+        source_kind: :company_site,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=ready")
+
+    assert render(view) =~ "Ready company signal scan"
+    assert has_element?(view, "button", "Launch Next Scan")
+  end
+
   test "source configuration saves selectors through procurement action", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{
