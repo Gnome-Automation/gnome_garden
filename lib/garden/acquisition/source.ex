@@ -7,7 +7,8 @@ defmodule GnomeGarden.Acquisition.Source do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Acquisition,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource],
+    notifiers: [Ash.Notifier.PubSub]
 
   admin do
     table_columns [:name, :source_family, :source_kind, :status, :enabled, :scan_strategy]
@@ -104,6 +105,14 @@ defmodule GnomeGarden.Acquisition.Source do
                 ]
               )
     end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "source"
+
+    publish :create, "created"
+    publish :update, "updated"
   end
 
   attributes do

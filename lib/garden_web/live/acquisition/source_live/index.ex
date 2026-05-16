@@ -10,6 +10,11 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("source:created")
+      GnomeGardenWeb.Endpoint.subscribe("source:updated")
+    end
+
     {:ok,
      socket
      |> assign(:page_title, "Acquisition Sources")
@@ -59,6 +64,11 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not launch source scan: #{inspect(error)}")}
     end
+  end
+
+  @impl true
+  def handle_info(%{topic: "source:" <> _event}, socket) do
+    {:noreply, refresh_sources(socket)}
   end
 
   @impl true

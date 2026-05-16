@@ -79,6 +79,31 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert render(view) =~ "Source Registry"
   end
 
+  test "source registry refreshes when Ash PubSub publishes source updates", %{conn: conn} do
+    {:ok, source} =
+      Acquisition.create_source(%{
+        name: "Manual directory intake",
+        external_ref: "test:manual-directory-intake",
+        url: "https://example.com/manual-directory-intake",
+        source_family: :discovery,
+        source_kind: :directory,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=all")
+
+    assert render(view) =~ "Manual directory intake"
+
+    {:ok, _source} =
+      Acquisition.update_source(source, %{
+        name: "Manual directory intake updated"
+      })
+
+    assert render(view) =~ "Manual directory intake updated"
+  end
+
   test "source configuration saves selectors through procurement action", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{
