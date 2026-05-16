@@ -218,7 +218,7 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
 
     http_get = fn _url, opts ->
       assert opts[:params][:api_key] == "test-sam-key"
-      assert opts[:params][:keywords] == "SCADA PLC controls"
+      assert opts[:params][:title] == "SCADA PLC controls"
       assert opts[:params][:ncode] == "541330"
 
       {:ok,
