@@ -123,6 +123,36 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert has_element?(view, "button", "Launch Next Scan")
   end
 
+  test "source registry shows durable run status and run link", %{conn: conn} do
+    {:ok, _source} =
+      Acquisition.create_source(%{
+        name: "Ran directory intake",
+        external_ref: "test:ran-directory-intake",
+        url: "https://example.com/ran-directory-intake",
+        source_family: :discovery,
+        source_kind: :directory,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic,
+        metadata: %{
+          "last_agent_run_id" => "12345678-1234-1234-1234-123456789abc",
+          "last_agent_run_state" => "running"
+        }
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=all")
+
+    assert render(view) =~ "Ran directory intake"
+    assert render(view) =~ "Running"
+    assert render(view) =~ "Run 12345678"
+
+    assert has_element?(
+             view,
+             "a[href='/console/agents/runs/12345678-1234-1234-1234-123456789abc']",
+             "Open Run"
+           )
+  end
+
   test "source configuration saves selectors through procurement action", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{

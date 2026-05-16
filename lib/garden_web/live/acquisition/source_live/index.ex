@@ -249,6 +249,29 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           <.source_fact label="Last Success" value={format_datetime(@source.last_success_at)} />
         </div>
 
+        <div class="flex flex-col gap-2 rounded-md border border-base-content/10 bg-base-200/60 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
+              Run
+            </p>
+            <div class="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+              <.status_badge status={run_state_variant(@source)}>
+                {run_state_label(@source)}
+              </.status_badge>
+              <span class="truncate text-xs text-base-content/55">
+                {run_context(@source)}
+              </span>
+            </div>
+          </div>
+          <.link
+            :if={@source.latest_run_id}
+            navigate={~p"/console/agents/runs/#{@source.latest_run_id}"}
+            class="btn btn-xs btn-ghost shrink-0"
+          >
+            Open Run
+          </.link>
+        </div>
+
         <p class="text-sm leading-6 text-base-content/60">
           {@source.health_note}
         </p>
@@ -284,13 +307,6 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           class="btn btn-sm btn-ghost"
         >
           Open Queue
-        </.link>
-        <.link
-          :if={@source.latest_run_id}
-          navigate={~p"/console/agents/runs/#{@source.latest_run_id}"}
-          class="btn btn-sm btn-ghost"
-        >
-          Open Run
         </.link>
       </div>
     </article>
@@ -393,6 +409,26 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp bucket_label(:ready), do: "Ready"
   defp bucket_label(:attention), do: "Attention"
   defp bucket_label(:all), do: "All"
+
+  defp run_state_variant(%{latest_run_id: nil}), do: :default
+  defp run_state_variant(%{last_run_state_variant: variant}) when is_atom(variant), do: variant
+  defp run_state_variant(_source), do: :default
+
+  defp run_state_label(%{latest_run_id: nil}), do: "No run yet"
+
+  defp run_state_label(%{last_run_state: state}) when is_atom(state) do
+    format_atom(state)
+  end
+
+  defp run_state_label(_source), do: "Run recorded"
+
+  defp run_context(%{latest_run_id: nil}), do: "Launch a scan to create a durable agent run."
+
+  defp run_context(%{latest_run_id: latest_run_id}) when is_binary(latest_run_id) do
+    "Run #{String.slice(latest_run_id, 0, 8)}"
+  end
+
+  defp run_context(_source), do: "Run linked."
 
   defp parse_bucket(bucket) when is_binary(bucket) do
     bucket
