@@ -32,6 +32,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   require Logger
 
+  @pre_score_detail_limit 6
+
   @doc """
   Scan a single procurement source using its saved scrape_config.
   """
@@ -133,7 +135,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
            ),
          {:ok, bids} <- extract_bids(config),
          filtered = TargetingFilter.filter_bids(bids, profile_context),
-         {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
+         {:ok, prepared} <-
+           prepare_bids_for_final_scoring(filtered.kept, source, listing_url, profile_context),
+         {:ok, scored} <- score_bids(prepared, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, enrich_bids(saved))
     end
@@ -433,6 +437,248 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     end)
   end
 
+  defp prepare_bids_for_final_scoring(
+         bids,
+         %{source_type: :planetbids} = source,
+         listing_url,
+         profile_context
+       ) do
+    with {:ok, preliminary_scored} <- score_bids(bids, source, profile_context) do
+      pre_score_enrich_bids(preliminary_scored, listing_url)
+    end
+  end
+
+  defp prepare_bids_for_final_scoring(bids, _source, _listing_url, _profile_context),
+    do: {:ok, bids}
+
+  defp pre_score_enrich_bids(bids, listing_url) do
+    detail_urls =
+      bids
+      |> Enum.sort_by(&preliminary_score_total/1, :desc)
+      |> Enum.take(@pre_score_detail_limit)
+      |> Enum.map(&bid_detail_url(&1, listing_url))
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    enriched =
+      Enum.map(bids, fn bid ->
+        if MapSet.member?(detail_urls, bid_detail_url(bid, listing_url)) do
+          pre_score_enrich_bid(bid, listing_url)
+        else
+          bid
+        end
+      end)
+
+    {:ok, enriched}
+  end
+
+  defp preliminary_score_total(bid) do
+    case bid_value(bid, :score) do
+      %{score_total: total} when is_number(total) -> total
+      %{"score_total" => total} when is_number(total) -> total
+      _ -> 0
+    end
+  end
+
+  defp pre_score_enrich_bid(bid, listing_url) do
+    detail_url =
+      bid
+      |> bid_detail_url(listing_url)
+      |> case do
+        nil -> nil
+        url -> String.replace(url, ~r/#.*$/, "")
+      end
+
+    if detail_url do
+      with {:ok, %Req.Response{status: status, body: body}}
+           when status in 200..299 and is_binary(body) <-
+             Req.get(detail_url,
+               receive_timeout: 6_000,
+               connect_options: [timeout: 6_000],
+               max_redirects: 5,
+               headers: [{"user-agent", "GnomeGarden DetailScanner/1.0"}]
+             ),
+           {:ok, data} <- extract_detail_data_from_html(body, detail_url) do
+        merge_bid_detail_data(bid, data)
+      else
+        _ ->
+          bid
+      end
+    else
+      bid
+    end
+  end
+
+  defp extract_detail_data_from_html(html, detail_url) do
+    with {:ok, document} <- Floki.parse_document(html) do
+      lines =
+        document
+        |> Floki.text(sep: "\n")
+        |> String.split("\n")
+        |> Enum.map(&String.trim/1)
+        |> Enum.filter(&(&1 != ""))
+
+      documents = documents_from_detail(document, detail_url)
+
+      {:ok,
+       %{
+         "description" => description_from_lines(lines),
+         "bid_type" => value_after_heading(lines, ~r/^project type$/i),
+         "documents" => documents,
+         "packet_status" => packet_status_from_detail(documents, lines)
+       }}
+    end
+  end
+
+  defp description_from_lines(lines) do
+    case Enum.find_index(lines, &Regex.match?(~r/^description$/i, &1)) do
+      nil ->
+        ""
+
+      index ->
+        lines
+        |> Enum.slice((index + 1)..(index + 15)//1)
+        |> Enum.take_while(
+          &(not Regex.match?(
+              ~r/^(other details|special notices|notes|bid detail|documents|addenda)/i,
+              &1
+            ))
+        )
+        |> Enum.filter(&(String.length(&1) > 30))
+        |> Enum.join(" ")
+    end
+  end
+
+  defp value_after_heading(lines, regex) do
+    case Enum.find_index(lines, &Regex.match?(regex, &1)) do
+      nil -> ""
+      index -> Enum.at(lines, index + 1, "")
+    end
+  end
+
+  defp documents_from_detail(document, detail_url) do
+    document
+    |> Floki.find("a[href]")
+    |> Enum.map(&document_descriptor(&1, detail_url))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq_by(& &1["url"])
+  end
+
+  defp document_descriptor(node, detail_url) do
+    text = node |> Floki.text(sep: " ") |> String.trim()
+    href = href_attr(node)
+    combined = "#{text} #{href}" |> String.downcase()
+
+    if is_binary(href) and href != "" and
+         not String.contains?(String.downcase(href), "bo-detail") and
+         String.match?(
+           combined,
+           ~r/document|download|attachment|addend|scope|spec|plan|bid|packet|pdf/
+         ) do
+      url = detail_url |> URI.merge(href) |> to_string()
+
+      %{
+        "url" => url,
+        "filename" =>
+          if(text == "", do: Path.basename(URI.parse(url).path || "document"), else: text),
+        "document_type" => document_type_from_text(combined),
+        "source_type" => "planetbids",
+        "requires_login" => true,
+        "captured_from" => detail_url
+      }
+    end
+  end
+
+  defp href_attr({"a", attrs, _children}) do
+    Enum.find_value(attrs, fn
+      {"href", value} -> value
+      _ -> nil
+    end)
+  end
+
+  defp href_attr(_node), do: nil
+
+  defp document_type_from_text(text) do
+    cond do
+      String.match?(text, ~r/addendum|addenda/) -> "addendum"
+      String.match?(text, ~r/scope|spec|plans?/) -> "scope"
+      String.match?(text, ~r/price|pricing|bid form|proposal form/) -> "pricing"
+      String.match?(text, ~r/solicitation|rfp|rfq|ifb|packet|document|pdf/) -> "solicitation"
+      true -> "other"
+    end
+  end
+
+  defp packet_status_from_detail([_ | _], _lines), do: "present"
+
+  defp packet_status_from_detail(_documents, lines) do
+    detail_text = lines |> Enum.join(" ") |> String.downcase()
+
+    cond do
+      String.match?(detail_text, ~r/login|sign in|password/) -> "login_required"
+      true -> "missing"
+    end
+  end
+
+  defp bid_detail_url(bid, listing_url) do
+    value = bid_value(bid, :link) || bid_value(bid, :url)
+
+    case resolve_bid_url(value, listing_url) do
+      url when is_binary(url) ->
+        if String.contains?(url, "bo-detail"), do: url
+
+      _ ->
+        nil
+    end
+  end
+
+  defp merge_bid_detail_data(bid, data) do
+    bid
+    |> maybe_put_bid_detail(:description, data["description"])
+    |> maybe_put_bid_type_detail(data["bid_type"])
+    |> maybe_put_documents_detail(data["documents"])
+    |> maybe_put_packet_status_detail(data["packet_status"])
+  end
+
+  defp maybe_put_bid_detail(bid, _key, nil), do: bid
+  defp maybe_put_bid_detail(bid, _key, ""), do: bid
+
+  defp maybe_put_bid_detail(bid, key, value) do
+    existing = bid_value(bid, key)
+
+    if is_nil(existing) || String.length(existing || "") < 20 do
+      Map.put(bid, key, value)
+    else
+      bid
+    end
+  end
+
+  defp maybe_put_bid_type_detail(bid, nil), do: bid
+  defp maybe_put_bid_type_detail(bid, ""), do: bid
+
+  defp maybe_put_bid_type_detail(bid, type) do
+    if bid_value(bid, :bid_type), do: bid, else: Map.put(bid, :bid_type, parse_bid_type(type))
+  end
+
+  defp maybe_put_documents_detail(bid, documents) do
+    documents =
+      bid
+      |> bid_value(:documents)
+      |> List.wrap()
+      |> Kernel.++(List.wrap(documents))
+      |> normalize_documents()
+
+    if documents == [] do
+      bid
+    else
+      Map.put(bid, :documents, documents)
+    end
+  end
+
+  defp maybe_put_packet_status_detail(bid, status) when is_binary(status),
+    do: Map.put(bid, :packet_status, status)
+
+  defp maybe_put_packet_status_detail(bid, _status), do: bid
+
   defp enrich_bid(bid_id) do
     case Procurement.get_bid(bid_id) do
       {:ok, bid} ->
@@ -650,9 +896,10 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp packet_metadata_for_bid(bid) do
     documents = documents_for_bid(bid)
+    status = bid_value(bid, :packet_status) || packet_status(documents)
 
     %{
-      status: packet_status(documents),
+      status: status,
       captured_at: DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
     }
   end

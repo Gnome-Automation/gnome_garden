@@ -12,6 +12,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   alias GnomeGarden.Agents.AgentTracker
   alias GnomeGarden.Agents.RunFailure
   alias GnomeGarden.Agents.Templates
+  alias GnomeGarden.Procurement
 
   @default_timeout_ms 180_000
 
@@ -65,6 +66,8 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
       case Agents.cancel_agent_run(run, actor: actor) do
         {:ok, cancelled_run} ->
+          persist_procurement_source_run_state(cancelled_run, :cancelled, actor)
+
           persist_message(%{
             agent_run_id: cancelled_run.id,
             role: :system,
@@ -508,6 +511,44 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
         Logger.warning("Failed to persist agent message: #{inspect(error)}")
         {:error, error}
     end
+  end
+
+  defp persist_procurement_source_run_state(%{metadata: metadata} = run, state, actor)
+       when is_map(metadata) do
+    case metadata_value(metadata, :procurement_source_id) do
+      source_id when is_binary(source_id) ->
+        with {:ok, source} <- Procurement.get_procurement_source(source_id, actor: actor) do
+          source_metadata =
+            source.metadata
+            |> Map.new()
+            |> Map.put("last_agent_run_id", run.id)
+            |> Map.put("last_agent_run_state", state)
+
+          case Procurement.update_procurement_source(
+                 source,
+                 %{metadata: source_metadata},
+                 actor: actor,
+                 authorize?: false
+               ) do
+            {:ok, _source} ->
+              :ok
+
+            {:error, error} ->
+              Logger.warning(
+                "Failed to persist procurement source run state for #{source_id}: #{inspect(error)}"
+              )
+          end
+        end
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp persist_procurement_source_run_state(_run, _state, _actor), do: :ok
+
+  defp metadata_value(metadata, key) when is_map(metadata) do
+    Map.get(metadata, key) || Map.get(metadata, Atom.to_string(key))
   end
 
   defp stop_runtime(runtime_instance_id) do
