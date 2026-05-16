@@ -28,6 +28,7 @@ defmodule GnomeGarden.Acquisition.Preparations.FilterFindingQueue do
     :promotion_blockers,
     :source,
     :program,
+    :agent_run,
     :organization,
     :signal
   ]
