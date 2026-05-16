@@ -330,6 +330,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         </:actions>
       </.page_header>
 
+      <.operator_brief finding={@finding} />
+
       <.finding_review_workbench
         finding={@finding}
         finding_documents={@finding_documents}
@@ -937,6 +939,46 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     """
   end
 
+  attr :finding, :map, required: true
+
+  defp operator_brief(assigns) do
+    assigns = assign(assigns, :brief, build_operator_brief(assigns.finding))
+
+    ~H"""
+    <.section
+      title="Operator Brief"
+      description="Fast read before you decide what to do with this finding."
+      body_class="p-0"
+    >
+      <div class="grid gap-0 divide-y divide-base-content/10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0">
+        <div class={["p-4", operator_brief_tone_class(@brief.tone)]}>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
+            Recommended action
+          </p>
+          <p class="mt-2 text-lg font-semibold leading-6">{@brief.action}</p>
+          <p class="mt-2 text-sm leading-6 opacity-80">{@brief.reason}</p>
+        </div>
+
+        <div class="p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+            Deadline
+          </p>
+          <p class="mt-2 text-base font-semibold text-base-content">{@brief.deadline}</p>
+          <p class="mt-2 text-sm leading-6 text-base-content/65">{@brief.deadline_note}</p>
+        </div>
+
+        <div class="p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+            Readiness
+          </p>
+          <p class="mt-2 text-base font-semibold text-base-content">{@brief.readiness}</p>
+          <p class="mt-2 text-sm leading-6 text-base-content/65">{@brief.readiness_note}</p>
+        </div>
+      </div>
+    </.section>
+    """
+  end
+
   attr :label, :string, required: true
   attr :value, :string, required: true
   attr :badge, :atom, default: nil
@@ -959,6 +1001,190 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp document_action_label(%{finding_family: :discovery}), do: "Upload Source Material"
   defp document_action_label(_finding), do: "Upload Document"
 
+  defp build_operator_brief(%{status: status} = finding)
+       when status in [:rejected, :suppressed, :parked, :promoted] do
+    %{
+      action: finding.status_label,
+      reason: disposition_reason(finding),
+      tone: disposition_tone(status),
+      deadline: deadline_label(finding),
+      deadline_note: deadline_note(finding),
+      readiness: terminal_readiness_label(status),
+      readiness_note: terminal_readiness_note(status)
+    }
+  end
+
+  defp build_operator_brief(%{finding_family: :procurement} = finding) do
+    cond do
+      expired?(finding) ->
+        %{
+          action: "Reject as expired",
+          reason:
+            "The opportunity deadline has passed. Keep the source pattern, but do not spend review time promoting this bid.",
+          tone: :error,
+          deadline: deadline_label(finding),
+          deadline_note: deadline_note(finding),
+          readiness: readiness_label(finding),
+          readiness_note: readiness_note(finding)
+        }
+
+      finding.status == :accepted and finding.promotion_ready ->
+        brief(finding, "Promote to signal", "Accepted and promotion-ready.", :success)
+
+      finding.status == :accepted ->
+        brief(
+          finding,
+          "Upload packet",
+          "Accepted, but still needs durable procurement proof before promotion.",
+          :warning
+        )
+
+      finding.acceptance_ready ->
+        brief(
+          finding,
+          "Accept if worth pursuing",
+          "The minimum review prep is complete. Decide if this should stay active.",
+          :success
+        )
+
+      true ->
+        brief(
+          finding,
+          "Complete review prep",
+          "Clear the listed blockers before accepting or promoting this finding.",
+          :warning
+        )
+    end
+  end
+
+  defp build_operator_brief(finding) do
+    cond do
+      finding.status == :accepted and finding.promotion_ready ->
+        brief(finding, "Promote to signal", "Accepted and promotion-ready.", :success)
+
+      finding.acceptance_ready ->
+        brief(
+          finding,
+          "Accept if worth pursuing",
+          "The minimum review prep is complete. Decide if this should stay active.",
+          :success
+        )
+
+      true ->
+        brief(
+          finding,
+          "Complete review prep",
+          "Clear the listed blockers before accepting or promoting this finding.",
+          :warning
+        )
+    end
+  end
+
+  defp brief(finding, action, reason, tone) do
+    %{
+      action: action,
+      reason: reason,
+      tone: tone,
+      deadline: deadline_label(finding),
+      deadline_note: deadline_note(finding),
+      readiness: readiness_label(finding),
+      readiness_note: readiness_note(finding)
+    }
+  end
+
+  defp expired?(%{due_at: nil}), do: false
+
+  defp expired?(%{due_at: due_at}) do
+    Date.compare(DateTime.to_date(due_at), Date.utc_today()) == :lt
+  end
+
+  defp deadline_label(%{due_at: nil}), do: "No deadline captured"
+  defp deadline_label(%{due_at: due_at}), do: format_datetime(due_at)
+
+  defp deadline_note(%{due_at: nil}), do: "Use source evidence to decide urgency."
+
+  defp deadline_note(%{due_at: due_at} = finding) do
+    due_date = DateTime.to_date(due_at)
+    today = Date.utc_today()
+
+    case Date.compare(due_date, today) do
+      :lt -> "Deadline passed #{abs(Date.diff(due_date, today))} days ago."
+      :eq -> "Deadline is today."
+      :gt -> "Deadline is in #{Date.diff(due_date, today)} days."
+    end
+    |> then(fn note ->
+      if finding.finding_family == :procurement, do: note, else: "Observed date: #{note}"
+    end)
+  end
+
+  defp readiness_label(%{promotion_ready: true}), do: "Ready to promote"
+  defp readiness_label(%{acceptance_ready: true}), do: "Ready to accept"
+  defp readiness_label(_finding), do: "Prep needed"
+
+  defp readiness_note(%{promotion_ready: true}), do: "All promotion gates are clear."
+
+  defp readiness_note(%{
+         acceptance_ready: true,
+         promotion_ready: false,
+         promotion_blockers: blockers
+       })
+       when is_list(blockers) and blockers != [] do
+    Enum.join(blockers, " ")
+  end
+
+  defp readiness_note(%{acceptance_blockers: blockers})
+       when is_list(blockers) and blockers != [] do
+    Enum.join(blockers, " ")
+  end
+
+  defp readiness_note(_finding), do: "No blockers currently listed."
+
+  defp disposition_reason(%{latest_review_reason: reason})
+       when is_binary(reason) and reason != "",
+       do: reason
+
+  defp disposition_reason(%{status: :promoted}), do: "Already promoted into commercial review."
+  defp disposition_reason(%{status: :parked}), do: "Parked for later review."
+  defp disposition_reason(%{status: :suppressed}), do: "Suppressed as source or profile noise."
+  defp disposition_reason(%{status: :rejected}), do: "Rejected by operator review."
+  defp disposition_reason(_finding), do: "Disposition recorded."
+
+  defp disposition_tone(:promoted), do: :success
+  defp disposition_tone(:parked), do: :info
+  defp disposition_tone(:suppressed), do: :warning
+  defp disposition_tone(:rejected), do: :error
+  defp disposition_tone(_status), do: :default
+
+  defp terminal_readiness_label(:promoted), do: "Commercial review"
+  defp terminal_readiness_label(:parked), do: "Parked"
+  defp terminal_readiness_label(:suppressed), do: "Suppressed"
+  defp terminal_readiness_label(:rejected), do: "Closed"
+  defp terminal_readiness_label(_status), do: "Disposition recorded"
+
+  defp terminal_readiness_note(:promoted), do: "Already handed into commercial review."
+  defp terminal_readiness_note(:parked), do: "Reopen when timing or evidence changes."
+
+  defp terminal_readiness_note(:suppressed),
+    do: "Stays out of active review and can teach source or profile noise."
+
+  defp terminal_readiness_note(:rejected), do: "No further action unless you reopen it."
+  defp terminal_readiness_note(_status), do: "No active review action pending."
+
+  defp operator_brief_tone_class(:success),
+    do: "bg-emerald-50 text-emerald-900 dark:bg-emerald-400/10 dark:text-emerald-100"
+
+  defp operator_brief_tone_class(:warning),
+    do: "bg-amber-50 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100"
+
+  defp operator_brief_tone_class(:error),
+    do: "bg-rose-50 text-rose-900 dark:bg-rose-400/10 dark:text-rose-100"
+
+  defp operator_brief_tone_class(:info),
+    do: "bg-sky-50 text-sky-900 dark:bg-sky-400/10 dark:text-sky-100"
+
+  defp operator_brief_tone_class(_tone),
+    do: "bg-base-200/70 text-base-content"
+
   defp substantive_procurement_document?(%{document: %{document_type: document_type}}),
     do: PromotionRules.substantive_procurement_document_type?(document_type)
 
@@ -976,6 +1202,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         :finding_type_label,
         :confidence_label,
         :confidence_variant,
+        :latest_review_reason,
+        :latest_review_reason_code,
+        :latest_review_feedback_scope,
         :acceptance_ready,
         :acceptance_blockers,
         :promotion_ready,

@@ -356,6 +356,47 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert show_html =~ ~s(rel="noopener noreferrer")
   end
 
+  test "finding detail surfaces an operator brief for expired procurement work", %{conn: conn} do
+    expired_at =
+      Date.utc_today()
+      |> Date.add(-10)
+      |> DateTime.new!(~T[17:00:00], "Etc/UTC")
+
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Expired Controls Services",
+        url: "https://example.com/bids/expired-controls-services",
+        external_id: "EXPIRED-CONTROLS-SERVICES",
+        description: "Controls services that are no longer actionable.",
+        agency: "Regional Water Agency",
+        location: "Anaheim, CA",
+        due_at: expired_at,
+        region: :oc,
+        score_total: 88,
+        score_tier: :hot
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    {:ok, _view, html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
+
+    assert html =~ "Operator Brief"
+    assert html =~ "Reject as expired"
+    assert html =~ "Deadline passed 10 days ago."
+
+    assert {:ok, _finding} =
+             Acquisition.reject_finding_review(finding.id, %{
+               reason: "Expired before review."
+             })
+
+    {:ok, _view, html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
+
+    assert html =~ "Expired before review."
+    assert html =~ "Closed"
+    assert html =~ "No further action unless you reopen it."
+  end
+
   test "source and program filters scope the acquisition queue from registries", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{
