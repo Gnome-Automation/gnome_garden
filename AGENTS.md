@@ -996,7 +996,9 @@ action row should be intentionally designed for:
 1. **I run the server** - Don't start/stop Phoenix
 2. **Generate migrations**: `mix ash.codegen`
 3. **Apply migrations**: `mix ash.migrate`
-4. **Before committing**: `mix precommit`
+4. **During development**: run focused checks such as `mix test path:line` or
+   the smallest relevant test file.
+5. **Before opening a PR only**: run `mix precommit` as the final broad check.
 
 ## Code Shape
 
@@ -1055,7 +1057,7 @@ mix test --failed            # Re-run failed tests
 mix test path:line           # Run specific test
 
 # Quality
-mix precommit                # Format, compile warnings, test
+mix precommit                # Final broad check before opening a PR
 mix format                   # Format code
 ```
 

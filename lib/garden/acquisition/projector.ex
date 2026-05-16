@@ -530,8 +530,18 @@ defmodule GnomeGarden.Acquisition.Projector do
     if bid_noise_feedback?(bid), do: :suppressed, else: :rejected
   end
 
+  defp bid_finding_status(%{status: :expired}), do: :rejected
+
+  defp bid_finding_status(%{due_at: due_at}) when not is_nil(due_at) do
+    if DateTime.compare(due_at, DateTime.utc_now()) == :lt do
+      :rejected
+    else
+      :new
+    end
+  end
+
   defp bid_finding_status(%{status: status})
-       when status in [:pursuing, :submitted, :won, :lost, :expired], do: :promoted
+       when status in [:pursuing, :submitted, :won, :lost], do: :promoted
 
   defp bid_finding_status(_bid), do: :new
 

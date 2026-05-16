@@ -15,7 +15,7 @@ defmodule GnomeGarden.Commercial.ReviewTest do
         region: :oc,
         location: "Anaheim, CA",
         description: "Upgrade controls, SCADA, and reporting stack.",
-        due_at: ~U[2026-05-01 18:00:00Z]
+        due_at: future_due_at(30)
       })
 
     {:ok, finding} = Acquisition.get_finding_by_source_bid(bid.id)
@@ -41,6 +41,12 @@ defmodule GnomeGarden.Commercial.ReviewTest do
     assert pursuit.signal_id == signal.id
     assert pursuit.organization_id == reloaded_bid.organization_id
     assert pursuit.pursuit_type == :bid_response
+  end
+
+  defp future_due_at(days) do
+    Date.utc_today()
+    |> Date.add(days)
+    |> DateTime.new!(~T[18:00:00], "Etc/UTC")
   end
 
   test "accept_review_item converts findings into signals and pursuits" do

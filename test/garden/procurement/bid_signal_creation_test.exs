@@ -16,7 +16,7 @@ defmodule GnomeGarden.Procurement.BidSignalCreationTest do
         location: "Anaheim, CA",
         region: :oc,
         posted_at: ~U[2026-04-10 16:00:00Z],
-        due_at: ~U[2026-05-01 23:59:00Z],
+        due_at: future_due_at(30),
         estimated_value: Decimal.new("245000.00"),
         score_total: 72,
         score_tier: :warm,
@@ -67,6 +67,12 @@ defmodule GnomeGarden.Procurement.BidSignalCreationTest do
     assert {:ok, signal} = Commercial.create_signal_from_bid(bid.id)
     assert signal.signal_type == :bid_notice
     assert signal.source_channel == :procurement_portal
+  end
+
+  defp future_due_at(days) do
+    Date.utc_today()
+    |> Date.add(days)
+    |> DateTime.new!(~T[23:59:00], "Etc/UTC")
   end
 
   defp metadata_value(metadata, key) do

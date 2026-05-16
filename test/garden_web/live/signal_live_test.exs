@@ -22,7 +22,7 @@ defmodule GnomeGardenWeb.SignalLiveTest do
         location: "Anaheim, CA",
         region: :oc,
         posted_at: ~U[2026-04-18 16:00:00Z],
-        due_at: ~U[2026-05-10 23:59:00Z]
+        due_at: future_due_at(30)
       })
 
     {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
@@ -67,7 +67,7 @@ defmodule GnomeGardenWeb.SignalLiveTest do
         location: "Fountain Valley, CA",
         region: :oc,
         posted_at: ~U[2026-04-18 16:00:00Z],
-        due_at: ~U[2026-05-10 23:59:00Z],
+        due_at: future_due_at(30),
         score_tier: :warm,
         score_source_confidence: :aggregated,
         score_risk_flags: ["aggregator source"],
@@ -113,7 +113,7 @@ defmodule GnomeGardenWeb.SignalLiveTest do
         location: "Anaheim, CA",
         region: :oc,
         posted_at: ~U[2026-04-18 16:00:00Z],
-        due_at: ~U[2026-05-10 23:59:00Z],
+        due_at: future_due_at(30),
         score_tier: :hot,
         score_source_confidence: :aggregated,
         score_risk_flags: ["aggregator source", "weak technical specificity"],
@@ -245,6 +245,12 @@ defmodule GnomeGardenWeb.SignalLiveTest do
     assert render(view) =~ "Intent Score"
     assert render(view) =~ "ambiguous software scope"
     assert render(view) =~ "Previously watched before promotion"
+  end
+
+  defp future_due_at(days) do
+    Date.utc_today()
+    |> Date.add(days)
+    |> DateTime.new!(~T[23:59:00], "Etc/UTC")
   end
 
   defp create_linked_document!(finding) do

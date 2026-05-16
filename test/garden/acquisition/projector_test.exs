@@ -92,4 +92,35 @@ defmodule GnomeGarden.Acquisition.ProjectorTest do
     assert finding.score_tier == :hot
     assert finding.score_note == "Intent 83"
   end
+
+  test "past-due procurement projection closes the acquisition finding as rejected" do
+    past_due_at =
+      Date.utc_today()
+      |> Date.add(-7)
+      |> DateTime.new!(~T[17:00:00], "Etc/UTC")
+
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Expired SCADA support",
+        url: "https://example.com/bids/expired-scada-support",
+        external_id: "EXPIRED-SCADA-SUPPORT",
+        description: "Controls support after the response deadline.",
+        agency: "Regional Utility",
+        location: "Anaheim, CA",
+        region: :oc,
+        due_at: past_due_at,
+        score_total: 82,
+        score_tier: :hot,
+        score_recommendation: "Reject as expired"
+      })
+
+    assert {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert finding.status == :rejected
+
+    assert {:ok, findings} = Acquisition.list_review_findings()
+    refute Enum.any?(findings, &(&1.id == finding.id))
+
+    assert {:ok, rejected_findings} = Acquisition.list_rejected_findings()
+    assert Enum.any?(rejected_findings, &(&1.id == finding.id))
+  end
 end

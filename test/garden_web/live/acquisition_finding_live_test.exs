@@ -18,7 +18,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
         description: "Controls retrofit and historian cleanup.",
         agency: "City of Anaheim",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-01 17:00:00Z],
+        due_at: future_due_at(30),
         region: :oc,
         score_total: 82,
         score_tier: :hot,
@@ -67,7 +67,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
         description: "Historian refresh and reporting work.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-18 17:00:00Z],
+        due_at: future_due_at(30),
         region: :oc,
         score_total: 79,
         score_tier: :hot,
@@ -104,7 +104,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
         description: "Controls retrofit that needs a durable intake packet.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-22 17:00:00Z],
+        due_at: future_due_at(30),
         region: :oc,
         score_total: 81,
         score_tier: :hot,
@@ -377,24 +377,15 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       })
 
     {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
-    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+    assert finding.status == :rejected
 
     {:ok, _view, html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
 
     assert html =~ "Operator Brief"
-    assert html =~ "Reject as expired"
-    assert html =~ "Deadline passed 10 days ago."
-
-    assert {:ok, _finding} =
-             Acquisition.reject_finding_review(finding.id, %{
-               reason: "Expired before review."
-             })
-
-    {:ok, _view, html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
-
     assert html =~ "Disposition"
     assert html =~ "Rejection reason"
-    assert html =~ "Expired before review."
+    assert html =~ "Deadline passed before review."
+    assert html =~ "Deadline passed 10 days ago."
     assert html =~ "Closed"
     assert html =~ "No further action unless you reopen it."
   end
@@ -531,6 +522,12 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
       document_role: :solicitation,
       notes: "Ready for commercial handoff."
     })
+  end
+
+  defp future_due_at(days) do
+    Date.utc_today()
+    |> Date.add(days)
+    |> DateTime.new!(~T[17:00:00], "Etc/UTC")
   end
 
   defp document_upload_fixture do
