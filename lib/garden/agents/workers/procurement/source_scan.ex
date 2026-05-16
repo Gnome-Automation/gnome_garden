@@ -20,7 +20,7 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
              %{source_id: source_id},
              %{tool_context: tool_context, agent_run_id: run.id}
            ) do
-      _ = mark_run_state(source, run, :completed)
+      _ = mark_run_state(source, run, :completed, result)
 
       {:ok,
        %{
@@ -62,7 +62,7 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
     end
   end
 
-  defp mark_run_state(source, run, state) do
+  defp mark_run_state(source, run, state, result \\ %{}) do
     source = current_source(source)
 
     metadata =
@@ -70,8 +70,59 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
       |> Map.new()
       |> Map.put("last_agent_run_id", run.id)
       |> Map.put("last_agent_run_state", state)
+      |> maybe_put_scan_summary(result)
 
     Procurement.update_procurement_source(source, %{metadata: metadata}, authorize?: false)
+  end
+
+  defp maybe_put_scan_summary(%{"last_scan_summary" => _summary} = metadata, _result),
+    do: metadata
+
+  defp maybe_put_scan_summary(metadata, result) do
+    case scan_summary(result) do
+      nil -> metadata
+      summary -> Map.put(metadata, "last_scan_summary", summary)
+    end
+  end
+
+  defp scan_summary(result) when is_map(result) do
+    cond do
+      value(result, :skipped) == true ->
+        %{
+          "extracted" => 0,
+          "excluded" => 0,
+          "scored" => 0,
+          "saved" => 0,
+          "diagnosis" => "scanner_not_implemented",
+          "reason" => value(result, :reason),
+          "recorded_at" =>
+            DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+        }
+
+      not is_nil(value(result, :extracted)) or not is_nil(value(result, :saved)) ->
+        %{
+          "extracted" => value(result, :extracted) || 0,
+          "excluded" => value(result, :excluded) || 0,
+          "scored" => value(result, :scored) || 0,
+          "saved" => value(result, :saved) || 0,
+          "diagnosis" => diagnosis_from_counts(result),
+          "recorded_at" =>
+            DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+        }
+
+      true ->
+        nil
+    end
+  end
+
+  defp scan_summary(_result), do: nil
+
+  defp diagnosis_from_counts(result) do
+    cond do
+      (value(result, :saved) || 0) > 0 -> "saved_qualified_leads"
+      (value(result, :extracted) || 0) == 0 -> "no_candidates_extracted"
+      true -> "scored_but_below_save_threshold"
+    end
   end
 
   defp current_source(source) do
@@ -82,6 +133,14 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
   end
 
   defp summary_text(source, result) do
+    if value(result, :skipped) == true do
+      "Skipped #{source.name}: #{value(result, :reason) || "scanner not implemented"}."
+    else
+      scan_summary_text(source, result)
+    end
+  end
+
+  defp scan_summary_text(source, result) do
     extracted = value(result, :extracted) || 0
     excluded = value(result, :excluded) || 0
     saved = value(result, :saved) || 0

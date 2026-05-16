@@ -200,7 +200,12 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
             "extracted" => 30,
             "scored" => 30,
             "saved" => 0,
-            "diagnosis" => "scored_but_below_save_threshold"
+            "diagnosis" => "scored_but_below_save_threshold",
+            "extraction" => %{
+              "row_count" => 30,
+              "title_count" => 30,
+              "link_count" => 28
+            }
           }
         }
       })
@@ -213,6 +218,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert html =~ "Zero saved"
     assert html =~ "Last scan extracted 30 and scored 30, but saved 0."
     assert html =~ "Top candidates were below save threshold."
+    assert html =~ "Last extraction: 30 rows / 30 titles / 28 links"
 
     assert html =~ "New From Last Run"
     assert html =~ "run_id=#{run_id}"
