@@ -21,7 +21,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
         doc: "PlanetBids portal ID (e.g., '47688' for Irvine)"
       ],
       portal_name: [type: :string, doc: "Human-readable name for the portal"],
-      max_results: [type: :integer, default: 50, doc: "Maximum bids to return"]
+      max_results: [type: :integer, default: 50, doc: "Maximum bids to return"],
+      source_url: [type: :string, doc: "Known source URL for the portal"]
     ]
 
   require Logger
@@ -30,19 +31,22 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
   @pbsystem_base "https://pbsystem.planetbids.com/portal"
 
   @impl true
-  def run(%{portal_id: portal_id} = params, _context) do
+  def run(%{portal_id: portal_id} = params, context) do
     portal_name = Map.get(params, :portal_name, "Portal #{portal_id}")
     max_results = Map.get(params, :max_results, 50)
 
     Logger.info("[ScanPlanetBids] Scanning #{portal_name} (#{portal_id})")
 
-    # Try both PlanetBids URL formats
-    urls = [
-      "#{@planetbids_base}/#{portal_id}/bo/bo-search",
-      "#{@pbsystem_base}/#{portal_id}/bo/bo-search"
-    ]
+    urls =
+      [
+        Map.get(params, :source_url),
+        "#{@planetbids_base}/#{portal_id}/bo/bo-search",
+        "#{@pbsystem_base}/#{portal_id}/bo/bo-search"
+      ]
+      |> Enum.filter(&is_binary/1)
+      |> Enum.uniq()
 
-    case fetch_and_parse(urls, portal_id) do
+    case fetch_and_parse(urls, portal_id, http_get(params, context)) do
       {:ok, bids} ->
         results = Enum.take(bids, max_results)
         Logger.info("[ScanPlanetBids] Found #{length(results)} bids from #{portal_name}")
@@ -62,29 +66,43 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
     end
   end
 
-  defp fetch_and_parse([], _portal_id), do: {:error, :all_urls_failed}
+  defp fetch_and_parse([], _portal_id, _http_get), do: {:error, :all_urls_failed}
 
-  defp fetch_and_parse([url | rest], portal_id) do
-    case Req.get(url, headers: [{"user-agent", "GnomeGarden BidScanner/1.0"}]) do
+  defp fetch_and_parse([url | rest], portal_id, http_get) do
+    case http_get.(url, headers: [{"user-agent", "GnomeGarden BidScanner/1.0"}]) do
       {:ok, %{status: 200, body: body}} when is_binary(body) ->
         bids = parse_planetbids_html(body, url, portal_id)
         {:ok, bids}
 
       {:ok, %{status: status}} when status in [301, 302, 303, 307, 308] ->
         # Try next URL
-        fetch_and_parse(rest, portal_id)
+        fetch_and_parse(rest, portal_id, http_get)
 
       {:ok, %{status: status}} ->
         Logger.debug("[ScanPlanetBids] Got status #{status} from #{url}")
-        fetch_and_parse(rest, portal_id)
+        fetch_and_parse(rest, portal_id, http_get)
 
       {:error, reason} ->
         Logger.debug("[ScanPlanetBids] Request failed for #{url}: #{inspect(reason)}")
-        fetch_and_parse(rest, portal_id)
+        fetch_and_parse(rest, portal_id, http_get)
     end
   end
 
+  defp http_get(_params, %{http_get: http_get}) when is_function(http_get, 2), do: http_get
+  defp http_get(_params, %{"http_get" => http_get}) when is_function(http_get, 2), do: http_get
+  defp http_get(_params, _context), do: &Req.get/2
+
   defp parse_planetbids_html(html, source_url, portal_id) do
+    floki_bids = parse_floki_format(html, source_url, portal_id)
+
+    if floki_bids != [] do
+      floki_bids
+    else
+      parse_legacy_planetbids_html(html, source_url, portal_id)
+    end
+  end
+
+  defp parse_legacy_planetbids_html(html, source_url, portal_id) do
     # Parse HTML to extract bid listings
     # PlanetBids typically has a table or list of bids with:
     # - Bid number/ID
@@ -109,6 +127,161 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
       parse_alternate_format(html, source_url, portal_id)
     else
       bids
+    end
+  end
+
+  defp parse_floki_format(html, source_url, portal_id) do
+    with {:ok, document} <- Floki.parse_document(html) do
+      rows =
+        document
+        |> Floki.find("tr, [rowattribute], [data-itemid], .bid-row, .solicitation-row")
+        |> Enum.filter(&(row_title(&1) not in [nil, ""]))
+
+      Enum.map(rows, &parse_floki_bid_row(&1, source_url, portal_id))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq_by(&(&1.url || &1.external_id))
+    else
+      _ -> []
+    end
+  end
+
+  defp parse_floki_bid_row(row, source_url, portal_id) do
+    title = row_title(row)
+
+    if title in [nil, ""] do
+      nil
+    else
+      href = row_href(row)
+      external_id = row_external_id(row) || "pb-#{portal_id}-#{:erlang.phash2(title)}"
+
+      %{
+        external_id: external_id,
+        title: title,
+        agency:
+          row_text(row, [
+            ".department",
+            ".agency",
+            "[data-label*='Department']",
+            "[data-label*='Agency']"
+          ]),
+        due_date:
+          row_text(row, [
+            ".due-date",
+            ".closing-date",
+            "[data-label*='Due']",
+            "[data-label*='Closing']"
+          ]),
+        url: build_bid_url(href, source_url),
+        source_url: source_url,
+        source_type: :planetbids,
+        documents: extract_documents(row, source_url),
+        raw_html: row |> Floki.raw_html() |> String.slice(0, 500)
+      }
+    end
+  end
+
+  defp row_title(row) do
+    row_text(row, [
+      ".title",
+      ".bid-title",
+      ".project-title",
+      "[data-label*='Title']",
+      "[data-label*='Project']",
+      "a[href*='bo-detail']",
+      "a"
+    ]) || row |> Floki.text(sep: " ") |> clean_text() |> title_from_row_text()
+  end
+
+  defp row_text(row, selectors) do
+    selectors
+    |> Enum.find_value(fn selector ->
+      row
+      |> Floki.find(selector)
+      |> List.first()
+      |> case do
+        nil -> nil
+        node -> node |> Floki.text(sep: " ") |> clean_text() |> blank_to_nil()
+      end
+    end)
+  end
+
+  defp title_from_row_text(text) when is_binary(text) do
+    text
+    |> String.split(~r/\s{2,}|\n/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.find(&(String.length(&1) > 8))
+  end
+
+  defp title_from_row_text(_text), do: nil
+
+  defp row_href(row) do
+    row
+    |> Floki.find("a[href]")
+    |> Enum.find_value(fn node ->
+      href_attr(node)
+    end)
+  end
+
+  defp row_external_id({"tr", attrs, _children}) do
+    attr(attrs, "rowattribute") || attr(attrs, "data-itemid") || attr(attrs, "data-bidid")
+  end
+
+  defp row_external_id({_tag, attrs, _children}) do
+    attr(attrs, "rowattribute") || attr(attrs, "data-itemid") || attr(attrs, "data-bidid")
+  end
+
+  defp row_external_id(_row), do: nil
+
+  defp extract_documents(row, source_url) do
+    row
+    |> Floki.find("a[href]")
+    |> Enum.map(fn node ->
+      text = node |> Floki.text(sep: " ") |> clean_text()
+      href = href_attr(node)
+
+      if document_link?(text, href) do
+        %{
+          url: build_bid_url(href, source_url),
+          filename: document_filename(text, href),
+          document_type: document_type(text, href),
+          source_type: "planetbids",
+          requires_login: true
+        }
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq_by(& &1.url)
+  end
+
+  defp document_link?(text, href) when is_binary(href) do
+    combined = "#{text} #{href}" |> String.downcase()
+
+    not String.contains?(String.downcase(href), "bo-detail") and
+      String.match?(
+        combined,
+        ~r/document|download|attachment|addend|scope|spec|plan|bid|packet|pdf/
+      )
+  end
+
+  defp document_link?(_text, _href), do: false
+
+  defp document_filename(text, href) do
+    cond do
+      is_binary(text) and text != "" -> text
+      is_binary(href) -> Path.basename(URI.parse(href).path || "document")
+      true -> "document"
+    end
+  end
+
+  defp document_type(text, href) do
+    combined = "#{text} #{href}" |> String.downcase()
+
+    cond do
+      String.match?(combined, ~r/addendum|addenda/) -> "addendum"
+      String.match?(combined, ~r/scope|spec|plans?/) -> "scope"
+      String.match?(combined, ~r/price|pricing|bid form|proposal form/) -> "pricing"
+      String.match?(combined, ~r/solicitation|rfp|rfq|ifb|packet|document|pdf/) -> "solicitation"
+      true -> "other"
     end
   end
 
@@ -152,7 +325,9 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
             due_date: parse_date(bid["dueDate"] || bid["closingDate"]),
             url: bid["url"] || bid["link"] || source_url,
             source_url: source_url,
-            source_type: :planetbids
+            source_type: :planetbids,
+            documents:
+              normalize_json_documents(bid["documents"] || bid["attachments"], source_url)
           }
         end)
 
@@ -165,11 +340,51 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
             title: "Bid (details at link)",
             url: build_bid_url(href, source_url),
             source_url: source_url,
-            source_type: :planetbids
+            source_type: :planetbids,
+            documents: []
           }
         end)
     end
   end
+
+  defp normalize_json_documents(documents, source_url) when is_list(documents) do
+    documents
+    |> Enum.filter(&is_map/1)
+    |> Enum.map(fn document ->
+      url = document["url"] || document["href"] || document["link"]
+
+      filename =
+        document["filename"] || document["name"] || document["title"] ||
+          document_filename(nil, url)
+
+      %{
+        url: build_bid_url(url, source_url),
+        filename: filename,
+        document_type:
+          document["document_type"] || document["type"] || document_type(filename, url),
+        source_type: "planetbids",
+        requires_login: true
+      }
+    end)
+    |> Enum.filter(&(is_binary(&1.url) and &1.url != ""))
+    |> Enum.uniq_by(& &1.url)
+  end
+
+  defp normalize_json_documents(_documents, _source_url), do: []
+
+  defp href_attr({"a", attrs, _children}), do: attr(attrs, "href")
+  defp href_attr(_node), do: nil
+
+  defp attr(attrs, key) when is_list(attrs) do
+    attrs
+    |> Enum.find_value(fn
+      {^key, value} -> value
+      _ -> nil
+    end)
+  end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(value), do: value
 
   defp extract_text(html, regex) do
     case Regex.run(regex, html) do

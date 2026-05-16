@@ -22,16 +22,18 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
   require Logger
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Procurement
 
   @max_bytes 50 * 1024 * 1024
   @timeout_ms 30_000
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"bid_id" => bid_id}}) when is_binary(bid_id) do
-    with {:ok, bid} <- GnomeGarden.Procurement.get_bid(bid_id),
+    with {:ok, bid} <- Procurement.get_bid(bid_id),
          documents when is_list(documents) and documents != [] <- list_documents(bid),
          {:ok, finding} <- Acquisition.get_finding_by_source_bid(bid_id) do
-      Enum.each(documents, &ingest_document(&1, finding))
+      results = Enum.map(documents, &ingest_document(&1, finding))
+      persist_packet_status(bid, documents, results)
       :ok
     else
       [] -> :ok
@@ -62,29 +64,43 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
 
       document_type = parse_document_type(Map.get(descriptor, "document_type"))
 
-      with {:ok, temp_path, content_type} <- download(url),
-           upload <- %Plug.Upload{
-             path: temp_path,
-             filename: filename,
-             content_type: content_type
-           },
-           {:ok, _document} <- create_document(upload, url, document_type, finding, filename) do
-        cleanup(temp_path)
-        :ok
-      else
-        {:error, reason} ->
-          Logger.warning(
-            "Document ingest failed for #{url} (finding #{finding.id}): #{inspect(reason)}"
-          )
+      case download(url) do
+        {:ok, temp_path, content_type} ->
+          try do
+            upload = %Plug.Upload{
+              path: temp_path,
+              filename: filename,
+              content_type: content_type
+            }
 
-          :error
+            case create_document(upload, url, document_type, finding, filename) do
+              {:ok, _document} ->
+                {:ok, %{url: url, filename: filename, document_type: document_type}}
+
+              {:error, reason} ->
+                ingest_error(url, filename, finding, reason)
+            end
+          after
+            cleanup(temp_path)
+          end
+
+        {:error, reason} ->
+          ingest_error(url, filename, finding, reason)
       end
     else
-      :ok
+      {:skip, %{reason: "missing_url"}}
     end
   end
 
-  defp ingest_document(_, _), do: :ok
+  defp ingest_document(_, _), do: {:skip, %{reason: "invalid_descriptor"}}
+
+  defp ingest_error(url, filename, finding, reason) do
+    Logger.warning(
+      "Document ingest failed for #{url} (finding #{finding.id}): #{inspect(reason)}"
+    )
+
+    {:error, %{url: url, filename: filename, reason: inspect(reason)}}
+  end
 
   defp stringify_keys(map) do
     Map.new(map, fn {key, value} -> {to_string(key), value} end)
@@ -98,7 +114,14 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
            headers: [{"user-agent", "GnomeGarden DocumentIngest/1.0"}]
          ) do
       {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
-        write_response_to_temp(response)
+        if login_page?(response) do
+          {:error, :login_required}
+        else
+          write_response_to_temp(response)
+        end
+
+      {:ok, %Req.Response{status: status}} when status in [401, 403] ->
+        {:error, :login_required}
 
       {:ok, %Req.Response{status: status}} ->
         {:error, {:http_status, status}}
@@ -139,6 +162,15 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
     end
   end
 
+  defp login_page?(%Req.Response{body: body} = response) when is_binary(body) do
+    content_type = content_type_for(response)
+
+    String.contains?(content_type, "text/html") and
+      String.match?(body, ~r/login|sign in|password/i)
+  end
+
+  defp login_page?(_response), do: false
+
   defp create_document(upload, source_url, document_type, finding, filename) do
     Acquisition.upload_document_for_finding(%{
       title: filename,
@@ -146,8 +178,66 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
       source_url: source_url,
       file: upload,
       finding_id: finding.id,
-      document_role: role_for_type(document_type)
+      document_role: role_for_type(document_type),
+      summary: "Captured from source packet ingest.",
+      metadata: %{
+        "ingest" => %{
+          "source" => "bid_document_ingest",
+          "captured_at" =>
+            DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+        }
+      },
+      finding_document_metadata: %{
+        "source_url" => source_url,
+        "ingested_by" => __MODULE__ |> to_string()
+      }
     })
+  end
+
+  defp persist_packet_status(bid, documents, results) do
+    ok = Enum.filter(results, &match?({:ok, _}, &1))
+    errors = Enum.filter(results, &match?({:error, _}, &1))
+
+    status =
+      cond do
+        ok != [] ->
+          "present"
+
+        Enum.any?(errors, fn {:error, result} -> result.reason =~ "login_required" end) ->
+          "login_required"
+
+        errors != [] ->
+          "download_failed"
+
+        documents == [] ->
+          "missing"
+
+        true ->
+          "missing"
+      end
+
+    metadata =
+      (bid.metadata || %{})
+      |> Map.put("packet", %{
+        "status" => status,
+        "document_count" => length(ok),
+        "failed_count" => length(errors),
+        "ingested_at" =>
+          DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601(),
+        "errors" => Enum.map(errors, fn {:error, result} -> result end)
+      })
+
+    case Procurement.record_bid_document_ingest(bid, %{metadata: metadata}) do
+      {:ok, _bid} ->
+        :ok
+
+      {:error, error} ->
+        Logger.warning(
+          "Failed to record packet ingest state for bid #{bid.id}: #{inspect(error)}"
+        )
+
+        :ok
+    end
   end
 
   # FindingDocument.document_role enum overlaps but isn't identical to

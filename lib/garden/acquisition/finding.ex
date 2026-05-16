@@ -218,6 +218,7 @@ defmodule GnomeGarden.Acquisition.Finding do
 
       argument :source_id, :uuid
       argument :program_id, :uuid
+      argument :agent_run_id, :uuid
 
       pagination offset?: true, countable: true, required?: false
 

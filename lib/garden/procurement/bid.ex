@@ -124,6 +124,12 @@ defmodule GnomeGarden.Procurement.Bid do
       change {GnomeGarden.Procurement.Changes.EnqueueDocumentIngest, []}
     end
 
+    update :record_document_ingest do
+      require_atomic? false
+      accept [:metadata]
+      change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
+    end
+
     update :link_signal do
       require_atomic? false
       accept []

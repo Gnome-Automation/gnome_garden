@@ -441,6 +441,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
               <p :if={finding_document.document.summary} class="text-sm text-base-content/70">
                 {finding_document.document.summary}
               </p>
+              <p
+                :if={document_analysis_excerpt(finding_document.document)}
+                class="rounded-md border border-base-content/10 bg-base-200/60 px-3 py-2 text-xs leading-5 text-base-content/60"
+              >
+                {document_analysis_excerpt(finding_document.document)}
+              </p>
               <p :if={finding_document.notes} class="text-sm text-base-content/70">
                 {finding_document.notes}
               </p>
@@ -960,7 +966,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       description="Fast read before you decide what to do with this finding."
       body_class="p-0"
     >
-      <div class="grid gap-0 divide-y divide-base-content/10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0">
+      <div class="grid gap-0 divide-y divide-base-content/10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0">
         <div class={["p-4", operator_brief_tone_class(@brief.tone)]}>
           <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
             {@brief.action_label}
@@ -986,6 +992,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           </p>
           <p class="mt-2 text-base font-semibold text-base-content">{@brief.readiness}</p>
           <p class="mt-2 text-sm leading-6 text-base-content/65">{@brief.readiness_note}</p>
+        </div>
+
+        <div class="p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
+            Packet
+          </p>
+          <p class="mt-2 text-base font-semibold text-base-content">{@brief.packet}</p>
+          <p class="mt-2 text-sm leading-6 text-base-content/65">{@brief.packet_note}</p>
         </div>
       </div>
     </.section>
@@ -1025,7 +1039,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       deadline: deadline_label(finding),
       deadline_note: deadline_note(finding),
       readiness: terminal_readiness_label(status),
-      readiness_note: terminal_readiness_note(status)
+      readiness_note: terminal_readiness_note(status),
+      packet: packet_label(finding),
+      packet_note: packet_note(finding)
     }
   end
 
@@ -1042,7 +1058,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           deadline: deadline_label(finding),
           deadline_note: deadline_note(finding),
           readiness: readiness_label(finding),
-          readiness_note: readiness_note(finding)
+          readiness_note: readiness_note(finding),
+          packet: packet_label(finding),
+          packet_note: packet_note(finding)
         }
 
       finding.status == :accepted and finding.promotion_ready ->
@@ -1107,7 +1125,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       deadline: deadline_label(finding),
       deadline_note: deadline_note(finding),
       readiness: readiness_label(finding),
-      readiness_note: readiness_note(finding)
+      readiness_note: readiness_note(finding),
+      packet: packet_label(finding),
+      packet_note: packet_note(finding)
     }
   end
 
@@ -1158,6 +1178,48 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   defp readiness_note(_finding), do: "No blockers currently listed."
 
+  defp packet_label(%{finding_family: :procurement, document_count: count})
+       when is_integer(count) and count > 0,
+       do: "#{count} linked"
+
+  defp packet_label(%{finding_family: :procurement, metadata: metadata}) do
+    case metadata_value(metadata, "packet") |> metadata_value("status") do
+      "present" -> "Capture queued"
+      "login_required" -> "Login required"
+      "download_failed" -> "Download failed"
+      "missing" -> "Missing"
+      _ -> "No packet yet"
+    end
+  end
+
+  defp packet_label(_finding), do: "Not required"
+
+  defp packet_note(%{finding_family: :procurement, document_count: count})
+       when is_integer(count) and count > 0,
+       do: "Linked documents are available below for review."
+
+  defp packet_note(%{finding_family: :procurement, metadata: metadata}) do
+    case metadata_value(metadata, "packet") |> metadata_value("status") do
+      "present" ->
+        "Document links were captured and ingestion is pending or in progress."
+
+      "login_required" ->
+        "The source exposed protected documents. Restart with portal credentials loaded, then rescan."
+
+      "download_failed" ->
+        "The source exposed documents, but at least one download failed. Check source access or URL expiry."
+
+      "missing" ->
+        "No source packet was captured from this finding yet."
+
+      _ ->
+        "No source packet status has been recorded yet."
+    end
+  end
+
+  defp packet_note(_finding),
+    do: "Discovery findings can use evidence or uploaded source material."
+
   defp disposition_reason(%{latest_review_reason: reason})
        when is_binary(reason) and reason != "",
        do: reason
@@ -1201,6 +1263,28 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp terminal_readiness_note(:rejected), do: "No further action unless you reopen it."
   defp terminal_readiness_note(_status), do: "No active review action pending."
 
+  defp document_analysis_excerpt(%{file: %{blob: %{metadata: metadata}}}) when is_map(metadata) do
+    metadata
+    |> metadata_value("document_analysis")
+    |> metadata_value("text_excerpt")
+    |> case do
+      text when is_binary(text) and text != "" -> String.slice(text, 0, 360)
+      _ -> nil
+    end
+  end
+
+  defp document_analysis_excerpt(_document), do: nil
+
+  defp metadata_value(nil, _key), do: nil
+
+  defp metadata_value(map, key) when is_map(map) do
+    Map.get(map, key) || Map.get(map, String.to_existing_atom(key))
+  rescue
+    ArgumentError -> Map.get(map, key)
+  end
+
+  defp metadata_value(_value, _key), do: nil
+
   defp operator_brief_tone_class(:success),
     do: "bg-emerald-50 text-emerald-900 dark:bg-emerald-400/10 dark:text-emerald-100"
 
@@ -1240,6 +1324,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         :acceptance_blockers,
         :promotion_ready,
         :promotion_blockers,
+        :document_count,
         :proof_label,
         :source,
         :program,
@@ -1497,9 +1582,4 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp readiness_label(_label, nil), do: nil
   defp readiness_label(label, true), do: "#{label}: Yes"
   defp readiness_label(label, false), do: "#{label}: No"
-
-  defp metadata_value(metadata, key) when is_map(metadata),
-    do: Map.get(metadata, key) || Map.get(metadata, to_string(key))
-
-  defp metadata_value(_metadata, _key), do: nil
 end

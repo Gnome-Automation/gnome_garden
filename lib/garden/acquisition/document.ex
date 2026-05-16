@@ -26,7 +26,9 @@ defmodule GnomeGarden.Acquisition.Document do
     blob_resource(GnomeGarden.Acquisition.DocumentBlob)
     attachment_resource(GnomeGarden.Acquisition.DocumentAttachment)
 
-    has_one_attached(:file)
+    has_one_attached :file do
+      analyzer(GnomeGarden.Acquisition.Analyzers.DocumentCLI)
+    end
   end
 
   actions do

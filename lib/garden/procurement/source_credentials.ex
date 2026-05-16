@@ -11,6 +11,17 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
       present?(System.get_env(@planetbids_password))
   end
 
+  def planetbids_credentials do
+    username = System.get_env(@planetbids_username)
+    password = System.get_env(@planetbids_password)
+
+    if present?(username) and present?(password) do
+      {:ok, %{username: username, password: password}}
+    else
+      {:error, missing_credentials_message(:planetbids)}
+    end
+  end
+
   def planetbids_env_names, do: [@planetbids_username, @planetbids_password]
 
   def credentials_configured?(:planetbids), do: planetbids_configured?()

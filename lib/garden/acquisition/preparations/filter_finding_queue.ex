@@ -39,12 +39,14 @@ defmodule GnomeGarden.Acquisition.Preparations.FilterFindingQueue do
     family = Ash.Query.get_argument(query, :family) || :all
     source_id = Ash.Query.get_argument(query, :source_id)
     program_id = Ash.Query.get_argument(query, :program_id)
+    agent_run_id = Ash.Query.get_argument(query, :agent_run_id)
 
     query
     |> filter_queue(queue)
     |> filter_family(family)
     |> filter_source(source_id)
     |> filter_program(program_id)
+    |> filter_agent_run(agent_run_id)
     |> Ash.Query.sort(sort_for(queue))
     |> Ash.Query.load(@queue_load)
   end
@@ -65,6 +67,11 @@ defmodule GnomeGarden.Acquisition.Preparations.FilterFindingQueue do
 
   defp filter_program(query, nil), do: query
   defp filter_program(query, program_id), do: Ash.Query.filter(query, program_id == ^program_id)
+
+  defp filter_agent_run(query, nil), do: query
+
+  defp filter_agent_run(query, agent_run_id),
+    do: Ash.Query.filter(query, agent_run_id == ^agent_run_id)
 
   defp sort_for(:review),
     do: [intent_score: :desc, fit_score: :desc, observed_at: :desc, inserted_at: :desc]
