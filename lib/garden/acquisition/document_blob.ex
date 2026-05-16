@@ -4,7 +4,8 @@ defmodule GnomeGarden.Acquisition.DocumentBlob do
   use Ash.Resource,
     otp_app: :gnome_garden,
     domain: GnomeGarden.Acquisition,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    notifiers: [Ash.Notifier.PubSub]
 
   postgres do
     table "acquisition_document_blobs"
@@ -51,6 +52,18 @@ defmodule GnomeGarden.Acquisition.DocumentBlob do
     destroy :purge_blob do
       change AshStorage.BlobResource.Changes.PurgeFile
     end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "document_blob"
+
+    publish :create, "created"
+    publish :update_metadata, "updated"
+    publish :complete_analysis, "updated"
+    publish :mark_for_purge, "updated"
+    publish :destroy, "destroyed"
+    publish :purge_blob, "destroyed"
   end
 
   attributes do
