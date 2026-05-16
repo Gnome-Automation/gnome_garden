@@ -385,7 +385,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
   def rail(assigns) do
     ~H"""
-    <div class="flex w-16 flex-col items-center gap-1.5 border-r border-base-content/10 bg-base-200 py-3">
+    <div class="flex h-full w-16 flex-col items-center gap-1.5 border-r border-base-content/10 bg-base-200 py-3">
       <.link
         navigate="/"
         class="mb-2 flex size-11 items-center justify-center rounded-lg bg-primary text-primary-content"

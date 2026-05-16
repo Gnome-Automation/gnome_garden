@@ -66,7 +66,7 @@ defmodule GnomeGardenWeb.Layouts do
     ~H"""
     <div class="flex h-screen w-full overflow-hidden bg-base-100 text-base-content">
       <%!-- Rail (desktop only) --%>
-      <div class="hidden lg:block">
+      <div class="hidden h-full lg:block">
         <RailNav.rail area={@area} />
       </div>
 
