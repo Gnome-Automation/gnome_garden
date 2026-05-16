@@ -56,16 +56,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/"]
     },
-    %{
-      id: "agent",
-      section: "Workspace",
-      icon: "hero-sparkles",
-      label: "Agent",
-      path: "/agent",
-      badge: 0,
-      hot: false,
-      match: ["/agent"]
-    },
 
     # Acquisition
     %{
@@ -325,7 +315,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
   def area_for_path(path) when is_binary(path) do
     cond do
       path == "/" -> "Workspace"
-      String.starts_with?(path, "/agent") -> "Workspace"
       String.starts_with?(path, "/acquisition") -> "Acquisition"
       String.starts_with?(path, "/procurement") -> "Procurement"
       String.starts_with?(path, "/commercial") -> "Commercial"

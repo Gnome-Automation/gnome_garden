@@ -4,7 +4,6 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
   import Phoenix.LiveViewTest
 
   @operator_live_routes [
-    "/agent",
     "/console/agents",
     "/console/agents/deployments/new",
     "/console/agents/runs/00000000-0000-0000-0000-000000000000",
@@ -43,6 +42,14 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     for path <- @operator_live_routes do
       assert {:error, {:redirect, %{to: "/sign-in"}}} = live(conn, path)
     end
+  end
+
+  test "legacy agent page redirects to the durable agent console", %{conn: conn} do
+    %{conn: conn} = register_and_log_in_user(%{conn: conn})
+
+    conn = get(conn, "/agent")
+
+    assert redirected_to(conn) == ~p"/console/agents"
   end
 
   test "admins can view user settings", %{conn: conn} do
