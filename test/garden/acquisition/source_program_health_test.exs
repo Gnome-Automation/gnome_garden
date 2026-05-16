@@ -186,12 +186,12 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     assert loaded_source.health_note =~ ".title"
   end
 
-  test "unsupported procurement scanners are recorded as repairable source failures" do
+  test "sam.gov source scans query the API and save qualified bids" do
     run_id = Ecto.UUID.generate()
 
     {:ok, procurement_source} =
       Procurement.create_procurement_source(%{
-        name: "Unsupported SAM Source",
+        name: "SAM Source",
         url: "https://sam.gov/opportunities",
         source_type: :sam_gov,
         portal_id: "sam",
@@ -203,30 +203,66 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     {:ok, procurement_source} =
       Procurement.configure_procurement_source(procurement_source, %{
         scrape_config: %{
-          listing_url: procurement_source.url,
-          listing_selector: ".result",
-          title_selector: ".title"
+          keywords: "SCADA PLC controls",
+          naics_codes: ["541330"],
+          limit: 10
         }
       })
+
+    http_get = fn _url, opts ->
+      assert opts[:params][:api_key] == "test-sam-key"
+      assert opts[:params][:keywords] == "SCADA PLC controls"
+      assert opts[:params][:ncode] == "541330"
+
+      {:ok,
+       %{
+         status: 200,
+         body: %{
+           "opportunitiesData" => [
+             %{
+               "noticeId" => "SAM-PLC-1",
+               "title" => "SCADA PLC controls modernization and instrumentation services",
+               "description" =>
+                 "Federal water treatment facility automation upgrade with PLC, SCADA, controls integration, telemetry, and instrumentation support.",
+               "fullParentPathName" => "Department of Energy",
+               "uiLink" => "https://sam.gov/opp/SAM-PLC-1/view",
+               "postedDate" => "2026-05-01",
+               "responseDeadLine" => "2026-06-01T17:00:00-05:00",
+               "naicsCode" => "541330",
+               "placeOfPerformance" => %{
+                 "city" => %{"name" => "Oak Ridge"},
+                 "state" => %{"code" => "TN", "name" => "Tennessee"}
+               }
+             }
+           ]
+         }
+       }}
+    end
 
     assert {:ok, result} =
              SourceScan.execute_run(%{
                run: %{id: run_id, metadata: %{procurement_source_id: procurement_source.id}},
                deployment: %{},
-               tool_context: %{agent_run_id: run_id}
+               tool_context: %{
+                 agent_run_id: run_id,
+                 sam_gov_api_key: "test-sam-key",
+                 http_get: http_get
+               }
              })
 
-    assert result.metadata.saved == nil
-    assert result.text =~ "Skipped Unsupported SAM Source"
+    assert result.metadata.saved == 1
+    assert result.text =~ "Scanned SAM Source: 1 saved, 0 excluded, 1 extracted."
+
+    assert {:ok, bid} = Procurement.get_bid_by_url("https://sam.gov/opp/SAM-PLC-1/view")
+    assert bid.procurement_source_id == procurement_source.id
+    assert bid.score_tier in [:hot, :warm]
 
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}",
         load: [:health_status, :health_variant, :health_note]
       )
 
-    assert acquisition_source.health_status == :failing
-    assert acquisition_source.health_variant == :error
-    assert acquisition_source.health_note =~ "no scanner is implemented"
+    assert acquisition_source.health_note =~ "Last successful scan"
   end
 
   test "planetbids sources show needs login health when credentials are missing" do

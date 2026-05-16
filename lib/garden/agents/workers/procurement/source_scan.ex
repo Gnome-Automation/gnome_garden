@@ -55,14 +55,14 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
     :ok
   end
 
-  defp mark_run_state_for_error(run, deployment, _reason) do
+  defp mark_run_state_for_error(run, deployment, reason) do
     with {:ok, source_id} <- source_id(run, deployment),
          {:ok, source} <- Procurement.get_procurement_source(source_id) do
-      mark_run_state(source, run, :failed)
+      mark_run_state(source, run, :failed, %{error: reason})
     end
   end
 
-  defp mark_run_state(source, run, state, result \\ %{}) do
+  defp mark_run_state(source, run, state, result) do
     source = current_source(source)
 
     metadata =
@@ -106,6 +106,18 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
           "scored" => value(result, :scored) || 0,
           "saved" => value(result, :saved) || 0,
           "diagnosis" => diagnosis_from_counts(result),
+          "recorded_at" =>
+            DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+        }
+
+      not is_nil(value(result, :error)) ->
+        %{
+          "extracted" => 0,
+          "excluded" => 0,
+          "scored" => 0,
+          "saved" => 0,
+          "diagnosis" => "scan_failed",
+          "reason" => inspect(value(result, :error)),
           "recorded_at" =>
             DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
         }

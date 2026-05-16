@@ -5,6 +5,7 @@ defmodule GnomeGarden.Agents.Procurement.ScannerRouter do
 
   alias GnomeGarden.Agents.Commercial.SiteScanner
   alias GnomeGarden.Agents.Procurement.ListingScanner
+  alias GnomeGarden.Agents.Procurement.SamGovScanner
   alias GnomeGarden.Procurement.ProcurementSource
 
   require Logger
@@ -19,6 +20,9 @@ defmodule GnomeGarden.Agents.Procurement.ScannerRouter do
 
       :company ->
         SiteScanner.scan(source)
+
+      :sam_gov_api ->
+        SamGovScanner.scan(source, context)
 
       other ->
         Logger.info("[ScannerRouter] #{other} scanner not yet implemented for #{source.name}")
