@@ -49,7 +49,9 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
         "[QuerySamGov] Searching with params: #{inspect(Map.delete(query_params, :api_key))}"
       )
 
-      case Req.get(@sam_api_base, params: query_params) do
+      request = context_value(context, [:http_get]) || (&Req.get/2)
+
+      case request.(@sam_api_base, params: query_params) do
         {:ok, %{status: 200, body: body}} ->
           opportunities = parse_response(body)
           Logger.info("[QuerySamGov] Found #{length(opportunities)} opportunities")
@@ -77,7 +79,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
 
   defp get_api_key(context) do
     # Check context first (injected by agent), then environment
-    Map.get(context, :sam_gov_api_key) ||
+    context_value(context, [:sam_gov_api_key]) ||
       System.get_env("SAM_GOV_API_KEY")
   end
 
@@ -160,7 +162,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
       external_id: opp["noticeId"] || opp["solicitationNumber"] || opp["id"],
       title: opp["title"] || opp["solicitationTitle"] || "Federal Opportunity",
       description: opp["description"] || opp["synopsis"],
-      agency: opp["department"] || opp["agency"] || opp["organizationName"],
+      agency:
+        opp["department"] || opp["agency"] || opp["organizationName"] || opp["fullParentPathName"],
       location: extract_location(opp),
       url: opp["uiLink"] || build_sam_url(opp["noticeId"]),
       source_url: @sam_api_base,
@@ -168,7 +171,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
       posted_at: parse_sam_date(opp["postedDate"]),
       due_date: parse_sam_date(opp["responseDeadLine"] || opp["responseDate"]),
       estimated_value: extract_value(opp),
-      naics_code: opp["naicsCode"],
+      naics_code: opp["naicsCode"] || List.first(opp["naicsCodes"] || []),
       set_aside: opp["typeOfSetAsideDescription"],
       notice_type: opp["type"] || opp["noticeType"],
       metadata: %{
@@ -182,7 +185,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   defp extract_location(opp) do
     place = opp["placeOfPerformance"] || %{}
     city = place["city"] || opp["city"]
-    state = place["state"] || opp["state"]
+    city = place_value(city, "name")
+    state = place_value(place["state"] || opp["state"], "code")
 
     cond do
       city && state -> "#{city}, #{state}"
@@ -229,11 +233,44 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
         end
 
       true ->
-        nil
+        parse_sam_space_datetime(date_str) || parse_us_date(date_str)
     end
   end
 
   defp parse_sam_date(_), do: nil
+
+  defp parse_sam_space_datetime(date_str) do
+    case Regex.run(~r/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})([+-]\d{2})$/, date_str) do
+      [_, date, time, offset] ->
+        case DateTime.from_iso8601("#{date}T#{time}#{offset}:00") do
+          {:ok, dt, _} -> dt
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp parse_us_date(date_str) do
+    case Regex.run(~r/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, date_str) do
+      [_, month, day, year] ->
+        with {month, ""} <- Integer.parse(month),
+             {day, ""} <- Integer.parse(day),
+             {year, ""} <- Integer.parse(year),
+             {:ok, date} <- Date.new(year, month, day) do
+          DateTime.new!(date, ~T[23:59:59], "Etc/UTC")
+        else
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp place_value(%{} = value, key), do: value[key] || value[Atom.to_string(key)]
+  defp place_value(value, _key), do: value
 
   defp build_sam_url(nil), do: "https://sam.gov"
   defp build_sam_url(notice_id), do: "https://sam.gov/opp/#{notice_id}/view"
@@ -252,4 +289,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   end
 
   defp nested_value(_map, _path), do: nil
+
+  defp context_value(context, path) do
+    nested_value(context, path) || nested_value(context, [:tool_context | path])
+  end
 end

@@ -61,6 +61,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       scan_issue(source) == :document_capture_failed -> :document_capture_failed
       scan_issue(source) == :selector_failed -> :selector_failed
       scan_issue(source) == :scanner_not_implemented -> :failing
+      scan_issue(source) == :scan_failed -> :failing
       scan_issue(source) == :no_results -> :no_results
       scan_issue(source) == :zero_saved -> :zero_saved
       noisy?(source) -> :noisy
@@ -83,7 +84,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp health_note(source, :zero_saved, _opts), do: scan_issue_note(source)
 
   defp health_note(source, :failing, _opts) do
-    if scan_issue(source) == :scanner_not_implemented do
+    if scan_issue(source) in [:scanner_not_implemented, :scan_failed] do
       scan_issue_note(source)
     else
       timestamp_note("Last run failed", source.last_run_at)
@@ -173,6 +174,9 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       diagnosis == "scanner_not_implemented" ->
         :scanner_not_implemented
 
+      diagnosis == "scan_failed" ->
+        :scan_failed
+
       diagnosis in ["all_candidates_filtered_before_scoring", "no_candidates_extracted"] ->
         :no_results
 
@@ -206,6 +210,9 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
         selector_issue_note(diagnosis, extraction)
 
       :scanner_not_implemented ->
+        scanner_failure_note(diagnosis, summary)
+
+      :scan_failed ->
         scanner_failure_note(diagnosis, summary)
 
       :no_results ->
@@ -245,6 +252,11 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp scanner_failure_note("scanner_not_implemented", summary) do
     reason = metadata_value(summary, "reason") || "scanner not implemented"
     "This source is configured, but no scanner is implemented for it yet: #{reason}."
+  end
+
+  defp scanner_failure_note("scan_failed", summary) do
+    reason = metadata_value(summary, "reason") || "unknown scan error"
+    "Last scan failed before it could produce results: #{reason}."
   end
 
   defp scanner_failure_note(_diagnosis, _summary), do: "Last run failed."
