@@ -237,6 +237,7 @@ defmodule GnomeGarden.Acquisition.Source do
                mapping: [
                  healthy: :success,
                  running: :info,
+                 needs_login: :warning,
                  noisy: :warning,
                  stale: :warning,
                  cancelled: :warning,

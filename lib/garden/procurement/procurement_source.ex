@@ -151,6 +151,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :organization_id,
         :priority,
         :enabled,
+        :requires_login,
         :scan_frequency_hours,
         :scrape_selector,
         :scrape_config,

@@ -76,16 +76,18 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     result =
       case source.source_type do
         :planetbids ->
-          case do_browser_scan(source, context) do
-            {:ok, _result} = ok ->
-              ok
+          with :ok <- ensure_credentials(source) do
+            case do_browser_scan(source, context) do
+              {:ok, _result} = ok ->
+                ok
 
-            {:error, browser_reason} ->
-              Logger.warning(
-                "Browser scan failed for #{source.name}, falling back to HTTP scanner: #{inspect(browser_reason)}"
-              )
+              {:error, browser_reason} ->
+                Logger.warning(
+                  "Browser scan failed for #{source.name}, falling back to HTTP scanner: #{inspect(browser_reason)}"
+                )
 
-              do_planetbids_scan(source, context)
+                do_planetbids_scan(source, context)
+            end
           end
 
         :bidnet ->
@@ -103,6 +105,14 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         Logger.error("Scan failed for #{source.name}: #{inspect(reason)}")
         Procurement.scan_fail_procurement_source(source, %{})
         {:error, reason}
+    end
+  end
+
+  defp ensure_credentials(%{source_type: source_type}) do
+    if GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type) do
+      :ok
+    else
+      {:error, GnomeGarden.Procurement.SourceCredentials.missing_credentials_message(source_type)}
     end
   end
 

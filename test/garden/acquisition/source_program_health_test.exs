@@ -1,9 +1,21 @@
 defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
-  use GnomeGarden.DataCase, async: true
+  use GnomeGarden.DataCase, async: false
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Procurement
+
+  setup do
+    original_username = System.get_env("PLANETBIDS_USERNAME")
+    original_password = System.get_env("PLANETBIDS_PASSWORD")
+
+    on_exit(fn ->
+      restore_env("PLANETBIDS_USERNAME", original_username)
+      restore_env("PLANETBIDS_PASSWORD", original_password)
+    end)
+
+    :ok
+  end
 
   test "console sources expose failing run health and runnable state" do
     {:ok, procurement_source} =
@@ -68,6 +80,83 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     refute source.runnable
   end
 
+  test "planetbids sources show needs login health when credentials are missing" do
+    System.delete_env("PLANETBIDS_USERNAME")
+    System.delete_env("PLANETBIDS_PASSWORD")
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Credentialed PlanetBids Source",
+        url: "https://vendors.planetbids.com/portal/12345/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "12345",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          listing_selector: ".bid-row",
+          title_selector: ".bid-title",
+          listing_url: procurement_source.url
+        }
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:runnable, :health_label, :health_note, :health_status, :health_variant]
+      )
+
+    refute source.runnable
+    assert source.health_status == :needs_login
+    assert source.health_variant == :warning
+    assert source.health_label == "Needs login"
+    assert source.health_note =~ "PlanetBids credentials are missing"
+  end
+
+  test "planetbids sources are runnable when credentials are configured" do
+    System.put_env("PLANETBIDS_USERNAME", "operator@example.com")
+    System.put_env("PLANETBIDS_PASSWORD", "secret-for-test")
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Runnable PlanetBids Source",
+        url: "https://vendors.planetbids.com/portal/67890/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "67890",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          listing_selector: ".bid-row",
+          title_selector: ".bid-title",
+          listing_url: procurement_source.url
+        }
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:runnable, :health_status, :health_variant]
+      )
+
+    assert source.runnable
+    refute source.health_status == :needs_login
+  end
+
   test "console sources detect noisy finding mixes" do
     {:ok, procurement_source} =
       Procurement.create_procurement_source(%{
@@ -105,6 +194,9 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     assert source.health_status == :noisy
     assert source.health_note =~ "3 noise"
   end
+
+  defp restore_env(name, nil), do: System.delete_env(name)
+  defp restore_env(name, value), do: System.put_env(name, value)
 
   test "console programs detect stale cadence from scope" do
     {:ok, discovery_program} =

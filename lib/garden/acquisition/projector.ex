@@ -287,6 +287,7 @@ defmodule GnomeGarden.Acquisition.Projector do
       |> Map.put("procurement_status", source.status)
       |> Map.put("procurement_config_status", source.config_status)
       |> Map.put("procurement_source_type", source.source_type)
+      |> Map.put("procurement_requires_login", source.requires_login)
       |> Map.put("portal_id", source.portal_id)
 
     Acquisition.create_source(
