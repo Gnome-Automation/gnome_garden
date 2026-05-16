@@ -335,9 +335,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
               <.status_badge :if={@finding.confidence} status={@finding.confidence_variant}>
                 {@finding.confidence_label}
               </.status_badge>
-              <.status_badge status={@finding.status_variant}>
-                {@finding.status_label}
-              </.status_badge>
             </div>
 
             <div>
@@ -430,6 +427,15 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         onclick="event.stopPropagation()"
         class="flex flex-col gap-3 border-t border-zinc-200 pt-3 dark:border-white/10 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0"
       >
+        <div class="space-y-1">
+          <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-base-content/40">
+            Status
+          </p>
+          <.status_badge status={@finding.status_variant}>
+            {@finding.status_label}
+          </.status_badge>
+        </div>
+
         <div class="flex flex-wrap gap-1.5">
           <.button
             navigate={~p"/acquisition/findings/#{@finding.id}"}
