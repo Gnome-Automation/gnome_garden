@@ -379,6 +379,27 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
           />
         </div>
 
+        <div class="flex flex-col gap-2 rounded-md border border-base-content/10 bg-base-200/60 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
+              Provenance
+            </p>
+            <p class="mt-1 truncate font-medium text-base-content">
+              {source_or_program_label(@finding)}
+            </p>
+            <p class="mt-0.5 truncate text-xs text-base-content/55">
+              {run_provenance_label(@finding)}
+            </p>
+          </div>
+          <.link
+            :if={@finding.agent_run_id}
+            navigate={~p"/console/agents/runs/#{@finding.agent_run_id}"}
+            class="btn btn-xs btn-ghost shrink-0"
+          >
+            Open Run
+          </.link>
+        </div>
+
         <div class="grid gap-2 text-xs leading-5 text-base-content/55 md:grid-cols-2">
           <p :if={@finding.score_note}>
             <span class="font-semibold text-base-content/70">Score:</span> {@finding.score_note}
@@ -786,6 +807,15 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   defp source_or_program_label(%{source: %{name: name}}) when is_binary(name), do: name
   defp source_or_program_label(%{program: %{name: name}}) when is_binary(name), do: name
   defp source_or_program_label(_finding), do: "Direct agent intake"
+
+  defp run_provenance_label(%{agent_run: %{state: state}, agent_run_id: run_id})
+       when is_atom(state) and is_binary(run_id),
+       do: "Run #{String.slice(run_id, 0, 8)} · #{status_label(state)}"
+
+  defp run_provenance_label(%{agent_run_id: run_id}) when is_binary(run_id),
+    do: "Run #{String.slice(run_id, 0, 8)}"
+
+  defp run_provenance_label(_finding), do: "No linked agent run"
 
   defp organization_name(%{organization: %{name: name}}) when is_binary(name), do: name
   defp organization_name(_finding), do: nil

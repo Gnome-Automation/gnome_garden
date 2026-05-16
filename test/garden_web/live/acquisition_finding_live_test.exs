@@ -6,6 +6,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
   import Phoenix.LiveViewTest
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Agents
   alias GnomeGarden.Commercial
   alias GnomeGarden.Procurement
 
@@ -63,6 +64,70 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
              |> render_click()
 
     assert path == ~p"/acquisition/findings/#{bid_finding.id}"
+  end
+
+  test "acquisition queue shows source and run provenance", %{conn: conn} do
+    Agents.TemplateCatalog.sync_templates()
+    {:ok, template} = Agents.get_agent_template_by_name("procurement_source_scan")
+
+    {:ok, deployment} =
+      Agents.create_agent_deployment(%{
+        name: "Queue Provenance #{System.unique_integer([:positive])}",
+        agent_id: template.id,
+        enabled: true
+      })
+
+    {:ok, run} =
+      Agents.create_agent_run(%{
+        agent_id: template.id,
+        deployment_id: deployment.id,
+        task: "scan queue provenance source",
+        run_kind: :manual
+      })
+
+    {:ok, run} = Agents.start_agent_run(run, %{runtime_instance_id: Ecto.UUID.generate()})
+
+    {:ok, source} =
+      Acquisition.create_source(%{
+        name: "Queue provenance source",
+        external_ref: "test:queue-provenance-source",
+        url: "https://example.com/queue-provenance-source",
+        source_family: :procurement,
+        source_kind: :portal,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic
+      })
+
+    {:ok, _finding} =
+      Acquisition.create_finding(%{
+        title: "Queue provenance retrofit",
+        summary: "Controls opportunity produced by a linked agent run.",
+        external_ref: "test:queue-provenance-retrofit",
+        source_url: "https://example.com/queue-provenance-retrofit",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        source_id: source.id,
+        agent_run_id: run.id,
+        fit_score: 73,
+        intent_score: 76,
+        confidence: :medium,
+        observed_at: DateTime.utc_now()
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings?family=procurement")
+
+    assert render(view) =~ "Queue provenance retrofit"
+    assert render(view) =~ "Provenance"
+    assert render(view) =~ "Queue provenance source"
+    assert render(view) =~ "Run #{String.slice(run.id, 0, 8)}"
+    assert render(view) =~ "Running"
+
+    assert has_element?(
+             view,
+             "a[href='/console/agents/runs/#{run.id}']",
+             "Open Run"
+           )
   end
 
   test "promoting a procurement finding opens the commercial signal" do
