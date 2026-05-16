@@ -331,6 +331,11 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
                   {output_summary_details(output)}
                 </div>
 
+                <.scan_diagnostics_panel
+                  :if={scan_diagnostics(output)}
+                  diagnostics={scan_diagnostics(output)}
+                />
+
                 <div :if={output_path(output)} class="mt-4 flex flex-wrap gap-2">
                   <.link navigate={output_path(output)} class="btn btn-sm">
                     {output_action_label(output)}
@@ -601,6 +606,62 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
   defp output_event_badge(:updated), do: "badge badge-warning badge-sm"
   defp output_event_badge(_event), do: "badge badge-ghost badge-sm"
 
+  attr :diagnostics, :map, required: true
+
+  defp scan_diagnostics_panel(assigns) do
+    ~H"""
+    <div class="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-950/60">
+      <div class="flex flex-wrap items-center gap-2">
+        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/50">
+          Scan Diagnostics
+        </p>
+        <span class="badge badge-ghost badge-sm">{diagnosis_label(@diagnostics)}</span>
+      </div>
+
+      <div :if={diagnostic_saved_examples(@diagnostics) != []} class="mt-3">
+        <p class="text-xs font-medium text-base-content/60">Saved examples</p>
+        <ul class="mt-1 space-y-1 text-xs text-base-content/70">
+          <li :for={title <- diagnostic_saved_examples(@diagnostics)}>{title}</li>
+        </ul>
+      </div>
+
+      <div :if={diagnostic_top_unsaved(@diagnostics) != []} class="mt-3">
+        <p class="text-xs font-medium text-base-content/60">Top unsaved candidates</p>
+        <div class="mt-2 space-y-2">
+          <div
+            :for={candidate <- diagnostic_top_unsaved(@diagnostics)}
+            class="rounded-lg border border-zinc-200 bg-white p-3 text-xs dark:border-zinc-800 dark:bg-zinc-900"
+          >
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div class="min-w-0">
+                <p class="font-medium text-base-content">{diagnostic_title(candidate)}</p>
+                <p class="mt-1 text-base-content/55">{diagnostic_reason(candidate)}</p>
+              </div>
+              <div class="flex shrink-0 flex-wrap gap-1">
+                <span class="badge badge-sm">{diagnostic_score(candidate)}</span>
+                <span class="badge badge-ghost badge-sm">{diagnostic_tier(candidate)}</span>
+                <span class="badge badge-outline badge-sm">
+                  {diagnostic_packet_status(candidate)}
+                </span>
+              </div>
+            </div>
+
+            <p :if={diagnostic_terms(candidate, :matched) != ""} class="mt-2 text-base-content/60">
+              Matched: {diagnostic_terms(candidate, :matched)}
+            </p>
+            <p :if={diagnostic_terms(candidate, :risk_flags) != ""} class="mt-1 text-base-content/60">
+              Risks: {diagnostic_terms(candidate, :risk_flags)}
+            </p>
+            <p :if={diagnostic_terms(candidate, :rejected) != ""} class="mt-1 text-base-content/60">
+              Rejected terms: {diagnostic_terms(candidate, :rejected)}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   defp output_summary_details(output) do
     parts =
       [
@@ -615,8 +676,67 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
     end
   end
 
+  defp scan_diagnostics(%{metadata: metadata}) when is_map(metadata) do
+    case metadata_value(metadata, :diagnostics) do
+      diagnostics when is_map(diagnostics) -> diagnostics
+      _ -> nil
+    end
+  end
+
+  defp scan_diagnostics(_output), do: nil
+
+  defp diagnosis_label(diagnostics) do
+    diagnostics
+    |> metadata_value(:diagnosis)
+    |> case do
+      nil -> "No diagnosis"
+      value -> value |> to_string() |> String.replace("_", " ")
+    end
+  end
+
+  defp diagnostic_saved_examples(diagnostics) do
+    case metadata_value(diagnostics, :saved_examples) do
+      values when is_list(values) -> values
+      _ -> []
+    end
+  end
+
+  defp diagnostic_top_unsaved(diagnostics) do
+    case metadata_value(diagnostics, :top_unsaved) do
+      values when is_list(values) -> values
+      _ -> []
+    end
+  end
+
+  defp diagnostic_title(candidate), do: metadata_value(candidate, :title) || "Untitled"
+  defp diagnostic_reason(candidate), do: metadata_value(candidate, :reason) || "Not saved"
+
+  defp diagnostic_score(candidate) do
+    case metadata_value(candidate, :score_total) do
+      nil -> "score -"
+      score -> "score #{score}"
+    end
+  end
+
+  defp diagnostic_tier(candidate), do: metadata_value(candidate, :score_tier) || "tier -"
+
+  defp diagnostic_packet_status(candidate),
+    do: metadata_value(candidate, :packet_status) || "packet -"
+
+  defp diagnostic_terms(candidate, key) do
+    case metadata_value(candidate, key) do
+      values when is_list(values) -> Enum.join(values, ", ")
+      value when is_binary(value) -> value
+      _ -> ""
+    end
+  end
+
   defp metadata_value(metadata, key) when is_map(metadata) do
-    Map.get(metadata, key) || Map.get(metadata, Atom.to_string(key))
+    cond do
+      Map.has_key?(metadata, key) -> Map.get(metadata, key)
+      Map.has_key?(metadata, Atom.to_string(key)) -> Map.get(metadata, Atom.to_string(key))
+      true -> nil
+    end
   end
 
   defp metadata_value(_metadata, _key), do: nil
