@@ -142,6 +142,22 @@ defmodule GnomeGarden.MyDomain do
 end
 ```
 
+### Ash PubSub and LiveView Refreshes
+
+Frontend screens that show persisted Ash resource state must refresh from Ash
+resource PubSub events.
+
+- Add `pub_sub do` blocks on resources whose create/update/transition actions
+  should update operator screens.
+- Publish action-specific events from the resource, not from ad hoc web or
+  service-layer broadcasts.
+- LiveViews should subscribe to the resource topics they render, such as
+  `"finding:created"` or `"finding:updated"`, and reload through the domain code
+  interface when messages arrive.
+- Do not rely on manual browser refresh, local-only assigns, or one-off
+  `Phoenix.PubSub.broadcast/3` calls for persisted Ash state. Plain Phoenix
+  PubSub remains appropriate for runtime-only streams such as agent output.
+
 ### Calling Actions - The Idiomatic Way
 
 **NEVER use raw Ecto. NEVER use Repo directly for Ash resources.**
