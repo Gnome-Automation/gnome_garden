@@ -22,11 +22,21 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   def mount(%{"id" => id}, _session, socket) do
     finding = load_finding!(id, socket.assigns.current_user)
 
+    if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("finding:created")
+      GnomeGardenWeb.Endpoint.subscribe("finding:updated")
+    end
+
     {:ok,
      socket
      |> assign(:page_title, finding.title)
      |> assign(:action_dialog, nil)
      |> assign_finding_context(finding)}
+  end
+
+  @impl true
+  def handle_info(%{topic: "finding:" <> _event}, socket) do
+    {:noreply, refresh_finding(socket)}
   end
 
   @impl true

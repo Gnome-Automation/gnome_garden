@@ -390,6 +390,35 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert html =~ "No further action unless you reopen it."
   end
 
+  test "finding detail refreshes from Ash PubSub updates", %{conn: conn} do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Live Refresh Controls Retrofit",
+        url: "https://example.com/bids/live-refresh-controls-retrofit",
+        external_id: "LIVE-REFRESH-CONTROLS-RETROFIT",
+        description: "Controls retrofit that should refresh while open.",
+        agency: "Regional Utility",
+        location: "Anaheim, CA",
+        due_at: future_due_at(30),
+        region: :oc,
+        score_total: 81,
+        score_tier: :hot,
+        score_recommendation: "Review"
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
+
+    assert has_element?(view, "#finding-show-start-review")
+    refute has_element?(view, "#finding-show-reject")
+
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    render_async(view, 1_000)
+
+    assert has_element?(view, "#finding-show-reject")
+  end
+
   test "source and program filters scope the acquisition queue from registries", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{
