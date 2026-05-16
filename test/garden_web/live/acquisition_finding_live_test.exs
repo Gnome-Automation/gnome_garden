@@ -56,6 +56,13 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     {:ok, view, _html} = live(conn, ~p"/acquisition/findings")
 
     assert render(view) =~ "Acquisition Queue"
+
+    assert {:error, {:live_redirect, %{to: path}}} =
+             view
+             |> element("#finding-card-#{bid_finding.id}")
+             |> render_click()
+
+    assert path == ~p"/acquisition/findings/#{bid_finding.id}"
   end
 
   test "promoting a procurement finding opens the commercial signal" do

@@ -8,6 +8,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Procurement.TargetingFeedback
+  alias Phoenix.LiveView.JS
 
   @queues [:review, :promoted, :rejected, :suppressed, :parked]
   @families [:all, :procurement, :discovery]
@@ -314,7 +315,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
   defp finding_card(assigns) do
     ~H"""
-    <article class="grid gap-3 px-3 py-3 transition hover:bg-zinc-50/80 dark:hover:bg-white/[0.025] sm:px-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+    <article
+      id={"finding-card-#{@finding.id}"}
+      phx-click={JS.navigate(~p"/acquisition/findings/#{@finding.id}")}
+      role="link"
+      tabindex="0"
+      class="grid cursor-pointer gap-3 px-3 py-3 transition hover:bg-zinc-50/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-inset dark:hover:bg-white/[0.025] sm:px-4 lg:grid-cols-[minmax(0,1fr)_16rem]"
+    >
       <div class="min-w-0 space-y-3">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div class="min-w-0 space-y-2">
@@ -419,7 +426,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         </div>
       </div>
 
-      <div class="flex flex-col gap-3 border-t border-zinc-200 pt-3 dark:border-white/10 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+      <div
+        onclick="event.stopPropagation()"
+        class="flex flex-col gap-3 border-t border-zinc-200 pt-3 dark:border-white/10 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0"
+      >
         <div class="flex flex-wrap gap-1.5">
           <.button
             navigate={~p"/acquisition/findings/#{@finding.id}"}
