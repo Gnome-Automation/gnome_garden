@@ -188,10 +188,11 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp complete_scan(source, bids, excluded, scored, saved, enriched) do
     source = current_source(source)
+    diagnostics = scan_diagnostics(scored, saved, excluded)
 
     Procurement.mark_procurement_source_scanned!(
       source,
-      %{metadata: scan_metadata(source, bids, excluded, scored, saved, enriched)}
+      %{metadata: scan_metadata(source, bids, excluded, scored, saved, enriched, diagnostics)}
     )
 
     {:ok,
@@ -202,6 +203,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
        scored: length(scored),
        saved: length(saved),
        enriched: enriched,
+       diagnostics: diagnostics,
        bids: saved
      }}
   end
@@ -213,13 +215,16 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     end
   end
 
-  defp scan_metadata(source, bids, excluded, scored, saved, enriched) do
+  defp scan_metadata(source, bids, excluded, scored, saved, enriched, diagnostics) do
     summary = %{
       "extracted" => length(bids),
       "excluded" => length(excluded),
       "scored" => length(scored),
       "saved" => length(saved),
       "enriched" => enriched,
+      "diagnosis" => diagnostics["diagnosis"],
+      "top_unsaved" => diagnostics["top_unsaved"],
+      "saved_examples" => diagnostics["saved_examples"],
       "excluded_examples" =>
         excluded
         |> Enum.take(3)
@@ -230,6 +235,125 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
     (source.metadata || %{})
     |> Map.put("last_scan_summary", summary)
+  end
+
+  defp scan_diagnostics(scored, saved, excluded) do
+    saved_keys =
+      saved
+      |> Enum.flat_map(fn result ->
+        [bid_value(result, :url), bid_value(result, :title)]
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    top_unsaved =
+      scored
+      |> Enum.reject(fn bid ->
+        MapSet.member?(saved_keys, bid_value(bid, :url)) ||
+          MapSet.member?(saved_keys, bid_value(bid, :title))
+      end)
+      |> Enum.sort_by(&diagnostic_score/1, :desc)
+      |> Enum.take(5)
+      |> Enum.map(&candidate_diagnostic/1)
+
+    saved_examples =
+      saved
+      |> Enum.take(5)
+      |> Enum.map(&(bid_value(&1, :title) || bid_value(&1, :id)))
+      |> Enum.reject(&is_nil/1)
+
+    %{
+      "diagnosis" => scan_diagnosis(scored, saved, excluded, top_unsaved),
+      "top_unsaved" => top_unsaved,
+      "saved_examples" => saved_examples
+    }
+  end
+
+  defp diagnostic_score(bid) do
+    case bid_value(bid, :score) do
+      %{score_total: total} when is_number(total) -> total
+      %{"score_total" => total} when is_number(total) -> total
+      _ -> 0
+    end
+  end
+
+  defp candidate_diagnostic(bid) do
+    score = bid_value(bid, :score) || %{}
+
+    %{
+      "title" => bid_value(bid, :title) || "Untitled opportunity",
+      "url" => bid_value(bid, :url) || bid_value(bid, :link),
+      "score_total" => score_value(score, :score_total),
+      "score_tier" => score_value(score, :score_tier),
+      "save_candidate" => score_value(score, :save_candidate?),
+      "reason" => unsaved_reason(score, bid),
+      "matched" => score_value(score, :keywords_matched) || [],
+      "rejected" => score_value(score, :keywords_rejected) || [],
+      "risk_flags" => score_value(score, :risk_flags) || [],
+      "packet_status" => bid_value(bid, :packet_status) || packet_status(documents_for_bid(bid)),
+      "detail_checked" => detail_checked?(bid)
+    }
+  end
+
+  defp score_value(score, key) when is_map(score) do
+    cond do
+      Map.has_key?(score, key) -> Map.get(score, key)
+      Map.has_key?(score, Atom.to_string(key)) -> Map.get(score, Atom.to_string(key))
+      true -> nil
+    end
+  end
+
+  defp score_value(_score, _key), do: nil
+
+  defp unsaved_reason(score, bid) do
+    cond do
+      score_value(score, :score_tier) == :rejected ->
+        "Rejected by scoring gate"
+
+      score_value(score, :save_candidate?) == false ->
+        "Below save threshold"
+
+      expired?(bid) ->
+        "Expired due date"
+
+      true ->
+        "Not saved"
+    end
+  end
+
+  defp expired?(bid) do
+    case parse_bid_due_at(bid) do
+      nil -> false
+      due -> DateTime.compare(due, DateTime.utc_now()) == :lt
+    end
+  end
+
+  defp detail_checked?(bid) do
+    description = bid_value(bid, :description)
+    documents = documents_for_bid(bid)
+    packet_status = bid_value(bid, :packet_status)
+
+    (is_binary(description) and String.length(description) > 30) or documents != [] or
+      is_binary(packet_status)
+  end
+
+  defp scan_diagnosis(_scored, [_ | _], _excluded, _top_unsaved),
+    do: "saved_qualified_leads"
+
+  defp scan_diagnosis([], _saved, [_ | _], _top_unsaved),
+    do: "all_candidates_filtered_before_scoring"
+
+  defp scan_diagnosis(scored, _saved, _excluded, top_unsaved) do
+    cond do
+      Enum.any?(top_unsaved, &(&1["score_tier"] == :rejected or &1["score_tier"] == "rejected")) ->
+        "candidates_rejected_by_scoring"
+
+      scored != [] ->
+        "scored_but_below_save_threshold"
+
+      true ->
+        "no_candidates_extracted"
+    end
   end
 
   defp extract_bids(config) do

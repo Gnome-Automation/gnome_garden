@@ -49,6 +49,14 @@ defmodule GnomeGarden.Agents.Tools.Procurement.RunSourceScan do
       saved: Map.get(result, :saved) || Map.get(result, "saved"),
       enriched: Map.get(result, :enriched) || Map.get(result, "enriched")
     }
+    |> maybe_put_diagnostics(result)
     |> Map.reject(fn {_key, value} -> is_nil(value) end)
+  end
+
+  defp maybe_put_diagnostics(metadata, result) do
+    case Map.get(result, :diagnostics) || Map.get(result, "diagnostics") do
+      diagnostics when is_map(diagnostics) -> Map.put(metadata, :diagnostics, diagnostics)
+      _ -> metadata
+    end
   end
 end

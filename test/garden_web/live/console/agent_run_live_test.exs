@@ -20,7 +20,59 @@ defmodule GnomeGardenWeb.Console.AgentRunLiveTest do
     assert html =~ "runtime"
   end
 
+  test "renders scan diagnostics for runs that save no candidates", %{conn: conn} do
+    {:ok, run} = running_run()
+
+    {:ok, _output} =
+      Agents.create_agent_run_output(%{
+        agent_run_id: run.id,
+        output_type: :procurement_source,
+        output_id: Ecto.UUID.generate(),
+        event: :updated,
+        label: "RCTC PlanetBids",
+        summary: "Scanned RCTC PlanetBids: 0 saved from 30 extracted",
+        metadata: %{
+          diagnostics: %{
+            diagnosis: "scored_but_below_save_threshold",
+            saved_examples: [],
+            top_unsaved: [
+              %{
+                title: "Landscape Maintenance Services",
+                score_total: 49,
+                score_tier: :cold,
+                save_candidate: false,
+                reason: "Below save threshold",
+                packet_status: "packet listed",
+                matched: ["maintenance"],
+                rejected: [],
+                risk_flags: ["low automation fit"]
+              }
+            ]
+          }
+        }
+      })
+
+    {:ok, _view, html} = live(conn, ~p"/console/agents/runs/#{run.id}")
+
+    assert html =~ "Scan Diagnostics"
+    assert html =~ "scored but below save threshold"
+    assert html =~ "Landscape Maintenance Services"
+    assert html =~ "Below save threshold"
+    assert html =~ "score 49"
+    assert html =~ "Matched: maintenance"
+    assert html =~ "Risks: low automation fit"
+  end
+
   defp failed_run do
+    {:ok, run} = running_run()
+
+    Agents.fail_agent_run(run, %{
+      error: "request timeout while scanning source",
+      failure_details: RunFailure.details({:timeout, :checkout}, phase: :runtime)
+    })
+  end
+
+  defp running_run do
     Agents.TemplateCatalog.sync_templates()
     {:ok, template} = Agents.get_agent_template_by_name("procurement_source_scan")
 
@@ -40,10 +92,6 @@ defmodule GnomeGardenWeb.Console.AgentRunLiveTest do
       })
 
     {:ok, run} = Agents.start_agent_run(run, %{runtime_instance_id: Ecto.UUID.generate()})
-
-    Agents.fail_agent_run(run, %{
-      error: "request timeout while scanning source",
-      failure_details: RunFailure.details({:timeout, :checkout}, phase: :runtime)
-    })
+    {:ok, run}
   end
 end
