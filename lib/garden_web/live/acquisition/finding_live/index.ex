@@ -353,7 +353,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 sm:w-48 sm:shrink-0">
+          <div class="grid gap-2 sm:w-48 sm:shrink-0">
             <.finding_metric label="Score" value={finding_score_value(@finding)} />
             <.finding_metric label="Due" value={finding_due_label(@finding)} />
           </div>
@@ -583,7 +583,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
       <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-base-content/45">
         {@label}
       </p>
-      <p class="mt-1 truncate text-sm font-semibold text-base-content">{@value}</p>
+      <p class="mt-1 text-sm font-semibold leading-5 text-base-content">{@value}</p>
     </div>
     """
   end
