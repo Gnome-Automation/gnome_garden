@@ -53,6 +53,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       source.status == :blocked -> :blocked
       source.status == :paused -> :paused
       source.enabled == false -> :disabled
+      needs_login?(source) -> :needs_login
       run_state == :running -> :running
       run_state == :failed -> :failing
       run_state == :cancelled -> :cancelled
@@ -68,6 +69,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp health_note(_source, :blocked, _opts), do: "Blocked until operator repair."
   defp health_note(_source, :paused, _opts), do: "Paused and out of rotation."
   defp health_note(_source, :disabled, _opts), do: "Disabled and not launchable."
+  defp health_note(source, :needs_login, _opts), do: missing_credentials_note(source)
   defp health_note(_source, :running, _opts), do: "Run currently in progress."
 
   defp health_note(source, :failing, _opts),
@@ -131,6 +133,43 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   end
 
   defp normalize_run_state(_value), do: nil
+
+  defp needs_login?(source) do
+    source_type = metadata_value(source.metadata, "procurement_source_type")
+
+    credentialed_source?(source.metadata, source_type) and
+      not GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type)
+  end
+
+  defp credentialed_source?(metadata, source_type) do
+    metadata_value(metadata, "procurement_requires_login") in [true, "true"] or
+      normalize_source_type(source_type) == :planetbids
+  end
+
+  defp missing_credentials_note(source) do
+    source.metadata
+    |> metadata_value("procurement_source_type")
+    |> GnomeGarden.Procurement.SourceCredentials.missing_credentials_message()
+  end
+
+  defp metadata_value(metadata, key) when is_map(metadata) do
+    Map.get(metadata, key) || Map.get(metadata, String.to_existing_atom(key))
+  rescue
+    ArgumentError -> Map.get(metadata, key)
+  end
+
+  defp metadata_value(_metadata, _key), do: nil
+
+  defp normalize_source_type(value) when is_atom(value), do: value
+
+  defp normalize_source_type(value) when is_binary(value) do
+    case value do
+      "planetbids" -> :planetbids
+      _ -> nil
+    end
+  end
+
+  defp normalize_source_type(_value), do: nil
 
   defp stale?(source, opts) do
     source.status in [:active, :candidate] and source.enabled != false and

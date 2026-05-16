@@ -30,8 +30,38 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
 
   defp runnable?(source) do
     source.enabled == true and source.status in [:active, :candidate] and
-      source.scan_strategy != :manual and routed?(source)
+      source.scan_strategy != :manual and credentials_ready?(source) and routed?(source)
   end
+
+  defp credentials_ready?(source) do
+    cond do
+      is_binary(source.procurement_source_id) ->
+        procurement_credentials_ready?(source.procurement_source)
+
+      metadata_requires_credentials?(source.metadata) ->
+        source.metadata
+        |> metadata_value("procurement_source_type")
+        |> GnomeGarden.Procurement.SourceCredentials.credentials_configured?()
+
+      true ->
+        true
+    end
+  end
+
+  defp procurement_credentials_ready?(%{source_type: source_type, requires_login: requires_login}) do
+    cond do
+      source_type == :planetbids ->
+        GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type)
+
+      requires_login == true ->
+        GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type)
+
+      true ->
+        true
+    end
+  end
+
+  defp procurement_credentials_ready?(_procurement_source), do: true
 
   defp routed?(source) do
     cond do
@@ -61,6 +91,13 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
 
   defp metadata_route?(_metadata), do: false
 
+  defp metadata_requires_credentials?(metadata) when is_map(metadata) do
+    metadata_value(metadata, "procurement_requires_login") in [true, "true"] or
+      metadata_value(metadata, "procurement_source_type") in [:planetbids, "planetbids"]
+  end
+
+  defp metadata_requires_credentials?(_metadata), do: false
+
   defp metadata_value(metadata, "agent_deployment_id"),
     do: Map.get(metadata, "agent_deployment_id") || Map.get(metadata, :agent_deployment_id)
 
@@ -69,6 +106,15 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
 
   defp metadata_value(metadata, "agent_template"),
     do: Map.get(metadata, "agent_template") || Map.get(metadata, :agent_template)
+
+  defp metadata_value(metadata, "procurement_requires_login"),
+    do:
+      Map.get(metadata, "procurement_requires_login") ||
+        Map.get(metadata, :procurement_requires_login)
+
+  defp metadata_value(metadata, "procurement_source_type"),
+    do:
+      Map.get(metadata, "procurement_source_type") || Map.get(metadata, :procurement_source_type)
 
   defp default_deployment_name(%{source_kind: source_kind})
        when source_kind in [:company_site, :directory, :job_board, :news_feed],
