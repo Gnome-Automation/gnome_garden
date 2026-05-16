@@ -238,6 +238,8 @@ defmodule GnomeGarden.Acquisition.Source do
                  healthy: :success,
                  running: :info,
                  needs_login: :warning,
+                 no_results: :warning,
+                 zero_saved: :warning,
                  noisy: :warning,
                  stale: :warning,
                  cancelled: :warning,
@@ -247,6 +249,8 @@ defmodule GnomeGarden.Acquisition.Source do
                  idle: :default,
                  blocked: :error,
                  failing: :error,
+                 selector_failed: :error,
+                 document_capture_failed: :error,
                  archived: :default
                ],
                default: :default}

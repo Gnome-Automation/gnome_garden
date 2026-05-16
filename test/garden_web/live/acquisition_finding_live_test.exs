@@ -130,6 +130,34 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
            )
   end
 
+  test "acquisition queue shows procurement packet state on finding cards", %{conn: conn} do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Packet status controls retrofit",
+        url: "https://example.com/bids/packet-status-controls-retrofit",
+        external_id: "PACKET-STATUS-QUEUE",
+        description: "Controls retrofit with protected source packet.",
+        agency: "Regional Utility",
+        location: "Anaheim, CA",
+        due_at: future_due_at(30),
+        region: :oc,
+        score_total: 76,
+        score_tier: :warm,
+        score_recommendation: "Review when packet is available",
+        metadata: %{
+          "packet" => %{"status" => "login_required"}
+        }
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings?family=procurement")
+
+    assert render(view) =~ finding.title
+    assert render(view) =~ "Packet"
+    assert render(view) =~ "Login required"
+  end
+
   test "promoting a procurement finding opens the commercial signal" do
     {:ok, bid} =
       Procurement.create_bid(%{

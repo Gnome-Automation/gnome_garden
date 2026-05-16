@@ -26,6 +26,8 @@ defmodule GnomeGarden.Acquisition.Preparations.FilterFindingQueue do
     :latest_review_decision_at,
     :promotion_ready,
     :promotion_blockers,
+    :document_count,
+    :promotion_document_count,
     :source,
     :program,
     :agent_run,

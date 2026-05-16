@@ -57,6 +57,11 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       run_state == :running -> :running
       run_state == :failed -> :failing
       run_state == :cancelled -> :cancelled
+      scan_issue(source) == :login_required -> :needs_login
+      scan_issue(source) == :document_capture_failed -> :document_capture_failed
+      scan_issue(source) == :selector_failed -> :selector_failed
+      scan_issue(source) == :no_results -> :no_results
+      scan_issue(source) == :zero_saved -> :zero_saved
       noisy?(source) -> :noisy
       source.scan_strategy == :manual -> :manual
       stale?(source, opts) -> :stale
@@ -71,6 +76,10 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp health_note(_source, :disabled, _opts), do: "Disabled and not launchable."
   defp health_note(source, :needs_login, _opts), do: missing_credentials_note(source)
   defp health_note(_source, :running, _opts), do: "Run currently in progress."
+  defp health_note(source, :document_capture_failed, _opts), do: scan_issue_note(source)
+  defp health_note(source, :selector_failed, _opts), do: scan_issue_note(source)
+  defp health_note(source, :no_results, _opts), do: scan_issue_note(source)
+  defp health_note(source, :zero_saved, _opts), do: scan_issue_note(source)
 
   defp health_note(source, :failing, _opts),
     do: timestamp_note("Last run failed", source.last_run_at)
@@ -134,6 +143,73 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
 
   defp normalize_run_state(_value), do: nil
 
+  defp scan_issue(source) do
+    packet_status = source.metadata |> metadata_value("packet") |> metadata_value("status")
+    summary = metadata_value(source.metadata, "last_scan_summary")
+    diagnosis = metadata_value(summary, "diagnosis")
+    extracted = metadata_integer(summary, "extracted")
+    saved = metadata_integer(summary, "saved")
+
+    cond do
+      packet_status == "login_required" ->
+        :login_required
+
+      packet_status == "download_failed" ->
+        :document_capture_failed
+
+      diagnosis == "selector_failed" ->
+        :selector_failed
+
+      diagnosis in ["all_candidates_filtered_before_scoring", "no_candidates_extracted"] ->
+        :no_results
+
+      is_integer(extracted) and extracted == 0 ->
+        :no_results
+
+      is_integer(extracted) and extracted > 0 and saved in [0, nil] ->
+        :zero_saved
+
+      true ->
+        nil
+    end
+  end
+
+  defp scan_issue_note(source) do
+    summary = metadata_value(source.metadata, "last_scan_summary") || %{}
+    diagnosis = metadata_value(summary, "diagnosis")
+    extracted = metadata_integer(summary, "extracted") || 0
+    scored = metadata_integer(summary, "scored") || 0
+    saved = metadata_integer(summary, "saved") || 0
+
+    case scan_issue(source) do
+      :login_required ->
+        "Last scan found protected packet access. Load credentials and rescan."
+
+      :document_capture_failed ->
+        "Last scan found packet links but document capture failed. Check portal access or expired links."
+
+      :selector_failed ->
+        "Last scan could not read the configured selectors. Recheck source configuration."
+
+      :no_results ->
+        "Last scan produced no reviewable candidates. Extracted #{extracted}, scored #{scored}, saved #{saved}."
+
+      :zero_saved ->
+        "Last scan extracted #{extracted} and scored #{scored}, but saved 0. #{diagnosis_note(diagnosis)}"
+
+      _ ->
+        "Last scan needs operator review."
+    end
+  end
+
+  defp diagnosis_note("scored_but_below_save_threshold"),
+    do: "Top candidates were below save threshold."
+
+  defp diagnosis_note("candidates_rejected_by_scoring"),
+    do: "Top candidates were rejected by scoring."
+
+  defp diagnosis_note(_diagnosis), do: "Review scan diagnostics."
+
   defp needs_login?(source) do
     source_type = metadata_value(source.metadata, "procurement_source_type")
 
@@ -159,6 +235,16 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   end
 
   defp metadata_value(_metadata, _key), do: nil
+
+  defp metadata_integer(metadata, key) do
+    case metadata_value(metadata, key) do
+      value when is_integer(value) -> value
+      value when is_binary(value) -> String.to_integer(value)
+      _ -> nil
+    end
+  rescue
+    ArgumentError -> nil
+  end
 
   defp normalize_source_type(value) when is_atom(value), do: value
 

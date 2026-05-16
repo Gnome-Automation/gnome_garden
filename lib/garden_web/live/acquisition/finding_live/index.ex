@@ -358,6 +358,11 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
           <div class="grid gap-2 sm:w-48 sm:shrink-0">
             <.finding_metric label="Score" value={finding_score_value(@finding)} />
             <.finding_metric label="Due" value={finding_due_label(@finding)} />
+            <.finding_metric
+              :if={@finding.finding_family == :procurement}
+              label="Packet"
+              value={finding_packet_label(@finding)}
+            />
           </div>
         </div>
 
@@ -846,6 +851,21 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
 
   defp finding_score_value(_finding), do: "-"
 
+  defp finding_packet_label(%{document_count: count}) when is_integer(count) and count > 0,
+    do: "#{count} linked"
+
+  defp finding_packet_label(%{metadata: metadata}) do
+    case metadata_value(metadata, "packet") |> metadata_value("status") do
+      "present" -> "Capture queued"
+      "login_required" -> "Login required"
+      "download_failed" -> "Download failed"
+      "missing" -> "Missing"
+      _ -> "No packet"
+    end
+  end
+
+  defp finding_packet_label(_finding), do: "No packet"
+
   defp family_filter_label(:all), do: "All"
   defp family_filter_label(:procurement), do: "Procurement"
   defp family_filter_label(:discovery), do: "Discovery"
@@ -863,6 +883,14 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     |> String.replace("_", " ")
     |> String.capitalize()
   end
+
+  defp metadata_value(metadata, key) when is_map(metadata) do
+    Map.get(metadata, key) || Map.get(metadata, String.to_existing_atom(key))
+  rescue
+    ArgumentError -> Map.get(metadata, key)
+  end
+
+  defp metadata_value(_metadata, _key), do: nil
 
   defp load_source_filter(nil, _actor), do: nil
   defp load_source_filter("", _actor), do: nil

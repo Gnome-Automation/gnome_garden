@@ -153,6 +153,47 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
            )
   end
 
+  test "source registry surfaces zero-save scan health and last-run findings path", %{conn: conn} do
+    run_id = Ecto.UUID.generate()
+
+    {:ok, source} =
+      Acquisition.create_source(%{
+        name: "Zero save portal",
+        external_ref: "test:zero-save-portal",
+        url: "https://example.com/zero-save-portal",
+        source_family: :procurement,
+        source_kind: :portal,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic,
+        last_run_at: DateTime.utc_now(),
+        last_success_at: DateTime.utc_now(),
+        metadata: %{
+          "last_agent_run_id" => run_id,
+          "last_agent_run_state" => "completed",
+          "last_scan_summary" => %{
+            "extracted" => 30,
+            "scored" => 30,
+            "saved" => 0,
+            "diagnosis" => "scored_but_below_save_threshold"
+          }
+        }
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=attention")
+
+    html = render(view)
+
+    assert html =~ "Zero save portal"
+    assert html =~ "Zero saved"
+    assert html =~ "Last scan extracted 30 and scored 30, but saved 0."
+    assert html =~ "Top candidates were below save threshold."
+
+    assert html =~ "New From Last Run"
+    assert html =~ "run_id=#{run_id}"
+    assert html =~ "source_id=#{source.id}"
+  end
+
   test "source configuration saves selectors through procurement action", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{

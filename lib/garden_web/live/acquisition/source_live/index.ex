@@ -315,7 +315,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           }
           class="btn btn-sm btn-ghost"
         >
-          Last Run Findings
+          New From Last Run
         </.link>
       </div>
     </article>
@@ -374,7 +374,18 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
       attention:
         Enum.count(
           sources,
-          &(&1.health_status in [:blocked, :needs_login, :failing, :stale, :noisy, :cancelled])
+          &(&1.health_status in [
+              :blocked,
+              :needs_login,
+              :failing,
+              :selector_failed,
+              :document_capture_failed,
+              :no_results,
+              :zero_saved,
+              :stale,
+              :noisy,
+              :cancelled
+            ])
         ),
       runnable: Enum.count(sources, &scan_ready?/1),
       needs_configuration: Enum.count(sources, &needs_configuration?/1),
@@ -407,7 +418,19 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp source_in_bucket?(source, :ready), do: scan_ready?(source)
 
   defp source_in_bucket?(source, :attention),
-    do: source.health_status in [:blocked, :needs_login, :failing, :stale, :noisy, :cancelled]
+    do:
+      source.health_status in [
+        :blocked,
+        :needs_login,
+        :failing,
+        :selector_failed,
+        :document_capture_failed,
+        :no_results,
+        :zero_saved,
+        :stale,
+        :noisy,
+        :cancelled
+      ]
 
   defp source_in_bucket?(_source, :all), do: true
 
