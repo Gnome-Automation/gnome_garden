@@ -628,13 +628,19 @@ defmodule GnomeGardenWeb.Components.Protocol do
   defp status_class(:warning),
     do: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
 
-  defp status_class(:error), do: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"
+  defp status_class(:error),
+    do:
+      "border border-rose-700 bg-rose-700 text-white shadow-sm dark:border-rose-400 dark:bg-rose-500 dark:text-white"
+
   defp status_class(:info), do: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400"
 
   defp status_dot_class(:default), do: "bg-zinc-400 dark:bg-zinc-500"
   defp status_dot_class(:success), do: "bg-emerald-500 dark:bg-emerald-400"
   defp status_dot_class(:warning), do: "bg-amber-500 dark:bg-amber-400"
-  defp status_dot_class(:error), do: "bg-rose-500 dark:bg-rose-400"
+
+  defp status_dot_class(:error),
+    do: "bg-white ring-2 ring-white/45 dark:bg-white dark:ring-white/45"
+
   defp status_dot_class(:info), do: "bg-sky-500 dark:bg-sky-400"
 
   @doc """
