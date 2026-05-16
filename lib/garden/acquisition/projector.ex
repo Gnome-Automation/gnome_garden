@@ -290,6 +290,9 @@ defmodule GnomeGarden.Acquisition.Projector do
       |> Map.put("procurement_requires_login", source.requires_login)
       |> Map.put("portal_id", source.portal_id)
 
+    last_run_at =
+      source.last_scanned_at || metadata_datetime(metadata, "last_agent_run_started_at")
+
     Acquisition.create_source(
       %{
         external_ref: "procurement_source:#{source.id}",
@@ -302,7 +305,7 @@ defmodule GnomeGarden.Acquisition.Projector do
         scan_strategy: acquisition_scan_strategy(source),
         description: source.notes,
         metadata: metadata,
-        last_run_at: source.last_scanned_at,
+        last_run_at: last_run_at,
         last_success_at: source.last_scanned_at,
         procurement_source_id: source.id,
         organization_id: source.organization_id
@@ -837,6 +840,22 @@ defmodule GnomeGarden.Acquisition.Projector do
   end
 
   defp metadata_value(_value, _key), do: nil
+
+  defp metadata_datetime(metadata, key) do
+    case metadata_value(metadata, key) do
+      %DateTime{} = value ->
+        value
+
+      value when is_binary(value) ->
+        case DateTime.from_iso8601(value) do
+          {:ok, datetime, _offset} -> datetime
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
 
   defp reject_nil_values(map) do
     Map.reject(map, fn {_key, value} -> is_nil(value) end)

@@ -80,6 +80,40 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     refute source.runnable
   end
 
+  test "procurement launch metadata updates acquisition source last run timestamp" do
+    started_at = ~U[2026-05-16 16:50:00Z]
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Launched Procurement Source",
+        url: "https://example.com/procurement/launched-source",
+        source_type: :utility,
+        portal_id: "launched-source",
+        region: :ca,
+        priority: :high,
+        status: :approved
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    assert is_nil(acquisition_source.last_run_at)
+
+    {:ok, _procurement_source} =
+      Procurement.update_procurement_source(procurement_source, %{
+        metadata: %{
+          "last_agent_run_id" => Ecto.UUID.generate(),
+          "last_agent_run_state" => "running",
+          "last_agent_run_started_at" => DateTime.to_iso8601(started_at)
+        }
+      })
+
+    {:ok, refreshed_source} = Acquisition.get_source(acquisition_source.id)
+
+    assert refreshed_source.last_run_at == started_at
+    assert is_nil(refreshed_source.last_success_at)
+  end
+
   test "planetbids sources show needs login health when credentials are missing" do
     System.delete_env("PLANETBIDS_USERNAME")
     System.delete_env("PLANETBIDS_PASSWORD")

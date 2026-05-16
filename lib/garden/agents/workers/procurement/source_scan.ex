@@ -63,6 +63,8 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
   end
 
   defp mark_run_state(source, run, state) do
+    source = current_source(source)
+
     metadata =
       source.metadata
       |> Map.new()
@@ -70,6 +72,13 @@ defmodule GnomeGarden.Agents.Workers.Procurement.SourceScan do
       |> Map.put("last_agent_run_state", state)
 
     Procurement.update_procurement_source(source, %{metadata: metadata}, authorize?: false)
+  end
+
+  defp current_source(source) do
+    case Procurement.get_procurement_source(source.id) do
+      {:ok, current_source} -> current_source
+      {:error, _error} -> source
+    end
   end
 
   defp summary_text(source, result) do

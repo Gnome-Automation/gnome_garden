@@ -4,6 +4,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.SourceLaunchBatch
 
   @buckets [:needs_configuration, :ready, :attention, :all]
   @source_limit 75
@@ -50,6 +51,21 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
       nil ->
         {:noreply, put_flash(socket, :error, "No ready source is available to scan.")}
     end
+  end
+
+  @impl true
+  def handle_event("launch_ready_runs", _params, socket) do
+    summary = SourceLaunchBatch.launch_ready_sources(actor: socket.assigns.current_user)
+
+    message =
+      "Launched #{summary.launched} ready scans" <>
+        if(summary.skipped > 0, do: "; skipped #{summary.skipped} active", else: "") <>
+        if(summary.errors > 0, do: "; #{summary.errors} failed", else: "")
+
+    {:noreply,
+     socket
+     |> refresh_sources()
+     |> put_flash(if(summary.errors > 0, do: :error, else: :info), message)}
   end
 
   defp launch_source(socket, id) do
@@ -149,6 +165,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                 >
                   Launch Next Scan
                 </.button>
+                <.button
+                  :if={@source_counts.runnable > 1}
+                  phx-click="launch_ready_runs"
+                  class="px-3 py-2 text-sm"
+                >
+                  Launch Ready
+                </.button>
                 <.link navigate={~p"/acquisition/findings"} class="btn btn-sm btn-ghost">
                   Open Review Queue
                 </.link>
@@ -242,9 +265,10 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           </div>
         </div>
 
-        <div class="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-4">
+        <div class="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-5">
           <.source_fact label="Findings" value={"#{@source.finding_count} total"} />
           <.source_fact label="Review" value={"#{@source.review_finding_count} waiting"} />
+          <.source_fact label="Quality" value={source_quality_label(@source)} />
           <.source_fact label="Last Run" value={format_datetime(@source.last_run_at)} />
           <.source_fact label="Last Success" value={format_datetime(@source.last_success_at)} />
         </div>
@@ -413,6 +437,10 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   defp run_sort_key(%{last_run_at: nil}), do: DateTime.from_unix!(0)
   defp run_sort_key(%{last_run_at: last_run_at}), do: last_run_at
+
+  defp source_quality_label(source) do
+    "#{source.promoted_finding_count || 0} promoted / #{source.noise_finding_count || 0} noise"
+  end
 
   defp source_in_bucket?(source, :needs_configuration), do: needs_configuration?(source)
   defp source_in_bucket?(source, :ready), do: scan_ready?(source)
