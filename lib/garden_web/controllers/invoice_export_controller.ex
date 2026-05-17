@@ -185,7 +185,7 @@ defmodule GnomeGardenWeb.InvoiceExportController do
   end
 
   defp require_authenticated_user(conn, _opts) do
-    if conn.assigns[:current_user] do
+    if conn.assigns[:current_user] || conn.assigns[:current_client_user] do
       conn
     else
       conn

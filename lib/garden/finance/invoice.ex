@@ -151,8 +151,23 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     update :void do
+      require_atomic? false
       accept []
       change transition_state(:void)
+      change after_action(fn changeset, invoice, _context ->
+        actor = changeset.context[:private][:actor]
+
+        invoice
+        |> Ash.load!([invoice_lines: [:time_entry]], actor: actor, authorize?: false)
+        |> Map.get(:invoice_lines, [])
+        |> Enum.each(fn line ->
+          if line.time_entry && line.time_entry.status == :billed do
+            Ash.update!(line.time_entry, %{}, action: :unmark_billed, actor: actor, authorize?: false)
+          end
+        end)
+
+        {:ok, invoice}
+      end)
     end
 
     update :reopen do
@@ -322,6 +337,10 @@ defmodule GnomeGarden.Finance.Invoice do
                  write_off: :error
                ],
                default: :default}
+  end
+
+  identities do
+    identity :unique_invoice_number, [:invoice_number]
   end
 
   aggregates do

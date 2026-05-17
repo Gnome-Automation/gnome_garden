@@ -60,7 +60,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
             Agreements
           </.button>
           <.button phx-click="toggle_export_form">
-            <.icon name="hero-arrow-down-tray" class="size-4" /> Export
+            <.icon name="hero-arrow-down-tray" class="size-4" /> Batch Export
           </.button>
           <.button navigate={~p"/finance/invoices/new"} variant="primary">
             New Invoice
@@ -70,7 +70,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
 
       <%= if @show_export_form do %>
         <div class="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
-          <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Export Invoices</h3>
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Batch Export</h3>
           <form method="get" action="/finance/invoices/batch-export" class="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
             <div>
               <label for="export_from" class="block text-sm/6 font-medium text-gray-900 dark:text-white">From</label>

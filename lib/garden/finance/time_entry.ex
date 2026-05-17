@@ -50,6 +50,7 @@ defmodule GnomeGarden.Finance.TimeEntry do
       transition :approve, from: :submitted, to: :approved
       transition :reject, from: :submitted, to: :rejected
       transition :mark_billed, from: :approved, to: :billed
+      transition :unmark_billed, from: :billed, to: :approved
       transition :reopen, from: [:rejected, :approved], to: :draft
     end
   end
@@ -119,6 +120,12 @@ defmodule GnomeGarden.Finance.TimeEntry do
       accept []
       change transition_state(:billed)
       change set_attribute(:billed_at, &DateTime.utc_now/0)
+    end
+
+    update :unmark_billed do
+      accept []
+      change transition_state(:approved)
+      change set_attribute(:billed_at, nil)
     end
 
     update :reopen do

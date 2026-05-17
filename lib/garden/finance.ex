@@ -24,6 +24,7 @@ defmodule GnomeGarden.Finance do
       define :approve_time_entry, action: :approve
       define :reject_time_entry, action: :reject
       define :bill_time_entry, action: :mark_billed
+      define :unmark_billed_time_entry, action: :unmark_billed
       define :reopen_time_entry, action: :reopen
       define :list_open_time_entries, action: :open
       define :list_unbilled_approved_time_entries, action: :approved_unbilled

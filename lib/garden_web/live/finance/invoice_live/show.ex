@@ -67,6 +67,13 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
       >
         <div class="flex flex-wrap gap-3">
           <.button
+            :if={@invoice.status == :draft}
+            navigate={~p"/finance/invoices/#{@invoice}/review"}
+            variant="primary"
+          >
+            <.icon name="hero-paper-airplane" class="size-4" /> Review & Issue
+          </.button>
+          <.button
             :for={action <- invoice_actions(@invoice)}
             phx-click="transition"
             phx-value-action={action.action}
@@ -318,7 +325,6 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp invoice_actions(%{status: :draft}) do
     [
-      %{action: "issue", label: "Issue", icon: "hero-paper-airplane", variant: "primary"},
       %{action: "void", label: "Void", icon: "hero-x-circle", variant: nil}
     ]
   end

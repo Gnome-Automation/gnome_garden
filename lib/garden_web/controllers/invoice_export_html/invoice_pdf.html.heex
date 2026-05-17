@@ -158,7 +158,10 @@
     <%= for invoice <- @invoices do %>
       <div class="invoice-page">
         <div class="header">
-          <div class="company-name"><%= @company_name %></div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img src="https://gnomeautomation.com/images/gnome-icon-clean-192.png" width="36" height="36" alt="Gnome Automation" style="border-radius:6px;" />
+            <div class="company-name"><%= @company_name %></div>
+          </div>
           <div class="invoice-meta">
             <h2>Invoice</h2>
             <p><strong><%= invoice.invoice_number %></strong></p>

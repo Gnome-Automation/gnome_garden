@@ -15,7 +15,7 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
 
   alias GnomeGarden.Operations
 
-  @logo_url "https://raw.githubusercontent.com/Gnome-Automation/gnome-company/main/06-templates/assets/gnome-icon-clean.png"
+  @logo_url "https://gnomeautomation.com/images/gnome-icon-clean-192.png"
 
   @spec build(map(), keyword()) :: Swoosh.Email.t()
   def build(invoice, mercury_info \\ []) do

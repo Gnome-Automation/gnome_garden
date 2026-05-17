@@ -36,6 +36,19 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Show do
             </.status_badge>
           </:subtitle>
           <:actions>
+            <a
+              href={~p"/finance/invoices/#{@invoice}/export?format=csv"}
+              class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+            >
+              Export CSV
+            </a>
+            <a
+              href={~p"/finance/invoices/#{@invoice}/export?format=pdf"}
+              target="_blank"
+              class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+            >
+              Export PDF
+            </a>
             <.button navigate={~p"/portal/invoices"}>← Invoices</.button>
           </:actions>
         </.page_header>

@@ -174,7 +174,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             New Change Order
           </.button>
           <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
-            Draft Invoice
+            Invoice Time &amp; Expenses
           </.button>
           <.button
             :if={@agreement.status == :active}
@@ -182,7 +182,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             phx-disable-with="Generating..."
             variant="primary"
           >
-            <.icon name="hero-document-plus" class="size-4" /> Generate Invoice
+            <.icon name="hero-document-plus" class="size-4" /> Invoice Milestone
           </.button>
           <.button
             :if={can_create_project?(@agreement)}
@@ -417,7 +417,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           >
             <:action>
               <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
-                Draft Invoice
+                Invoice Time &amp; Expenses
               </.button>
             </:action>
           </.empty_state>

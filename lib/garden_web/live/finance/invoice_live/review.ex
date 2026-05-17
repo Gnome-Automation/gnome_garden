@@ -31,31 +31,19 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
           Review the generated line items, set a due date, then issue to send the invoice email.
         </:subtitle>
         <:actions>
-          <div class="relative" id="export-dropdown-wrapper">
-            <details class="group">
-              <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer">
-                <.button>
-                  <.icon name="hero-arrow-down-tray" class="size-4" /> Export
-                  <.icon name="hero-chevron-down" class="size-3 ml-1 group-open:rotate-180 transition" />
-                </.button>
-              </summary>
-              <div class="absolute right-0 mt-1 w-40 rounded-md border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-zinc-800 z-10">
-                <a
-                  href={~p"/finance/invoices/#{@invoice}/export?format=pdf"}
-                  target="_blank"
-                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-                >
-                  Export as PDF
-                </a>
-                <a
-                  href={~p"/finance/invoices/#{@invoice}/export?format=csv"}
-                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-                >
-                  Export as CSV
-                </a>
-              </div>
-            </details>
-          </div>
+          <a
+            href={~p"/finance/invoices/#{@invoice}/export?format=csv"}
+            class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+          >
+            <.icon name="hero-arrow-down-tray" class="size-4" /> Export CSV
+          </a>
+          <a
+            href={~p"/finance/invoices/#{@invoice}/export?format=pdf"}
+            target="_blank"
+            class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+          >
+            <.icon name="hero-arrow-down-tray" class="size-4" /> Export PDF
+          </a>
           <.button navigate={~p"/finance/invoices/#{@invoice}"}>
             <.icon name="hero-arrow-left" class="size-4" /> View Invoice
           </.button>
