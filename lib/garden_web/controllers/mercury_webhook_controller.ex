@@ -81,9 +81,8 @@ defmodule GnomeGardenWeb.MercuryWebhookController do
          raw_body = Map.get(conn.assigns, :raw_body, ""),
          secret when is_binary(secret) and secret != "" <-
            Application.get_env(:gnome_garden, :mercury_webhook_secret),
-         expected = compute_hmac(secret, timestamp, raw_body),
-         true <- Plug.Crypto.secure_compare(expected, v1) do
-      :ok
+         expected = compute_hmac(secret, timestamp, raw_body) do
+      if Plug.Crypto.secure_compare(expected, v1), do: :ok, else: :error
     else
       _ -> :error
     end
