@@ -10,6 +10,7 @@ defmodule GnomeGarden.Commercial.Agreement do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Commercial,
     data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshAdmin.Resource, AshStateMachine]
 
   admin do
@@ -61,6 +62,16 @@ defmodule GnomeGarden.Commercial.Agreement do
     end
   end
 
+  policies do
+    policy action([:portal_index, :portal_show]) do
+      authorize_if always()
+    end
+
+    bypass always() do
+      authorize_if always()
+    end
+  end
+
   actions do
     defaults [:read, :destroy]
 
@@ -86,7 +97,9 @@ defmodule GnomeGarden.Commercial.Agreement do
         :renewal_notice_days,
         :notes,
         :billing_cycle,
-        :next_billing_date
+        :next_billing_date,
+        :default_bill_rate,
+        :payment_terms_days
       ]
     end
 
@@ -131,7 +144,9 @@ defmodule GnomeGarden.Commercial.Agreement do
         :renewal_notice_days,
         :notes,
         :billing_cycle,
-        :next_billing_date
+        :next_billing_date,
+        :default_bill_rate,
+        :payment_terms_days
       ]
     end
 
@@ -211,6 +226,19 @@ defmodule GnomeGarden.Commercial.Agreement do
                   :payments
                 ]
               )
+    end
+
+    read :portal_index do
+      description "Portal-scoped agreement list — returns only active agreements for actor's organization."
+      filter expr(organization_id == ^actor(:organization_id) and status == :active)
+      prepare build(load: [:invoices])
+    end
+
+    read :portal_show do
+      description "Portal-scoped agreement detail — returns a single agreement for actor's organization."
+      filter expr(organization_id == ^actor(:organization_id))
+      get? true
+      prepare build(load: [:payment_schedule_items, :invoices])
     end
   end
 
@@ -319,6 +347,16 @@ defmodule GnomeGarden.Commercial.Agreement do
       public? true
     end
 
+    attribute :default_bill_rate, :decimal do
+      public? true
+    end
+
+    attribute :payment_terms_days, :integer do
+      default 30
+      allow_nil? false
+      description "Days after invoice issue date when payment is due (default: 30)."
+    end
+
     timestamps()
   end
 
@@ -394,6 +432,10 @@ defmodule GnomeGarden.Commercial.Agreement do
 
     has_many :payments, GnomeGarden.Finance.Payment do
       public? true
+    end
+
+    has_many :payment_schedule_items, GnomeGarden.Finance.PaymentScheduleItem do
+      sort position: :asc
     end
   end
 

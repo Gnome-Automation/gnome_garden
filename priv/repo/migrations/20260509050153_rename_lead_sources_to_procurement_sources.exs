@@ -48,8 +48,20 @@ defmodule GnomeGarden.Repo.Migrations.RenameLeadSourcesToProcurementSources do
 
   defp rename_procurement_source_constraint(from, to) do
     execute(
-      "ALTER TABLE procurement_sources RENAME CONSTRAINT #{from} TO #{to}",
-      "ALTER TABLE procurement_sources RENAME CONSTRAINT #{to} TO #{from}"
+      """
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM pg_constraint c JOIN pg_class t ON c.conrelid = t.oid WHERE t.relname = 'procurement_sources' AND c.conname = '#{from}') THEN
+          ALTER TABLE procurement_sources RENAME CONSTRAINT #{from} TO #{to};
+        END IF;
+      END $$;
+      """,
+      """
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM pg_constraint c JOIN pg_class t ON c.conrelid = t.oid WHERE t.relname = 'procurement_sources' AND c.conname = '#{to}') THEN
+          ALTER TABLE procurement_sources RENAME CONSTRAINT #{to} TO #{from};
+        END IF;
+      END $$;
+      """
     )
   end
 end

@@ -67,6 +67,13 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
       >
         <div class="flex flex-wrap gap-3">
           <.button
+            :if={@invoice.status == :draft}
+            navigate={~p"/finance/invoices/#{@invoice}/review"}
+            variant="primary"
+          >
+            <.icon name="hero-paper-airplane" class="size-4" /> Review & Issue
+          </.button>
+          <.button
             :for={action <- invoice_actions(@invoice)}
             phx-click="transition"
             phx-value-action={action.action}
@@ -200,8 +207,82 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
           </.link>
         </div>
       </.section>
+
+      <%!-- Credit Note card — only shown for void invoices --%>
+      <.section :if={@invoice.status == :void} title="Credit Note">
+        <div class="px-5 py-4">
+          <%= if @invoice.credit_note do %>
+            <p class="text-sm text-zinc-600 mb-3">
+              Credit note <strong>{@invoice.credit_note.credit_note_number}</strong>
+              has been created
+              (<.status_badge status={@invoice.credit_note.status_variant}>
+                {format_atom(@invoice.credit_note.status)}
+              </.status_badge>).
+            </p>
+            <.button navigate={~p"/finance/credit-notes/#{@invoice.credit_note.id}"}>
+              View Credit Note
+            </.button>
+          <% else %>
+            <p class="text-sm text-zinc-400 italic mb-3">
+              No credit note has been created yet. Create one to give the client a reconcilable document.
+            </p>
+            <.button phx-click="create_credit_note" variant="primary">
+              Create Credit Note
+            </.button>
+          <% end %>
+        </div>
+      </.section>
     </.page>
     """
+  end
+
+  @impl true
+  def handle_event("create_credit_note", _params, socket) do
+    invoice = socket.assigns.invoice
+    actor = socket.assigns.current_user
+
+    n = Finance.next_sequence_value("credit_notes")
+    cn_number = Finance.format_credit_note_number(n)
+
+    with {:ok, credit_note} <-
+           Finance.create_credit_note(
+             %{
+               credit_note_number: cn_number,
+               invoice_id: invoice.id,
+               organization_id: invoice.organization_id,
+               total_amount: Decimal.negate(invoice.total_amount || Decimal.new("0")),
+               currency_code: invoice.currency_code || "USD"
+             },
+             actor: actor
+           ),
+         {:ok, _} <- create_credit_note_lines(credit_note, invoice.invoice_lines, actor) do
+      {:noreply,
+       socket
+       |> push_navigate(to: ~p"/finance/credit-notes/#{credit_note.id}")}
+    else
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Could not create credit note: #{inspect(reason)}")}
+    end
+  end
+
+  defp create_credit_note_lines(credit_note, invoice_lines, actor) do
+    invoice_lines
+    |> Enum.with_index(1)
+    |> Enum.reduce_while({:ok, []}, fn {line, position}, {:ok, acc} ->
+      attrs = %{
+        credit_note_id: credit_note.id,
+        position: position,
+        description: line.description || "",
+        quantity: line.quantity,
+        unit_price: line.unit_price && Decimal.negate(line.unit_price),
+        line_total: Decimal.negate(line.line_total || Decimal.new("0"))
+      }
+
+      case Finance.create_credit_note_line(attrs, actor: actor) do
+        {:ok, cn_line} -> {:cont, {:ok, [cn_line | acc]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   attr :label, :string, required: true
@@ -228,6 +309,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
              :payment_application_count,
              :line_total_amount,
              :applied_amount,
+             credit_note: [:status_variant],
              organization: [],
              agreement: [],
              project: [],
@@ -243,7 +325,6 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp invoice_actions(%{status: :draft}) do
     [
-      %{action: "issue", label: "Issue", icon: "hero-paper-airplane", variant: "primary"},
       %{action: "void", label: "Void", icon: "hero-x-circle", variant: nil}
     ]
   end

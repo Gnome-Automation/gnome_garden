@@ -8,7 +8,7 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
   1. Calls create_invoice_from_agreement_sources — creates a draft invoice
      from all approved, unbilled TimeEntries and Expenses.
   2. Issues the invoice (draft → issued).
-  3. Sends invoice email to client via Swoosh.
+  3. Sends invoice email to client via GnomeGarden.Mailer.InvoiceEmail.
   4. Advances next_billing_date by one billing cycle.
 
   If there are no billable entries, the invoice is not created but
@@ -20,12 +20,10 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
   require Logger
   require Ash.Query
 
-  import Swoosh.Email
-
   alias GnomeGarden.Finance
   alias GnomeGarden.Commercial
-  alias GnomeGarden.Operations
   alias GnomeGarden.Mailer
+  alias GnomeGarden.Mailer.InvoiceEmail
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
@@ -47,7 +45,7 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
   defp process_agreement(agreement) do
     Logger.info("InvoiceSchedulerWorker: processing agreement #{agreement.id}")
 
-    case Finance.create_invoice_from_agreement_sources(agreement.id) do
+    case Finance.draft_invoice_from_agreement_sources(agreement.id) do
       {:ok, invoice} ->
         case Finance.issue_invoice(invoice) do
           {:ok, issued} ->
@@ -107,68 +105,25 @@ defmodule GnomeGarden.Mercury.InvoiceSchedulerWorker do
 
   defp send_invoice_email(invoice) do
     {:ok, loaded} =
-      Ash.get(
-        GnomeGarden.Finance.Invoice,
-        invoice.id,
-        domain: GnomeGarden.Finance,
+      Finance.get_invoice(invoice.id,
+        actor: nil,
         load: [:invoice_lines, :organization]
       )
 
-    contact_email =
-      case Operations.list_people_for_organization(loaded.organization_id) do
-        {:ok, people} ->
-          Enum.find_value(people, fn person ->
-            if person.email && !person.do_not_email, do: to_string(person.email)
-          end)
+    mercury_info = Application.get_env(:gnome_garden, :mercury_payment_info, [])
 
-        {:error, _} ->
-          nil
-      end
+    loaded
+    |> InvoiceEmail.build(mercury_info)
+    |> Mailer.deliver()
+    |> case do
+      {:ok, _} ->
+        :ok
 
-    if contact_email do
-      new()
-      |> from({"GnomeGarden Billing", "billing@gnomegarden.io"})
-      |> to(contact_email)
-      |> subject(
-        "Invoice #{loaded.invoice_number} — #{loaded.currency_code} #{loaded.total_amount}"
-      )
-      |> html_body(invoice_email_body(loaded))
-      |> Mailer.deliver()
-      |> case do
-        {:ok, _} ->
-          :ok
-
-        {:error, reason} ->
-          Logger.warning("InvoiceSchedulerWorker: failed to send invoice email",
-            invoice_id: invoice.id,
-            reason: inspect(reason)
-          )
-      end
-    else
-      Logger.warning(
-        "InvoiceSchedulerWorker: no contact email for org #{loaded.organization_id}, invoice #{loaded.id} not emailed"
-      )
+      {:error, reason} ->
+        Logger.warning("InvoiceSchedulerWorker: failed to send invoice email",
+          invoice_id: invoice.id,
+          reason: inspect(reason)
+        )
     end
-  end
-
-  defp invoice_email_body(invoice) do
-    lines_html =
-      invoice.invoice_lines
-      |> Enum.map(fn line ->
-        "<tr><td>#{line.description}</td><td>#{line.amount}</td></tr>"
-      end)
-      |> Enum.join("\n")
-
-    """
-    <p>Dear #{invoice.organization.name},</p>
-    <p>Please find your invoice <strong>#{invoice.invoice_number}</strong> attached.</p>
-    <p><strong>Total due: #{invoice.currency_code} #{invoice.total_amount}</strong><br>
-    Due date: #{invoice.due_on}</p>
-    <table border="1" cellpadding="4">
-      <thead><tr><th>Description</th><th>Amount</th></tr></thead>
-      <tbody>#{lines_html}</tbody>
-    </table>
-    <p>Please remit payment via wire or ACH per the instructions on file.</p>
-    """
   end
 end

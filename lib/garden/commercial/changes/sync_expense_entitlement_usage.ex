@@ -31,10 +31,11 @@ defmodule GnomeGarden.Commercial.Changes.SyncExpenseEntitlementUsage do
     with {:ok, usages} <- Commercial.list_usage_for_expense(expense.id),
          :ok <- destroy_all(usages),
          {:ok, entitlement} <- matching_entitlement(expense) do
-      create_usage(expense, entitlement)
-    else
-      {:ok, nil} -> {:ok, expense}
-      {:error, error} -> {:error, error}
+      if is_nil(entitlement) do
+        {:ok, expense}
+      else
+        create_usage(expense, entitlement)
+      end
     end
   end
 

@@ -263,6 +263,56 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/finance/invoices"]
     },
+    %{
+      id: "ops-mercury",
+      section: "Operations",
+      icon: "hero-building-library",
+      label: "Mercury",
+      path: "/finance/mercury",
+      badge: 0,
+      hot: false,
+      match: ["/finance/mercury"]
+    },
+    %{
+      id: "ops-ar-aging",
+      section: "Operations",
+      icon: "hero-clock",
+      label: "AR Aging",
+      path: "/finance/ar-aging",
+      badge: 0,
+      hot: false,
+      match: ["/finance/ar-aging"]
+    },
+    %{
+      id: "ops-finance-settings",
+      section: "Operations",
+      icon: "hero-cog-6-tooth",
+      label: "Settings",
+      path: "/finance/settings",
+      badge: 0,
+      hot: false,
+      match: ["/finance/settings"]
+    },
+    %{
+      id: "ops-credit-notes",
+      section: "Operations",
+      icon: "hero-minus-circle",
+      label: "Credit Notes",
+      path: "/finance/credit-notes",
+      badge: 0,
+      hot: false,
+      match: ["/finance/credit-notes"]
+    },
+    %{
+      id: "ops-approval-queue",
+      section: "Operations",
+      icon: "hero-check-circle",
+      label: "Approvals",
+      path: "/finance/time-entries/approval-queue",
+      badge: 0,
+      hot: false,
+      match: ["/finance/time-entries/approval-queue"]
+    },
 
     # Reports
     %{

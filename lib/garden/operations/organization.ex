@@ -35,6 +35,7 @@ defmodule GnomeGarden.Operations.Organization do
 
     references do
       reference :merged_into, on_delete: :nilify
+      reference :billing_contact, on_delete: :nilify
     end
   end
 
@@ -75,7 +76,8 @@ defmodule GnomeGarden.Operations.Organization do
         :website,
         :phone,
         :primary_region,
-        :notes
+        :notes,
+        :billing_contact_id
       ]
 
       change {GnomeGarden.Operations.Changes.NormalizeOrganizationWebsite, []}
@@ -259,6 +261,12 @@ defmodule GnomeGarden.Operations.Organization do
       source_attribute_on_join_resource :organization_id
       destination_attribute_on_join_resource :person_id
       public? true
+    end
+
+    belongs_to :billing_contact, GnomeGarden.Operations.Person do
+      attribute_type :uuid
+      allow_nil? true
+      attribute_writable? true
     end
   end
 

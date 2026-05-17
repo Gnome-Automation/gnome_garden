@@ -10,6 +10,7 @@ defmodule GnomeGarden.Finance.Invoice do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Finance,
     data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshAdmin.Resource, AshStateMachine]
 
   admin do
@@ -54,6 +55,16 @@ defmodule GnomeGarden.Finance.Invoice do
     end
   end
 
+  policies do
+    policy action([:portal_index, :portal_show]) do
+      authorize_if always()
+    end
+
+    bypass always() do
+      authorize_if always()
+    end
+  end
+
   actions do
     defaults [:read, :destroy]
 
@@ -78,6 +89,7 @@ defmodule GnomeGarden.Finance.Invoice do
 
     create :create_from_agreement_sources do
       argument :agreement_id, :uuid, allow_nil?: false
+      argument :expense_ids, {:array, :string}, default: []
 
       accept [
         :invoice_number,
@@ -101,7 +113,8 @@ defmodule GnomeGarden.Finance.Invoice do
         :total_amount,
         :balance_amount,
         :due_on,
-        :notes
+        :notes,
+        :stripe_payment_url
       ]
     end
 
@@ -115,6 +128,8 @@ defmodule GnomeGarden.Finance.Invoice do
         total_amount = Ash.Changeset.get_attribute(changeset, :total_amount)
         Ash.Changeset.change_attribute(changeset, :balance_amount, total_amount)
       end
+
+      change GnomeGarden.Finance.Changes.GenerateStripePaymentLink
     end
 
     update :mark_paid do
@@ -136,8 +151,23 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     update :void do
+      require_atomic? false
       accept []
       change transition_state(:void)
+      change after_action(fn changeset, invoice, _context ->
+        actor = changeset.context[:private][:actor]
+
+        invoice
+        |> Ash.load!([invoice_lines: [:time_entry]], actor: actor, authorize?: false)
+        |> Map.get(:invoice_lines, [])
+        |> Enum.each(fn line ->
+          if line.time_entry && line.time_entry.status == :billed do
+            Ash.update!(line.time_entry, %{}, action: :unmark_billed, actor: actor, authorize?: false)
+          end
+        end)
+
+        {:ok, invoice}
+      end)
     end
 
     update :reopen do
@@ -179,6 +209,19 @@ defmodule GnomeGarden.Finance.Invoice do
                   :payment_applications
                 ]
               )
+    end
+
+    read :portal_index do
+      description "Portal-scoped invoice list — returns only invoices for actor's organization."
+      filter expr(organization_id == ^actor(:organization_id))
+      prepare build(load: [:invoice_lines, :agreement, :organization])
+    end
+
+    read :portal_show do
+      description "Portal-scoped invoice detail — returns a single invoice for actor's organization."
+      filter expr(organization_id == ^actor(:organization_id))
+      get? true
+      prepare build(load: [:invoice_lines, :agreement, :organization])
     end
   end
 
@@ -242,6 +285,12 @@ defmodule GnomeGarden.Finance.Invoice do
       public? true
     end
 
+    attribute :stripe_payment_url, :string do
+      allow_nil? true
+      description "Stripe Payment Link URL. Generated on invoice issue. Nil if Stripe is unavailable."
+      public? true
+    end
+
     timestamps()
   end
 
@@ -270,6 +319,8 @@ defmodule GnomeGarden.Finance.Invoice do
     has_many :payment_applications, GnomeGarden.Finance.PaymentApplication do
       public? true
     end
+
+    has_one :credit_note, GnomeGarden.Finance.CreditNote
   end
 
   calculations do
@@ -286,6 +337,10 @@ defmodule GnomeGarden.Finance.Invoice do
                  write_off: :error
                ],
                default: :default}
+  end
+
+  identities do
+    identity :unique_invoice_number, [:invoice_number]
   end
 
   aggregates do

@@ -48,6 +48,10 @@ if mercury_api_key = System.get_env("MERCURY_API_KEY") do
     mercury_sandbox: System.get_env("MERCURY_SANDBOX", "true") == "true"
 end
 
+config :gnome_garden, :mercury_payment_info,
+  account_number: System.get_env("MERCURY_ACCOUNT_NUMBER", ""),
+  routing_number: System.get_env("MERCURY_ROUTING_NUMBER", "")
+
 if mercury_webhook_secret = System.get_env("MERCURY_WEBHOOK_SECRET") do
   config :gnome_garden,
     mercury_webhook_secret: mercury_webhook_secret
@@ -164,6 +168,17 @@ if config_env() == :prod do
     token_signing_secret:
       System.get_env("TOKEN_SIGNING_SECRET") ||
         raise("Missing environment variable `TOKEN_SIGNING_SECRET`!")
+
+  stripe_secret_key =
+    System.get_env("STRIPE_SECRET_KEY") ||
+      raise "environment variable STRIPE_SECRET_KEY is missing"
+
+  stripe_webhook_secret =
+    System.get_env("STRIPE_WEBHOOK_SECRET") ||
+      raise "environment variable STRIPE_WEBHOOK_SECRET is missing"
+
+  config :stripity_stripe, api_key: stripe_secret_key
+  config :gnome_garden, stripe_webhook_secret: stripe_webhook_secret
 
   # ## SSL Support
   #

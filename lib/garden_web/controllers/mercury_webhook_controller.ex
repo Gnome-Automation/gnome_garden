@@ -51,7 +51,9 @@ defmodule GnomeGardenWeb.MercuryWebhookController do
     end
   end
 
-  defp handle_event(conn, "balance.updated", payload) do
+  defp handle_event(conn, event_type, payload)
+       when event_type in ["balance.updated", "checkingAccount.balance.updated",
+                           "savingsAccount.balance.updated", "creditAccount.balance.updated"] do
     with {:ok, account} <- Mercury.get_mercury_account_by_mercury_id(payload["accountId"]),
          {:ok, _} <-
            Mercury.update_mercury_account(account, %{
@@ -79,9 +81,8 @@ defmodule GnomeGardenWeb.MercuryWebhookController do
          raw_body = Map.get(conn.assigns, :raw_body, ""),
          secret when is_binary(secret) and secret != "" <-
            Application.get_env(:gnome_garden, :mercury_webhook_secret),
-         expected = compute_hmac(secret, timestamp, raw_body),
-         true <- Plug.Crypto.secure_compare(expected, v1) do
-      :ok
+         expected = compute_hmac(secret, timestamp, raw_body) do
+      if Plug.Crypto.secure_compare(expected, v1), do: :ok, else: :error
     else
       _ -> :error
     end
@@ -115,7 +116,7 @@ defmodule GnomeGardenWeb.MercuryWebhookController do
       mercury_id: payload["id"],
       account_id: account_id,
       amount: payload["amount"],
-      kind: payload["kind"],
+      kind: normalize_kind(payload["kind"]),
       status: payload["status"],
       bank_description: payload["bankDescription"],
       external_memo: payload["externalMemo"],
@@ -136,6 +137,19 @@ defmodule GnomeGardenWeb.MercuryWebhookController do
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()
   end
+
+  # Mercury sends camelCase kind values; normalize to snake_case atoms the resource expects.
+  @kind_map %{
+    "externalTransfer" => "external_transfer",
+    "internalTransfer" => "internal_transfer",
+    "outbound" => "outbound",
+    "inbound" => "inbound",
+    "fee" => "fee",
+    "ach" => "ach",
+    "wire" => "wire",
+    "check" => "check"
+  }
+  defp normalize_kind(kind), do: Map.get(@kind_map, kind, "other")
 
   defp build_transaction_update_attrs(payload) do
     %{

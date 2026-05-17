@@ -36,6 +36,30 @@ defmodule GnomeGardenWeb.ConnCase do
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 
+  def register_and_log_in_client_user(%{conn: conn} = context) do
+    org = Ash.Seed.seed!(GnomeGarden.Operations.Organization, %{name: "Test Client Org #{System.unique_integer()}"})
+    email = "client-#{System.unique_integer([:positive, :monotonic])}@example.com"
+
+    client_user =
+      Ash.Seed.seed!(GnomeGarden.Accounts.ClientUser, %{
+        email: email,
+        organization_id: org.id
+      })
+
+    {:ok, token, _claims} = AshAuthentication.Jwt.token_for_user(client_user)
+    client_user = Ash.Resource.put_metadata(client_user, :token, token)
+
+    new_conn =
+      conn
+      |> Phoenix.ConnTest.init_test_session(%{})
+      |> AshAuthentication.Plug.Helpers.store_in_session(client_user)
+
+    context
+    |> Map.put(:conn, new_conn)
+    |> Map.put(:current_client_user, client_user)
+    |> Map.put(:organization, org)
+  end
+
   def register_and_log_in_user(%{conn: conn} = context) do
     email = "operator-#{System.unique_integer([:positive, :monotonic])}@example.com"
     password = "valid-password-#{System.unique_integer([:positive, :monotonic])}"

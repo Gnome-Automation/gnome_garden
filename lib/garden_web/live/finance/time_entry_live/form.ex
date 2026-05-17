@@ -149,6 +149,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
+    params = maybe_fill_bill_rate(params, socket.assigns.agreements)
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     selected_project_id = blank_to_nil(params["project_id"])
 
@@ -306,4 +307,22 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
   end
 
   defp team_member_label(team_member), do: team_member.display_name || "Team member"
+
+  defp maybe_fill_bill_rate(%{"agreement_id" => agreement_id} = params, agreements)
+       when is_binary(agreement_id) and agreement_id != "" do
+    current_rate = params["bill_rate"]
+
+    if is_nil(current_rate) or current_rate == "" do
+      agreement = Enum.find(agreements, &(to_string(&1.id) == agreement_id))
+
+      case agreement && agreement.default_bill_rate do
+        nil -> params
+        rate -> Map.put(params, "bill_rate", Decimal.to_string(rate, :normal))
+      end
+    else
+      params
+    end
+  end
+
+  defp maybe_fill_bill_rate(params, _agreements), do: params
 end

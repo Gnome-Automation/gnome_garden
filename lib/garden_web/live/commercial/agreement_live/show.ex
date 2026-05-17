@@ -4,15 +4,27 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
   import GnomeGardenWeb.Commercial.Helpers
 
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Finance
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    agreement = load_agreement!(id, socket.assigns.current_user)
+    actor = socket.assigns.current_user
+    agreement = load_agreement!(id, actor)
+
+    unbilled_expenses =
+      case Finance.list_billable_expenses_for_agreement(agreement.id,
+             actor: actor, authorize?: false) do
+        {:ok, exps} -> exps
+        _ -> []
+      end
 
     {:ok,
      socket
      |> assign(:page_title, agreement.name)
-     |> assign(:agreement, agreement)}
+     |> assign(:agreement, agreement)
+     |> assign(:schedule_pct_total, compute_pct_total(agreement.payment_schedule_items))
+     |> assign(:unbilled_expenses, unbilled_expenses)
+     |> assign(:selected_expense_ids, MapSet.new())}
   end
 
   @impl true
@@ -32,6 +44,110 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not update agreement: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("generate_invoice", _params, socket) do
+    actor = socket.assigns.current_user
+    agreement = socket.assigns.agreement
+    selected_ids = MapSet.to_list(socket.assigns.selected_expense_ids)
+
+    result =
+      case agreement.billing_model do
+        :fixed_fee ->
+          Finance.create_invoices_from_fixed_fee_schedule(agreement.id, selected_ids)
+
+        _ ->
+          case Finance.draft_invoice_from_agreement_sources(agreement.id,
+                 expense_ids: selected_ids,
+                 actor: actor
+               ) do
+            {:ok, invoice} -> {:ok, [invoice]}
+            error -> error
+          end
+      end
+
+    case result do
+      {:ok, invoices} ->
+        count = length(List.wrap(invoices))
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "#{count} invoice(s) created")
+         |> assign(:selected_expense_ids, MapSet.new())
+         |> reload_unbilled_expenses()}
+
+      {:error, %Ash.Error.Invalid{errors: errors}} ->
+        if Enum.any?(errors, fn
+             %{message: msg} when is_binary(msg) -> msg =~ "approved billable source records"
+             _ -> false
+           end) do
+          {:noreply,
+           put_flash(socket, :info, "No approved billable entries for this agreement yet.")}
+        else
+          {:noreply,
+           put_flash(socket, :error, "Could not generate invoice: #{inspect(errors)}")}
+        end
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Could not generate invoice: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_expense", %{"id" => id}, socket) do
+    ids = socket.assigns.selected_expense_ids
+
+    updated =
+      if MapSet.member?(ids, id),
+        do: MapSet.delete(ids, id),
+        else: MapSet.put(ids, id)
+
+    {:noreply, assign(socket, :selected_expense_ids, updated)}
+  end
+
+  @impl true
+  def handle_event("add_schedule_item", %{"label" => label, "percentage" => pct, "due_days" => days}, socket) do
+    agreement = socket.assigns.agreement
+    next_position = length(agreement.payment_schedule_items) + 1
+
+    attrs = %{
+      agreement_id: agreement.id,
+      position: next_position,
+      label: label,
+      percentage: Decimal.new(pct),
+      due_days: String.to_integer(days)
+    }
+
+    case Finance.create_payment_schedule_item(attrs) do
+      {:ok, _item} ->
+        refreshed = reload_agreement(socket)
+        {:noreply,
+         socket
+         |> assign(:agreement, refreshed)
+         |> assign(:schedule_pct_total, compute_pct_total(refreshed.payment_schedule_items))
+         |> put_flash(:info, "Item added")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Could not add item: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete_schedule_item", %{"id" => id}, socket) do
+    case Finance.get_payment_schedule_item(id) do
+      {:ok, item} ->
+        Finance.delete_payment_schedule_item(item)
+        refreshed = reload_agreement(socket)
+        {:noreply,
+         socket
+         |> assign(:agreement, refreshed)
+         |> assign(:schedule_pct_total, compute_pct_total(refreshed.payment_schedule_items))
+         |> put_flash(:info, "Item removed")}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "Item not found")}
     end
   end
 
@@ -58,7 +174,15 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             New Change Order
           </.button>
           <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
-            Draft Invoice
+            Invoice Time &amp; Expenses
+          </.button>
+          <.button
+            :if={@agreement.status == :active}
+            phx-click="generate_invoice"
+            phx-disable-with="Generating..."
+            variant="primary"
+          >
+            <.icon name="hero-document-plus" class="size-4" /> Invoice Milestone
           </.button>
           <.button
             :if={can_create_project?(@agreement)}
@@ -143,6 +267,77 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
       </.section>
 
       <.section
+        :if={@agreement.billing_model == :fixed_fee}
+        title="Payment Schedule"
+        description="Define installments as percentages of the contract value. Total must equal 100% before generating invoices."
+      >
+        <p class={[
+          "text-sm font-medium mb-3",
+          if(Decimal.equal?(@schedule_pct_total, Decimal.new("100")),
+            do: "text-emerald-600",
+            else: "text-amber-600"
+          )
+        ]}>
+          Total: <%= @schedule_pct_total %>%
+          <%= if not Decimal.equal?(@schedule_pct_total, Decimal.new("100")) do %>
+            (must equal 100% before generating invoices)
+          <% end %>
+        </p>
+
+        <table :if={length(@agreement.payment_schedule_items) > 0} class="min-w-full text-sm mb-4">
+          <thead>
+            <tr class="text-left text-zinc-500">
+              <th class="pr-4 pb-2 font-medium">#</th>
+              <th class="pr-4 pb-2 font-medium">Label</th>
+              <th class="pr-4 pb-2 font-medium">%</th>
+              <th class="pr-4 pb-2 font-medium">Due (days after issue)</th>
+              <th class="pb-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={item <- @agreement.payment_schedule_items} class="border-t border-zinc-100">
+              <td class="pr-4 py-2 text-zinc-500">{item.position}</td>
+              <td class="pr-4 py-2">{item.label}</td>
+              <td class="pr-4 py-2">{item.percentage}%</td>
+              <td class="pr-4 py-2">{item.due_days} days</td>
+              <td class="py-2">
+                <button
+                  phx-click="delete_schedule_item"
+                  phx-value-id={item.id}
+                  class="text-red-500 hover:text-red-700 text-xs"
+                  data-confirm="Remove this installment?"
+                >
+                  Remove
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <form phx-submit="add_schedule_item" class="flex gap-3 items-end flex-wrap">
+          <div>
+            <label class="block text-xs text-zinc-500 mb-1">Label</label>
+            <input type="text" name="label" placeholder="e.g. Deposit"
+              class="border border-zinc-300 rounded px-2 py-1 text-sm w-32" required />
+          </div>
+          <div>
+            <label class="block text-xs text-zinc-500 mb-1">Percentage</label>
+            <input type="number" name="percentage" placeholder="25" min="1" max="100" step="0.01"
+              class="border border-zinc-300 rounded px-2 py-1 text-sm w-24" required />
+          </div>
+          <div>
+            <label class="block text-xs text-zinc-500 mb-1">Due (days)</label>
+            <input type="number" name="due_days" value="30" min="0"
+              class="border border-zinc-300 rounded px-2 py-1 text-sm w-20" required />
+          </div>
+          <button type="submit"
+            class="bg-emerald-600 text-white text-sm px-3 py-1.5 rounded hover:bg-emerald-700">
+            Add Item
+          </button>
+        </form>
+      </.section>
+
+      <.section
         title="Downstream Projects"
         description="Projects should be created from active agreements instead of bypassing the contract layer."
       >
@@ -222,7 +417,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           >
             <:action>
               <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
-                Draft Invoice
+                Invoice Time &amp; Expenses
               </.button>
             </:action>
           </.empty_state>
@@ -247,6 +442,38 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             </.status_badge>
           </.link>
         </div>
+      </.section>
+
+      <.section :if={not Enum.empty?(@unbilled_expenses)} title="Unbilled Expenses">
+        <table class="min-w-full divide-y divide-zinc-200 text-sm">
+          <thead class="bg-zinc-50">
+            <tr>
+              <th class="px-5 py-3"></th>
+              <th class="px-5 py-3 text-left font-medium text-zinc-500">Date</th>
+              <th class="px-5 py-3 text-left font-medium text-zinc-500">Category</th>
+              <th class="px-5 py-3 text-left font-medium text-zinc-500">Description</th>
+              <th class="px-5 py-3 text-left font-medium text-zinc-500">Vendor</th>
+              <th class="px-5 py-3 text-right font-medium text-zinc-500">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-zinc-200">
+            <tr :for={exp <- @unbilled_expenses}>
+              <td class="px-5 py-3">
+                <input
+                  type="checkbox"
+                  phx-click="toggle_expense"
+                  phx-value-id={exp.id}
+                  checked={MapSet.member?(@selected_expense_ids, to_string(exp.id))}
+                />
+              </td>
+              <td class="px-5 py-3">{exp.incurred_on}</td>
+              <td class="px-5 py-3">{format_atom(exp.category)}</td>
+              <td class="px-5 py-3">{exp.description}</td>
+              <td class="px-5 py-3 text-zinc-500">{exp.vendor || "—"}</td>
+              <td class="px-5 py-3 text-right font-medium">{format_amount(exp.amount)}</td>
+            </tr>
+          </tbody>
+        </table>
       </.section>
     </.page>
     """
@@ -278,6 +505,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
              :open_work_order_count,
              :invoiced_amount,
              :received_amount,
+             :payment_schedule_items,
              organization: [],
              proposal: [],
              pursuit: [],
@@ -289,6 +517,17 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
       {:ok, agreement} -> agreement
       {:error, error} -> raise "failed to load agreement #{id}: #{inspect(error)}"
     end
+  end
+
+  defp reload_agreement(socket) do
+    agreement = socket.assigns.agreement
+    load_agreement!(agreement.id, socket.assigns.current_user)
+  end
+
+  defp compute_pct_total(items) do
+    Enum.reduce(items, Decimal.new("0"), fn item, acc ->
+      Decimal.add(acc, item.percentage)
+    end)
   end
 
   defp can_create_project?(agreement), do: agreement.status == :active
@@ -354,4 +593,18 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
 
   defp transition_agreement(agreement, :reopen, actor),
     do: Commercial.reopen_agreement(agreement, actor: actor)
+
+  defp reload_unbilled_expenses(socket) do
+    agreement = socket.assigns.agreement
+    actor = socket.assigns.current_user
+
+    unbilled_expenses =
+      case Finance.list_billable_expenses_for_agreement(agreement.id,
+             actor: actor, authorize?: false) do
+        {:ok, exps} -> exps
+        _ -> []
+      end
+
+    assign(socket, :unbilled_expenses, unbilled_expenses)
+  end
 end

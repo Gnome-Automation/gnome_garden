@@ -118,7 +118,7 @@ config :jido_ai,
 config :gnome_garden, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
-  queues: [default: 10, procurement_scanning: 2, mercury: 10],
+  queues: [default: 10, procurement_scanning: 2, mercury: 10, finance: 5],
   repo: GnomeGarden.Repo,
   plugins: [
     {Oban.Plugins.Cron,
@@ -126,7 +126,8 @@ config :gnome_garden, Oban,
        {"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker},
        {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker},
        {"0 6 * * *", GnomeGarden.Mercury.InvoiceSchedulerWorker},
-       {"*/5 * * * *", GnomeGarden.Acquisition.Workers.RetryFailedImports}
+       {"*/5 * * * *", GnomeGarden.Acquisition.Workers.RetryFailedImports},
+       {"0 8 * * *", GnomeGarden.Finance.PaymentReminderWorker}
      ],
      timezone: "Etc/UTC"}
   ]
@@ -268,6 +269,8 @@ config :logger, :default_formatter,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+config :gnome_garden, :company_name, "Gnome Automation"
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

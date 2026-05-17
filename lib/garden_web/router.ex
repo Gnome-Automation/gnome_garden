@@ -57,6 +57,10 @@ defmodule GnomeGardenWeb.Router do
   scope "/", GnomeGardenWeb do
     pipe_through :browser
 
+    # Finance - Invoice Export (plain controller routes, before :id to avoid conflict)
+    get "/finance/invoices/batch-export", InvoiceExportController, :batch
+    get "/finance/invoices/:id/export", InvoiceExportController, :show
+
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_required}] do
@@ -194,11 +198,13 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/invoices", Finance.InvoiceLive.Index, :index
       live "/finance/invoices/new", Finance.InvoiceLive.Form, :new
       live "/finance/invoices/:id", Finance.InvoiceLive.Show, :show
+      live "/finance/invoices/:id/review", Finance.InvoiceLive.Review, :review
       live "/finance/invoices/:id/edit", Finance.InvoiceLive.Form, :edit
 
       # Finance - Time Entries
       live "/finance/time-entries", Finance.TimeEntryLive.Index, :index
       live "/finance/time-entries/new", Finance.TimeEntryLive.Form, :new
+      live "/finance/time-entries/approval-queue", Finance.ApprovalQueueLive, :index
       live "/finance/time-entries/:id", Finance.TimeEntryLive.Show, :show
       live "/finance/time-entries/:id/edit", Finance.TimeEntryLive.Form, :edit
 
@@ -219,6 +225,19 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/payment-applications/new", Finance.PaymentApplicationLive.Form, :new
       live "/finance/payment-applications/:id", Finance.PaymentApplicationLive.Show, :show
       live "/finance/payment-applications/:id/edit", Finance.PaymentApplicationLive.Form, :edit
+
+      # Finance - AR Aging
+      live "/finance/ar-aging", Finance.ArAgingLive, :index
+
+      # Finance - Billing Settings
+      live "/finance/settings", Finance.BillingSettingsLive, :index
+
+      # Finance - Credit Notes
+      live "/finance/credit-notes", Finance.CreditNoteLive.Index, :index
+      live "/finance/credit-notes/:id", Finance.CreditNoteLive.Show, :show
+
+      # Finance - Mercury Bank
+      live "/finance/mercury", Finance.MercuryLive
 
       # Agents - Procurement targeting
       live "/procurement/targeting", Agents.ProcurementTargetingLive, :index
@@ -243,11 +262,13 @@ defmodule GnomeGardenWeb.Router do
     get "/access-denied", PageController, :access_denied
 
     auth_routes AuthController, GnomeGarden.Accounts.User, path: "/auth"
+    auth_routes AuthController, GnomeGarden.Accounts.ClientUser, path: "/portal/auth"
     sign_out_route AuthController
 
     sign_in_route reset_path: "/reset",
                   auth_routes_prefix: "/auth",
                   on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_no_user}],
+                  resources: [GnomeGarden.Accounts.User],
                   overrides: [
                     GnomeGardenWeb.AuthOverrides,
                     Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI
@@ -269,9 +290,43 @@ defmodule GnomeGardenWeb.Router do
       ]
   end
 
+  # Portal — public routes (no auth required)
+  scope "/portal", GnomeGardenWeb do
+    pipe_through :browser
+
+    get "/login", ClientPortal.SessionController, :new
+    post "/login", ClientPortal.SessionController, :create
+
+    # AshAuthentication magic link callback for ClientUser
+    # IMPORTANT: path is "/sign-in" (not "/portal/sign-in") because this scope
+    # already prefixes all routes with "/portal". The resolved URL is /portal/sign-in,
+    # which matches the URL generated in the sender module (~p"/portal/sign-in/#{token}").
+    magic_sign_in_route GnomeGarden.Accounts.ClientUser, :magic_link,
+      path: "/sign-in",
+      as: :portal,
+      auth_routes_prefix: {:unscoped, "/portal/auth"}
+  end
+
+  # Portal — authenticated routes (ClientUser session required)
+  scope "/", GnomeGardenWeb do
+    pipe_through :browser
+
+    ash_authentication_live_session :client_portal,
+      layout: {GnomeGardenWeb.Layouts, :portal_app},
+      on_mount: [{GnomeGardenWeb.ClientPortalAuth, :require_client_user}] do
+
+      live "/portal", ClientPortal.DashboardLive, :index
+      live "/portal/invoices", ClientPortal.InvoiceLive.Index, :index
+      live "/portal/invoices/:id", ClientPortal.InvoiceLive.Show, :show
+      live "/portal/agreements", ClientPortal.AgreementLive.Index, :index
+      live "/portal/agreements/:id", ClientPortal.AgreementLive.Show, :show
+    end
+  end
+
   scope "/webhooks", GnomeGardenWeb do
     pipe_through :webhooks
     post "/mercury", MercuryWebhookController, :receive
+    post "/stripe", StripeWebhookController, :receive
   end
 
   # Other scopes may use custom stacks.

@@ -3,7 +3,13 @@ defmodule GnomeGardenWeb.AuthController do
   use AshAuthentication.Phoenix.Controller
 
   def success(conn, activity, user, _token) do
-    return_to = get_session(conn, :return_to) || ~p"/"
+    default_path =
+      case user do
+        %GnomeGarden.Accounts.ClientUser{} -> ~p"/portal"
+        _ -> ~p"/"
+      end
+
+    return_to = get_session(conn, :return_to) || default_path
 
     message =
       case activity do
