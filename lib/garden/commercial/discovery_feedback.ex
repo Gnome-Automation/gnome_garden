@@ -8,6 +8,14 @@ defmodule GnomeGarden.Commercial.DiscoveryFeedback do
   """
 
   @reject_reasons [
+    {"Stale", "stale"},
+    {"Wrong service", "wrong_service"},
+    {"Wrong geography", "wrong_geography"},
+    {"Too big", "too_big"},
+    {"Too small", "too_small"},
+    {"Duplicate", "duplicate"},
+    {"Missing docs", "missing_docs"},
+    {"Not enough info", "not_enough_info"},
     {"Too generic / weak signal", "weak_signal_generic"},
     {"Out of our scope", "out_of_scope"},
     {"Wrong industry or market", "wrong_industry_market"},
@@ -22,6 +30,14 @@ defmodule GnomeGarden.Commercial.DiscoveryFeedback do
   @reason_label_map Map.new(@reject_reasons, fn {label, code} -> {code, label} end)
 
   @source_feedback_categories %{
+    "stale" => "stale",
+    "wrong_service" => "service_mismatch",
+    "wrong_geography" => "geography_mismatch",
+    "too_big" => "scope_mismatch",
+    "too_small" => "value_mismatch",
+    "duplicate" => "duplicate",
+    "missing_docs" => "missing_docs",
+    "not_enough_info" => "insufficient_information",
     "weak_signal_generic" => "weak_signal",
     "out_of_scope" => "fit_gap",
     "wrong_industry_market" => "fit_gap",
@@ -42,6 +58,16 @@ defmodule GnomeGarden.Commercial.DiscoveryFeedback do
 
   @spec reject_reason_options() :: [{String.t(), String.t()}]
   def reject_reason_options, do: @reject_reasons
+
+  @spec reject_reason_code_valid?(term()) :: boolean()
+  def reject_reason_code_valid?(value) when is_binary(value) do
+    Map.has_key?(@reason_label_map, String.trim(value))
+  end
+
+  def reject_reason_code_valid?(value) when is_atom(value),
+    do: value |> Atom.to_string() |> reject_reason_code_valid?()
+
+  def reject_reason_code_valid?(_value), do: false
 
   @spec reject_reason_label(String.t() | nil) :: String.t()
   def reject_reason_label(reason_code), do: reason_label(reason_code) || "Other"

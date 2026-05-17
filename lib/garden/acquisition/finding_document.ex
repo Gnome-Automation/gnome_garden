@@ -72,7 +72,12 @@ defmodule GnomeGarden.Acquisition.FindingDocument do
 
       prepare build(
                 sort: [linked_at: :desc, inserted_at: :desc],
-                load: [document: [:file_url, file: :blob]]
+                load: [
+                  :document_state,
+                  :document_state_label,
+                  :document_state_variant,
+                  document: [:file_url, file: :blob]
+                ]
               )
     end
   end
@@ -133,6 +138,20 @@ defmodule GnomeGarden.Acquisition.FindingDocument do
       allow_nil? false
       public? true
     end
+  end
+
+  calculations do
+    calculate :document_state,
+              :atom,
+              {GnomeGarden.Calculations.FindingDocumentState, return: :state}
+
+    calculate :document_state_label,
+              :string,
+              {GnomeGarden.Calculations.FindingDocumentState, return: :label}
+
+    calculate :document_state_variant,
+              :atom,
+              {GnomeGarden.Calculations.FindingDocumentState, return: :variant}
   end
 
   identities do

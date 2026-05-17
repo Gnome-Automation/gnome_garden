@@ -139,7 +139,14 @@ defmodule GnomeGarden.Acquisition.PilotSeeds do
         link_selector: "a",
         description_selector: "p, td",
         notes: "Prefer API-backed scanning when SAM credentials are available."
-      }
+      },
+      search_filters: [
+        %{value: "541330", label: "Engineering services"},
+        %{value: "238210", label: "Electrical contractors and wiring"},
+        %{value: "541512", label: "Computer systems design"},
+        %{value: "541519", label: "Other computer related services"},
+        %{value: "541511", label: "Custom computer programming"}
+      ]
     },
     %{
       name: "City of Anaheim OpenGov",
@@ -307,7 +314,8 @@ defmodule GnomeGarden.Acquisition.PilotSeeds do
   defp ensure_source(attrs, actor) do
     with {:ok, source} <- Procurement.create_procurement_source(source_attrs(attrs), actor: actor),
          {:ok, approved_source} <- ensure_source_approved(source, actor),
-         {:ok, configured_source} <- ensure_source_configured(approved_source, attrs, actor) do
+         {:ok, configured_source} <- ensure_source_configured(approved_source, attrs, actor),
+         :ok <- ensure_source_search_filters(configured_source, attrs, actor) do
       {:ok, configured_source}
     end
   end
@@ -349,6 +357,25 @@ defmodule GnomeGarden.Acquisition.PilotSeeds do
       |> Map.put(:url, source.url)
 
     Procurement.save_source_config(config, actor: actor)
+  end
+
+  defp ensure_source_search_filters(source, attrs, actor) do
+    attrs
+    |> Map.get(:search_filters, [])
+    |> Enum.reduce_while(:ok, fn filter_attrs, :ok ->
+      attrs =
+        filter_attrs
+        |> Map.put(:procurement_source_id, source.id)
+        |> Map.put_new(:filter_type, :naics)
+        |> Map.put_new(:enabled, true)
+        |> Map.put_new(:priority, :medium)
+        |> Map.put_new(:per_run_limit, 5)
+
+      case Procurement.create_source_search_filter(attrs, actor: actor) do
+        {:ok, _filter} -> {:cont, :ok}
+        {:error, error} -> {:halt, {:error, error}}
+      end
+    end)
   end
 
   defp reverse_ok({:ok, records}), do: {:ok, Enum.reverse(records)}

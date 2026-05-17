@@ -445,6 +445,12 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       public? true
       description "Organization this source belongs to (for company_site type)"
     end
+
+    has_many :search_filters, GnomeGarden.Procurement.SourceSearchFilter do
+      destination_attribute :procurement_source_id
+      public? true
+      description "Operator-tunable filters used by scanners such as SAM.gov"
+    end
   end
 
   calculations do

@@ -278,6 +278,120 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     assert acquisition_source.health_note =~ "Last successful scan"
   end
 
+  test "sam.gov source scans use enabled persisted search filters and record counts" do
+    previous_sam_key = System.get_env("SAM_GOV_API_KEY")
+    System.put_env("SAM_GOV_API_KEY", "test-sam-key")
+
+    on_exit(fn ->
+      restore_env("SAM_GOV_API_KEY", previous_sam_key)
+    end)
+
+    run_id = Ecto.UUID.generate()
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "SAM Filtered Source",
+        url: "https://sam.gov/opportunities/search",
+        source_type: :sam_gov,
+        portal_id: "sam-filtered",
+        region: :national,
+        priority: :high,
+        status: :approved
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          keywords: "ignored when persisted keyword is absent",
+          naics_codes: ["000000"],
+          limit: 20
+        }
+      })
+
+    {:ok, enabled_filter} =
+      Procurement.create_source_search_filter(%{
+        procurement_source_id: procurement_source.id,
+        filter_type: :naics,
+        value: "541330",
+        label: "Engineering services",
+        per_run_limit: 7,
+        enabled: true
+      })
+
+    {:ok, _disabled_filter} =
+      Procurement.create_source_search_filter(%{
+        procurement_source_id: procurement_source.id,
+        filter_type: :naics,
+        value: "238210",
+        label: "Electrical contractors",
+        per_run_limit: 7,
+        enabled: false
+      })
+
+    test_pid = self()
+
+    http_get = fn _url, opts ->
+      assert opts[:params][:api_key] == "test-sam-key"
+      assert opts[:params][:ncode] == "541330"
+      assert opts[:params][:limit] == 7
+      refute Map.has_key?(opts[:params], :title)
+
+      send(test_pid, {:sam_request, opts[:params][:ncode]})
+
+      {:ok,
+       %{
+         status: 200,
+         body: %{
+           "opportunitiesData" => [
+             %{
+               "noticeId" => "SAM-FILTER-1",
+               "title" => "SCADA PLC controls modernization and instrumentation services",
+               "description" =>
+                 "Federal water treatment automation upgrade with PLC, SCADA, controls integration, telemetry, and instrumentation support.",
+               "fullParentPathName" => "Department of Energy",
+               "uiLink" => "https://sam.gov/opp/SAM-FILTER-1/view",
+               "postedDate" => "2026-05-01",
+               "responseDeadLine" => "2026-06-01T17:00:00-05:00",
+               "naicsCode" => opts[:params][:ncode]
+             }
+           ]
+         }
+       }}
+    end
+
+    assert {:ok, result} =
+             SourceScan.execute_run(%{
+               run: %{id: run_id, metadata: %{procurement_source_id: procurement_source.id}},
+               deployment: %{},
+               tool_context: %{
+                 agent_run_id: run_id,
+                 sam_gov_api_key: "test-sam-key",
+                 http_get: http_get
+               }
+             })
+
+    assert result.metadata.saved == 1
+    assert_received {:sam_request, "541330"}
+    refute_received {:sam_request, "238210"}
+    refute_received {:sam_request, "000000"}
+
+    {:ok, enabled_filter} = Procurement.get_source_search_filter(enabled_filter.id)
+    assert enabled_filter.last_returned_count == 1
+    assert enabled_filter.last_saved_count == 1
+    assert enabled_filter.last_run_at
+
+    assert {:ok, filters} = Procurement.list_source_search_filters(procurement_source.id)
+    enabled_filter = Enum.find(filters, &(&1.value == "541330"))
+
+    assert enabled_filter.performance_recommendation == "Keep"
+    assert enabled_filter.performance_variant == :success
+    assert enabled_filter.performance_note == "1 saved from 1 returned in the last run."
+
+    {:ok, source} = Procurement.get_procurement_source(procurement_source.id)
+    search_filter_counts = get_in(source.metadata, ["last_scan_summary", "search_filter_counts"])
+    assert [%{"value" => "541330", "returned" => 1}] = search_filter_counts
+  end
+
   test "sam.gov sources show needs login health when API key is missing" do
     previous_sam_key = System.get_env("SAM_GOV_API_KEY")
     System.delete_env("SAM_GOV_API_KEY")
@@ -434,6 +548,59 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     assert source.noise_finding_count == 3
     assert source.health_status == :noisy
     assert source.health_note =~ "3 noise"
+  end
+
+  test "console sources expose review outcome counts separately" do
+    {:ok, acquisition_source} =
+      Acquisition.create_source(%{
+        name: "Outcome Split Source",
+        external_ref: "test:outcome-split-source",
+        url: "https://example.com/outcome-split-source",
+        source_family: :procurement,
+        source_kind: :portal,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic
+      })
+
+    for {status, index} <- [
+          {:new, 1},
+          {:reviewing, 2},
+          {:accepted, 3},
+          {:parked, 4},
+          {:rejected, 5},
+          {:promoted, 6}
+        ] do
+      assert {:ok, _finding} =
+               Acquisition.create_finding(%{
+                 external_ref: "outcome-split-finding-#{index}",
+                 title: "Outcome Split Finding #{index}",
+                 finding_family: :procurement,
+                 finding_type: :bid_notice,
+                 status: status,
+                 observed_at: DateTime.utc_now(),
+                 source_id: acquisition_source.id
+               })
+    end
+
+    {:ok, source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [
+          :finding_count,
+          :review_finding_count,
+          :accepted_finding_count,
+          :parked_finding_count,
+          :rejected_finding_count,
+          :promoted_finding_count
+        ]
+      )
+
+    assert source.finding_count == 6
+    assert source.review_finding_count == 2
+    assert source.accepted_finding_count == 1
+    assert source.parked_finding_count == 1
+    assert source.rejected_finding_count == 1
+    assert source.promoted_finding_count == 1
   end
 
   defp restore_env(name, nil), do: System.delete_env(name)

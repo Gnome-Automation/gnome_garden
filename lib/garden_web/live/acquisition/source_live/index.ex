@@ -23,7 +23,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
      |> assign(:selected_bucket, :needs_configuration)
      |> assign(:source_counts, empty_counts())
      |> assign(:next_runnable_source, nil)
-     |> assign(:sources, [])}
+     |> assign(:sources, [])
+     |> assign(:launching_source_ids, MapSet.new())
+     |> assign(:launching_ready_batch?, false)}
   end
 
   @impl true
@@ -55,17 +57,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   @impl true
   def handle_event("launch_ready_runs", _params, socket) do
-    summary = SourceLaunchBatch.launch_ready_sources(actor: socket.assigns.current_user)
-
-    message =
-      "Launched #{summary.launched} ready scans" <>
-        if(summary.skipped > 0, do: "; skipped #{summary.skipped} active", else: "") <>
-        if(summary.errors > 0, do: "; #{summary.errors} failed", else: "")
+    actor = socket.assigns.current_user
 
     {:noreply,
      socket
-     |> refresh_sources()
-     |> put_flash(if(summary.errors > 0, do: :error, else: :info), message)}
+     |> assign(:launching_ready_batch?, true)
+     |> put_flash(:info, "Launching ready source scans.")
+     |> start_batch_launch(actor)}
   end
 
   defp launch_source(socket, id) do
@@ -75,14 +73,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
              load: [:procurement_source, :runnable]
            ),
          true <- scan_ready?(source),
-         {:ok, %{run: run}} <-
-           Acquisition.launch_source_run(source,
-             actor: socket.assigns.current_user
-           ) do
+         false <- launching_source?(socket.assigns.launching_source_ids, source.id) do
+      actor = socket.assigns.current_user
+
       {:noreply,
        socket
-       |> refresh_sources()
-       |> put_flash(:info, "Launched source scan #{run.id} for #{source.name}.")}
+       |> assign_launching_source(source.id, true)
+       |> put_flash(:info, "Launching source scan for #{source.name}.")
+       |> start_source_launch(source, actor)}
     else
       false ->
         {:noreply,
@@ -98,6 +96,43 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   end
 
   @impl true
+  def handle_info({:source_launch_finished, source_id, source_name, result}, socket) do
+    socket = assign_launching_source(socket, source_id, false)
+
+    case result do
+      {:ok, %{run: run}} ->
+        {:noreply,
+         socket
+         |> refresh_sources()
+         |> put_flash(:info, "Launched source scan #{run.id} for #{source_name}.")}
+
+      {:ok, _result} ->
+        {:noreply,
+         socket
+         |> refresh_sources()
+         |> put_flash(:info, "Launched source scan for #{source_name}.")}
+
+      {:error, error} ->
+        {:noreply,
+         socket
+         |> refresh_sources()
+         |> put_flash(:error, "Could not launch source scan: #{inspect(error)}")}
+    end
+  end
+
+  def handle_info({:ready_source_launches_finished, summary}, socket) do
+    message =
+      "Launched #{summary.launched} ready scans" <>
+        if(summary.skipped > 0, do: "; skipped #{summary.skipped} active", else: "") <>
+        if(summary.errors > 0, do: "; #{summary.errors} failed", else: "")
+
+    {:noreply,
+     socket
+     |> assign(:launching_ready_batch?, false)
+     |> refresh_sources()
+     |> put_flash(if(summary.errors > 0, do: :error, else: :info), message)}
+  end
+
   def handle_info(%{topic: "source:" <> _event}, socket) do
     {:noreply, refresh_sources(socket)}
   end
@@ -161,16 +196,25 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                   :if={@next_runnable_source}
                   phx-click="launch_next_run"
                   variant="primary"
-                  class="px-3 py-2 text-sm"
+                  disabled={launching_source?(@launching_source_ids, @next_runnable_source.id)}
+                  class={[
+                    "px-3 py-2 text-sm",
+                    if(launching_source?(@launching_source_ids, @next_runnable_source.id),
+                      do: "opacity-60"
+                    )
+                  ]}
                 >
-                  Launch Next Scan
+                  {if launching_source?(@launching_source_ids, @next_runnable_source.id),
+                    do: "Launching...",
+                    else: "Launch Next Scan"}
                 </.button>
                 <.button
                   :if={@source_counts.runnable > 1}
                   phx-click="launch_ready_runs"
-                  class="px-3 py-2 text-sm"
+                  disabled={@launching_ready_batch?}
+                  class={["px-3 py-2 text-sm", if(@launching_ready_batch?, do: "opacity-60")]}
                 >
-                  Launch Ready
+                  {if @launching_ready_batch?, do: "Launching...", else: "Launch Ready"}
                 </.button>
                 <.link navigate={~p"/acquisition/findings"} class="btn btn-sm btn-ghost">
                   Open Review Queue
@@ -183,7 +227,11 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
               id="acquisition-source-cards"
               class="divide-y divide-zinc-200 bg-base-100 dark:divide-white/10"
             >
-              <.source_card :for={source <- @sources} source={source} />
+              <.source_card
+                :for={source <- @sources}
+                source={source}
+                launching_source_ids={@launching_source_ids}
+              />
             </div>
 
             <div :if={@sources == []} class="p-4">
@@ -232,6 +280,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   end
 
   attr :source, :map, required: true
+  attr :launching_source_ids, :any, required: true
 
   defp source_card(assigns) do
     ~H"""
@@ -265,10 +314,16 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           </div>
         </div>
 
-        <div class="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-5">
+        <div class="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-6">
           <.source_fact label="Findings" value={"#{@source.finding_count} total"} />
           <.source_fact label="Review" value={"#{@source.review_finding_count} waiting"} />
-          <.source_fact label="Quality" value={source_quality_label(@source)} />
+          <.source_fact label="Accepted" value={count_label(@source.accepted_finding_count)} />
+          <.source_fact label="Parked" value={count_label(@source.parked_finding_count)} />
+          <.source_fact label="Rejected" value={count_label(@source.rejected_finding_count)} />
+          <.source_fact label="Promoted" value={count_label(@source.promoted_finding_count)} />
+        </div>
+
+        <div class="grid gap-2 text-sm sm:grid-cols-2">
           <.source_fact label="Last Run" value={format_datetime(@source.last_run_at)} />
           <.source_fact label="Last Success" value={format_datetime(@source.last_success_at)} />
         </div>
@@ -324,10 +379,16 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           id={"launch-source-#{@source.id}"}
           phx-click="launch_run"
           phx-value-id={@source.id}
-          class="px-3 py-2 text-sm"
+          disabled={launching_source?(@launching_source_ids, @source.id)}
+          class={[
+            "px-3 py-2 text-sm",
+            if(launching_source?(@launching_source_ids, @source.id), do: "opacity-60")
+          ]}
           variant="primary"
         >
-          Launch Scan
+          {if launching_source?(@launching_source_ids, @source.id),
+            do: "Launching...",
+            else: "Launch Scan"}
         </.button>
         <.link
           navigate={~p"/acquisition/findings?family=#{@source.source_family}&source_id=#{@source.id}"}
@@ -441,8 +502,83 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp run_sort_key(%{last_run_at: nil}), do: DateTime.from_unix!(0)
   defp run_sort_key(%{last_run_at: last_run_at}), do: last_run_at
 
-  defp source_quality_label(source) do
-    "#{source.promoted_finding_count || 0} promoted / #{source.noise_finding_count || 0} noise"
+  defp count_label(count) when is_integer(count), do: Integer.to_string(count)
+  defp count_label(_count), do: "0"
+
+  defp assign_launching_source(socket, source_id, launching?) do
+    update(socket, :launching_source_ids, fn source_ids ->
+      if launching? do
+        MapSet.put(source_ids, source_id)
+      else
+        MapSet.delete(source_ids, source_id)
+      end
+    end)
+  end
+
+  defp launching_source?(source_ids, source_id), do: MapSet.member?(source_ids, source_id)
+
+  defp start_source_launch(socket, source, actor) do
+    parent = self()
+
+    case Task.Supervisor.start_child(GnomeGarden.AsyncSupervisor, fn ->
+           result =
+             safe_launch_result(fn ->
+               Acquisition.launch_source_run(source, actor: actor)
+             end)
+
+           send(parent, {:source_launch_finished, source.id, source.name, result})
+         end) do
+      {:ok, _pid} ->
+        socket
+
+      {:error, reason} ->
+        socket
+        |> assign_launching_source(source.id, false)
+        |> put_flash(:error, "Could not start source scan launch: #{inspect(reason)}")
+    end
+  end
+
+  defp start_batch_launch(socket, actor) do
+    parent = self()
+
+    case Task.Supervisor.start_child(GnomeGarden.AsyncSupervisor, fn ->
+           summary =
+             case safe_launch_result(fn ->
+                    SourceLaunchBatch.launch_ready_sources(actor: actor)
+                  end) do
+               {:ok, summary} -> summary
+               {:error, _reason} -> failed_batch_summary()
+             end
+
+           send(parent, {:ready_source_launches_finished, summary})
+         end) do
+      {:ok, _pid} ->
+        socket
+
+      {:error, reason} ->
+        socket
+        |> assign(:launching_ready_batch?, false)
+        |> put_flash(:error, "Could not start ready source launches: #{inspect(reason)}")
+    end
+  end
+
+  defp safe_launch_result(fun) do
+    {:ok, fun.()}
+  rescue
+    error -> {:error, error}
+  catch
+    kind, reason -> {:error, {kind, reason}}
+  end
+
+  defp failed_batch_summary do
+    %{
+      checked: 0,
+      eligible: 0,
+      launched: 0,
+      skipped: 0,
+      errors: 1,
+      source_ids: []
+    }
   end
 
   defp extraction_summary(%{metadata: metadata}) when is_map(metadata) do
@@ -489,9 +625,21 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp bucket_label(:attention), do: "Attention"
   defp bucket_label(:all), do: "All"
 
+  defp run_state_variant(%{latest_run_id: nil, last_run_at: last_run_at})
+       when not is_nil(last_run_at),
+       do: :info
+
+  defp run_state_variant(%{latest_run_id: nil, last_run_at: last_run_at})
+       when not is_nil(last_run_at),
+       do: :info
+
   defp run_state_variant(%{latest_run_id: nil}), do: :default
   defp run_state_variant(%{last_run_state_variant: variant}) when is_atom(variant), do: variant
   defp run_state_variant(_source), do: :default
+
+  defp run_state_label(%{latest_run_id: nil, last_run_at: last_run_at})
+       when not is_nil(last_run_at),
+       do: "Run recorded"
 
   defp run_state_label(%{latest_run_id: nil}), do: "No run yet"
 
@@ -500,6 +648,11 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   end
 
   defp run_state_label(_source), do: "Run recorded"
+
+  defp run_context(%{latest_run_id: nil, last_run_at: last_run_at})
+       when not is_nil(last_run_at) do
+    "Last run #{format_datetime(last_run_at)}; no agent run link recorded."
+  end
 
   defp run_context(%{latest_run_id: nil}), do: "Launch a scan to create a durable agent run."
 

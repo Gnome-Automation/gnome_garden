@@ -9,6 +9,14 @@ defmodule GnomeGarden.Procurement.TargetingFeedback do
   @fire_alarm_terms ["fire alarm", "alarm monitoring"]
   @audio_visual_terms ["audio visual", "av system", "conference room"]
   @pass_reasons [
+    {"stale", "Stale"},
+    {"wrong_service", "Wrong service"},
+    {"wrong_geography", "Wrong geography"},
+    {"too_big", "Too big"},
+    {"too_small", "Too small"},
+    {"duplicate", "Duplicate"},
+    {"missing_docs", "Missing docs"},
+    {"not_enough_info", "Not enough info"},
     {"not_our_service_lane", "Not our service lane"},
     {"wrong_industry", "Wrong industry"},
     {"too_large_or_complex", "Too large or too complex"},
@@ -21,6 +29,14 @@ defmodule GnomeGarden.Procurement.TargetingFeedback do
   ]
 
   @source_feedback_categories %{
+    "stale" => "stale",
+    "wrong_service" => "service_mismatch",
+    "wrong_geography" => "geography_mismatch",
+    "too_big" => "scope_mismatch",
+    "too_small" => "value_mismatch",
+    "duplicate" => "duplicate_intake",
+    "missing_docs" => "missing_docs",
+    "not_enough_info" => "insufficient_information",
     "source_noise_or_misclassified" => "noisy_source",
     "duplicate_or_already_covered" => "duplicate_intake",
     "pricing_or_contract_risk" => "commercial_risk",

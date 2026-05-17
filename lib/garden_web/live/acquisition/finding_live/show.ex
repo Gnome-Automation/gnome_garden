@@ -9,6 +9,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       review_dialogs: 1
     ]
 
+  import GnomeGardenWeb.Components.AcquisitionOperatorBrief, only: [operator_brief: 1]
   import GnomeGardenWeb.Commercial.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
@@ -112,8 +113,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     end
   end
 
-  def handle_event("open_dialog", %{"action" => action}, socket) do
-    case parse_dialog_action(action) do
+  def handle_event("open_dialog", params, socket) do
+    case params |> dialog_action_param() |> parse_dialog_action() do
       nil ->
         {:noreply, put_flash(socket, :error, "Unknown acquisition action")}
 
@@ -360,13 +361,47 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         </:actions>
       </.page_header>
 
-      <.operator_brief finding={@finding} />
+      <.operator_brief finding={@finding} finding_documents={@finding_documents} />
 
       <.finding_review_workbench
         finding={@finding}
         finding_documents={@finding_documents}
         discovery_evidence={@discovery_evidence}
       />
+
+      <.section
+        :if={@research_requests != []}
+        title="Next Actions"
+        description="Queued follow-up work created from acquisition review decisions."
+        compact
+        body_class="p-0"
+      >
+        <div class="divide-y divide-base-content/10">
+          <div
+            :for={request <- @research_requests}
+            class="grid gap-3 px-3 py-3 text-sm sm:px-4 lg:grid-cols-[minmax(0,1fr)_14rem]"
+          >
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-semibold text-base-content">
+                  {format_atom(request.research_type)}
+                </span>
+                <.status_badge status={research_state_variant(request.state)}>
+                  {format_atom(request.state)}
+                </.status_badge>
+                <span class="badge badge-outline badge-sm">
+                  {format_atom(request.priority)}
+                </span>
+              </div>
+              <p class="mt-2 leading-6 text-base-content/70">{request.notes}</p>
+            </div>
+            <div class="text-xs text-base-content/55 lg:text-right">
+              <p class="font-semibold uppercase tracking-[0.14em] text-base-content/40">Due</p>
+              <p class="mt-1">{format_datetime(request.due_at)}</p>
+            </div>
+          </div>
+        </div>
+      </.section>
 
       <.section
         title="Review Notes"
@@ -417,7 +452,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           :if={Enum.empty?(@finding_documents)}
           class="m-3 flex flex-col gap-3 rounded-lg border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300 sm:m-4 sm:flex-row sm:items-center sm:justify-between"
         >
-          <span>No documents linked yet.</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <.status_badge status={:warning}>Needed</.status_badge>
+            <span>No documents linked yet.</span>
+          </div>
           <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"}>
             Upload Document
           </.button>
@@ -442,6 +480,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
                 <span class="badge badge-outline badge-sm">
                   {format_atom(finding_document.document.document_type)}
                 </span>
+                <.status_badge status={finding_document.document_state_variant}>
+                  {finding_document.document_state_label}
+                </.status_badge>
                 <span
                   :if={substantive_procurement_document?(finding_document)}
                   class="badge badge-success badge-sm"
@@ -461,12 +502,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
               <p :if={finding_document.document.summary} class="text-sm text-base-content/70">
                 {finding_document.document.summary}
               </p>
-              <p
-                :if={document_analysis_excerpt(finding_document.document)}
-                class="rounded-md border border-base-content/10 bg-base-200/60 px-3 py-2 text-xs leading-5 text-base-content/60"
-              >
-                {document_analysis_excerpt(finding_document.document)}
-              </p>
+              <.document_analysis_card analysis={document_analysis(finding_document.document)} />
               <p :if={finding_document.notes} class="text-sm text-base-content/70">
                 {finding_document.notes}
               </p>
@@ -975,57 +1011,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     """
   end
 
-  attr :finding, :map, required: true
-
-  defp operator_brief(assigns) do
-    assigns = assign(assigns, :brief, build_operator_brief(assigns.finding))
-
-    ~H"""
-    <.section
-      title="Operator Brief"
-      description="Fast read before you decide what to do with this finding."
-      body_class="p-0"
-    >
-      <div class="grid gap-0 divide-y divide-base-content/10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0">
-        <div class={["p-4", operator_brief_tone_class(@brief.tone)]}>
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
-            {@brief.action_label}
-          </p>
-          <p class="mt-2 text-lg font-semibold leading-6">{@brief.action}</p>
-          <p class="mt-4 text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
-            {@brief.reason_label}
-          </p>
-          <p class="mt-2 text-sm leading-6 opacity-80">{@brief.reason}</p>
-        </div>
-
-        <div class="p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
-            Deadline
-          </p>
-          <p class="mt-2 text-base font-semibold text-base-content">{@brief.deadline}</p>
-          <p class="mt-2 text-sm leading-6 text-base-content/65">{@brief.deadline_note}</p>
-        </div>
-
-        <div class="p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
-            Readiness
-          </p>
-          <p class="mt-2 text-base font-semibold text-base-content">{@brief.readiness}</p>
-          <p class="mt-2 text-sm leading-6 text-base-content/65">{@brief.readiness_note}</p>
-        </div>
-
-        <div class="p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/40">
-            Packet
-          </p>
-          <p class="mt-2 text-base font-semibold text-base-content">{@brief.packet}</p>
-          <p class="mt-2 text-sm leading-6 text-base-content/65">{@brief.packet_note}</p>
-        </div>
-      </div>
-    </.section>
-    """
-  end
-
   attr :label, :string, required: true
   attr :value, :string, required: true
   attr :badge, :atom, default: nil
@@ -1048,240 +1033,11 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp document_action_label(%{finding_family: :discovery}), do: "Upload Source Material"
   defp document_action_label(_finding), do: "Upload Document"
 
-  defp build_operator_brief(%{status: status} = finding)
-       when status in [:rejected, :suppressed, :parked, :promoted] do
-    %{
-      action_label: "Disposition",
-      action: finding.status_label,
-      reason_label: disposition_reason_label(status),
-      reason: disposition_reason(finding),
-      tone: disposition_tone(status),
-      deadline: deadline_label(finding),
-      deadline_note: deadline_note(finding),
-      readiness: terminal_readiness_label(status),
-      readiness_note: terminal_readiness_note(status),
-      packet: packet_label(finding),
-      packet_note: packet_note(finding)
-    }
-  end
-
-  defp build_operator_brief(%{finding_family: :procurement} = finding) do
-    cond do
-      expired?(finding) ->
-        %{
-          action_label: "Recommended action",
-          action: "Reject as expired",
-          reason_label: "Why",
-          reason:
-            "The opportunity deadline has passed. Keep the source pattern, but do not spend review time promoting this bid.",
-          tone: :error,
-          deadline: deadline_label(finding),
-          deadline_note: deadline_note(finding),
-          readiness: readiness_label(finding),
-          readiness_note: readiness_note(finding),
-          packet: packet_label(finding),
-          packet_note: packet_note(finding)
-        }
-
-      finding.status == :accepted and finding.promotion_ready ->
-        brief(finding, "Promote to signal", "Accepted and promotion-ready.", :success)
-
-      finding.status == :accepted ->
-        brief(
-          finding,
-          "Upload packet",
-          "Accepted, but still needs durable procurement proof before promotion.",
-          :warning
-        )
-
-      finding.acceptance_ready ->
-        brief(
-          finding,
-          "Accept if worth pursuing",
-          "The minimum review prep is complete. Decide if this should stay active.",
-          :success
-        )
-
-      true ->
-        brief(
-          finding,
-          "Complete review prep",
-          "Clear the listed blockers before accepting or promoting this finding.",
-          :warning
-        )
-    end
-  end
-
-  defp build_operator_brief(finding) do
-    cond do
-      finding.status == :accepted and finding.promotion_ready ->
-        brief(finding, "Promote to signal", "Accepted and promotion-ready.", :success)
-
-      finding.acceptance_ready ->
-        brief(
-          finding,
-          "Accept if worth pursuing",
-          "The minimum review prep is complete. Decide if this should stay active.",
-          :success
-        )
-
-      true ->
-        brief(
-          finding,
-          "Complete review prep",
-          "Clear the listed blockers before accepting or promoting this finding.",
-          :warning
-        )
-    end
-  end
-
-  defp brief(finding, action, reason, tone) do
-    %{
-      action_label: "Recommended action",
-      action: action,
-      reason_label: "Why",
-      reason: reason,
-      tone: tone,
-      deadline: deadline_label(finding),
-      deadline_note: deadline_note(finding),
-      readiness: readiness_label(finding),
-      readiness_note: readiness_note(finding),
-      packet: packet_label(finding),
-      packet_note: packet_note(finding)
-    }
-  end
-
-  defp expired?(%{due_at: nil}), do: false
-
-  defp expired?(%{due_at: due_at}) do
-    Date.compare(DateTime.to_date(due_at), Date.utc_today()) == :lt
-  end
-
-  defp deadline_label(%{due_at: nil}), do: "No deadline captured"
-  defp deadline_label(%{due_at: due_at}), do: format_datetime(due_at)
-
-  defp deadline_note(%{due_at: nil}), do: "Use source evidence to decide urgency."
-
-  defp deadline_note(%{due_at: due_at} = finding) do
-    due_date = DateTime.to_date(due_at)
-    today = Date.utc_today()
-
-    case Date.compare(due_date, today) do
-      :lt -> "Deadline passed #{abs(Date.diff(due_date, today))} days ago."
-      :eq -> "Deadline is today."
-      :gt -> "Deadline is in #{Date.diff(due_date, today)} days."
-    end
-    |> then(fn note ->
-      if finding.finding_family == :procurement, do: note, else: "Observed date: #{note}"
-    end)
-  end
-
-  defp readiness_label(%{promotion_ready: true}), do: "Ready to promote"
-  defp readiness_label(%{acceptance_ready: true}), do: "Ready to accept"
-  defp readiness_label(_finding), do: "Prep needed"
-
-  defp readiness_note(%{promotion_ready: true}), do: "All promotion gates are clear."
-
-  defp readiness_note(%{
-         acceptance_ready: true,
-         promotion_ready: false,
-         promotion_blockers: blockers
-       })
-       when is_list(blockers) and blockers != [] do
-    Enum.join(blockers, " ")
-  end
-
-  defp readiness_note(%{acceptance_blockers: blockers})
-       when is_list(blockers) and blockers != [] do
-    Enum.join(blockers, " ")
-  end
-
-  defp readiness_note(_finding), do: "No blockers currently listed."
-
-  defp packet_label(%{finding_family: :procurement, document_count: count})
-       when is_integer(count) and count > 0,
-       do: "#{count} linked"
-
-  defp packet_label(%{finding_family: :procurement, metadata: metadata}) do
-    case metadata_value(metadata, "packet") |> metadata_value("status") do
-      "present" -> "Capture queued"
-      "login_required" -> "Login required"
-      "download_failed" -> "Download failed"
-      "missing" -> "Missing"
-      _ -> "No packet yet"
-    end
-  end
-
-  defp packet_label(_finding), do: "Not required"
-
-  defp packet_note(%{finding_family: :procurement, document_count: count})
-       when is_integer(count) and count > 0,
-       do: "Linked documents are available below for review."
-
-  defp packet_note(%{finding_family: :procurement, metadata: metadata}) do
-    case metadata_value(metadata, "packet") |> metadata_value("status") do
-      "present" ->
-        "Document links were captured and ingestion is pending or in progress."
-
-      "login_required" ->
-        "The source exposed protected documents. Restart with portal credentials loaded, then rescan."
-
-      "download_failed" ->
-        "The source exposed documents, but at least one download failed. Check source access or URL expiry."
-
-      "missing" ->
-        "No source packet was captured from this finding yet."
-
-      _ ->
-        "No source packet status has been recorded yet."
-    end
-  end
-
-  defp packet_note(_finding),
-    do: "Discovery findings can use evidence or uploaded source material."
-
-  defp disposition_reason(%{latest_review_reason: reason})
-       when is_binary(reason) and reason != "",
-       do: reason
-
-  defp disposition_reason(%{status: :rejected, finding_family: :procurement} = finding) do
-    if expired?(finding),
-      do: "Deadline passed before review.",
-      else: "Rejected by operator review."
-  end
-
-  defp disposition_reason(%{status: :promoted}), do: "Already promoted into commercial review."
-  defp disposition_reason(%{status: :parked}), do: "Parked for later review."
-  defp disposition_reason(%{status: :suppressed}), do: "Suppressed as source or profile noise."
-  defp disposition_reason(%{status: :rejected}), do: "Rejected by operator review."
-  defp disposition_reason(_finding), do: "Disposition recorded."
-
-  defp disposition_tone(:promoted), do: :success
-  defp disposition_tone(:parked), do: :info
-  defp disposition_tone(:suppressed), do: :warning
-  defp disposition_tone(:rejected), do: :error
-  defp disposition_tone(_status), do: :default
-
-  defp disposition_reason_label(:rejected), do: "Rejection reason"
-  defp disposition_reason_label(:suppressed), do: "Suppression reason"
-  defp disposition_reason_label(:parked), do: "Parking reason"
-  defp disposition_reason_label(:promoted), do: "Promotion note"
-  defp disposition_reason_label(_status), do: "Reason"
-
-  defp terminal_readiness_label(:promoted), do: "Commercial review"
-  defp terminal_readiness_label(:parked), do: "Parked"
-  defp terminal_readiness_label(:suppressed), do: "Suppressed"
-  defp terminal_readiness_label(:rejected), do: "Closed"
-  defp terminal_readiness_label(_status), do: "Disposition recorded"
-
-  defp terminal_readiness_note(:promoted), do: "Already handed into commercial review."
-  defp terminal_readiness_note(:parked), do: "Reopen when timing or evidence changes."
-
-  defp terminal_readiness_note(:suppressed),
-    do: "Stays out of active review and can teach source or profile noise."
-
-  defp terminal_readiness_note(:rejected), do: "No further action unless you reopen it."
-  defp terminal_readiness_note(_status), do: "No active review action pending."
+  defp research_state_variant(:requested), do: :warning
+  defp research_state_variant(:in_progress), do: :info
+  defp research_state_variant(:complete), do: :success
+  defp research_state_variant(:cancelled), do: :default
+  defp research_state_variant(_state), do: :default
 
   defp document_analysis_excerpt(%{file: %{blob: %{metadata: metadata}}}) when is_map(metadata) do
     metadata
@@ -1295,6 +1051,111 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
   defp document_analysis_excerpt(_document), do: nil
 
+  attr :analysis, :map, default: nil
+
+  defp document_analysis_card(assigns) do
+    ~H"""
+    <div
+      :if={@analysis}
+      class="rounded-md border border-base-content/10 bg-base-200/60 px-3 py-3 text-xs leading-5 text-base-content/65"
+    >
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="font-semibold text-base-content">Document Analysis</span>
+        <span :if={metadata_value(@analysis, "status")} class="badge badge-outline badge-xs">
+          {format_feedback_scope(metadata_value(@analysis, "status"))}
+        </span>
+        <span :if={metadata_value(@analysis, "word_count")} class="badge badge-ghost badge-xs">
+          {metadata_value(@analysis, "word_count")} words
+        </span>
+      </div>
+
+      <p :if={metadata_value(@analysis, "scope_summary")} class="mt-2">
+        <span class="font-semibold text-base-content/75">Scope:</span>
+        {metadata_value(@analysis, "scope_summary")}
+      </p>
+
+      <div :if={analysis_list(@analysis, "keyword_hits") != []} class="mt-2 flex flex-wrap gap-1">
+        <span
+          :for={hit <- analysis_list(@analysis, "keyword_hits")}
+          class="badge badge-success badge-xs"
+        >
+          {hit}
+        </span>
+      </div>
+
+      <.analysis_list label="Due" values={analysis_list(@analysis, "due_date_mentions")} />
+      <.analysis_list
+        label="Submission"
+        values={analysis_list(@analysis, "submission_instructions")}
+      />
+      <.analysis_list
+        label="Mandatory meeting"
+        values={analysis_list(@analysis, "mandatory_meeting")}
+      />
+      <.analysis_list
+        label="Licenses/certs"
+        values={analysis_list(@analysis, "required_licenses_certs")}
+      />
+      <.analysis_list
+        label="Bonding/insurance"
+        values={analysis_list(@analysis, "bonding_insurance")}
+      />
+      <.analysis_list label="Red flags" values={analysis_list(@analysis, "red_flags")} />
+
+      <p :if={metadata_value(@analysis, "next_action")} class="mt-2">
+        <span class="font-semibold text-base-content/75">Next:</span>
+        {metadata_value(@analysis, "next_action")}
+      </p>
+
+      <p
+        :if={
+          document_analysis_excerpt(%{
+            file: %{blob: %{metadata: %{"document_analysis" => @analysis}}}
+          })
+        }
+        class="mt-2 line-clamp-3 text-base-content/50"
+      >
+        {document_analysis_excerpt(%{file: %{blob: %{metadata: %{"document_analysis" => @analysis}}}})}
+      </p>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :values, :list, default: []
+
+  defp analysis_list(assigns) do
+    ~H"""
+    <div :if={@values != []} class="mt-2">
+      <p class="font-semibold text-base-content/75">{@label}</p>
+      <ul class="mt-1 space-y-1">
+        <li :for={value <- @values} class="flex gap-1.5">
+          <span class="text-base-content/35">-</span>
+          <span>{value}</span>
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
+  defp document_analysis(%{file: %{blob: %{metadata: metadata}}}) when is_map(metadata) do
+    case metadata_value(metadata, "document_analysis") do
+      analysis when is_map(analysis) -> analysis
+      _other -> nil
+    end
+  end
+
+  defp document_analysis(_document), do: nil
+
+  defp analysis_list(analysis, key) when is_map(analysis) do
+    analysis
+    |> metadata_value(key)
+    |> List.wrap()
+    |> Enum.reject(&(&1 in [nil, ""]))
+  end
+
+  defp analysis_list(_analysis, _key), do: []
+
   defp metadata_value(nil, _key), do: nil
 
   defp metadata_value(map, key) when is_map(map) do
@@ -1304,21 +1165,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   end
 
   defp metadata_value(_value, _key), do: nil
-
-  defp operator_brief_tone_class(:success),
-    do: "bg-emerald-50 text-emerald-900 dark:bg-emerald-400/10 dark:text-emerald-100"
-
-  defp operator_brief_tone_class(:warning),
-    do: "bg-amber-50 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100"
-
-  defp operator_brief_tone_class(:error),
-    do: "bg-rose-50 text-rose-900 dark:bg-rose-400/10 dark:text-rose-100"
-
-  defp operator_brief_tone_class(:info),
-    do: "bg-sky-50 text-sky-900 dark:bg-sky-400/10 dark:text-sky-100"
-
-  defp operator_brief_tone_class(_tone),
-    do: "bg-base-200/70 text-base-content"
 
   defp substantive_procurement_document?(%{document: %{document_type: document_type}}),
     do: PromotionRules.substantive_procurement_document_type?(document_type)
@@ -1380,6 +1226,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       review_notes_form: build_review_notes_form(finding, socket.assigns.current_user),
       finding_documents: load_finding_documents(finding, socket.assigns.current_user),
       review_decisions: load_review_decisions(finding, socket.assigns.current_user),
+      research_requests: load_research_requests(finding, socket.assigns.current_user),
       discovery_identity_review:
         load_discovery_identity_review(finding, socket.assigns.current_user),
       discovery_evidence: load_discovery_evidence(finding, socket.assigns.current_user)
@@ -1433,6 +1280,19 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     end
   end
 
+  defp load_research_requests(%{id: finding_id}, actor) do
+    case Acquisition.list_research_requests(
+           actor: actor,
+           query: [
+             filter: [researchable_type: "finding", researchable_id: finding_id],
+             sort: [inserted_at: :desc]
+           ]
+         ) do
+      {:ok, requests} -> requests
+      {:error, error} -> raise "failed to load finding research requests: #{inspect(error)}"
+    end
+  end
+
   defp identity_attrs_from_params(params) do
     %{}
     |> maybe_put_identity_attr(:organization_id, Map.get(params, "organization_id"))
@@ -1442,6 +1302,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp maybe_put_identity_attr(attrs, _key, nil), do: attrs
   defp maybe_put_identity_attr(attrs, _key, ""), do: attrs
   defp maybe_put_identity_attr(attrs, key, value), do: Map.put(attrs, key, value)
+
+  defp dialog_action_param(params) do
+    Map.get(params, "action") || Map.get(params, "value")
+  end
 
   defp build_action_dialog(finding, type) do
     %{

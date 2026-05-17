@@ -18,6 +18,7 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
 
     config_json = pretty_json((deployment && deployment.config) || %{})
     source_scope_json = pretty_json((deployment && deployment.source_scope) || %{})
+    schedule_preset = schedule_preset_for(deployment && deployment.schedule)
 
     {:ok,
      socket
@@ -25,6 +26,7 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
      |> assign(:template_options, template_options)
      |> assign(:config_json, config_json)
      |> assign(:source_scope_json, source_scope_json)
+     |> assign(:schedule_preset, schedule_preset)
      |> assign(:page_title, if(deployment, do: "Edit #{deployment.name}", else: "New Deployment"))
      |> assign_form()}
   end
@@ -57,12 +59,19 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
 
   @impl true
   def handle_event("validate", params, socket) do
-    form_params = Map.get(params, "form", %{})
+    schedule_preset = Map.get(params, "schedule_preset", socket.assigns.schedule_preset)
+
+    form_params =
+      params
+      |> Map.get("form", %{})
+      |> put_schedule_from_preset(schedule_preset)
+
     form = AshPhoenix.Form.validate(socket.assigns.form, form_params)
 
     {:noreply,
      socket
      |> assign(:form, to_form(form))
+     |> assign(:schedule_preset, schedule_preset)
      |> assign(:config_json, Map.get(params, "config_json", socket.assigns.config_json))
      |> assign(
        :source_scope_json,
@@ -72,7 +81,13 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
 
   @impl true
   def handle_event("save", params, socket) do
-    form_params = Map.get(params, "form", %{})
+    schedule_preset = Map.get(params, "schedule_preset", socket.assigns.schedule_preset)
+
+    form_params =
+      params
+      |> Map.get("form", %{})
+      |> put_schedule_from_preset(schedule_preset)
+
     config_json = Map.get(params, "config_json", socket.assigns.config_json)
     source_scope_json = Map.get(params, "source_scope_json", socket.assigns.source_scope_json)
 
@@ -98,6 +113,7 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
           {:noreply,
            socket
            |> assign(:form, to_form(form))
+           |> assign(:schedule_preset, schedule_preset)
            |> assign(:config_json, config_json)
            |> assign(:source_scope_json, source_scope_json)}
       end
@@ -105,6 +121,7 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
       {:error, message} ->
         {:noreply,
          socket
+         |> assign(:schedule_preset, schedule_preset)
          |> assign(:config_json, config_json)
          |> assign(:source_scope_json, source_scope_json)
          |> put_flash(:error, message)}
@@ -171,7 +188,29 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
             </div>
 
             <div class="sm:col-span-3">
-              <.input field={@form[:schedule]} label="Schedule" placeholder="0 */6 * * *" />
+              <.input
+                type="select"
+                id="schedule_preset"
+                name="schedule_preset"
+                label="Run Mode"
+                value={@schedule_preset}
+                options={schedule_preset_options()}
+              />
+
+              <.input
+                :if={@schedule_preset == "custom"}
+                field={@form[:schedule]}
+                label="Custom Cron"
+                placeholder="0 14 * * 1,3,5"
+              />
+
+              <.input
+                :if={@schedule_preset != "custom"}
+                type="hidden"
+                id={@form[:schedule].id}
+                name={@form[:schedule].name}
+                value={schedule_value_for_preset(@schedule_preset) || ""}
+              />
             </div>
 
             <div class="sm:col-span-3">
@@ -248,4 +287,32 @@ defmodule GnomeGardenWeb.Console.AgentDeploymentFormLive do
   end
 
   defp pretty_json(value), do: Jason.encode!(value, pretty: true)
+
+  defp schedule_preset_options do
+    [
+      {"Manual - run now only", "manual"},
+      {"Automatic - Mon, Wed, Fri at 14:00 UTC", "bid_mwf_1400"},
+      {"Automatic - Tuesday at 16:00 UTC", "source_tue_1600"},
+      {"Automatic - Tue, Fri at 15:00 UTC", "target_tue_fri_1500"},
+      {"Custom cron", "custom"}
+    ]
+  end
+
+  defp schedule_preset_for(nil), do: "manual"
+  defp schedule_preset_for(""), do: "manual"
+  defp schedule_preset_for("0 14 * * 1,3,5"), do: "bid_mwf_1400"
+  defp schedule_preset_for("0 16 * * 2"), do: "source_tue_1600"
+  defp schedule_preset_for("0 15 * * 2,5"), do: "target_tue_fri_1500"
+  defp schedule_preset_for(_schedule), do: "custom"
+
+  defp put_schedule_from_preset(form_params, "custom"), do: form_params
+
+  defp put_schedule_from_preset(form_params, preset) do
+    Map.put(form_params, "schedule", schedule_value_for_preset(preset))
+  end
+
+  defp schedule_value_for_preset("bid_mwf_1400"), do: "0 14 * * 1,3,5"
+  defp schedule_value_for_preset("source_tue_1600"), do: "0 16 * * 2"
+  defp schedule_value_for_preset("target_tue_fri_1500"), do: "0 15 * * 2,5"
+  defp schedule_value_for_preset(_preset), do: nil
 end

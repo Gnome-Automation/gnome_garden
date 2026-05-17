@@ -12,6 +12,28 @@ defmodule GnomeGarden.Agents.RunFailureTest do
     assert RunFailure.label(details["category"]) == "Timed Out"
   end
 
+  test "classifies atom timeout reasons as retryable timeouts" do
+    details = RunFailure.details(:timeout, phase: :runtime)
+
+    assert details["category"] == "timeout"
+    assert details["message"] == ":timeout"
+    assert details["retryable"] == true
+  end
+
+  test "classifies runtime exits caused by timeout as retryable timeouts" do
+    details = RunFailure.details({:exit, {:timeout, {GenServer, :call, [:pid, :await, 605_000]}}})
+
+    assert details["category"] == "timeout"
+    assert details["retryable"] == true
+  end
+
+  test "recovers timeout category from older unknown failure details" do
+    details = %{"category" => "unknown", "message" => ":timeout", "retryable" => true}
+
+    assert RunFailure.category(details) == :timeout
+    assert RunFailure.label(RunFailure.category(details)) == "Timed Out"
+  end
+
   test "classifies startup failures separately" do
     details = RunFailure.details("runtime service unavailable", phase: :startup)
 

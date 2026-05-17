@@ -106,6 +106,58 @@ defmodule GnomeGarden.Acquisition.Document do
       end
     end
 
+    create :reference_for_finding do
+      accept [
+        :title,
+        :summary,
+        :document_type,
+        :source_url,
+        :metadata
+      ]
+
+      argument :finding_id, :uuid, allow_nil?: false
+
+      argument :document_role, :atom do
+        allow_nil? false
+        default :supporting
+
+        constraints one_of: [
+                      :supporting,
+                      :solicitation,
+                      :scope,
+                      :pricing,
+                      :addendum,
+                      :research_note,
+                      :other
+                    ]
+      end
+
+      argument :notes, :string
+
+      argument :finding_document_metadata, :map do
+        allow_nil? false
+        default %{}
+      end
+
+      change set_new_attribute(:uploaded_at, &DateTime.utc_now/0)
+
+      change fn changeset, _context ->
+        finding_document = %{
+          finding_id: Ash.Changeset.get_argument(changeset, :finding_id),
+          document_role: Ash.Changeset.get_argument(changeset, :document_role),
+          notes: Ash.Changeset.get_argument(changeset, :notes),
+          metadata: Ash.Changeset.get_argument(changeset, :finding_document_metadata)
+        }
+
+        Ash.Changeset.manage_relationship(
+          changeset,
+          :finding_documents,
+          [finding_document],
+          type: :create
+        )
+      end
+    end
+
     update :update do
       require_atomic? false
 
@@ -129,6 +181,7 @@ defmodule GnomeGarden.Acquisition.Document do
 
     publish :create, "created"
     publish :upload_for_finding, "created"
+    publish :reference_for_finding, "created"
     publish :update, "updated"
     publish :destroy, "destroyed"
   end

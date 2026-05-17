@@ -104,6 +104,36 @@ defmodule GnomeGarden.Acquisition.Analyzers.DocumentCLI do
       "line_count" => text |> String.split("\n", trim: true) |> length(),
       "keyword_hits" => keyword_hits(text)
     }
+    |> Map.merge(structured_analysis(text))
+  end
+
+  defp structured_analysis(""), do: %{}
+
+  defp structured_analysis(text) do
+    sentences = sentences(text)
+
+    %{
+      "scope_summary" => scope_summary(sentences, text),
+      "due_date_mentions" => date_mentions(text),
+      "submission_instructions" =>
+        matching_sentences(sentences, [
+          "submit",
+          "submission",
+          "proposal",
+          "bid due",
+          "sealed",
+          "portal"
+        ]),
+      "mandatory_meeting" =>
+        matching_sentences(sentences, ["mandatory", "pre-bid", "pre proposal", "site visit"]),
+      "required_licenses_certs" =>
+        matching_sentences(sentences, ["license", "certification", "certified", "cert"]),
+      "bonding_insurance" => matching_sentences(sentences, ["bond", "insurance", "insured"]),
+      "red_flags" => red_flags(sentences),
+      "next_action" => next_action(text, sentences)
+    }
+    |> Enum.reject(fn {_key, value} -> value in [nil, "", []] end)
+    |> Map.new()
   end
 
   defp image_metadata(tool, path) do
@@ -188,5 +218,71 @@ defmodule GnomeGarden.Acquisition.Analyzers.DocumentCLI do
       "ignition"
     ]
     |> Enum.filter(&String.contains?(text, &1))
+  end
+
+  defp sentences(text) do
+    text
+    |> String.split(~r/(?<=[\.\!\?])\s+|\n+/, trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp scope_summary(sentences, text) do
+    sentences
+    |> Enum.find(fn sentence ->
+      contains_any?(sentence, ["scope", "work", "project", "services", "replace", "upgrade"])
+    end)
+    |> case do
+      nil -> String.slice(text, 0, 260)
+      sentence -> String.slice(sentence, 0, 260)
+    end
+  end
+
+  defp date_mentions(text) do
+    ~r/\b(?:\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})\b/i
+    |> Regex.scan(text)
+    |> Enum.map(&List.first/1)
+    |> Enum.uniq()
+    |> Enum.take(5)
+  end
+
+  defp matching_sentences(sentences, terms) do
+    sentences
+    |> Enum.filter(&contains_any?(&1, terms))
+    |> Enum.map(&String.slice(&1, 0, 220))
+    |> Enum.take(3)
+  end
+
+  defp red_flags(sentences) do
+    matching_sentences(sentences, [
+      "mandatory",
+      "bond",
+      "insurance",
+      "prevailing wage",
+      "liquidated damages",
+      "sole source",
+      "addendum"
+    ])
+  end
+
+  defp next_action(text, sentences) do
+    cond do
+      contains_any?(text, ["mandatory", "pre-bid", "site visit"]) ->
+        "Confirm mandatory meeting or site visit requirements before pursuing."
+
+      date_mentions(text) != [] ->
+        "Confirm deadline and submission instructions from the packet."
+
+      matching_sentences(sentences, ["license", "certification", "bond", "insurance"]) != [] ->
+        "Validate license, bonding, and insurance requirements before accepting."
+
+      true ->
+        "Review extracted scope and decide whether more evidence is needed."
+    end
+  end
+
+  defp contains_any?(text, terms) do
+    text = String.downcase(text)
+    Enum.any?(terms, &String.contains?(text, &1))
   end
 end

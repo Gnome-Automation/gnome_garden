@@ -71,6 +71,8 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
     {:ok, show_view, _html} = live(conn, path)
 
     assert render(show_view) =~ "Linked Documents"
+    assert render(show_view) =~ "Next Actions"
+    assert render(show_view) =~ "Accepted finding needs promotion prep"
     assert render(show_view) =~ "Procurement Packet"
     assert render(show_view) =~ "Required before commercial handoff."
     assert render(show_view) =~ "Counts for promotion"
@@ -85,6 +87,121 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
     assert refreshed_finding.promotion_document_count == 1
     assert refreshed_finding.promotion_ready
     assert refreshed_finding.promotion_blockers == []
+  end
+
+  test "source URL packet can be linked without uploading a file", %{conn: conn} do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "URL Packet Retrofit",
+        url: "https://example.com/bids/url-packet-retrofit",
+        external_id: "URL-PACKET-RETROFIT",
+        description: "Controls retrofit with packet URL evidence.",
+        agency: "Regional Utility",
+        location: "Anaheim, CA",
+        due_at: ~U[2026-05-24 17:00:00Z],
+        region: :oc,
+        score_total: 85,
+        score_tier: :hot
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}/documents/new")
+
+    submit_result =
+      view
+      |> form("#finding-document-form", %{
+        "form" => %{
+          "title" => "URL Solicitation Packet",
+          "document_type" => "solicitation",
+          "source_url" => "https://example.com/packets/url-solicitation.pdf",
+          "summary" => "Solicitation packet linked from the source portal."
+        },
+        "finding_document" => %{
+          "document_role" => "solicitation",
+          "notes" => "URL-only evidence captured during intake review."
+        }
+      })
+      |> render_submit()
+
+    assert {:error, {:live_redirect, %{to: path}}} = submit_result
+    assert path == ~p"/acquisition/findings/#{finding.id}"
+
+    {:ok, show_view, _html} = live(conn, path)
+
+    html = render(show_view)
+    assert html =~ "URL Solicitation Packet"
+    assert html =~ "URL-only evidence captured during intake review."
+    assert html =~ "Linked"
+
+    {:ok, refreshed_finding} =
+      Acquisition.get_finding(
+        finding.id,
+        load: [:document_count, :promotion_document_count]
+      )
+
+    assert refreshed_finding.document_count == 1
+    assert refreshed_finding.promotion_document_count == 1
+  end
+
+  test "finding detail surfaces structured document analysis", %{conn: conn} do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Analysis Detail Retrofit",
+        url: "https://example.com/bids/analysis-detail-retrofit",
+        external_id: "ANALYSIS-DETAIL-RETROFIT",
+        description: "Controls retrofit with source packet analysis.",
+        agency: "Regional Utility",
+        location: "Anaheim, CA",
+        due_at: ~U[2026-05-24 17:00:00Z],
+        region: :oc,
+        score_total: 84,
+        score_tier: :hot
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+
+    upload = %Plug.Upload{
+      path:
+        write_temp_packet!(
+          "analysis-detail-packet.txt",
+          """
+          Project scope includes SCADA and PLC controls upgrades for water telemetry.
+          Mandatory pre-bid site visit is required on May 20, 2026.
+          Submit sealed proposals through the portal by 06/01/2026.
+          Contractor must carry insurance and provide performance bond.
+          """
+        ),
+      filename: "analysis-detail-packet.txt",
+      content_type: "text/plain"
+    }
+
+    assert {:ok, _document} =
+             Acquisition.upload_document_for_finding(%{
+               title: "Analyzed Detail Packet",
+               document_type: :solicitation,
+               source_url: finding.source_url,
+               file: upload,
+               finding_id: finding.id,
+               document_role: :solicitation
+             })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
+
+    html = render(view)
+    assert html =~ "Operator Brief"
+    assert html =~ "Context"
+    assert html =~ "Agency: Regional Utility."
+    assert html =~ "Location: Anaheim, CA."
+    assert html =~ "Analysis"
+    assert html =~ "Analyzed"
+    assert html =~ "Document Analysis"
+    assert html =~ "Analyzed"
+    assert html =~ "SCADA and PLC controls upgrades"
+    assert html =~ "Mandatory meeting"
+    assert html =~ "Confirm mandatory meeting or site visit requirements before pursuing."
+    assert html =~ "Bonding/insurance"
   end
 
   test "linked procurement documents can be removed from the finding detail", %{conn: conn} do
@@ -128,6 +245,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
     |> render_click()
 
     assert render(view) =~ "No documents linked yet."
+    assert render(view) =~ "Needed"
 
     {:ok, refreshed_finding} =
       Acquisition.get_finding(

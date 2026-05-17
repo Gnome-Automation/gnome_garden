@@ -53,6 +53,35 @@ defmodule GnomeGarden.Procurement do
         args: [:organization_id]
     end
 
+    resource GnomeGarden.Procurement.SourceSearchFilter do
+      define :list_source_search_filters, action: :for_source, args: [:procurement_source_id]
+      define :get_source_search_filter, action: :read, get_by: [:id]
+
+      define :list_enabled_source_search_filters,
+        action: :enabled_for_source,
+        args: [:procurement_source_id]
+
+      define :create_source_search_filter, action: :create
+      define :update_source_search_filter, action: :update
+      define :disable_noisy_source_search_filter, action: :disable_noisy
+      define :keep_searching_source_search_filter, action: :keep_searching
+      define :delete_source_search_filter, action: :destroy
+      define :record_source_search_filter_run, action: :record_run
+    end
+
+    resource GnomeGarden.Procurement.SourceSearchFilterFeedback do
+      define :list_source_search_filter_feedback,
+        action: :for_filter,
+        args: [:source_search_filter_id]
+
+      define :list_source_search_filter_feedback_for_finding,
+        action: :for_finding,
+        args: [:finding_id]
+
+      define :record_source_search_filter_feedback, action: :record
+      define :get_source_search_filter_feedback, action: :read, get_by: [:id]
+    end
+
     resource GnomeGarden.Procurement.Bid do
       define :list_bids, action: :read
       define :list_bids_for_organization, action: :for_organization, args: [:organization_id]

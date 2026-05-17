@@ -22,66 +22,31 @@ defmodule GnomeGarden.Agents.StreamingHandler do
       &__MODULE__.handle_event/4,
       %{}
     )
-
-    # Also attach a debug handler for all jido.ai events
-    :telemetry.attach(
-      "gnome-hub-debug-handler",
-      [:jido, :ai],
-      &__MODULE__.debug_event/4,
-      %{}
-    )
   end
 
   def detach do
     :telemetry.detach("gnome-hub-streaming-handler")
-    :telemetry.detach("gnome-hub-debug-handler")
-  end
-
-  # Debug handler to see all jido.ai events
-  def debug_event(event, measurements, metadata, _config) do
-    Logger.warning(
-      "[StreamingHandler DEBUG] Event: #{inspect(event)}, measurements_keys: #{inspect(Map.keys(measurements))}, metadata_keys: #{inspect(Map.keys(metadata))}"
-    )
   end
 
   # Handle streaming delta (token by token)
-  def handle_event([:jido, :ai, :llm, :delta] = event, measurements, metadata, _config) do
-    Logger.debug("[StreamingHandler] LLM delta event: #{inspect(event)}")
-    Logger.debug("[StreamingHandler] measurements: #{inspect(measurements, limit: 3)}")
-    Logger.debug("[StreamingHandler] metadata keys: #{inspect(Map.keys(metadata))}")
-
+  def handle_event([:jido, :ai, :llm, :delta], measurements, metadata, _config) do
     agent_id = Map.get(metadata, :agent_id)
     delta = Map.get(measurements, :delta) || Map.get(metadata, :delta)
 
-    Logger.debug(
-      "[StreamingHandler] agent_id=#{inspect(agent_id)}, delta=#{inspect(delta, limit: 50)}"
-    )
-
     if agent_id && delta do
       content = extract_delta_content(delta)
-
-      Logger.info(
-        "[StreamingHandler] Broadcasting delta to agent_stream:#{agent_id}: #{inspect(content, limit: 50)}"
-      )
 
       broadcast_streaming(agent_id, {:llm_delta, content})
     end
   end
 
   # Handle complete LLM response
-  def handle_event([:jido, :ai, :llm, :complete] = event, _measurements, metadata, _config) do
-    Logger.debug("[StreamingHandler] LLM complete event: #{inspect(event)}")
-    Logger.debug("[StreamingHandler] metadata keys: #{inspect(Map.keys(metadata))}")
-
+  def handle_event([:jido, :ai, :llm, :complete], _measurements, metadata, _config) do
     agent_id = Map.get(metadata, :agent_id)
 
     if agent_id do
       thinking = Map.get(metadata, :thinking_content)
       text = Map.get(metadata, :text)
-
-      Logger.info(
-        "[StreamingHandler] LLM complete for #{agent_id}, thinking=#{inspect(thinking != nil)}, text_len=#{inspect(text && String.length(text))}"
-      )
 
       broadcast_streaming(agent_id, {:llm_complete, %{thinking: thinking, text: text}})
     end
@@ -89,13 +54,11 @@ defmodule GnomeGarden.Agents.StreamingHandler do
 
   # Handle tool execution start
   def handle_event(
-        [:jido, :ai, :tool, :execute, :start] = event,
+        [:jido, :ai, :tool, :execute, :start],
         _measurements,
         metadata,
         _config
       ) do
-    Logger.debug("[StreamingHandler] Tool execute start event: #{inspect(event)}")
-
     agent_id = Map.get(metadata, :agent_id)
     tool_name = Map.get(metadata, :tool_name)
 
@@ -107,9 +70,7 @@ defmodule GnomeGarden.Agents.StreamingHandler do
   end
 
   # Handle tool execution complete
-  def handle_event([:jido, :ai, :tool, :execute, :stop] = event, measurements, metadata, _config) do
-    Logger.debug("[StreamingHandler] Tool execute stop event: #{inspect(event)}")
-
+  def handle_event([:jido, :ai, :tool, :execute, :stop], measurements, metadata, _config) do
     agent_id = Map.get(metadata, :agent_id)
     tool_name = Map.get(metadata, :tool_name)
     duration = Map.get(measurements, :duration) || Map.get(measurements, :duration_ms)

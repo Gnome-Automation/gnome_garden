@@ -273,15 +273,13 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
     end
   end
 
-  defp place_value(%{} = value, key), do: value[key] || value[Atom.to_string(key)]
+  defp place_value(%{} = value, key), do: map_value(value, key)
   defp place_value(value, _key), do: value
 
   defp build_sam_url(nil), do: "https://sam.gov"
   defp build_sam_url(notice_id), do: "https://sam.gov/opp/#{notice_id}/view"
 
-  defp nested_value(map, [key]) when is_map(map) do
-    Map.get(map, key) || Map.get(map, Atom.to_string(key))
-  end
+  defp nested_value(map, [key]) when is_map(map), do: map_value(map, key)
 
   defp nested_value(map, [key | rest]) when is_map(map) do
     map
@@ -293,6 +291,20 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   end
 
   defp nested_value(_map, _path), do: nil
+
+  defp map_value(map, key) when is_atom(key) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp map_value(map, key) when is_binary(key) do
+    Map.get(map, key) || existing_atom_value(map, key)
+  end
+
+  defp existing_atom_value(map, key) do
+    Map.get(map, String.to_existing_atom(key))
+  rescue
+    ArgumentError -> nil
+  end
 
   defp context_value(context, path) do
     nested_value(context, path) || nested_value(context, [:tool_context | path])

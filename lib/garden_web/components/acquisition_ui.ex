@@ -56,6 +56,8 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
               </.status_badge>
             </div>
 
+            <.latest_decision_summary finding={@finding} />
+
             <p class="max-w-5xl text-sm leading-6 text-base-content/70">
               {@finding.summary || "No summary captured yet."}
             </p>
@@ -282,6 +284,54 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
   end
 
   attr :finding, :map, required: true
+
+  defp latest_decision_summary(assigns) do
+    assigns =
+      assigns
+      |> assign(:latest_review_reason, loaded_field(assigns.finding, :latest_review_reason))
+      |> assign(
+        :latest_review_reason_code,
+        loaded_field(assigns.finding, :latest_review_reason_code)
+      )
+      |> assign(
+        :latest_review_feedback_scope,
+        loaded_field(assigns.finding, :latest_review_feedback_scope)
+      )
+      |> assign(
+        :latest_review_decision,
+        loaded_field(assigns.finding, :latest_review_decision)
+      )
+
+    ~H"""
+    <div
+      :if={
+        latest_decision_present?(
+          @latest_review_reason,
+          @latest_review_reason_code,
+          @latest_review_feedback_scope
+        )
+      }
+      class="rounded-lg border border-base-content/10 bg-base-200/70 px-3 py-2 text-sm leading-6 text-base-content/70"
+    >
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="font-semibold text-base-content">
+          {decision_prefix(@finding.status, @latest_review_decision)}
+        </span>
+        <span :if={@latest_review_reason_code} class="badge badge-outline badge-sm">
+          {humanize_value(@latest_review_reason_code)}
+        </span>
+        <span :if={@latest_review_feedback_scope} class="badge badge-ghost badge-sm">
+          Scope: {humanize_value(@latest_review_feedback_scope)}
+        </span>
+      </div>
+      <p :if={@latest_review_reason} class="mt-1">
+        {@latest_review_reason}
+      </p>
+    </div>
+    """
+  end
+
+  attr :finding, :map, required: true
   attr :id_prefix, :string, required: true
   attr :target_id, :string, default: nil
   attr :compact, :boolean, default: false
@@ -401,7 +451,8 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
 
   defp review_button(assigns) do
     ~H"""
-    <.button
+    <button
+      type="button"
       id={@id}
       phx-click={@click}
       phx-value-id={@target_id}
@@ -410,7 +461,7 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
     >
       <.icon name={@icon} class={icon_class(@compact)} />
       {render_slot(@inner_block)}
-    </.button>
+    </button>
     """
   end
 
@@ -523,9 +574,12 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
               :if={@action_dialog.type in [:reject, :suppress]}
               name="reason"
               value=""
-              label="Operator note (optional)"
-              type="text"
+              label={
+                if(@action_dialog.type == :reject, do: "Rejection reason", else: "Operator note")
+              }
+              type="textarea"
               placeholder="Add specific context for this intake decision"
+              required={@action_dialog.type == :reject}
             />
             <.input
               :if={@action_dialog.type in [:reject, :suppress]}
@@ -570,11 +624,21 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
         <form id={"#{@id_prefix}-park-form"} phx-submit="submit_park">
           <div class="space-y-3">
             <.input
+              name="reason_code"
+              value=""
+              label="Park reason category"
+              type="select"
+              prompt="Select a reason..."
+              options={GnomeGarden.Acquisition.ReviewReasons.options()}
+              required
+            />
+            <.input
               name="reason"
               value=""
               label="Why are we parking this?"
-              type="text"
+              type="textarea"
               placeholder="e.g. Keep watching, timing is not right yet"
+              required
             />
             <.input
               :if={@action_dialog.family == :procurement}
@@ -798,6 +862,12 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
 
   defp dialog_reason_options(%{type: :accept}), do: []
 
+  defp dialog_reason_options(%{type: :reject, family: :discovery}),
+    do: GnomeGarden.Commercial.DiscoveryFeedback.reject_reason_options()
+
+  defp dialog_reason_options(%{type: :reject}),
+    do: GnomeGarden.Acquisition.ReviewReasons.options()
+
   defp dialog_reason_options(%{family: :procurement}),
     do: GnomeGarden.Procurement.TargetingFeedback.pass_reason_options()
 
@@ -818,4 +888,30 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
   end
 
   defp dialog_feedback_scope_options(_dialog), do: []
+
+  defp latest_decision_present?(reason, reason_code, feedback_scope) do
+    not is_nil(reason) or not is_nil(reason_code) or not is_nil(feedback_scope)
+  end
+
+  defp decision_prefix(_status, decision) when not is_nil(decision),
+    do: "#{humanize_value(decision)} reason"
+
+  defp decision_prefix(status, nil) when status in [:rejected, :parked, :suppressed],
+    do: "#{humanize_value(status)} reason"
+
+  defp decision_prefix(_status, _decision), do: "Latest decision"
+
+  defp loaded_field(map, key) do
+    case Map.get(map, key) do
+      %Ash.NotLoaded{} -> nil
+      value -> value
+    end
+  end
+
+  defp humanize_value(value) do
+    value
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
 end
