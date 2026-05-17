@@ -21,11 +21,22 @@ defmodule GnomeGardenWeb.ClientPortal.SessionController do
     with {:ok, person} <- Operations.get_person_by_email(email),
          {:ok, affiliations} <- Operations.list_affiliations_for_person(person.id),
          [affiliation | _] <- Enum.filter(affiliations, &(&1.status == :active)),
-         {:ok, _client_user} <- Accounts.invite_client_user(email, affiliation.organization_id) do
-      # Request magic link — AshAuthentication sends it via SendMagicLinkEmail sender
-      Accounts.request_client_portal_access(email)
+         {:ok, client_user} <- Accounts.invite_client_user(email, affiliation.organization_id) do
+      strategy =
+        AshAuthentication.Info.strategy_for_action!(
+          GnomeGarden.Accounts.ClientUser,
+          :request_magic_link
+        )
+
+      case AshAuthentication.Strategy.MagicLink.request_token_for(strategy, client_user) do
+        {:ok, token} ->
+          GnomeGarden.Accounts.ClientUser.Senders.SendMagicLinkEmail.send(client_user, token, [])
+
+        _ ->
+          :ok
+      end
     else
-      _ -> :ok  # silently succeed — no information leak
+      _ -> :ok
     end
   end
 end

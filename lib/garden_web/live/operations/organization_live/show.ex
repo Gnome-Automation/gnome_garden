@@ -47,8 +47,25 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
     org_id = socket.assigns.organization.id
 
     case GnomeGarden.Accounts.invite_client_user(email, org_id) do
-      {:ok, _client_user} ->
-        GnomeGarden.Accounts.request_client_portal_access(email)
+      {:ok, client_user} ->
+        strategy =
+          AshAuthentication.Info.strategy_for_action!(
+            GnomeGarden.Accounts.ClientUser,
+            :request_magic_link
+          )
+
+        case AshAuthentication.Strategy.MagicLink.request_token_for(strategy, client_user) do
+          {:ok, token} ->
+            GnomeGarden.Accounts.ClientUser.Senders.SendMagicLinkEmail.send(
+              client_user,
+              token,
+              []
+            )
+
+          _ ->
+            :ok
+        end
+
         {:noreply, assign(socket, :invite_ok, true)}
 
       {:error, error} ->

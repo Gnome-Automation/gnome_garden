@@ -261,6 +261,7 @@ defmodule GnomeGardenWeb.Router do
     get "/access-denied", PageController, :access_denied
 
     auth_routes AuthController, GnomeGarden.Accounts.User, path: "/auth"
+    auth_routes AuthController, GnomeGarden.Accounts.ClientUser, path: "/portal/auth"
     sign_out_route AuthController
 
     sign_in_route reset_path: "/reset",
@@ -301,7 +302,8 @@ defmodule GnomeGardenWeb.Router do
     # which matches the URL generated in the sender module (~p"/portal/sign-in/#{token}").
     magic_sign_in_route GnomeGarden.Accounts.ClientUser, :magic_link,
       path: "/sign-in",
-      as: :portal
+      as: :portal,
+      auth_routes_prefix: {:unscoped, "/portal/auth"}
   end
 
   # Portal — authenticated routes (ClientUser session required)

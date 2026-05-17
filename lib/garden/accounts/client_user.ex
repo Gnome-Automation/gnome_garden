@@ -26,7 +26,7 @@ defmodule GnomeGarden.Accounts.ClientUser do
     strategies do
       magic_link do
         identity_field :email
-        registration_enabled? true
+        registration_enabled? false
         require_interaction? true
         sender GnomeGarden.Accounts.ClientUser.Senders.SendMagicLinkEmail
       end
@@ -52,19 +52,11 @@ defmodule GnomeGarden.Accounts.ClientUser do
       prepare AshAuthentication.Preparations.FilterBySubject
     end
 
-    create :sign_in_with_magic_link do
+    read :sign_in_with_magic_link do
       description "Sign in a client user with a magic link token."
       argument :token, :string, allow_nil?: false
-
-      upsert? true
-      upsert_identity :unique_email_per_org
-      upsert_fields []
-
-      change AshAuthentication.Strategy.MagicLink.SignInChange
-
-      metadata :token, :string do
-        allow_nil? false
-      end
+      get? true
+      prepare AshAuthentication.Strategy.MagicLink.SignInPreparation
     end
 
     action :request_magic_link do
