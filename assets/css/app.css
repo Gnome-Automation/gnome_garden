@@ -122,6 +122,15 @@
 
 /* This file is for your main application CSS */
 
+.gg-scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.gg-scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* =============================================================================
    Ash Authentication - Garden Sign In
    ============================================================================= */

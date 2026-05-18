@@ -1,21 +1,26 @@
 defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Operations.Helpers
 
   alias GnomeGarden.Operations
   alias GnomeGarden.Operations.IdentityMergeReview
+  alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     organization = load_organization!(id, socket.assigns.current_user)
     merge_review = load_merge_review!(organization, socket.assigns.current_user)
 
+    if connected?(socket), do: TaskPubSub.subscribe_related(:organization, organization.id)
+
     {:ok,
      socket
      |> assign(:page_title, organization.name)
      |> assign(:organization, organization)
-     |> assign(:merge_review, merge_review)}
+     |> assign(:merge_review, merge_review)
+     |> assign(:related_tasks, load_related_tasks(organization, socket.assigns.current_user))}
   end
 
   @impl true
@@ -38,6 +43,16 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not merge organization: #{inspect(error)}")}
     end
+  end
+
+  @impl true
+  def handle_info(%{topic: "task:organization:" <> _organization_id}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :related_tasks,
+       load_related_tasks(socket.assigns.organization, socket.assigns.current_user)
+     )}
   end
 
   @impl true
@@ -64,6 +79,13 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
           </.button>
         </:actions>
       </.page_header>
+
+      <.related_tasks_panel
+        tasks={@related_tasks}
+        description="Operator follow-up linked to this organization."
+        empty_description="Account, contact, source, and service follow-up tasks will appear here."
+        new_task_path={new_organization_task_path(@organization)}
+      />
 
       <div class="grid gap-4 md:grid-cols-4">
         <.stat_card
@@ -332,6 +354,35 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
       {:ok, merge_review} -> merge_review
       {:error, error} -> raise "failed to load organization merge review: #{inspect(error)}"
     end
+  end
+
+  defp load_related_tasks(%{id: organization_id}, actor) do
+    case Operations.list_tasks_by_organization(organization_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load organization tasks: #{inspect(error)}"
+    end
+  end
+
+  defp new_organization_task_path(organization) do
+    query =
+      %{
+        title: "Follow up: #{organization.name}",
+        task_type: :review,
+        origin_domain: :operations,
+        origin_resource: "organization",
+        origin_id: organization.id,
+        origin_label: organization.name,
+        origin_url: ~p"/operations/organizations/#{organization}",
+        organization_id: organization.id,
+        return_to: ~p"/operations/organizations/#{organization}"
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+      |> URI.encode_query()
+
+    "/operations/tasks/new?#{query}"
   end
 
   defp format_merge_reason(:website_domain), do: "Same Website Domain"

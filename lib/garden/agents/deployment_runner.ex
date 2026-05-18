@@ -12,6 +12,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   alias GnomeGarden.Agents.AgentTracker
   alias GnomeGarden.Agents.RunFailure
   alias GnomeGarden.Agents.Templates
+  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
   @default_timeout_ms 180_000
@@ -388,7 +389,7 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
              },
              actor: actor
            ) do
-        {:ok, _failed_run} ->
+        {:ok, failed_run} ->
           persist_message(%{
             agent_run_id: run.id,
             role: :system,
@@ -398,6 +399,8 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
               tool_count: (tracker_entry && tracker_entry.tool_calls) || 0
             }
           })
+
+          maybe_create_agent_failure_task(failed_run, error_text, failure_details, actor)
 
           :ok
 
@@ -495,6 +498,8 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
           metadata: %{failure_details: failure_details}
         })
 
+        maybe_create_agent_failure_task(failed_run, error_text, failure_details, actor)
+
         {:error, error_text}
 
       {:error, error} ->
@@ -512,6 +517,65 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
         {:error, error}
     end
   end
+
+  defp maybe_create_agent_failure_task(run, error_text, failure_details, actor) do
+    case Operations.list_tasks_by_agent_run(run.id, actor: actor) do
+      {:ok, tasks} ->
+        if Enum.any?(tasks, &open_agent_failure_task?/1) do
+          :ok
+        else
+          create_agent_failure_task(run, error_text, failure_details, actor)
+        end
+
+      {:error, _error} ->
+        create_agent_failure_task(run, error_text, failure_details, actor)
+    end
+  end
+
+  defp open_agent_failure_task?(task) do
+    task.status in [:pending, :in_progress, :blocked] and task.task_type == :agent_followup
+  end
+
+  defp create_agent_failure_task(run, error_text, failure_details, actor) do
+    deployment_name = metadata_value(run.metadata, :deployment_name) || "Agent run"
+    failure_category = RunFailure.category(failure_details, error_text)
+    recovery_hint = RunFailure.recovery_hint(failure_category)
+
+    Operations.create_task_from_agent_run(
+      %{
+        title: "Review failed agent run: #{deployment_name}",
+        description: Enum.join([error_text, recovery_hint], "\n\n"),
+        task_type: :agent_followup,
+        priority: agent_failure_task_priority(failure_details, error_text),
+        due_at: DateTime.utc_now(),
+        origin_id: run.id,
+        origin_label: deployment_name,
+        origin_url: "/console/agents/runs/#{run.id}",
+        agent_run_id: run.id,
+        owner_team_member_id: run.requested_by_team_member_id,
+        metadata: %{
+          "failure_category" => atom_to_string(failure_category),
+          "retryable" => RunFailure.retryable?(failure_details, error_text)
+        }
+      },
+      actor: actor
+    )
+    |> case do
+      {:ok, _task} ->
+        :ok
+
+      {:error, error} ->
+        Logger.warning("Failed to create agent failure task for run #{run.id}: #{inspect(error)}")
+        :ok
+    end
+  end
+
+  defp agent_failure_task_priority(failure_details, error_text) do
+    if RunFailure.retryable?(failure_details, error_text), do: :high, else: :normal
+  end
+
+  defp atom_to_string(value) when is_atom(value), do: Atom.to_string(value)
+  defp atom_to_string(value), do: value
 
   defp persist_procurement_source_run_state(%{metadata: metadata} = run, state, actor)
        when is_map(metadata) do

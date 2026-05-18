@@ -44,6 +44,49 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
     assert has_element?(form_view, "#proposal-form")
   end
 
+  test "pursuit show renders contextual task panel and task prefill", %{conn: conn} do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Pursuit Task Account",
+        organization_kind: :business,
+        status: :prospect
+      })
+
+    {:ok, pursuit} =
+      Commercial.create_pursuit(%{
+        organization_id: organization.id,
+        name: "Pursuit task follow-up",
+        pursuit_type: :new_logo
+      })
+
+    {:ok, task} =
+      Operations.create_task(%{
+        title: "Build estimate",
+        pursuit_id: pursuit.id,
+        organization_id: organization.id,
+        origin_domain: :commercial,
+        origin_resource: "pursuit",
+        origin_id: pursuit.id,
+        origin_label: pursuit.name
+      })
+
+    {:ok, view, html} = live(conn, ~p"/commercial/pursuits/#{pursuit}")
+
+    assert html =~ "Related Tasks"
+    assert html =~ task.title
+
+    {:error, {:redirect, %{to: path}}} =
+      view
+      |> element("a", "New Task")
+      |> render_click()
+
+    assert path =~ "/operations/tasks/new?"
+    assert path =~ "pursuit_id=#{pursuit.id}"
+    assert path =~ "organization_id=#{organization.id}"
+    assert path =~ "origin_resource=pursuit"
+    assert path =~ "task_type=proposal"
+  end
+
   test "agreement routes render", %{conn: conn} do
     {:ok, organization} =
       Operations.create_organization(%{

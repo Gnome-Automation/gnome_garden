@@ -67,6 +67,22 @@ mv "$RELEASE_DIR" "$previous"
 cp -a "$CHECKOUT/_build/prod/rel/gnome_garden" "$RELEASE_DIR"
 chown -R gnome_garden:gnome_garden "$RELEASE_DIR"
 
+echo "Running release setup..."
+systemd-run --wait --pipe --collect \
+  --service-type=exec \
+  --property=User=gnome_garden \
+  --property=Group=gnome_garden \
+  --property=WorkingDirectory="$RELEASE_DIR" \
+  --property=EnvironmentFile=/var/lib/secrets/garden.env \
+  --setenv=PATH=/run/current-system/sw/bin \
+  --setenv=PHX_SERVER=false \
+  --setenv=PHX_HOST=garden.tail6f3b43.ts.net \
+  --setenv=PORT=4000 \
+  --setenv=DATABASE_URL=ecto://gnome_garden_prod@localhost/gnome_garden_prod \
+  --setenv=RELEASE_DISTRIBUTION=none \
+  --setenv=LANG=en_US.UTF-8 \
+  "$RELEASE_DIR/bin/gnome_garden" eval "GnomeGarden.Release.setup()"
+
 echo "Starting $SERVICE..."
 systemctl start "$SERVICE"
 systemctl is-active "$SERVICE"

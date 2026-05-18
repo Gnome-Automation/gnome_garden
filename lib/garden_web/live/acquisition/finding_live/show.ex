@@ -10,6 +10,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     ]
 
   import GnomeGardenWeb.Components.AcquisitionOperatorBrief, only: [operator_brief: 1]
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Commercial.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
@@ -17,6 +18,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.DiscoveryFeedback
   alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskPubSub
   alias GnomeGarden.Procurement.TargetingFeedback
 
   @impl true
@@ -34,6 +36,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       GnomeGardenWeb.Endpoint.subscribe("finding_document:created")
       GnomeGardenWeb.Endpoint.subscribe("finding_document:updated")
       GnomeGardenWeb.Endpoint.subscribe("finding_document:destroyed")
+      TaskPubSub.subscribe_related(:finding, finding.id)
     end
 
     {:ok,
@@ -57,6 +60,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   end
 
   def handle_info(%{topic: "finding_document:" <> _event}, socket) do
+    {:noreply, refresh_finding(socket)}
+  end
+
+  def handle_info(%{topic: "task:finding:" <> _finding_id}, socket) do
     {:noreply, refresh_finding(socket)}
   end
 
@@ -402,6 +409,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           </div>
         </div>
       </.section>
+
+      <.related_tasks_panel
+        tasks={@related_tasks}
+        description="Operational follow-up linked to this finding."
+        empty_description="Accepted findings that need more work will create tasks here."
+        new_task_path={new_finding_task_path(@finding)}
+      />
 
       <.section
         title="Review Notes"
@@ -1227,6 +1241,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       finding_documents: load_finding_documents(finding, socket.assigns.current_user),
       review_decisions: load_review_decisions(finding, socket.assigns.current_user),
       research_requests: load_research_requests(finding, socket.assigns.current_user),
+      related_tasks: load_related_tasks(finding, socket.assigns.current_user),
       discovery_identity_review:
         load_discovery_identity_review(finding, socket.assigns.current_user),
       discovery_evidence: load_discovery_evidence(finding, socket.assigns.current_user)
@@ -1291,6 +1306,37 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
       {:ok, requests} -> requests
       {:error, error} -> raise "failed to load finding research requests: #{inspect(error)}"
     end
+  end
+
+  defp load_related_tasks(%{id: finding_id}, actor) do
+    case Operations.list_tasks_by_finding(finding_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load finding tasks: #{inspect(error)}"
+    end
+  end
+
+  defp new_finding_task_path(finding) do
+    query =
+      %{
+        title: "Follow up: #{finding.title}",
+        task_type: :review,
+        origin_domain: :acquisition,
+        origin_resource: "finding",
+        origin_id: finding.id,
+        origin_label: finding.title,
+        origin_url: ~p"/acquisition/findings/#{finding}",
+        finding_id: finding.id,
+        organization_id: finding.organization_id,
+        person_id: finding.person_id,
+        return_to: ~p"/acquisition/findings/#{finding}"
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+      |> URI.encode_query()
+
+    "/operations/tasks/new?#{query}"
   end
 
   defp identity_attrs_from_params(params) do

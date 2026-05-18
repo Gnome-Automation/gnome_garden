@@ -1,21 +1,27 @@
 defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Commercial.Helpers
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     signal = load_signal!(id, socket.assigns.current_user)
     finding_id = load_finding_id(signal.id)
 
+    if connected?(socket), do: TaskPubSub.subscribe_related(:signal, signal.id)
+
     {:ok,
      socket
      |> assign(:page_title, signal.title)
      |> assign(:finding_id, finding_id)
-     |> assign(:signal, signal)}
+     |> assign(:signal, signal)
+     |> assign(:related_tasks, load_related_tasks(signal, socket.assigns.current_user))}
   end
 
   @impl true
@@ -32,6 +38,16 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not update signal: #{inspect(error)}")}
     end
+  end
+
+  @impl true
+  def handle_info(%{topic: "task:signal:" <> _signal_id}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :related_tasks,
+       load_related_tasks(socket.assigns.signal, socket.assigns.current_user)
+     )}
   end
 
   @impl true
@@ -71,6 +87,13 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
           </.button>
         </:actions>
       </.page_header>
+
+      <.related_tasks_panel
+        tasks={@related_tasks}
+        description="Operator follow-up linked to this commercial signal."
+        empty_description="Qualification, research, and outreach tasks for this signal will appear here."
+        new_task_path={new_signal_task_path(@signal)}
+      />
 
       <.section
         title="Review Actions"
@@ -329,6 +352,36 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
       {:ok, finding} -> finding.id
       _ -> nil
     end
+  end
+
+  defp load_related_tasks(%{id: signal_id}, actor) do
+    case Operations.list_tasks_by_signal(signal_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load signal tasks: #{inspect(error)}"
+    end
+  end
+
+  defp new_signal_task_path(signal) do
+    query =
+      %{
+        title: "Follow up: #{signal.title}",
+        task_type: :review,
+        origin_domain: :commercial,
+        origin_resource: "signal",
+        origin_id: signal.id,
+        origin_label: signal.title,
+        origin_url: ~p"/commercial/signals/#{signal}",
+        signal_id: signal.id,
+        organization_id: signal.organization_id,
+        return_to: ~p"/commercial/signals/#{signal}"
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+      |> URI.encode_query()
+
+    "/operations/tasks/new?#{query}"
   end
 
   defp can_create_pursuit?(signal),

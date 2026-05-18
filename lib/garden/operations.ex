@@ -120,6 +120,46 @@ defmodule GnomeGarden.Operations do
       define :list_active_inventory_items, action: :active
       define :list_low_stock_inventory_items, action: :low_stock
     end
+
+    resource GnomeGarden.Operations.Task do
+      define :list_tasks, action: :read
+      define :list_task_inbox, action: :inbox
+      define :get_task, action: :read, get_by: [:id]
+      define :create_task, action: :create
+      define :create_manual_task, action: :create_manual
+      define :create_task_from_finding, action: :create_from_finding
+      define :create_task_from_agent_run, action: :create_from_agent_run
+      define :create_task_from_pursuit, action: :create_from_pursuit
+      define :update_task, action: :update
+      define :delete_task, action: :destroy
+      define :assign_task, action: :assign
+      define :reschedule_task, action: :reschedule
+      define :start_task, action: :start
+      define :block_task, action: :block
+      define :complete_task, action: :complete
+      define :cancel_task, action: :cancel
+      define :reopen_task, action: :reopen
+      define :list_tasks_by_owner_team_member, action: :by_owner, args: [:owner_team_member_id]
+
+      define :list_open_tasks_by_owner_team_member,
+        action: :open_by_owner,
+        args: [:owner_team_member_id]
+
+      define :list_tasks_by_organization, action: :by_organization, args: [:organization_id]
+      define :list_tasks_by_person, action: :by_person, args: [:person_id]
+      define :list_tasks_by_pursuit, action: :by_pursuit, args: [:pursuit_id]
+      define :list_tasks_by_finding, action: :by_finding, args: [:finding_id]
+      define :list_tasks_by_signal, action: :by_signal, args: [:signal_id]
+      define :list_tasks_by_agent_run, action: :by_agent_run, args: [:agent_run_id]
+
+      define :list_tasks_by_origin,
+        action: :by_origin,
+        args: [:origin_domain, :origin_resource, :origin_id]
+
+      define :list_overdue_tasks, action: :overdue
+      define :list_due_today_tasks, action: :due_today
+      define :list_blocked_tasks, action: :blocked
+    end
   end
 
   def current_team_member_id(nil), do: nil

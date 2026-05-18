@@ -7,7 +7,7 @@ defmodule GnomeGarden.Commercial.FollowupWorkflowTest do
   describe "task workflow" do
     test "tracks follow-up tasks through start, complete, and reopen" do
       {:ok, task} =
-        Commercial.create_task(%{
+        Operations.create_manual_task(%{
           title: "Call buyer about bid fit",
           task_type: :call,
           priority: :high,
@@ -16,16 +16,28 @@ defmodule GnomeGarden.Commercial.FollowupWorkflowTest do
 
       assert task.status == :pending
 
-      assert {:ok, started} = Commercial.start_task(task)
+      assert {:ok, started} = Operations.start_task(task)
       assert started.status == :in_progress
 
-      assert {:ok, completed} = Commercial.complete_task(started)
+      assert {:ok, completed} = Operations.complete_task(started)
       assert completed.status == :completed
       assert completed.completed_at
 
-      assert {:ok, reopened} = Commercial.reopen_task(completed)
+      assert {:ok, reopened} = Operations.reopen_task(completed)
       assert reopened.status == :pending
       refute reopened.completed_at
+    end
+
+    test "pending tasks cannot be completed before they are started" do
+      {:ok, task} =
+        Operations.create_manual_task(%{
+          title: "Review source follow-up",
+          task_type: :review,
+          priority: :normal
+        })
+
+      assert task.status == :pending
+      assert {:error, _error} = Operations.complete_task(task)
     end
   end
 
@@ -56,17 +68,22 @@ defmodule GnomeGarden.Commercial.FollowupWorkflowTest do
       pursuit = pursuit_fixture()
 
       {:ok, task} =
-        Commercial.create_task(%{
+        Operations.create_task_from_pursuit(%{
           title: "Follow up after bid walk",
-          task_type: :follow_up,
+          task_type: :call,
           priority: :high,
           due_at: DateTime.utc_now(),
-          pursuit_id: pursuit.id
+          pursuit_id: pursuit.id,
+          origin_id: pursuit.id,
+          origin_label: pursuit.name,
+          origin_url: "/commercial/pursuits/#{pursuit.id}"
         })
 
+      assert task.origin_domain == :commercial
+      assert task.origin_resource == "pursuit"
       assert task.pursuit_id == pursuit.id
 
-      assert {:ok, [listed_task]} = Commercial.list_tasks_by_pursuit(pursuit.id)
+      assert {:ok, [listed_task]} = Operations.list_tasks_by_pursuit(pursuit.id)
       assert listed_task.id == task.id
     end
   end
