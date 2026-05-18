@@ -46,6 +46,10 @@ defmodule GnomeGarden.Acquisition.DocumentAnalysisTest do
     assert analysis["text_excerpt"] =~ "SCADA PLC controls"
     assert "scada" in analysis["keyword_hits"]
     assert "plc" in analysis["keyword_hits"]
+    assert analysis["scope_summary"] =~ "SCADA PLC controls scope"
+
+    assert analysis["next_action"] ==
+             "Review extracted scope and decide whether more evidence is needed."
   end
 
   defp write_temp_packet!(filename, contents) do

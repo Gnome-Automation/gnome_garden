@@ -9,12 +9,20 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
+    if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_search_filter:created")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_search_filter:updated")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_search_filter:destroyed")
+    end
+
     case load_source(id, socket.assigns.current_user) do
       {:ok, source} ->
         {:ok,
          socket
          |> assign(:page_title, "Configure Source")
          |> assign(:source, source)
+         |> assign_search_filters()
+         |> assign_search_filter_form(%{})
          |> assign_form(config_params(source))}
 
       {:error, error} ->
@@ -72,6 +80,99 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not start discovery: #{inspect(error)}")}
     end
+  end
+
+  @impl true
+  def handle_event("add_search_filter", %{"search_filter" => params}, socket) do
+    source = socket.assigns.source.procurement_source
+    attrs = search_filter_attrs(source, params)
+
+    case Procurement.create_source_search_filter(attrs, actor: socket.assigns.current_user) do
+      {:ok, _filter} ->
+        {:noreply,
+         socket
+         |> assign_search_filters()
+         |> assign_search_filter_form(%{})
+         |> put_flash(:info, "Search filter added.")}
+
+      {:error, error} ->
+        {:noreply,
+         socket
+         |> assign_search_filter_form(params)
+         |> put_flash(:error, "Could not add search filter: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_search_filter", %{"id" => id}, socket) do
+    with {:ok, filter} <-
+           Procurement.get_source_search_filter(id, actor: socket.assigns.current_user),
+         {:ok, _filter} <-
+           Procurement.update_source_search_filter(
+             filter,
+             %{enabled: !filter.enabled},
+             actor: socket.assigns.current_user
+           ) do
+      {:noreply, assign_search_filters(socket)}
+    else
+      error ->
+        {:noreply, put_flash(socket, :error, "Could not update search filter: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("disable_noisy_search_filter", %{"id" => id}, socket) do
+    with {:ok, filter} <-
+           Procurement.get_source_search_filter(id, actor: socket.assigns.current_user),
+         {:ok, _filter} <-
+           Procurement.disable_noisy_source_search_filter(filter,
+             actor: socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> assign_search_filters()
+       |> put_flash(:info, "Search filter disabled as noisy.")}
+    else
+      error ->
+        {:noreply,
+         put_flash(socket, :error, "Could not disable search filter: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("keep_searching_filter", %{"id" => id}, socket) do
+    with {:ok, filter} <-
+           Procurement.get_source_search_filter(id, actor: socket.assigns.current_user),
+         {:ok, _filter} <-
+           Procurement.keep_searching_source_search_filter(filter,
+             actor: socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> assign_search_filters()
+       |> put_flash(:info, "Search filter kept for the next run.")}
+    else
+      error ->
+        {:noreply, put_flash(socket, :error, "Could not keep search filter: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete_search_filter", %{"id" => id}, socket) do
+    with {:ok, filter} <-
+           Procurement.get_source_search_filter(id, actor: socket.assigns.current_user),
+         {:ok, _filter} <-
+           Procurement.delete_source_search_filter(filter, actor: socket.assigns.current_user) do
+      {:noreply, assign_search_filters(socket)}
+    else
+      error ->
+        {:noreply, put_flash(socket, :error, "Could not delete search filter: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_info(%{topic: "procurement_source_search_filter:" <> _event}, socket) do
+    {:noreply, assign_search_filters(socket)}
   end
 
   @impl true
@@ -245,6 +346,152 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
           </.section>
 
           <.section
+            :if={sam_gov_source?(@source.procurement_source)}
+            title="SAM.gov Search"
+            description="NAICS filters control which federal opportunity searches run. Keep the useful ones enabled and remove noise."
+          >
+            <div class="space-y-4">
+              <div
+                :if={@search_filters == []}
+                class="rounded-lg border border-dashed border-base-content/20 bg-base-200/50 p-3 text-sm text-base-content/65"
+              >
+                No saved filters yet. The scanner will use the default profile NAICS codes until you add filters here.
+              </div>
+
+              <div :if={@search_filters != []} class="space-y-2">
+                <div
+                  :for={filter <- @search_filters}
+                  class={[
+                    "rounded-lg border p-3 text-sm",
+                    filter.enabled &&
+                      "border-emerald-300 bg-emerald-50/80 dark:border-emerald-400/20 dark:bg-emerald-400/10",
+                    !filter.enabled &&
+                      "border-zinc-200 bg-zinc-50 text-base-content/55 dark:border-white/10 dark:bg-white/[0.03]"
+                  ]}
+                >
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="font-semibold text-base-content">{filter.value}</span>
+                        <span class="text-xs uppercase tracking-wide text-base-content/50">
+                          {format_atom(filter.filter_type)}
+                        </span>
+                        <.status_badge status={if(filter.enabled, do: :success, else: :default)}>
+                          {if(filter.enabled, do: "Enabled", else: "Off")}
+                        </.status_badge>
+                        <.status_badge status={filter.performance_variant}>
+                          {filter.performance_recommendation}
+                        </.status_badge>
+                      </div>
+                      <p :if={filter.label} class="mt-1 text-base-content/70">{filter.label}</p>
+                      <p :if={filter.performance_note} class="mt-1 text-xs text-base-content/60">
+                        {filter.performance_note}
+                      </p>
+                      <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-base-content/60 sm:grid-cols-5">
+                        <div>
+                          <span class="block font-semibold text-base-content">
+                            {filter.per_run_limit}
+                          </span>
+                          per run
+                        </div>
+                        <div>
+                          <span class="block font-semibold text-base-content">
+                            {filter.last_returned_count}
+                          </span>
+                          returned
+                        </div>
+                        <div>
+                          <span class="block font-semibold text-base-content">
+                            {filter.last_saved_count}
+                          </span>
+                          saved
+                        </div>
+                        <div>
+                          <span class="block font-semibold text-base-content">
+                            {filter.accepted_feedback_count}
+                          </span>
+                          accepted
+                        </div>
+                        <div>
+                          <span class="block font-semibold text-base-content">
+                            {filter.rejected_feedback_count + filter.suppressed_feedback_count}
+                          </span>
+                          rejected
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex shrink-0 flex-col gap-1">
+                      <.button
+                        :if={show_disable_noisy_action?(filter)}
+                        type="button"
+                        phx-click="disable_noisy_search_filter"
+                        phx-value-id={filter.id}
+                        variant="primary"
+                      >
+                        Disable Noisy
+                      </.button>
+                      <.button
+                        :if={show_keep_searching_action?(filter)}
+                        type="button"
+                        phx-click="keep_searching_filter"
+                        phx-value-id={filter.id}
+                      >
+                        Keep Searching
+                      </.button>
+                      <.button
+                        type="button"
+                        phx-click="toggle_search_filter"
+                        phx-value-id={filter.id}
+                      >
+                        {if(filter.enabled, do: "Disable", else: "Enable")}
+                      </.button>
+                      <.button
+                        type="button"
+                        phx-click="delete_search_filter"
+                        phx-value-id={filter.id}
+                      >
+                        Remove
+                      </.button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <.form
+                for={@search_filter_form}
+                id="sam-search-filter-form"
+                phx-submit="add_search_filter"
+                class="space-y-3 rounded-lg border border-base-content/10 bg-base-100/70 p-3"
+              >
+                <.input
+                  field={@search_filter_form[:value]}
+                  type="text"
+                  label="Add Related NAICS Code"
+                  placeholder="541330"
+                  required
+                />
+                <.input
+                  field={@search_filter_form[:label]}
+                  type="text"
+                  label="Label"
+                  placeholder="Engineering services"
+                />
+                <.input
+                  field={@search_filter_form[:per_run_limit]}
+                  type="number"
+                  label="Per-Code Limit"
+                  min="1"
+                  max="25"
+                  placeholder="5"
+                />
+                <div class="flex justify-end">
+                  <.button type="submit" variant="primary">Add Filter</.button>
+                </div>
+              </.form>
+            </div>
+          </.section>
+
+          <.section
             title="Discovery"
             description="Use browser discovery when selectors are unknown or the portal layout needs inspection."
           >
@@ -283,6 +530,32 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
     end
   end
 
+  defp assign_search_filters(socket) do
+    filters =
+      case socket.assigns.source.procurement_source do
+        %{id: id} ->
+          case Procurement.list_source_search_filters(id, actor: socket.assigns.current_user) do
+            {:ok, filters} -> filters
+            _ -> []
+          end
+
+        _ ->
+          []
+      end
+
+    assign(socket, :search_filters, filters)
+  end
+
+  defp assign_search_filter_form(socket, params) do
+    params =
+      Map.merge(
+        %{"value" => "", "label" => "", "per_run_limit" => "5"},
+        stringify_keys(params)
+      )
+
+    assign(socket, :search_filter_form, to_form(params, as: :search_filter))
+  end
+
   defp assign_form(socket, params) do
     assign(socket, :form, to_form(params, as: :config))
   end
@@ -319,6 +592,51 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       {key, value}
     end)
   end
+
+  defp search_filter_attrs(source, params) do
+    value =
+      params
+      |> Map.get("value", "")
+      |> String.trim()
+
+    per_run_limit =
+      params
+      |> Map.get("per_run_limit")
+      |> parse_positive_integer(5)
+
+    %{
+      procurement_source_id: source.id,
+      filter_type: :naics,
+      value: value,
+      label: blank_to_nil(Map.get(params, "label")),
+      per_run_limit: per_run_limit,
+      enabled: true,
+      priority: :medium
+    }
+  end
+
+  defp stringify_keys(params) do
+    Map.new(params, fn {key, value} -> {to_string(key), value} end)
+  end
+
+  defp parse_positive_integer(value, default) do
+    case Integer.parse(to_string(value || "")) do
+      {integer, _} when integer > 0 -> integer
+      _ -> default
+    end
+  end
+
+  defp blank_to_nil(nil), do: nil
+  defp blank_to_nil(""), do: nil
+
+  defp blank_to_nil(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  defp blank_to_nil(value), do: value
 
   defp value(map, key), do: Map.get(map, key) || Map.get(map, config_key_atom(key))
 
@@ -360,6 +678,25 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
        do: true
 
   defp discoverable?(_source), do: false
+
+  defp sam_gov_source?(%{source_type: :sam_gov}), do: true
+  defp sam_gov_source?(_source), do: false
+
+  defp show_disable_noisy_action?(%{
+         enabled: true,
+         performance_recommendation: "Disable noisy filter"
+       }),
+       do: true
+
+  defp show_disable_noisy_action?(_filter), do: false
+
+  defp show_keep_searching_action?(%{enabled: false}), do: true
+
+  defp show_keep_searching_action?(%{performance_recommendation: recommendation})
+       when recommendation in ["Keep searching", "Watch next run"],
+       do: true
+
+  defp show_keep_searching_action?(_filter), do: false
 
   defp procurement_status_variant(:approved), do: :success
   defp procurement_status_variant(:blocked), do: :error

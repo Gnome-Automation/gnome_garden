@@ -15,6 +15,7 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
   alias GnomeGarden.Commercial.CompanyProfileContext
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
+  alias GnomeGarden.Procurement.SourceSearchFilter
   alias GnomeGarden.Procurement.TargetingFilter
 
   @default_limit 5
@@ -36,8 +37,13 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
     |> query_param_sets(profile_context)
     |> Enum.reduce_while({:ok, []}, fn params, {:ok, results} ->
       case QuerySamGov.run(params, context) do
-        {:ok, result} -> {:cont, {:ok, [result | results]}}
-        {:error, error} -> {:halt, {:error, error}}
+        {:ok, result} ->
+          {:cont,
+           {:ok,
+            [annotate_query_result(result, Map.get(params, :source_search_filter)) | results]}}
+
+        {:error, error} ->
+          {:halt, {:error, error}}
       end
     end)
     |> case do
@@ -53,7 +59,8 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
            query: query_summary(results),
            bids_found: length(bids),
            bids: bids,
-           query_count: length(results)
+           query_count: length(results),
+           search_filter_counts: search_filter_counts(results)
          }}
 
       {:error, error} ->
@@ -63,12 +70,42 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
 
   defp query_param_sets(source, profile_context) do
     base = query_params(source, profile_context)
+
+    case source_search_filters(source) do
+      [] -> fallback_query_param_sets(base)
+      filters -> Enum.map(filters, &filter_query_params(base, &1))
+    end
+  end
+
+  defp fallback_query_param_sets(base) do
     codes = List.wrap(Map.get(base, :naics_codes))
 
     case codes do
       [] -> [base]
       codes -> Enum.map(codes, &Map.put(base, :naics_codes, [&1]))
     end
+  end
+
+  defp filter_query_params(base, %SourceSearchFilter{filter_type: :naics} = filter) do
+    base
+    |> Map.delete(:keywords)
+    |> Map.put(:naics_codes, [filter.value])
+    |> Map.put(:limit, filter.per_run_limit || @default_limit)
+    |> Map.put(:source_search_filter, filter)
+  end
+
+  defp filter_query_params(base, %SourceSearchFilter{filter_type: :keyword} = filter) do
+    base
+    |> Map.put(:keywords, filter.value)
+    |> Map.put(:limit, filter.per_run_limit || @default_limit)
+    |> Map.put(:source_search_filter, filter)
+  end
+
+  defp filter_query_params(base, %SourceSearchFilter{filter_type: :state} = filter) do
+    base
+    |> Map.put(:state, filter.value)
+    |> Map.put(:limit, filter.per_run_limit || @default_limit)
+    |> Map.put(:source_search_filter, filter)
   end
 
   defp query_params(source, profile_context) do
@@ -170,6 +207,9 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
               naics_code: bid_value(bid, :naics_code),
               set_aside: bid_value(bid, :set_aside),
               notice_type: bid_value(bid, :notice_type),
+              search_filter_id: bid_value(bid, :search_filter_id),
+              search_filter_type: bid_value(bid, :search_filter_type),
+              search_filter_value: bid_value(bid, :search_filter_value),
               raw_metadata: bid_value(bid, :metadata) || %{}
             },
             scoring: %{
@@ -188,6 +228,8 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
         case SaveBid.run(params, context) do
           {:ok, result} ->
             result
+            |> Map.put(:search_filter_id, bid_value(bid, :search_filter_id))
+            |> Map.put(:search_filter_value, bid_value(bid, :search_filter_value))
 
           {:error, reason} ->
             Logger.warning(
@@ -205,6 +247,7 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
   defp complete_scan(source, bids, excluded, scored, saved, query_result) do
     source = current_source(source)
     diagnostics = scan_diagnostics(scored, saved, excluded)
+    record_search_filter_counts(query_result, saved)
 
     Procurement.mark_procurement_source_scanned!(
       source,
@@ -240,6 +283,7 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
       "diagnosis" => diagnostics["diagnosis"],
       "query" => Map.get(query_result, :query),
       "query_count" => Map.get(query_result, :query_count),
+      "search_filter_counts" => Map.get(query_result, :search_filter_counts, []),
       "top_unsaved" => diagnostics["top_unsaved"],
       "saved_examples" => diagnostics["saved_examples"],
       "excluded_examples" => Enum.take(excluded, 5),
@@ -339,6 +383,70 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
     |> Enum.reject(&blank?/1)
     |> Enum.uniq()
     |> Enum.join(", ")
+  end
+
+  defp annotate_query_result(result, nil), do: result
+
+  defp annotate_query_result(result, %SourceSearchFilter{} = filter) do
+    bids =
+      result
+      |> Map.get(:bids, [])
+      |> Enum.map(fn bid ->
+        bid
+        |> Map.put(:search_filter_id, filter.id)
+        |> Map.put(:search_filter_type, filter.filter_type)
+        |> Map.put(:search_filter_value, filter.value)
+      end)
+
+    result
+    |> Map.put(:bids, bids)
+    |> Map.put(:source_search_filter, filter)
+  end
+
+  defp search_filter_counts(results) do
+    results
+    |> Enum.map(fn result ->
+      case Map.get(result, :source_search_filter) do
+        %SourceSearchFilter{} = filter ->
+          %{
+            "id" => filter.id,
+            "type" => to_string(filter.filter_type),
+            "value" => filter.value,
+            "label" => filter.label,
+            "returned" => length(Map.get(result, :bids, []))
+          }
+
+        _ ->
+          nil
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp record_search_filter_counts(query_result, saved) do
+    saved_counts = Enum.frequencies_by(saved, &Map.get(&1, :search_filter_id))
+
+    query_result
+    |> Map.get(:search_filter_counts, [])
+    |> Enum.each(fn %{"id" => id, "returned" => returned} ->
+      with {:ok, filter} <- Ash.get(SourceSearchFilter, id, authorize?: false) do
+        Procurement.record_source_search_filter_run!(
+          filter,
+          %{
+            last_returned_count: returned,
+            last_saved_count: Map.get(saved_counts, id, 0)
+          },
+          authorize?: false
+        )
+      end
+    end)
+  end
+
+  defp source_search_filters(source) do
+    case Procurement.list_enabled_source_search_filters(source.id, authorize?: false) do
+      {:ok, filters} -> filters
+      _ -> []
+    end
   end
 
   defp estimated_value_for_scoring(%Decimal{} = value), do: Decimal.to_float(value)

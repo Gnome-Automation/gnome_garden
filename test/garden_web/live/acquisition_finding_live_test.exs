@@ -158,6 +158,72 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert render(view) =~ "Login required"
   end
 
+  test "acquisition queue uses operator summary fallback instead of empty placeholder", %{
+    conn: conn
+  } do
+    {:ok, source} =
+      Acquisition.create_source(%{
+        name: "Summary fallback source",
+        external_ref: "test:summary-fallback-source",
+        url: "https://example.com/summary-fallback-source",
+        source_family: :procurement,
+        source_kind: :portal,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic
+      })
+
+    {:ok, finding} =
+      Acquisition.create_finding(%{
+        title: "Summary fallback controls finding",
+        external_ref: "test:summary-fallback-controls-finding",
+        source_url: "https://example.com/summary-fallback-controls-finding",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        source_id: source.id,
+        recommendation: "Review as a controls opportunity with an actionable source record.",
+        fit_score: 99,
+        intent_score: 99,
+        confidence: :medium,
+        observed_at: DateTime.utc_now()
+      })
+
+    {:ok, view, _html} =
+      live(conn, ~p"/acquisition/findings?family=procurement&source_id=#{source.id}")
+
+    html = render(view)
+
+    assert html =~ finding.title
+    assert html =~ "Review as a controls opportunity with an actionable source record."
+    refute html =~ "No summary yet."
+  end
+
+  test "acquisition queue makes active stale findings obvious", %{conn: conn} do
+    stale_due_at =
+      Date.utc_today()
+      |> Date.add(-2)
+      |> DateTime.new!(~T[17:00:00], "Etc/UTC")
+
+    {:ok, finding} =
+      Acquisition.create_finding(%{
+        title: "Stale direct intake finding",
+        summary: "Direct intake still in review even though the due date passed.",
+        external_ref: "test:stale-direct-intake-finding",
+        source_url: "https://example.com/stale-direct-intake-finding",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        due_at: stale_due_at,
+        fit_score: 71,
+        confidence: :medium,
+        observed_at: DateTime.utc_now()
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings?family=procurement")
+
+    assert render(view) =~ finding.title
+    assert has_element?(view, "#finding-card-#{finding.id}", "Stale")
+  end
+
   test "promoting a procurement finding opens the commercial signal" do
     {:ok, bid} =
       Procurement.create_bid(%{
@@ -307,6 +373,59 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert has_element?(view, "#finding-show-accept")
   end
 
+  test "finding detail accept dialog submits a review decision", %{conn: conn} do
+    {:ok, source} =
+      Acquisition.create_source(%{
+        name: "Accept Dialog Source",
+        external_ref: "test:accept-dialog-source",
+        url: "https://example.com/accept-dialog-source",
+        source_family: :procurement,
+        source_kind: :portal,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic
+      })
+
+    {:ok, finding} =
+      Acquisition.create_finding(%{
+        title: "Accept Dialog Controls Finding",
+        external_ref: "test:accept-dialog-controls-finding",
+        source_url: "https://example.com/accept-dialog-controls-finding",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        source_id: source.id,
+        summary: "Controls retrofit worth keeping in the intake queue.",
+        work_summary: "PLC retrofit",
+        fit_score: 88,
+        intent_score: 90,
+        confidence: :high,
+        observed_at: DateTime.utc_now()
+      })
+
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
+
+    view
+    |> element("#finding-show-accept")
+    |> render_click()
+
+    assert render(view) =~ "Accept this finding?"
+
+    view
+    |> form("#finding-show-accept-form", %{
+      "reason" => "Good fit with a clear controls scope and linked source."
+    })
+    |> render_submit()
+
+    html = render(view)
+    assert html =~ "Accepted"
+    assert html =~ "Good fit with a clear controls scope and linked source."
+
+    {:ok, refreshed_finding} = Acquisition.get_finding(finding.id)
+    assert refreshed_finding.status == :accepted
+  end
+
   test "suppressing a procurement finding removes noisy intake from the review queue", %{
     conn: conn
   } do
@@ -378,7 +497,10 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
 
     assert {:ok, _finding} =
-             Acquisition.park_finding_review(finding.id, %{reason: "Keep watching"})
+             Acquisition.park_finding_review(finding.id, %{
+               reason_code: "not_enough_info",
+               reason: "Keep watching"
+             })
 
     {:ok, parked_finding} = Acquisition.get_finding(finding.id)
     assert parked_finding.status == :parked
@@ -387,6 +509,35 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
 
     {:ok, reopened_finding} = Acquisition.get_finding(finding.id)
     assert reopened_finding.status == :new
+  end
+
+  test "rejected queue cards keep decision reason beside status", %{conn: conn} do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Wrong geography controls bid",
+        url: "https://example.com/bids/wrong-geography-controls-bid",
+        external_id: "WRONG-GEOGRAPHY-CONTROLS-BID",
+        description: "Controls work well outside the active service region.",
+        agency: "Regional Utility",
+        location: "Reno, NV",
+        region: :other,
+        score_total: 62,
+        score_tier: :prospect
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:ok, _finding} =
+             Acquisition.reject_finding_review(finding.id, %{
+               reason_code: "wrong_geography",
+               reason: "Outside the active service geography."
+             })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings?queue=rejected")
+
+    assert render(view) =~ "Outside the active service geography."
+    assert has_element?(view, "#finding-card-#{finding.id}", "Wrong geography")
   end
 
   test "family filter narrows the acquisition queue and finding detail shows provenance", %{

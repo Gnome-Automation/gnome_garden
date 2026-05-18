@@ -104,6 +104,51 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert render(view) =~ "Manual directory intake updated"
   end
 
+  test "source registry separates review outcome counts", %{conn: conn} do
+    {:ok, source} =
+      Acquisition.create_source(%{
+        name: "Outcome Count Portal",
+        external_ref: "test:outcome-count-portal",
+        url: "https://example.com/outcome-count-portal",
+        source_family: :procurement,
+        source_kind: :portal,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic
+      })
+
+    for {status, index} <- [
+          {:new, 1},
+          {:reviewing, 2},
+          {:accepted, 3},
+          {:parked, 4},
+          {:rejected, 5},
+          {:promoted, 6}
+        ] do
+      assert {:ok, _finding} =
+               Acquisition.create_finding(%{
+                 external_ref: "registry-outcome-count-#{index}",
+                 title: "Registry Outcome Count #{index}",
+                 finding_family: :procurement,
+                 finding_type: :bid_notice,
+                 status: status,
+                 observed_at: DateTime.utc_now(),
+                 source_id: source.id
+               })
+    end
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=all")
+
+    html = render(view)
+
+    assert html =~ "Outcome Count Portal"
+    assert html =~ "2 waiting"
+    assert html =~ "Accepted"
+    assert html =~ "Parked"
+    assert html =~ "Rejected"
+    assert html =~ "Promoted"
+  end
+
   test "source registry exposes a launch next action when a source is ready", %{conn: conn} do
     {:ok, _source} =
       Acquisition.create_source(%{
@@ -176,6 +221,31 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
              "a[href='/console/agents/runs/12345678-1234-1234-1234-123456789abc']",
              "Open Run"
            )
+  end
+
+  test "source registry distinguishes timestamp-only run records from never-run sources", %{
+    conn: conn
+  } do
+    {:ok, _source} =
+      Acquisition.create_source(%{
+        name: "Timestamp only source run",
+        external_ref: "test:timestamp-only-source-run",
+        url: "https://example.com/timestamp-only-source-run",
+        source_family: :discovery,
+        source_kind: :directory,
+        status: :active,
+        enabled: true,
+        scan_strategy: :agentic,
+        last_run_at: DateTime.utc_now()
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=all")
+
+    html = render(view)
+
+    assert html =~ "Timestamp only source run"
+    assert html =~ "Run recorded"
+    assert html =~ "no agent run link recorded"
   end
 
   test "source registry surfaces zero-save scan health and last-run findings path", %{conn: conn} do
@@ -262,5 +332,89 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
 
     assert updated_source.config_status == :configured
     assert Map.get(updated_source.scrape_config, "listing_selector") == ".bid-row"
+  end
+
+  test "source configuration shows SAM filter performance recommendations", %{conn: conn} do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "SAM Performance Source",
+        url: "https://sam.gov/opportunities",
+        source_type: :sam_gov,
+        portal_id: "sam-performance-source",
+        region: :national,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, filter} =
+      Procurement.create_source_search_filter(%{
+        procurement_source_id: source.id,
+        filter_type: :naics,
+        value: "541330",
+        label: "Engineering services",
+        per_run_limit: 10,
+        enabled: true
+      })
+
+    assert {:ok, _filter} =
+             Procurement.record_source_search_filter_run(filter, %{
+               last_returned_count: 12,
+               last_saved_count: 0
+             })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
+
+    {:ok, finding} =
+      Acquisition.create_finding(%{
+        title: "SAM filter rejected finding",
+        external_ref: "sam-filter-rejected-finding-#{source.id}",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        status: :rejected,
+        observed_at: DateTime.utc_now(),
+        source_id: acquisition_source.id
+      })
+
+    assert {:ok, _feedback} =
+             Procurement.record_source_search_filter_feedback(%{
+               source_search_filter_id: filter.id,
+               finding_id: finding.id,
+               decision: :rejected,
+               reason_code: "wrong_geography",
+               reason: "Outside service geography."
+             })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
+
+    html = render(view)
+    assert html =~ "SAM.gov Search"
+    assert html =~ "541330"
+    assert html =~ "Disable noisy filter"
+    assert html =~ "12 returned in the last run. 1 rejected and 0 suppressed from review."
+    assert html =~ "Add Related NAICS Code"
+    assert html =~ "accepted"
+    assert html =~ "rejected"
+
+    view
+    |> element("button[phx-click='disable_noisy_search_filter']", "Disable Noisy")
+    |> render_click()
+
+    {:ok, disabled_filter} = Procurement.get_source_search_filter(filter.id)
+
+    refute disabled_filter.enabled
+    assert disabled_filter.metadata["operator_recommendation"] == "disable_noisy"
+
+    assert render(view) =~ "Search filter disabled as noisy."
+
+    view
+    |> element("button[phx-click='keep_searching_filter']", "Keep Searching")
+    |> render_click()
+
+    {:ok, kept_filter} = Procurement.get_source_search_filter(filter.id)
+
+    assert kept_filter.enabled
+    assert kept_filter.metadata["operator_recommendation"] == "keep_searching"
+    assert render(view) =~ "Search filter kept for the next run."
   end
 end

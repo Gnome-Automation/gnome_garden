@@ -24,6 +24,19 @@ defmodule GnomeGarden.Acquisition.PilotSeedsTest do
     assert {:ok, acquisition_sources} = Acquisition.list_console_sources()
     assert Enum.any?(acquisition_sources, &(&1.name == "SAM.gov Contract Opportunities"))
 
+    sam_source = Enum.find(sources, &(&1.source_type == :sam_gov))
+    assert {:ok, sam_filters} = Procurement.list_source_search_filters(sam_source.id)
+
+    assert Enum.sort(Enum.map(sam_filters, & &1.value)) == [
+             "238210",
+             "541330",
+             "541511",
+             "541512",
+             "541519"
+           ]
+
+    assert Enum.all?(sam_filters, &(&1.per_run_limit == 5))
+
     assert {:ok, active_programs} = Commercial.list_active_discovery_programs()
     assert Enum.any?(active_programs, &(&1.name == "Seven Day Food Plant Automation Sweep"))
 

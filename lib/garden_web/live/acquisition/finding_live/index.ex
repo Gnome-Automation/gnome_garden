@@ -114,8 +114,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     end
   end
 
-  def handle_event("open_dialog", %{"id" => id, "action" => action}, socket) do
-    case parse_dialog_action(action) do
+  def handle_event("open_dialog", %{"id" => id} = params, socket) do
+    case params |> dialog_action_param() |> parse_dialog_action() do
       nil ->
         {:noreply, put_flash(socket, :error, "Unknown acquisition action")}
 
@@ -323,9 +323,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     <article
       id={"finding-card-#{@finding.id}"}
       phx-click={JS.navigate(~p"/acquisition/findings/#{@finding.id}")}
-      role="link"
-      tabindex="0"
-      class="grid cursor-pointer gap-3 px-3 py-3 transition hover:bg-zinc-50/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-inset dark:hover:bg-white/[0.025] sm:px-4 lg:grid-cols-[minmax(0,1fr)_16rem]"
+      class="grid cursor-pointer gap-3 px-3 py-3 transition hover:bg-zinc-50/80 dark:hover:bg-white/[0.025] sm:px-4 lg:grid-cols-[minmax(0,1fr)_16rem]"
     >
       <div class="min-w-0 space-y-3">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -340,6 +338,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
               <.status_badge :if={@finding.confidence} status={@finding.confidence_variant}>
                 {@finding.confidence_label}
               </.status_badge>
+              <.status_badge :if={stale_finding?(@finding)} status={:error}>
+                Stale
+              </.status_badge>
+              <.status_badge :if={due_soon_finding?(@finding)} status={:warning}>
+                Due soon
+              </.status_badge>
             </div>
 
             <div>
@@ -350,7 +354,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
                 {@finding.title}
               </.link>
               <p class="mt-1 max-w-4xl text-sm leading-6 text-base-content/65">
-                {@finding.summary || "No summary yet."}
+                {@finding.display_summary}
               </p>
             </div>
           </div>
@@ -465,6 +469,23 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
           <.status_badge status={@finding.status_variant}>
             {@finding.status_label}
           </.status_badge>
+          <p
+            :if={@finding.latest_review_reason}
+            class="pt-1 text-xs leading-5 text-base-content/60"
+          >
+            {@finding.latest_review_reason}
+          </p>
+          <div
+            :if={@finding.latest_review_reason_code || stale_finding?(@finding)}
+            class="flex flex-wrap gap-1 pt-1"
+          >
+            <span :if={stale_finding?(@finding)} class="badge badge-error badge-xs">
+              Stale
+            </span>
+            <span :if={@finding.latest_review_reason_code} class="badge badge-outline badge-xs">
+              {status_label(@finding.latest_review_reason_code)}
+            </span>
+          </div>
         </div>
 
         <div class="flex flex-wrap gap-1.5">
@@ -846,6 +867,25 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     end
   end
 
+  defp stale_finding?(%{due_at: nil}), do: false
+
+  defp stale_finding?(%{status: status, due_at: due_at})
+       when status in [:new, :reviewing, :accepted] do
+    Date.compare(DateTime.to_date(due_at), Date.utc_today()) == :lt
+  end
+
+  defp stale_finding?(_finding), do: false
+
+  defp due_soon_finding?(%{due_at: nil}), do: false
+
+  defp due_soon_finding?(%{status: status, due_at: due_at})
+       when status in [:new, :reviewing, :accepted] do
+    days = Date.diff(DateTime.to_date(due_at), Date.utc_today())
+    days in 0..7
+  end
+
+  defp due_soon_finding?(_finding), do: false
+
   defp finding_score_value(%{fit_score: score}) when is_integer(score),
     do: Integer.to_string(score)
 
@@ -941,6 +981,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   defp blank_to_nil(nil), do: nil
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
+
+  defp dialog_action_param(params) do
+    Map.get(params, "action") || Map.get(params, "value")
+  end
 
   defp queue_path(queue, family, source, program),
     do: queue_path(queue, family, source, program, nil)

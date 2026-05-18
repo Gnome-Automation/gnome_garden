@@ -88,6 +88,9 @@ defmodule GnomeGarden.Acquisition.Source do
                   :organization,
                   :finding_count,
                   :review_finding_count,
+                  :accepted_finding_count,
+                  :parked_finding_count,
+                  :rejected_finding_count,
                   :promoted_finding_count,
                   :noise_finding_count,
                   :source_family_label,
@@ -303,7 +306,22 @@ defmodule GnomeGarden.Acquisition.Source do
 
     count :review_finding_count, :findings do
       public? true
-      filter expr(status in [:new, :reviewing, :accepted])
+      filter expr(status in [:new, :reviewing])
+    end
+
+    count :accepted_finding_count, :findings do
+      public? true
+      filter expr(status == :accepted)
+    end
+
+    count :parked_finding_count, :findings do
+      public? true
+      filter expr(status == :parked)
+    end
+
+    count :rejected_finding_count, :findings do
+      public? true
+      filter expr(status == :rejected)
     end
 
     count :promoted_finding_count, :findings do

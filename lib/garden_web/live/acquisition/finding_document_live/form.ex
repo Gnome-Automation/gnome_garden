@@ -80,8 +80,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
             class="space-y-5"
           >
             <.section
-              title={"Upload #{String.capitalize(@document_noun)}"}
-              description="Store one durable file through AshStorage, then attach finding-specific role and notes."
+              title={"Add #{String.capitalize(@document_noun)}"}
+              description="Upload a durable file or save a source URL/manual note, then attach finding-specific role and notes."
             >
               <div class="mb-4 grid gap-2 sm:grid-cols-4">
                 <.packet_type_hint
@@ -137,7 +137,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
                     class="block text-sm/6 font-medium text-gray-900 dark:text-white"
                     for={@uploads.file.ref}
                   >
-                    File
+                    File optional
                   </label>
                   <div class="rounded-lg border border-dashed border-zinc-300 bg-zinc-50/80 px-4 py-5 dark:border-white/15 dark:bg-white/[0.03]">
                     <.live_file_input
@@ -189,7 +189,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
             <.section body_class="px-4 py-4 sm:px-5">
               <.form_actions
                 cancel_path={~p"/acquisition/findings/#{@finding.id}"}
-                submit_label={"Upload #{String.capitalize(@document_noun)}"}
+                submit_label={"Save #{String.capitalize(@document_noun)}"}
               />
             </.section>
           </.form>
@@ -382,8 +382,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
           |> Map.put("file", upload)
 
         result =
-          AshPhoenix.Form.submit(socket.assigns.form.source,
-            params: submit_params
+          Acquisition.upload_document_for_finding(submit_params,
+            actor: socket.assigns.current_user
           )
 
         cleanup_upload(upload)
@@ -403,6 +403,25 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
              |> put_flash(:error, "Could not upload document")}
         end
 
+      {:error, :no_upload} ->
+        submit_params = normalized_params(form_params, link_params, socket.assigns.finding)
+
+        case Acquisition.create_document_reference_for_finding(submit_params,
+               actor: socket.assigns.current_user
+             ) do
+          {:ok, _document} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, "Document reference linked to the finding")
+             |> push_navigate(to: ~p"/acquisition/findings/#{socket.assigns.finding.id}")}
+
+          {:error, error} ->
+            {:noreply,
+             socket
+             |> assign(:link_params, link_params)
+             |> put_flash(:error, "Could not save document reference: #{format_error(error)}")}
+        end
+
       {:error, message} ->
         {:noreply,
          socket
@@ -416,7 +435,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
 
     form =
       Acquisition.Document
-      |> AshPhoenix.Form.for_create(:upload_for_finding,
+      |> AshPhoenix.Form.for_create(:reference_for_finding,
         actor: socket.assigns.current_user,
         domain: Acquisition,
         params: seed_params
@@ -535,7 +554,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
 
     case uploads do
       [upload | _rest] -> {:ok, upload}
-      [] -> {:error, "Upload a document file before saving."}
+      [] -> {:error, :no_upload}
     end
   end
 

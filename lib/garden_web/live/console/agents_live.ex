@@ -6,7 +6,6 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
 
   alias GnomeGarden.Agents
   alias GnomeGarden.Agents.AgentTracker
-  alias GnomeGarden.Agents.DefaultDeployments
   alias GnomeGarden.Agents.DeploymentRunner
   alias GnomeGarden.Agents.TemplateCatalog
   alias GnomeGarden.Agents.Templates
@@ -30,6 +29,9 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
      |> assign(:deployment_pending_delete, nil)
      |> assign(:deployment_count, 0)
      |> assign(:active_run_count, 0)
+     |> assign(:scheduled_deployment_count, 0)
+     |> assign(:manual_deployment_count, 0)
+     |> assign(:attention_deployment_count, 0)
      |> assign(:runtime_count, 0)
      |> assign(:last_refreshed_at, nil)
      |> stream(:recent_runs, [], reset: true)
@@ -106,22 +108,6 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
     end
   end
 
-  def handle_event("bootstrap_defaults", _params, socket) do
-    result = DefaultDeployments.ensure_defaults()
-
-    message =
-      case result.created do
-        [] -> "Default deployments already exist."
-        created -> "Bootstrapped default deployments: #{Enum.join(created, ", ")}."
-      end
-
-    {:noreply,
-     socket
-     |> load_console()
-     |> refresh_table("agent-deployments-table")
-     |> put_flash(:info, message)}
-  end
-
   def handle_event("confirm_delete_deployment", %{"deployment_id" => deployment_id}, socket) do
     case Agents.get_agent_deployment(deployment_id, load: [:agent, :run_count, :active_run_count]) do
       {:ok, deployment} ->
@@ -166,53 +152,50 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
           Orchestrate templates, deployments, durable runs, and runtime cache from one operational workspace.
         </:subtitle>
         <:actions>
-          <button type="button" class="btn btn-sm" phx-click="bootstrap_defaults">
-            Bootstrap Defaults
-          </button>
-
           <.link navigate={~p"/console/agents/deployments/new"} class="btn btn-sm btn-primary gap-1">
             New Deployment
           </.link>
         </:actions>
       </.page_header>
 
-      <div class="grid gap-4 md:grid-cols-3">
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <.stat_card
-          title="Deployments"
-          value={to_string(@deployment_count)}
-          description="Configured agent instances with ownership, schedule, and scope."
-          icon="hero-rectangle-stack"
-          accent="emerald"
-        />
-        <.stat_card
-          title="Active Runs"
+          title="Running Now"
           value={to_string(@active_run_count)}
-          description="Durable run records still pending or executing."
+          description="Runs currently pending or executing. Use Recent Runs to view or cancel them."
           icon="hero-bolt"
           accent="sky"
         />
         <.stat_card
-          title="Live Runtime"
-          value={to_string(@runtime_count)}
-          description="Running Jido instances on this node, keyed by AgentRun."
-          icon="hero-cpu-chip"
+          title="Scheduled"
+          value={to_string(@scheduled_deployment_count)}
+          description="Enabled deployments that run automatically from the Run Mode column."
+          icon="hero-calendar-days"
+          accent="emerald"
+        />
+        <.stat_card
+          title="Manual"
+          value={to_string(@manual_deployment_count)}
+          description="Deployments that only run from Run now or another workflow."
+          icon="hero-cursor-arrow-rays"
           accent="amber"
+        />
+        <.stat_card
+          title="Needs Attention"
+          value={to_string(@attention_deployment_count)}
+          description="Enabled deployments whose last run failed."
+          icon="hero-exclamation-triangle"
+          accent="rose"
         />
       </div>
 
       <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div class="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+        <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <div>
             <h2 class="text-lg font-semibold text-base-content">Deployments</h2>
             <p class="text-sm text-base-content/60">
-              Launch, pause, and resume configured agent deployments.
+              {@deployment_count} configured. Click a row to edit schedule and scope.
             </p>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <.link navigate={~p"/console/agents/deployments/new"} class="btn btn-sm btn-primary gap-1">
-              New Deployment
-            </.link>
           </div>
         </div>
 
@@ -224,12 +207,22 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
           url_state={@url_state}
           theme={GnomeGardenWeb.CinderTheme}
           page_size={25}
+          click={
+            fn deployment -> JS.navigate(~p"/console/agents/deployments/#{deployment.id}/edit") end
+          }
         >
-          <:col :let={deployment} field="name" search sort label="Deployment">
+          <:col
+            :let={deployment}
+            field="name"
+            search
+            sort
+            label="Deployment"
+            class="min-w-72 max-w-md whitespace-normal"
+          >
             <div class="font-medium text-base-content">{deployment.name}</div>
             <div
               :if={deployment.description}
-              class="mt-1 max-w-md text-xs text-base-content/50"
+              class="mt-1 text-xs leading-5 break-words text-base-content/50"
             >
               {deployment.description}
             </div>
@@ -253,6 +246,22 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
           </:col>
           <:col :let={deployment} label="Last Run">
             {format_datetime(deployment.last_run_at)}
+          </:col>
+          <:col :let={deployment} field="schedule" sort label="Run Mode">
+            <div class="space-y-1.5">
+              <span class={schedule_badge(deployment.schedule)}>
+                {schedule_mode_label(deployment.schedule)}
+              </span>
+              <div class="text-xs leading-5 text-base-content/60">
+                {schedule_label(deployment.schedule)}
+              </div>
+              <div
+                :if={scheduled?(deployment.schedule)}
+                class="text-xs font-medium leading-5 text-base-content/80"
+              >
+                Next: {next_schedule_label(deployment.schedule)}
+              </div>
+            </div>
           </:col>
           <:col :let={deployment} field="enabled" sort label="State">
             <div class="flex items-center gap-2">
@@ -325,111 +334,125 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
         </Cinder.collection>
       </section>
 
-      <section class="grid gap-8 xl:grid-cols-[1.4fr_1fr]">
-        <div class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-            <h2 class="text-lg font-semibold text-base-content">Recent Runs</h2>
-            <p class="text-sm text-base-content/60">
-              Deployment-centric run history with quick links into live details.
-            </p>
-          </div>
-
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
-              <thead class="bg-zinc-50 text-left dark:bg-zinc-950/50">
-                <tr>
-                  <th class="px-5 py-3 font-medium text-base-content/50">Task</th>
-                  <th class="px-5 py-3 font-medium text-base-content/50">Deployment</th>
-                  <th class="px-5 py-3 font-medium text-base-content/50">Requested By</th>
-                  <th class="px-5 py-3 font-medium text-base-content/50">Started</th>
-                  <th class="px-5 py-3 font-medium text-base-content/50">State</th>
-                  <th class="px-5 py-3 font-medium text-base-content/50">Outputs</th>
-                  <th class="px-5 py-3 font-medium text-base-content/50">Actions</th>
-                </tr>
-              </thead>
-              <tbody
-                id="agent-runs"
-                phx-update="stream"
-                class="divide-y divide-zinc-200 dark:divide-zinc-800"
-              >
-                <tr class="hidden only:table-row">
-                  <td
-                    colspan="7"
-                    class="px-5 py-8 text-center text-sm text-base-content/50"
-                  >
-                    No AgentRun records yet.
-                  </td>
-                </tr>
-
-                <tr :for={{row_id, run} <- @streams.recent_runs} id={row_id}>
-                  <td class="px-5 py-4">
-                    <div class="font-medium text-base-content">{run.task}</div>
-                    <div :if={run.agent} class="mt-1 text-xs text-base-content/50">
-                      Template: {run.agent.name}
-                    </div>
-                  </td>
-                  <td class="px-5 py-4 text-base-content/80">
-                    {run.deployment && run.deployment.name}
-                  </td>
-                  <td class="px-5 py-4 text-base-content/80">
-                    {requester_label(run)}
-                  </td>
-                  <td class="px-5 py-4 text-base-content/80">
-                    {format_datetime(run.started_at || run.inserted_at)}
-                  </td>
-                  <td class="px-5 py-4">
-                    <div class="flex items-center gap-2">
-                      <span class={run_state_badge(run.state)}>{format_atom(run.state)}</span>
-                      <span :if={run.completed_at} class="text-xs text-base-content/50">
-                        done {format_datetime(run.completed_at)}
-                      </span>
-                    </div>
-                  </td>
-                  <td class="px-5 py-4 text-base-content/80">
-                    <div class="font-medium">{run.output_count || 0}</div>
-                    <div
-                      :if={(run.output_count || 0) > 0}
-                      class="mt-1 text-xs text-base-content/50"
-                    >
-                      {output_breakdown(run)}
-                    </div>
-                  </td>
-                  <td class="px-5 py-4">
-                    <div class="flex flex-wrap gap-2">
-                      <.link navigate={~p"/console/agents/runs/#{run.id}"} class="btn btn-sm">
-                        View
-                      </.link>
-
-                      <button
-                        :if={run.state in [:pending, :running]}
-                        type="button"
-                        class="btn btn-sm"
-                        phx-click="cancel_run"
-                        phx-value-run_id={run.id}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+          <h2 class="text-lg font-semibold text-base-content">Recent Runs</h2>
+          <p class="text-sm text-base-content/60">
+            Compact run history. Open a run for full prompt, output, and failure diagnostics.
+          </p>
         </div>
 
-        <div class="space-y-8">
-          <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div class="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-              <div>
-                <h2 class="text-lg font-semibold text-base-content">Runtime Cache</h2>
-                <p class="text-sm text-base-content/60">
-                  `AgentTracker` is live cache only. Durable history lives in `AgentRun`.
-                </p>
-              </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
+            <thead class="bg-zinc-50 text-left dark:bg-zinc-950/50">
+              <tr>
+                <th class="px-5 py-3 font-medium text-base-content/50">Deployment</th>
+                <th class="px-5 py-3 font-medium text-base-content/50">Run</th>
+                <th class="px-5 py-3 font-medium text-base-content/50">Requested By</th>
+                <th class="px-5 py-3 font-medium text-base-content/50">Started</th>
+                <th class="px-5 py-3 font-medium text-base-content/50">State</th>
+                <th class="px-5 py-3 font-medium text-base-content/50">Outputs</th>
+                <th class="px-5 py-3 font-medium text-base-content/50">Actions</th>
+              </tr>
+            </thead>
+            <tbody
+              id="agent-runs"
+              phx-update="stream"
+              class="divide-y divide-zinc-200 dark:divide-zinc-800"
+            >
+              <tr class="hidden only:table-row">
+                <td
+                  colspan="7"
+                  class="px-5 py-8 text-center text-sm text-base-content/50"
+                >
+                  No AgentRun records yet.
+                </td>
+              </tr>
 
-              <span class="text-xs text-base-content/50">
-                Refreshed {format_datetime(@last_refreshed_at)}
-              </span>
+              <tr :for={{row_id, run} <- @streams.recent_runs} id={row_id}>
+                <td class="px-5 py-4 text-base-content/80">
+                  <div class="font-medium text-base-content">
+                    {(run.deployment && run.deployment.name) || "Unassigned"}
+                  </div>
+                  <div :if={run.agent} class="mt-1 text-xs text-base-content/50">
+                    {run.agent.name}
+                  </div>
+                </td>
+                <td class="max-w-md whitespace-normal px-5 py-4">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="badge badge-ghost badge-sm">{format_atom(run.run_kind)}</span>
+                    <span class="font-medium text-base-content">#{short_id(run.id)}</span>
+                  </div>
+                  <div class="mt-1 text-xs leading-5 break-words text-base-content/55">
+                    {task_preview(run.task)}
+                  </div>
+                </td>
+                <td class="px-5 py-4 text-base-content/80">
+                  {requester_label(run)}
+                </td>
+                <td class="px-5 py-4 text-base-content/80">
+                  {format_datetime(run.started_at || run.inserted_at)}
+                </td>
+                <td class="px-5 py-4">
+                  <div class="flex items-center gap-2">
+                    <span class={run_state_badge(run.state)}>{format_atom(run.state)}</span>
+                    <span :if={run.completed_at} class="text-xs text-base-content/50">
+                      done {format_datetime(run.completed_at)}
+                    </span>
+                  </div>
+                </td>
+                <td class="px-5 py-4 text-base-content/80">
+                  <div class="font-medium">{run.output_count || 0}</div>
+                  <div
+                    :if={(run.output_count || 0) > 0}
+                    class="mt-1 text-xs text-base-content/50"
+                  >
+                    {output_breakdown(run)}
+                  </div>
+                </td>
+                <td class="px-5 py-4">
+                  <div class="flex flex-wrap gap-2">
+                    <.link navigate={~p"/console/agents/runs/#{run.id}"} class="btn btn-sm">
+                      View
+                    </.link>
+
+                    <button
+                      :if={run.state in [:pending, :running]}
+                      type="button"
+                      class="btn btn-sm"
+                      phx-click="cancel_run"
+                      phx-value-run_id={run.id}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <details class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <summary class="flex cursor-pointer items-center justify-between gap-4 px-5 py-4">
+          <div>
+            <h2 class="text-lg font-semibold text-base-content">Diagnostics</h2>
+            <p class="text-sm text-base-content/60">
+              Runtime cache and template registry for debugging agent infrastructure.
+            </p>
+          </div>
+          <span class="text-xs text-base-content/50">
+            Refreshed {format_datetime(@last_refreshed_at)}
+          </span>
+        </summary>
+
+        <div class="grid gap-8 border-t border-zinc-200 p-5 dark:border-zinc-800 xl:grid-cols-[1fr_1fr]">
+          <section class="rounded-xl border border-zinc-200 dark:border-zinc-800">
+            <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+              <h3 class="text-base font-semibold text-base-content">Runtime Cache</h3>
+              <p class="text-sm text-base-content/60">
+                Live `AgentTracker` entries on this node.
+              </p>
             </div>
 
             <div
@@ -450,7 +473,7 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
                   <div>
                     <p class="font-medium text-base-content">{runtime.id}</p>
                     <p class="mt-1 text-sm text-base-content/60">
-                      Template {runtime.template || "unknown"}<span :if={runtime.task}> · {runtime.task}</span>
+                      Template {runtime.template || "unknown"}<span :if={runtime.task}> · {task_preview(runtime.task)}</span>
                     </p>
                   </div>
 
@@ -492,11 +515,11 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
             </div>
           </section>
 
-          <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <section class="rounded-xl border border-zinc-200 dark:border-zinc-800">
             <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-              <h2 class="text-lg font-semibold text-base-content">Template Registry</h2>
+              <h3 class="text-base font-semibold text-base-content">Template Registry</h3>
               <p class="text-sm text-base-content/60">
-                Worker types currently registered in `GnomeGarden.Agents.Templates`.
+                Worker types registered in `GnomeGarden.Agents.Templates`.
               </p>
             </div>
 
@@ -516,7 +539,7 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
             </div>
           </section>
         </div>
-      </section>
+      </details>
 
       <.modal
         :if={@deployment_pending_delete}
@@ -568,7 +591,11 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
   end
 
   defp load_console(socket) do
-    deployment_count = length(Agents.list_console_agent_deployments!())
+    deployments = Agents.list_console_agent_deployments!()
+    deployment_count = length(deployments)
+    scheduled_deployment_count = Enum.count(deployments, &scheduled_deployment?/1)
+    manual_deployment_count = Enum.count(deployments, &manual_deployment?/1)
+    attention_deployment_count = Enum.count(deployments, &attention_deployment?/1)
     active_runs = Agents.list_active_agent_runs!()
     recent_runs = Agents.list_recent_agent_runs!(@recent_run_limit)
     runtime_instances = runtime_instances()
@@ -576,6 +603,9 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
     socket
     |> assign(:deployment_count, deployment_count)
     |> assign(:active_run_count, length(active_runs))
+    |> assign(:scheduled_deployment_count, scheduled_deployment_count)
+    |> assign(:manual_deployment_count, manual_deployment_count)
+    |> assign(:attention_deployment_count, attention_deployment_count)
     |> assign(:runtime_count, length(runtime_instances))
     |> assign(:last_refreshed_at, DateTime.utc_now())
     |> stream(:recent_runs, recent_runs, reset: true)
@@ -637,6 +667,46 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
     |> Enum.join(" · ")
   end
 
+  defp task_preview(nil), do: "-"
+
+  defp task_preview(task) when is_binary(task) do
+    cond do
+      String.contains?(task, "DISCOVERY PROGRAM:") ->
+        discovery_program_preview(task)
+
+      String.starts_with?(task, "COMPANY PROFILE") ->
+        "Commercial discovery run"
+
+      String.starts_with?(task, "Run the BidScanner deployment") ->
+        "Scheduled bid scanner sweep"
+
+      String.starts_with?(task, "Run a procurement source scan") ->
+        task |> compact_text() |> truncate_text(120)
+
+      true ->
+        task |> compact_text() |> truncate_text(110)
+    end
+  end
+
+  defp task_preview(task), do: task |> inspect() |> task_preview()
+
+  defp discovery_program_preview(task) do
+    case Regex.run(~r/DISCOVERY PROGRAM:\s*([^\n]+)/, task) do
+      [_, name] -> "Discovery program: #{String.trim(name)}"
+      _ -> "Commercial discovery run"
+    end
+  end
+
+  defp compact_text(text), do: text |> String.replace(~r/\s+/, " ") |> String.trim()
+
+  defp truncate_text(text, limit) do
+    if String.length(text) > limit do
+      String.slice(text, 0, limit) <> "..."
+    else
+      text
+    end
+  end
+
   defp owner_label(%{visibility: :system}), do: "System"
   defp owner_label(%{owner_team_member: %{display_name: display_name}}), do: display_name
   defp owner_label(_deployment), do: "Unassigned"
@@ -661,6 +731,43 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
 
   defp format_datetime(nil), do: "-"
   defp format_datetime(datetime), do: Calendar.strftime(datetime, "%b %d, %H:%M")
+
+  defp scheduled_deployment?(%{enabled: true, schedule: schedule}), do: scheduled?(schedule)
+  defp scheduled_deployment?(_deployment), do: false
+
+  defp manual_deployment?(deployment), do: !scheduled_deployment?(deployment)
+
+  defp attention_deployment?(%{enabled: true, last_run_state: :failed}), do: true
+  defp attention_deployment?(_deployment), do: false
+
+  defp scheduled?(schedule) when is_binary(schedule), do: String.trim(schedule) != ""
+  defp scheduled?(_schedule), do: false
+
+  defp schedule_badge(schedule) do
+    if scheduled?(schedule), do: "badge badge-info badge-sm", else: "badge badge-ghost badge-sm"
+  end
+
+  defp schedule_mode_label(schedule) do
+    if scheduled?(schedule), do: "Automatic", else: "Manual"
+  end
+
+  defp schedule_label(nil), do: "Run now only"
+  defp schedule_label(""), do: "Run now only"
+  defp schedule_label("0 14 * * 1,3,5"), do: "Mon, Wed, Fri at 14:00 UTC"
+  defp schedule_label("0 16 * * 2"), do: "Tuesday at 16:00 UTC"
+  defp schedule_label("0 15 * * 2,5"), do: "Tue, Fri at 15:00 UTC"
+  defp schedule_label(schedule), do: "Cron: #{schedule}"
+
+  defp next_schedule_label(schedule) do
+    with schedule when is_binary(schedule) <- schedule,
+         {:ok, expression} <- Oban.Plugins.Cron.parse(schedule),
+         %DateTime{} = next_at <- Oban.Cron.Expression.next_at(expression, DateTime.utc_now()) do
+      Calendar.strftime(next_at, "%b %d, %H:%M UTC")
+    else
+      :unknown -> "unknown"
+      _ -> "invalid schedule"
+    end
+  end
 
   defp visibility_badge(:private), do: "badge badge-ghost badge-sm"
   defp visibility_badge(:shared), do: "badge badge-info badge-sm"

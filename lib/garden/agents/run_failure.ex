@@ -39,12 +39,18 @@ defmodule GnomeGarden.Agents.RunFailure do
   def category(details, error \\ nil)
 
   def category(details, error) when is_map(details) do
-    details
-    |> metadata_value(:category)
-    |> normalize_category()
-    |> case do
-      nil -> category_from_text(error)
-      category -> category
+    category = details |> metadata_value(:category) |> normalize_category()
+
+    case category do
+      nil ->
+        category_from_text(error) || category_from_text(metadata_value(details, :message))
+
+      :unknown ->
+        category_from_text(error) || category_from_text(metadata_value(details, :message)) ||
+          :unknown
+
+      category ->
+        category
     end
   end
 
@@ -125,6 +131,8 @@ defmodule GnomeGarden.Agents.RunFailure do
   end
 
   defp classify({:timeout, _reason}, _phase), do: :timeout
+  defp classify(:timeout, _phase), do: :timeout
+  defp classify({:exit, {:timeout, _reason}}, _phase), do: :timeout
   defp classify({:exit, _reason}, _phase), do: :runtime_exit
   defp classify({:throw, reason}, phase), do: classify(reason, phase)
   defp classify({:error, reason}, phase), do: classify(reason, phase)

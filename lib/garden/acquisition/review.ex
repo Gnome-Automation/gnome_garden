@@ -5,9 +5,11 @@ defmodule GnomeGarden.Acquisition.Review do
   alias GnomeGarden.Acquisition.AcceptanceRules
   alias GnomeGarden.Acquisition.Finding
   alias GnomeGarden.Acquisition.PromotionRules
+  alias GnomeGarden.Acquisition.ReviewReasons
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.CompanyProfileLearning
   alias GnomeGarden.Commercial.DiscoveryFeedback
+  alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.TargetingFeedback
   alias GnomeGarden.Procurement.BidReview
 
@@ -46,7 +48,8 @@ defmodule GnomeGarden.Acquisition.Review do
          {:ok, _accepted_finding} <- transition_finding(finding, :accept, actor),
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
          :ok <-
-           record_review_decision(refreshed_finding, :accepted, accept_feedback, actor, finding) do
+           record_review_decision(refreshed_finding, :accepted, accept_feedback, actor, finding),
+         :ok <- maybe_queue_accepted_next_action(refreshed_finding, actor) do
       {:ok, refreshed_finding}
     end
   end
@@ -61,8 +64,10 @@ defmodule GnomeGarden.Acquisition.Review do
              [:reviewing, :accepted],
              "Start review before rejecting a finding."
            ),
+         :ok <- ensure_submitted_reason(feedback, :rejected),
          decision_feedback <-
            decision_feedback(finding, feedback, "Rejected from acquisition queue"),
+         :ok <- ensure_disposition_feedback(finding, decision_feedback, :rejected),
          {:ok, _result} <- reject_origin(finding, decision_feedback, actor),
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
          {:ok, final_finding} <-
@@ -95,7 +100,7 @@ defmodule GnomeGarden.Acquisition.Review do
 
   def park(finding_or_id, feedback \\ %{}, opts \\ []) do
     actor = Keyword.get(opts, :actor)
-    raw_feedback = normalize_feedback(feedback, "Parked from acquisition queue")
+    raw_feedback = normalize_feedback(feedback, nil)
 
     with {:ok, finding} <- load_finding(finding_or_id, actor),
          :ok <-
@@ -104,7 +109,9 @@ defmodule GnomeGarden.Acquisition.Review do
              [:reviewing, :accepted],
              "Start review before parking a finding."
            ),
+         :ok <- ensure_submitted_reason(raw_feedback, :parked),
          decision_feedback <- park_feedback(finding, raw_feedback),
+         :ok <- ensure_disposition_feedback(finding, decision_feedback, :parked),
          origin_feedback <- park_origin_feedback(finding, raw_feedback, decision_feedback),
          {:ok, _result} <- park_origin(finding, origin_feedback, actor),
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
@@ -507,6 +514,64 @@ defmodule GnomeGarden.Acquisition.Review do
   defp ensure_accept_reason(_feedback),
     do: {:error, "Add an acceptance reason before accepting this finding."}
 
+  defp ensure_submitted_reason(feedback, decision) do
+    feedback
+    |> normalize_feedback(nil)
+    |> ensure_reason_text(decision)
+  end
+
+  defp ensure_disposition_feedback(finding, feedback, decision) do
+    with :ok <- ensure_reason_text(feedback, decision),
+         :ok <- ensure_reason_code(finding, feedback, decision) do
+      :ok
+    end
+  end
+
+  defp ensure_reason_text(feedback, decision) do
+    case feedback_value(feedback, :reason) do
+      reason when is_binary(reason) ->
+        if byte_size(String.trim(reason)) >= 3 do
+          :ok
+        else
+          {:error, disposition_reason_message(decision)}
+        end
+
+      _other ->
+        {:error, disposition_reason_message(decision)}
+    end
+  end
+
+  defp ensure_reason_code(finding, feedback, decision) do
+    case feedback_value(feedback, :reason_code) do
+      reason_code when is_binary(reason_code) ->
+        if valid_reason_code?(finding, reason_code) do
+          :ok
+        else
+          {:error, disposition_category_message(decision)}
+        end
+
+      _other ->
+        {:error, disposition_category_message(decision)}
+    end
+  end
+
+  defp valid_reason_code?(%Finding{finding_family: :discovery}, reason_code),
+    do: DiscoveryFeedback.reject_reason_code_valid?(reason_code)
+
+  defp valid_reason_code?(_finding, reason_code), do: ReviewReasons.valid?(reason_code)
+
+  defp disposition_reason_message(:parked),
+    do: "Add a park reason before parking this finding."
+
+  defp disposition_reason_message(_decision),
+    do: "Add a rejection reason before rejecting this finding."
+
+  defp disposition_category_message(:parked),
+    do: "Choose a park reason category before parking this finding."
+
+  defp disposition_category_message(_decision),
+    do: "Choose a rejection reason category before rejecting this finding."
+
   defp normalize_accept_feedback(feedback),
     do: normalize_feedback(feedback, nil) |> to_atom_key_map()
 
@@ -549,7 +614,6 @@ defmodule GnomeGarden.Acquisition.Review do
   defp park_feedback(%{finding_family: :discovery} = finding, feedback) do
     finding
     |> decision_feedback(feedback, "Keep watching, not ready")
-    |> Map.put_new(:reason_code, "not_ready_yet")
   end
 
   defp park_feedback(_finding, feedback) do
@@ -592,10 +656,134 @@ defmodule GnomeGarden.Acquisition.Review do
       actor: actor
     )
     |> case do
-      {:ok, _decision} -> :ok
+      {:ok, _decision} ->
+        maybe_record_search_filter_feedback(decision_finding, decision, feedback, actor)
+        :ok
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  defp maybe_record_search_filter_feedback(
+         %Finding{source_bid: %{metadata: metadata}} = finding,
+         decision,
+         feedback,
+         actor
+       )
+       when decision in [:accepted, :rejected, :parked, :suppressed] and is_map(metadata) do
+    case search_filter_id(metadata) do
+      filter_id when is_binary(filter_id) ->
+        with {:ok, _filter} <- Procurement.get_source_search_filter(filter_id, actor: actor),
+             {:ok, _feedback} <-
+               Procurement.record_source_search_filter_feedback(
+                 %{
+                   source_search_filter_id: filter_id,
+                   finding_id: finding.id,
+                   decision: decision,
+                   reason: feedback_value(feedback, :reason),
+                   reason_code: feedback_value(feedback, :reason_code),
+                   feedback_scope: feedback_value(feedback, :feedback_scope),
+                   source_feedback_category: feedback_value(feedback, :source_feedback_category),
+                   metadata: %{
+                     "source_bid_id" => finding.source_bid_id,
+                     "finding_family" => atom_value(finding.finding_family),
+                     "finding_type" => atom_value(finding.finding_type)
+                   }
+                 },
+                 actor: actor
+               ) do
+          :ok
+        else
+          {:error, _error} ->
+            :ok
+        end
+
+      _other ->
+        :ok
+    end
+  end
+
+  defp maybe_record_search_filter_feedback(_finding, _decision, _feedback, _actor), do: :ok
+
+  defp maybe_queue_accepted_next_action(%Finding{id: finding_id}, actor) do
+    with {:ok, finding} <-
+           Acquisition.get_finding(finding_id,
+             actor: actor,
+             load: [:promotion_ready, :promotion_blockers]
+           ) do
+      if finding.promotion_ready do
+        :ok
+      else
+        queue_promotion_prep_request(finding, actor)
+      end
+    end
+  end
+
+  defp queue_promotion_prep_request(%Finding{} = finding, actor) do
+    with {:ok, requests} <-
+           Acquisition.list_research_requests(
+             actor: actor,
+             query: [filter: [researchable_type: "finding", researchable_id: finding.id]]
+           ) do
+      if Enum.any?(requests, &(&1.state in [:requested, :in_progress])) do
+        :ok
+      else
+        create_promotion_prep_request(finding, actor)
+      end
+    end
+  end
+
+  defp create_promotion_prep_request(%Finding{} = finding, actor) do
+    notes =
+      finding.promotion_blockers
+      |> List.wrap()
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> case do
+        [] -> "Accepted finding needs promotion prep before commercial handoff."
+        blockers -> "Accepted finding needs promotion prep: #{Enum.join(blockers, " ")}"
+      end
+
+    Acquisition.create_research_request(
+      %{
+        research_type: :qualification,
+        priority: accepted_next_action_priority(finding),
+        notes: notes,
+        due_at: finding.due_at,
+        researchable_type: "finding",
+        researchable_id: finding.id
+      },
+      actor: actor
+    )
+    |> case do
+      {:ok, _request} -> :ok
       {:error, error} -> {:error, error}
     end
   end
+
+  defp accepted_next_action_priority(%{due_at: nil}), do: :normal
+
+  defp accepted_next_action_priority(%{due_at: due_at}) do
+    if Date.diff(DateTime.to_date(due_at), Date.utc_today()) <= 7 do
+      :high
+    else
+      :normal
+    end
+  end
+
+  defp search_filter_id(metadata) do
+    normalized = normalize_metadata_map(metadata)
+
+    get_in(normalized, ["sam_gov", "search_filter_id"]) ||
+      get_in(normalized, ["source_search_filter", "id"]) ||
+      Map.get(normalized, "search_filter_id")
+  end
+
+  defp normalize_metadata_map(metadata) when is_map(metadata) do
+    Map.new(metadata, fn {key, value} -> {to_string(key), value} end)
+  end
+
+  defp normalize_metadata_map(_metadata), do: %{}
 
   defp feedback_value(%{} = feedback, key),
     do: Map.get(feedback, key) || Map.get(feedback, to_string(key))

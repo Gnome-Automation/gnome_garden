@@ -244,6 +244,7 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
+                  :display_summary,
                   :due_status_label,
                   :acceptance_ready,
                   :acceptance_blockers,
@@ -277,6 +278,7 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
+                  :display_summary,
                   :due_status_label,
                   :acceptance_ready,
                   :acceptance_blockers,
@@ -308,6 +310,7 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
+                  :display_summary,
                   :due_status_label,
                   :latest_review_decision,
                   :latest_review_reason_code,
@@ -336,6 +339,7 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
+                  :display_summary,
                   :due_status_label,
                   :latest_review_decision,
                   :latest_review_reason_code,
@@ -361,6 +365,7 @@ defmodule GnomeGarden.Acquisition.Finding do
                   :confidence_variant,
                   :status_variant,
                   :score_tier_variant,
+                  :display_summary,
                   :due_status_label,
                   :latest_review_decision,
                   :latest_review_reason_code,
@@ -729,6 +734,10 @@ defmodule GnomeGarden.Acquisition.Finding do
               {GnomeGarden.Calculations.AcquisitionPromotionReadiness, return: :blockers}
 
     calculate :proof_label, :string, GnomeGarden.Calculations.AcquisitionProofLabel
+
+    calculate :display_summary,
+              :string,
+              GnomeGarden.Calculations.AcquisitionFindingDisplaySummary
   end
 
   aggregates do

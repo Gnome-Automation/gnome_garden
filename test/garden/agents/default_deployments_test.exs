@@ -50,9 +50,13 @@ defmodule GnomeGarden.Agents.DefaultDeploymentsTest do
     assert bid_scanner.source_scope.bidnet_query_keywords == ["scada", "controls"]
     assert bid_scanner.source_scope.sam_gov_naics_codes == ["541330", "238210"]
     assert bid_scanner.source_scope.industries == ["food and beverage", "packaging"]
+    assert bid_scanner.schedule == "0 14 * * 1,3,5"
+    assert bid_scanner.config.timeout_ms == 600_000
 
     assert target_discovery.source_scope.company_profile_mode == "industrial_plus_software"
     assert target_discovery.source_scope.industries == ["food and beverage", "packaging"]
     assert target_discovery.config.company_profile_key == "primary"
+    assert target_discovery.schedule == nil
+    assert target_discovery.config.timeout_ms == 600_000
   end
 end

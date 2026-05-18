@@ -65,6 +65,161 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
              "Add at least one piece of discovery evidence before accepting."
   end
 
+  test "rejecting a finding requires an operator reason and canonical category" do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Reject Category Gate Retrofit",
+        url: "https://example.com/bids/reject-category-gate-retrofit",
+        external_id: "REJECT-CATEGORY-GATE-RETROFIT",
+        description: "Controls work that is outside the current geography.",
+        agency: "Regional Utility",
+        location: "Reno, NV",
+        due_at: ~U[2026-05-24 17:00:00Z],
+        score_total: 64,
+        score_tier: :prospect
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:error, "Choose a rejection reason category before rejecting this finding."} =
+             Acquisition.reject_finding_review(finding.id, %{
+               reason: "Outside our current service geography."
+             })
+
+    assert {:error, "Add a rejection reason before rejecting this finding."} =
+             Acquisition.reject_finding_review(finding.id, %{
+               reason_code: "wrong_geography"
+             })
+
+    assert {:ok, rejected_finding} =
+             Acquisition.reject_finding_review(finding.id, %{
+               reason_code: "wrong_geography",
+               reason: "Outside our current service geography."
+             })
+
+    assert rejected_finding.status == :rejected
+
+    {:ok, rejected_finding} =
+      Acquisition.get_finding(finding.id,
+        load: [:latest_review_reason_code, :latest_review_reason]
+      )
+
+    assert rejected_finding.latest_review_reason_code == "wrong_geography"
+    assert rejected_finding.latest_review_reason == "Outside our current service geography."
+  end
+
+  test "procurement review decisions feed durable source search filter feedback" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "SAM Review Feedback Source",
+        url: "https://sam.gov/opportunities",
+        source_type: :sam_gov,
+        portal_id: "sam-review-feedback-source",
+        region: :national,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, filter} =
+      Procurement.create_source_search_filter(%{
+        procurement_source_id: source.id,
+        filter_type: :naics,
+        value: "541330",
+        label: "Engineering services",
+        enabled: true
+      })
+
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        procurement_source_id: source.id,
+        title: "Filter Feedback Retrofit",
+        url: "https://example.com/bids/filter-feedback-retrofit",
+        external_id: "FILTER-FEEDBACK-RETROFIT",
+        description: "Federal opportunity outside the current service geography.",
+        agency: "Federal Buyer",
+        location: "Boise, ID",
+        due_at: ~U[2026-05-24 17:00:00Z],
+        score_total: 61,
+        score_tier: :prospect,
+        metadata: %{
+          "sam_gov" => %{
+            "search_filter_id" => filter.id,
+            "search_filter_type" => "naics",
+            "search_filter_value" => "541330"
+          }
+        }
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:ok, _rejected_finding} =
+             Acquisition.reject_finding_review(finding.id, %{
+               reason_code: "wrong_geography",
+               reason: "Federal opportunity is outside our service geography."
+             })
+
+    {:ok, [feedback]} = Procurement.list_source_search_filter_feedback(filter.id)
+
+    assert feedback.finding_id == finding.id
+    assert feedback.decision == :rejected
+    assert feedback.reason_code == "wrong_geography"
+    assert feedback.reason == "Federal opportunity is outside our service geography."
+
+    {:ok, filter} =
+      Procurement.get_source_search_filter(filter.id,
+        load: [:rejected_feedback_count, :performance_recommendation]
+      )
+
+    assert filter.rejected_feedback_count == 1
+    assert filter.performance_recommendation == "Disable noisy filter"
+  end
+
+  test "parking a finding requires an operator reason and canonical category" do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Park Category Gate Retrofit",
+        url: "https://example.com/bids/park-category-gate-retrofit",
+        external_id: "PARK-CATEGORY-GATE-RETROFIT",
+        description: "Controls work that needs source packet review later.",
+        agency: "Regional Utility",
+        location: "Anaheim, CA",
+        due_at: ~U[2026-05-24 17:00:00Z],
+        score_total: 72,
+        score_tier: :warm
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+
+    assert {:error, "Choose a park reason category before parking this finding."} =
+             Acquisition.park_finding_review(finding.id, %{
+               reason: "Source packet needs review before action."
+             })
+
+    assert {:error, "Add a park reason before parking this finding."} =
+             Acquisition.park_finding_review(finding.id, %{
+               reason_code: "missing_docs"
+             })
+
+    assert {:ok, parked_finding} =
+             Acquisition.park_finding_review(finding.id, %{
+               reason_code: "missing_docs",
+               reason: "Source packet needs review before action."
+             })
+
+    assert parked_finding.status == :parked
+
+    {:ok, parked_finding} =
+      Acquisition.get_finding(finding.id,
+        load: [:latest_review_reason_code, :latest_review_reason]
+      )
+
+    assert parked_finding.latest_review_reason_code == "missing_docs"
+    assert parked_finding.latest_review_reason == "Source packet needs review before action."
+  end
+
   test "accepted procurement findings can be promoted manually once ready" do
     {:ok, bid} =
       Procurement.create_bid(%{
@@ -89,6 +244,14 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
              })
 
     assert accepted_finding.status == :accepted
+
+    {:ok, research_requests} =
+      Acquisition.list_research_requests(query: [filter: [researchable_id: finding.id]])
+
+    assert length(research_requests) == 1
+    assert List.first(research_requests).researchable_type == "finding"
+    assert List.first(research_requests).research_type == :qualification
+    assert List.first(research_requests).notes =~ "promotion prep"
 
     assert {:error,
             "Attach a substantive procurement packet (solicitation, scope, pricing, or addendum) before promotion."} =

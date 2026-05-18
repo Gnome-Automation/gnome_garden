@@ -52,13 +52,14 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
       %{
         name: "SoCal Source Discovery",
         template: "source_discovery",
-        description: "Discover new public procurement portals across Southern California.",
+        description:
+          "Find new public-sector procurement portals weekly across Southern California.",
         visibility: :shared,
         enabled: true,
-        schedule: "0 9 * * *",
+        schedule: "0 16 * * 2",
         memory_namespace: "agents.source_discovery.socal",
         config: %{
-          timeout_ms: 180_000,
+          timeout_ms: 600_000,
           company_profile_key: profile_scope.company_profile_key
         },
         source_scope: %{
@@ -73,13 +74,13 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
         name: "SoCal Bid Scanner",
         template: "bid_scanner",
         description:
-          "Scan approved procurement sources for controller, SCADA, integration, and operations-software opportunities.",
+          "Scan approved procurement sources three times weekly for controller, SCADA, integration, and operations-software opportunities.",
         visibility: :shared,
         enabled: true,
-        schedule: "0 */6 * * *",
+        schedule: "0 14 * * 1,3,5",
         memory_namespace: "agents.bid_scanner.socal",
         config: %{
-          timeout_ms: 180_000,
+          timeout_ms: 600_000,
           company_profile_key: industrial_scope.company_profile_key
         },
         source_scope: %{
@@ -97,13 +98,13 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
         name: "Commercial Target Discovery",
         template: "target_discovery",
         description:
-          "Launch focused company discovery sweeps that populate acquisition findings for human review.",
+          "On-demand focused company discovery sweeps launched from acquisition programs.",
         visibility: :shared,
         enabled: true,
         schedule: nil,
         memory_namespace: "agents.target_discovery.commercial",
         config: %{
-          timeout_ms: 300_000,
+          timeout_ms: 600_000,
           company_profile_key: profile_scope.company_profile_key
         },
         source_scope: %{
@@ -117,10 +118,10 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
         name: "Pi Bid Scanner",
         template: "pi_bid_scanner",
         description:
-          "Pi sidecar scans approved procurement sources every 4h, persists matching bids via save_bid.",
+          "Pi sidecar scans approved procurement sources three times weekly; persists matching bids via save_bid.",
         visibility: :shared,
         enabled: true,
-        schedule: "0 */4 * * *",
+        schedule: "0 14 * * 1,3,5",
         memory_namespace: "pi.bid_scanner.socal",
         config: %{
           "pi_skill" => "scan-bids",
@@ -135,10 +136,10 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
         name: "Pi Target Discovery",
         template: "pi_target_discovery",
         description:
-          "Pi sidecar finds commercial targets daily; persists reviewable targets via save_target.",
+          "Pi sidecar finds commercial targets twice weekly; persists reviewable targets via save_target.",
         visibility: :shared,
         enabled: true,
-        schedule: "0 9 * * *",
+        schedule: "0 15 * * 2,5",
         memory_namespace: "pi.target_discovery.socal",
         config: %{
           "pi_skill" => "discover-targets",
@@ -155,7 +156,7 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
           "Pi sidecar discovers new procurement portals weekly; persists via save_source.",
         visibility: :shared,
         enabled: true,
-        schedule: "0 6 * * 1",
+        schedule: "0 16 * * 2",
         memory_namespace: "pi.source_discovery",
         config: %{
           "pi_skill" => "discover-sources",

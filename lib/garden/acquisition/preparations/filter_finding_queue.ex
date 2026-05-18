@@ -16,6 +16,7 @@ defmodule GnomeGarden.Acquisition.Preparations.FilterFindingQueue do
     :confidence_variant,
     :status_variant,
     :score_tier_variant,
+    :display_summary,
     :due_status_label,
     :acceptance_ready,
     :acceptance_blockers,
