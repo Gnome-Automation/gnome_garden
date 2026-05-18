@@ -66,6 +66,29 @@ systemctl stop "$SERVICE"
 mv "$RELEASE_DIR" "$previous"
 cp -a "$CHECKOUT/_build/prod/rel/gnome_garden" "$RELEASE_DIR"
 chown -R gnome_garden:gnome_garden "$RELEASE_DIR"
+ln -sfn "$CHECKOUT/sidecar" "$RELEASE_DIR/sidecar"
+chown -h gnome_garden:gnome_garden "$RELEASE_DIR/sidecar"
+
+echo "Configuring runtime PATH for Pi sidecar..."
+runtime_path="$(
+  cd "$CHECKOUT"
+  sudo -u gnome_garden nix print-dev-env 2>/dev/null |
+    sed -n "s/^HOST_PATH='\(.*\)'$/\1/p" |
+    head -1
+)"
+
+if [ -n "$runtime_path" ]; then
+  mkdir -p "/run/systemd/system/${SERVICE}.service.d"
+  cat >"/run/systemd/system/${SERVICE}.service.d/pi-runtime.conf" <<PATH_DROPIN
+[Service]
+Environment="PATH=${runtime_path}:/run/current-system/sw/bin"
+ReadWritePaths=${RELEASE_DIR} ${CHECKOUT}/sidecar
+PATH_DROPIN
+  systemctl daemon-reload
+else
+  echo "Could not derive Nix runtime PATH for Pi sidecar." >&2
+  exit 1
+fi
 
 echo "Running release setup..."
 systemd-run --wait --pipe --collect \
