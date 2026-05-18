@@ -112,23 +112,6 @@ defmodule GnomeGarden.Commercial do
       define :log_event, action: :log
     end
 
-    resource GnomeGarden.Commercial.Task do
-      define :list_tasks, action: :read
-      define :get_task, action: :read, get_by: [:id]
-      define :create_task, action: :create
-      define :update_task, action: :update
-      define :start_task, action: :start
-      define :complete_task, action: :complete
-      define :cancel_task, action: :cancel
-      define :reopen_task, action: :reopen
-      define :list_tasks_by_owner_team_member, action: :by_owner, args: [:owner_team_member_id]
-      define :list_tasks_by_organization, action: :by_organization, args: [:organization_id]
-      define :list_tasks_by_pursuit, action: :by_pursuit, args: [:pursuit_id]
-      define :list_overdue_tasks, action: :overdue
-      define :list_due_today_tasks, action: :due_today
-      define :list_urgent_tasks, action: :urgent
-    end
-
     resource GnomeGarden.Commercial.Signal do
       define :list_signals, action: :read
       define :get_signal, action: :read, get_by: [:id]

@@ -82,6 +82,12 @@ defmodule GnomeGardenWeb.Router do
       live "/acquisition/sources/:id/configure", Acquisition.SourceLive.Configure, :configure
       live "/acquisition/programs", Acquisition.ProgramLive.Index, :index
 
+      # Operations - Tasks
+      live "/operations/tasks", Operations.TaskLive.Index, :index
+      live "/operations/tasks/new", Operations.TaskLive.Form, :new
+      live "/operations/tasks/:id", Operations.TaskLive.Show, :show
+      live "/operations/tasks/:id/edit", Operations.TaskLive.Form, :edit
+
       # Operations - Organizations
       live "/operations/organizations", Operations.OrganizationLive.Index, :index
       live "/operations/organizations/new", Operations.OrganizationLive.Form, :new

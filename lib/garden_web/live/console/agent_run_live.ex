@@ -1,9 +1,13 @@
 defmodule GnomeGardenWeb.Console.AgentRunLive do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
+
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Agents
   alias GnomeGarden.Agents.DeploymentRunner
+  alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskPubSub
 
   @refresh_interval_ms 2_000
 
@@ -12,9 +16,11 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
     run = load_run!(id)
     messages = Agents.list_agent_messages_for_run!(run.id)
     outputs = Agents.list_agent_run_outputs_for_run!(run.id)
+    related_tasks = load_related_tasks(run, socket.assigns.current_user)
 
     if connected?(socket) do
       maybe_subscribe(run)
+      TaskPubSub.subscribe_related(:agent_run, run.id)
       :timer.send_interval(@refresh_interval_ms, :refresh_run)
     end
 
@@ -26,6 +32,7 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
      |> assign(:current_thinking, nil)
      |> assign(:active_tool, nil)
      |> assign(:last_refreshed_at, DateTime.utc_now())
+     |> assign(:related_tasks, related_tasks)
      |> stream(:messages, messages, reset: true)
      |> stream(:outputs, outputs, reset: true)
      |> stream(:tool_events, [], reset: true)}
@@ -36,13 +43,24 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
     run = load_run!(socket.assigns.run.id)
     messages = Agents.list_agent_messages_for_run!(run.id)
     outputs = Agents.list_agent_run_outputs_for_run!(run.id)
+    related_tasks = load_related_tasks(run, socket.assigns.current_user)
 
     {:noreply,
      socket
      |> assign(:run, run)
      |> assign(:last_refreshed_at, DateTime.utc_now())
+     |> assign(:related_tasks, related_tasks)
      |> stream(:messages, messages, reset: true)
      |> stream(:outputs, outputs, reset: true)}
+  end
+
+  def handle_info(%{topic: "task:agent_run:" <> _agent_run_id}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :related_tasks,
+       load_related_tasks(socket.assigns.run, socket.assigns.current_user)
+     )}
   end
 
   def handle_info({:stream, {:llm_delta, delta}}, socket) do
@@ -347,6 +365,13 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
         </div>
 
         <div class="space-y-8">
+          <.related_tasks_panel
+            tasks={@related_tasks}
+            description="Operator follow-up created from this run."
+            empty_description="Failed runs that need review will create tasks here."
+            new_task_path={new_agent_run_task_path(@run)}
+          />
+
           <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div class="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
               <div>
@@ -523,6 +548,42 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
       ]
     )
   end
+
+  defp load_related_tasks(%{id: agent_run_id}, actor) do
+    case Operations.list_tasks_by_agent_run(agent_run_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load agent run tasks: #{inspect(error)}"
+    end
+  end
+
+  defp new_agent_run_task_path(run) do
+    query =
+      %{
+        title: "Review agent run: #{agent_run_label(run)}",
+        task_type: :agent_followup,
+        priority: agent_run_task_priority(run),
+        origin_domain: :agents,
+        origin_resource: "agent_run",
+        origin_id: run.id,
+        origin_label: agent_run_label(run),
+        origin_url: ~p"/console/agents/runs/#{run}",
+        agent_run_id: run.id,
+        return_to: ~p"/console/agents/runs/#{run}"
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+      |> URI.encode_query()
+
+    "/operations/tasks/new?#{query}"
+  end
+
+  defp agent_run_label(%{deployment: %{name: name}}) when is_binary(name), do: name
+  defp agent_run_label(run), do: "Run #{short_id(run.id)}"
+
+  defp agent_run_task_priority(%{state: :failed}), do: :high
+  defp agent_run_task_priority(_run), do: :normal
 
   defp maybe_subscribe(%{state: state} = run) when state in [:pending, :running] do
     Phoenix.PubSub.subscribe(

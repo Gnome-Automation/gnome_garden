@@ -1,18 +1,24 @@
 defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Commercial.Helpers
 
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     pursuit = load_pursuit!(id, socket.assigns.current_user)
 
+    if connected?(socket), do: TaskPubSub.subscribe_related(:pursuit, pursuit.id)
+
     {:ok,
      socket
      |> assign(:page_title, pursuit.name)
-     |> assign(:pursuit, pursuit)}
+     |> assign(:pursuit, pursuit)
+     |> assign(:related_tasks, load_related_tasks(pursuit, socket.assigns.current_user))}
   end
 
   @impl true
@@ -29,6 +35,16 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not update pursuit: #{inspect(error)}")}
     end
+  end
+
+  @impl true
+  def handle_info(%{topic: "task:pursuit:" <> _pursuit_id}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :related_tasks,
+       load_related_tasks(socket.assigns.pursuit, socket.assigns.current_user)
+     )}
   end
 
   @impl true
@@ -64,6 +80,13 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
           </.button>
         </:actions>
       </.page_header>
+
+      <.related_tasks_panel
+        tasks={@related_tasks}
+        description="Operator follow-up linked to this pursuit."
+        empty_description="Estimating, proposal, outreach, and close-plan tasks will appear here."
+        new_task_path={new_pursuit_task_path(@pursuit)}
+      />
 
       <.section
         title="Stage Actions"
@@ -206,6 +229,37 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
       {:ok, pursuit} -> pursuit
       {:error, error} -> raise "failed to load pursuit #{id}: #{inspect(error)}"
     end
+  end
+
+  defp load_related_tasks(%{id: pursuit_id}, actor) do
+    case Operations.list_tasks_by_pursuit(pursuit_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load pursuit tasks: #{inspect(error)}"
+    end
+  end
+
+  defp new_pursuit_task_path(pursuit) do
+    query =
+      %{
+        title: "Follow up: #{pursuit.name}",
+        task_type: :proposal,
+        origin_domain: :commercial,
+        origin_resource: "pursuit",
+        origin_id: pursuit.id,
+        origin_label: pursuit.name,
+        origin_url: ~p"/commercial/pursuits/#{pursuit}",
+        pursuit_id: pursuit.id,
+        signal_id: pursuit.signal_id,
+        organization_id: pursuit.organization_id,
+        return_to: ~p"/commercial/pursuits/#{pursuit}"
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+      |> URI.encode_query()
+
+    "/operations/tasks/new?#{query}"
   end
 
   defp can_create_proposal?(pursuit),

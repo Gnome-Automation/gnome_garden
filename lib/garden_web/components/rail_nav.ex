@@ -30,6 +30,8 @@ defmodule GnomeGardenWeb.Components.RailNav do
     %{id: "Procurement", icon: "hero-viewfinder-circle", label: "Procurement"},
     %{id: "Commercial", icon: "hero-rocket-launch", label: "Commercial"},
     %{id: "Operations", icon: "hero-building-office", label: "Operations"},
+    %{id: "Execution", icon: "hero-clipboard-document-list", label: "Execution"},
+    %{id: "Finance", icon: "hero-banknotes", label: "Finance"},
     %{id: "Reports", icon: "hero-chart-bar", label: "Reports"},
     %{id: "Settings", icon: "hero-cog-6-tooth", label: "Settings"}
   ]
@@ -39,6 +41,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
     %{id: "Procurement", icon: "hero-viewfinder-circle", label: "Procure"},
     %{id: "Commercial", icon: "hero-rocket-launch", label: "Pursue"},
     %{id: "Operations", icon: "hero-building-office", label: "Ops"},
+    %{id: "Execution", icon: "hero-clipboard-document-list", label: "Run"},
     %{id: "more", icon: "hero-ellipsis-horizontal", label: "More"}
   ]
 
@@ -164,6 +167,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
     # Operations
     %{
+      id: "ops-tasks",
+      section: "Operations",
+      icon: "hero-inbox-stack",
+      label: "Tasks",
+      path: "/operations/tasks",
+      badge: 0,
+      hot: false,
+      match: ["/operations/tasks"]
+    },
+    %{
       id: "ops-orgs",
       section: "Operations",
       icon: "hero-building-office-2",
@@ -223,9 +236,10 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/operations/affiliations"]
     },
+    # Execution
     %{
-      id: "ops-projects",
-      section: "Operations",
+      id: "exec-projects",
+      section: "Execution",
       icon: "hero-clipboard-document-list",
       label: "Projects",
       path: "/execution/projects",
@@ -234,8 +248,8 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/execution/projects"]
     },
     %{
-      id: "ops-tickets",
-      section: "Operations",
+      id: "exec-tickets",
+      section: "Execution",
       icon: "hero-wrench-screwdriver",
       label: "Service tickets",
       path: "/execution/service-tickets",
@@ -244,8 +258,8 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/execution/service-tickets"]
     },
     %{
-      id: "ops-workorders",
-      section: "Operations",
+      id: "exec-workorders",
+      section: "Execution",
       icon: "hero-calendar-days",
       label: "Work orders",
       path: "/execution/work-orders",
@@ -253,9 +267,11 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/execution/work-orders"]
     },
+
+    # Finance
     %{
-      id: "ops-invoices",
-      section: "Operations",
+      id: "fin-invoices",
+      section: "Finance",
       icon: "hero-banknotes",
       label: "Invoices",
       path: "/finance/invoices",
@@ -319,8 +335,8 @@ defmodule GnomeGardenWeb.Components.RailNav do
       String.starts_with?(path, "/procurement") -> "Procurement"
       String.starts_with?(path, "/commercial") -> "Commercial"
       String.starts_with?(path, "/operations") -> "Operations"
-      String.starts_with?(path, "/execution") -> "Operations"
-      String.starts_with?(path, "/finance") -> "Operations"
+      String.starts_with?(path, "/execution") -> "Execution"
+      String.starts_with?(path, "/finance") -> "Finance"
       String.starts_with?(path, "/console") -> "Settings"
       String.starts_with?(path, "/settings") -> "Settings"
       true -> "Workspace"
@@ -441,7 +457,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
   def tab_strip(assigns) do
     ~H"""
-    <div class="flex items-end gap-0.5 border-b border-base-content/10 bg-base-200 px-2 overflow-x-auto">
+    <div class="gg-scrollbar-none flex items-end gap-0.5 overflow-x-auto border-b border-base-content/10 bg-base-200 px-2">
       <.link
         :for={d <- area_dests(@area)}
         navigate={d.path}
@@ -544,7 +560,9 @@ defmodule GnomeGardenWeb.Components.RailNav do
     items =
       case assigns.area_id do
         "more" ->
-          for area <- ["Reports", "Settings", "Workspace"], d <- area_dests(area), do: d
+          for area <- ["Finance", "Reports", "Settings", "Workspace"],
+              d <- area_dests(area),
+              do: d
 
         id ->
           area_dests(id)
@@ -622,6 +640,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
     |> JS.add_class("hidden", to: "##{"mobile-sheet-Procurement"}")
     |> JS.add_class("hidden", to: "##{"mobile-sheet-Commercial"}")
     |> JS.add_class("hidden", to: "##{"mobile-sheet-Operations"}")
+    |> JS.add_class("hidden", to: "##{"mobile-sheet-Execution"}")
     |> JS.add_class("hidden", to: "##{"mobile-sheet-more"}")
   end
 end

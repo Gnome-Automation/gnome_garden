@@ -53,6 +53,40 @@ defmodule GnomeGardenWeb.OperationsLiveTest do
     assert render(view) =~ person.first_name
   end
 
+  test "organization show renders contextual task panel and task prefill", %{conn: conn} do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Contextual Task Account",
+        organization_kind: :business,
+        status: :prospect
+      })
+
+    {:ok, task} =
+      Operations.create_task(%{
+        title: "Check account source",
+        organization_id: organization.id,
+        origin_domain: :operations,
+        origin_resource: "organization",
+        origin_id: organization.id,
+        origin_label: organization.name
+      })
+
+    {:ok, view, html} = live(conn, ~p"/operations/organizations/#{organization}")
+
+    assert html =~ "Related Tasks"
+    assert html =~ task.title
+    assert has_element?(view, "a", "New Task")
+
+    {:error, {:redirect, %{to: path}}} =
+      view
+      |> element("a", "New Task")
+      |> render_click()
+
+    assert path =~ "/operations/tasks/new?"
+    assert path =~ "organization_id=#{organization.id}"
+    assert path =~ "origin_resource=organization"
+  end
+
   test "organization show surfaces duplicate merge candidates and merges into canonical record",
        %{
          conn: conn
@@ -137,6 +171,43 @@ defmodule GnomeGardenWeb.OperationsLiveTest do
 
     assert has_element?(view, "#person-organizations")
     assert render(view) =~ organization.name
+  end
+
+  test "person show renders contextual task panel and task prefill", %{conn: conn} do
+    {:ok, person} =
+      Operations.create_person(%{
+        first_name: "Casey",
+        last_name: "Tasker",
+        email: "casey.tasker@example.com",
+        preferred_contact_method: :email,
+        status: :active
+      })
+
+    {:ok, task} =
+      Operations.create_task(%{
+        title: "Email Casey",
+        person_id: person.id,
+        origin_domain: :operations,
+        origin_resource: "person",
+        origin_id: person.id,
+        origin_label: "Casey Tasker"
+      })
+
+    {:ok, view, html} = live(conn, ~p"/operations/people/#{person}")
+
+    assert html =~ "Related Tasks"
+    assert html =~ task.title
+    assert has_element?(view, "a", "New Task")
+
+    {:error, {:redirect, %{to: path}}} =
+      view
+      |> element("a", "New Task")
+      |> render_click()
+
+    assert path =~ "/operations/tasks/new?"
+    assert path =~ "person_id=#{person.id}"
+    assert path =~ "origin_resource=person"
+    assert path =~ "task_type=email"
   end
 
   test "person show surfaces duplicate merge candidates and merges into canonical record", %{

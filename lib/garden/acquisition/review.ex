@@ -9,6 +9,7 @@ defmodule GnomeGarden.Acquisition.Review do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.CompanyProfileLearning
   alias GnomeGarden.Commercial.DiscoveryFeedback
+  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.TargetingFeedback
   alias GnomeGarden.Procurement.BidReview
@@ -744,20 +745,69 @@ defmodule GnomeGarden.Acquisition.Review do
         blockers -> "Accepted finding needs promotion prep: #{Enum.join(blockers, " ")}"
       end
 
-    Acquisition.create_research_request(
+    priority = accepted_next_action_priority(finding)
+
+    case Acquisition.create_research_request(
+           %{
+             research_type: :qualification,
+             priority: priority,
+             notes: notes,
+             due_at: finding.due_at,
+             researchable_type: "finding",
+             researchable_id: finding.id
+           },
+           actor: actor
+         ) do
+      {:ok, request} ->
+        maybe_create_promotion_prep_task(finding, request, notes, priority, actor)
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  defp maybe_create_promotion_prep_task(%Finding{} = finding, request, notes, priority, actor) do
+    case Operations.list_tasks_by_finding(finding.id, actor: actor) do
+      {:ok, tasks} ->
+        if Enum.any?(tasks, &open_promotion_prep_task?/1) do
+          :ok
+        else
+          create_promotion_prep_task(finding, request, notes, priority, actor)
+        end
+
+      {:error, _error} ->
+        create_promotion_prep_task(finding, request, notes, priority, actor)
+    end
+  end
+
+  defp open_promotion_prep_task?(task) do
+    task.status in [:pending, :in_progress, :blocked] and
+      task.task_type in [:research, :evidence] and
+      metadata_value(task.metadata, :research_request_id)
+  end
+
+  defp create_promotion_prep_task(%Finding{} = finding, request, notes, priority, actor) do
+    Operations.create_task_from_finding(
       %{
-        research_type: :qualification,
-        priority: accepted_next_action_priority(finding),
-        notes: notes,
+        title: "Prepare accepted finding for promotion",
+        description: notes,
+        task_type: :research,
+        priority: priority,
         due_at: finding.due_at,
-        researchable_type: "finding",
-        researchable_id: finding.id
+        origin_id: finding.id,
+        origin_label: finding.title,
+        origin_url: "/acquisition/findings/#{finding.id}",
+        finding_id: finding.id,
+        organization_id: finding.organization_id,
+        person_id: finding.person_id,
+        agent_run_id: finding.agent_run_id,
+        metadata: %{"research_request_id" => request.id}
       },
       actor: actor
     )
     |> case do
-      {:ok, _request} -> :ok
-      {:error, error} -> {:error, error}
+      {:ok, _task} -> :ok
+      {:error, _error} -> :ok
     end
   end
 
@@ -789,6 +839,11 @@ defmodule GnomeGarden.Acquisition.Review do
     do: Map.get(feedback, key) || Map.get(feedback, to_string(key))
 
   defp feedback_value(_feedback, _key), do: nil
+
+  defp metadata_value(metadata, key) when is_map(metadata),
+    do: Map.get(metadata, key) || Map.get(metadata, to_string(key))
+
+  defp metadata_value(_metadata, _key), do: nil
 
   defp decision_snapshot(%Finding{id: finding_id} = finding, actor, decision_finding) do
     finding =

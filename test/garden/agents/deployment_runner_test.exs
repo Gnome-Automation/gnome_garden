@@ -3,6 +3,7 @@ defmodule GnomeGarden.Agents.DeploymentRunnerTest do
 
   alias GnomeGarden.Agents
   alias GnomeGarden.Agents.DeploymentRunner
+  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
   test "manual runs do not overlap an active deployment run" do
@@ -81,7 +82,76 @@ defmodule GnomeGarden.Agents.DeploymentRunnerTest do
     assert metadata_value(source.metadata, :last_agent_run_state) in [:cancelled, "cancelled"]
   end
 
+  test "failed direct runs create operator follow-up tasks" do
+    _templates = Agents.TemplateCatalog.sync_templates()
+    {:ok, template} = Agents.get_agent_template_by_name("procurement_source_scan")
+
+    {:ok, deployment} =
+      Agents.create_agent_deployment(%{
+        name: "Failure Task Guard #{System.unique_integer([:positive])}",
+        agent_id: template.id,
+        enabled: true
+      })
+
+    assert {:ok, run} = DeploymentRunner.launch_manual_run(deployment.id)
+    assert {:ok, failed_run} = wait_for_failed_run(run.id)
+
+    assert {:ok, task} = wait_for_agent_run_task(failed_run.id)
+
+    assert task.origin_domain == :agents
+    assert task.origin_resource == "agent_run"
+    assert task.origin_id == failed_run.id
+    assert task.origin_url == "/console/agents/runs/#{failed_run.id}"
+    assert task.task_type == :agent_followup
+    assert task.status == :pending
+    assert task.priority == :high
+    assert task.metadata["failure_category"] == "unknown"
+    assert task.metadata["retryable"] == true
+  end
+
   defp metadata_value(metadata, key) do
     Map.get(metadata, key) || Map.get(metadata, to_string(key))
+  end
+
+  defp wait_for_failed_run(run_id, attempts \\ 20)
+
+  defp wait_for_failed_run(run_id, attempts) when attempts > 0 do
+    case Agents.get_agent_run(run_id) do
+      {:ok, %{state: :failed} = run} ->
+        {:ok, run}
+
+      {:ok, _run} ->
+        Process.sleep(25)
+        wait_for_failed_run(run_id, attempts - 1)
+
+      error ->
+        error
+    end
+  end
+
+  defp wait_for_failed_run(run_id, 0), do: Agents.get_agent_run(run_id)
+
+  defp wait_for_agent_run_task(run_id, attempts \\ 20)
+
+  defp wait_for_agent_run_task(run_id, attempts) when attempts > 0 do
+    case Operations.list_tasks_by_agent_run(run_id) do
+      {:ok, [task | _]} ->
+        {:ok, task}
+
+      {:ok, []} ->
+        Process.sleep(25)
+        wait_for_agent_run_task(run_id, attempts - 1)
+
+      error ->
+        error
+    end
+  end
+
+  defp wait_for_agent_run_task(run_id, 0) do
+    case Operations.list_tasks_by_agent_run(run_id) do
+      {:ok, [task | _]} -> {:ok, task}
+      {:ok, []} -> {:error, :task_not_created}
+      error -> error
+    end
   end
 end

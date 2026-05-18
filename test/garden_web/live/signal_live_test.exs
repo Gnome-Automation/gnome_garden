@@ -7,6 +7,7 @@ defmodule GnomeGardenWeb.SignalLiveTest do
 
   alias GnomeGarden.Commercial
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
   test "signal queue shows promoted procurement findings without signal pre-acceptance", %{
@@ -141,6 +142,51 @@ defmodule GnomeGardenWeb.SignalLiveTest do
     assert render(view) =~ "HOT"
     assert render(view) =~ "Aggregated"
     assert render(view) =~ "weak technical specificity"
+  end
+
+  test "signal detail renders contextual task panel and task prefill", %{conn: conn} do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Signal Task Account",
+        organization_kind: :business,
+        status: :prospect
+      })
+
+    {:ok, signal} =
+      Commercial.create_signal(%{
+        organization_id: organization.id,
+        title: "Signal task follow-up",
+        description: "Needs qualification.",
+        signal_type: :referral,
+        source_channel: :referral,
+        observed_at: ~U[2026-04-19 16:00:00Z]
+      })
+
+    {:ok, task} =
+      Operations.create_task(%{
+        title: "Qualify signal",
+        signal_id: signal.id,
+        organization_id: organization.id,
+        origin_domain: :commercial,
+        origin_resource: "signal",
+        origin_id: signal.id,
+        origin_label: signal.title
+      })
+
+    {:ok, view, html} = live(conn, ~p"/commercial/signals/#{signal}")
+
+    assert html =~ "Related Tasks"
+    assert html =~ task.title
+
+    {:error, {:redirect, %{to: path}}} =
+      view
+      |> element("a", "New Task")
+      |> render_click()
+
+    assert path =~ "/operations/tasks/new?"
+    assert path =~ "signal_id=#{signal.id}"
+    assert path =~ "organization_id=#{organization.id}"
+    assert path =~ "origin_resource=signal"
   end
 
   test "signal queue shows promoted discovery provenance", %{conn: conn} do

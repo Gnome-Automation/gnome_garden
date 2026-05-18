@@ -3,6 +3,7 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
   test "decisionable finding transitions are not exposed as raw acquisition code interfaces" do
@@ -252,6 +253,16 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
     assert List.first(research_requests).researchable_type == "finding"
     assert List.first(research_requests).research_type == :qualification
     assert List.first(research_requests).notes =~ "promotion prep"
+
+    {:ok, [task]} = Operations.list_tasks_by_finding(finding.id)
+
+    assert task.origin_domain == :acquisition
+    assert task.origin_resource == "finding"
+    assert task.origin_id == finding.id
+    assert task.origin_url == "/acquisition/findings/#{finding.id}"
+    assert task.task_type == :research
+    assert task.priority == :high
+    assert task.metadata["research_request_id"] == List.first(research_requests).id
 
     assert {:error,
             "Attach a substantive procurement packet (solicitation, scope, pricing, or addendum) before promotion."} =

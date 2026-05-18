@@ -1,21 +1,26 @@
 defmodule GnomeGardenWeb.Operations.PersonLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Operations.Helpers
 
   alias GnomeGarden.Operations
   alias GnomeGarden.Operations.IdentityMergeReview
+  alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     person = load_person!(id, socket.assigns.current_user)
     merge_review = load_merge_review!(person, socket.assigns.current_user)
 
+    if connected?(socket), do: TaskPubSub.subscribe_related(:person, person.id)
+
     {:ok,
      socket
      |> assign(:page_title, person.full_name)
      |> assign(:person, person)
-     |> assign(:merge_review, merge_review)}
+     |> assign(:merge_review, merge_review)
+     |> assign(:related_tasks, load_related_tasks(person, socket.assigns.current_user))}
   end
 
   @impl true
@@ -41,6 +46,16 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
   end
 
   @impl true
+  def handle_info(%{topic: "task:person:" <> _person_id}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :related_tasks,
+       load_related_tasks(socket.assigns.person, socket.assigns.current_user)
+     )}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <.page class="pb-8">
@@ -60,6 +75,13 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
           </.button>
         </:actions>
       </.page_header>
+
+      <.related_tasks_panel
+        tasks={@related_tasks}
+        description="Operator follow-up linked to this person."
+        empty_description="Call, email, and stakeholder follow-up tasks will appear here."
+        new_task_path={new_person_task_path(@person)}
+      />
 
       <div class="grid gap-4 md:grid-cols-3">
         <.stat_card
@@ -257,6 +279,39 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
       {:error, error} -> raise "failed to load person merge review: #{inspect(error)}"
     end
   end
+
+  defp load_related_tasks(%{id: person_id}, actor) do
+    case Operations.list_tasks_by_person(person_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load person tasks: #{inspect(error)}"
+    end
+  end
+
+  defp new_person_task_path(person) do
+    query =
+      %{
+        title: "Follow up: #{person.full_name}",
+        task_type: default_person_task_type(person),
+        origin_domain: :operations,
+        origin_resource: "person",
+        origin_id: person.id,
+        origin_label: person.full_name,
+        origin_url: ~p"/operations/people/#{person}",
+        person_id: person.id,
+        return_to: ~p"/operations/people/#{person}"
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+      |> URI.encode_query()
+
+    "/operations/tasks/new?#{query}"
+  end
+
+  defp default_person_task_type(%{preferred_contact_method: :phone}), do: :call
+  defp default_person_task_type(%{preferred_contact_method: :email}), do: :email
+  defp default_person_task_type(_person), do: :review
 
   defp candidate_person_organizations(person) do
     case person.organizations || [] do
