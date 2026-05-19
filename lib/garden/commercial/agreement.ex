@@ -58,7 +58,7 @@ defmodule GnomeGarden.Commercial.Agreement do
         from: [:draft, :pending_signature, :active, :suspended],
         to: :terminated
 
-      transition :reopen, from: [:suspended, :terminated], to: :active
+      transition :reopen, from: [:suspended, :terminated, :completed], to: :active
     end
   end
 
