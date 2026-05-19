@@ -145,7 +145,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
             {"Affiliation updated", ~p"/operations/affiliations/#{affiliation}"}
           else
             {"Affiliation created — you can now set a billing contact for this organization",
-             ~p"/operations/organizations/#{affiliation.organization_id}/edit"}
+             ~p"/operations/organizations/#{affiliation.organization_id}/edit?highlight=billing_contact"}
           end
 
         {:noreply, socket |> put_flash(:info, flash) |> push_navigate(to: path)}

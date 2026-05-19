@@ -10,6 +10,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
     {:ok,
      socket
      |> assign(:organization, organization)
+     |> assign(:highlight_billing_contact, params["highlight"] == "billing_contact")
      |> assign(:page_title, if(organization, do: "Edit Organization", else: "New Organization"))
      |> assign_form()}
   end
@@ -108,7 +109,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
             <div class="col-span-full">
               <.input field={@form[:notes]} type="textarea" label="Notes" />
             </div>
-            <div class="sm:col-span-3">
+            <div class={["sm:col-span-3 rounded-lg transition-all", @highlight_billing_contact && "ring-2 ring-amber-400 p-3"]}>
               <.input
                 field={@form[:billing_contact_id]}
                 type="select"
