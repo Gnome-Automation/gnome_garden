@@ -53,8 +53,8 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
                 options={Enum.map(@organizations, &{&1.name, &1.id})}
               />
               <p class="mt-1.5 text-xs text-base-content/50">
-                Not in the list?
-                <.link navigate={~p"/operations/organizations/new"} class="underline text-emerald-600 dark:text-emerald-400">Create a new organization</.link>.
+                Organization not in the list?
+                <.link navigate={~p"/operations/organizations/new"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
               </p>
             </div>
             <div class="sm:col-span-3">
@@ -66,8 +66,8 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
                 options={Enum.map(@people, &{&1.full_name, &1.id})}
               />
               <p class="mt-1.5 text-xs text-base-content/50">
-                Not in the list?
-                <.link navigate={~p"/operations/people/new"} class="underline text-emerald-600 dark:text-emerald-400">Create a new person</.link>.
+                Person not in the list?
+                <.link navigate={~p"/operations/people/new"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
               </p>
             </div>
             <div class="sm:col-span-3">
@@ -140,13 +140,15 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
   def handle_event("save", %{"form" => params}, socket) do
     case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, affiliation} ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :info,
-           "Affiliation #{if socket.assigns.affiliation, do: "updated", else: "created"}"
-         )
-         |> push_navigate(to: ~p"/operations/affiliations/#{affiliation}")}
+        {flash, path} =
+          if socket.assigns.affiliation do
+            {"Affiliation updated", ~p"/operations/affiliations/#{affiliation}"}
+          else
+            {"Affiliation created — you can now set a billing contact for this organization",
+             ~p"/operations/organizations/#{affiliation.organization_id}/edit"}
+          end
+
+        {:noreply, socket |> put_flash(:info, flash) |> push_navigate(to: path)}
 
       {:error, form} ->
         {:noreply, assign(socket, form: to_form(form))}

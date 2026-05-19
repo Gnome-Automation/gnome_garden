@@ -117,9 +117,9 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
                 options={billing_contact_options(@organization)}
               />
               <p class="mt-1.5 text-xs text-base-content/50">
-                Only affiliated people appear here. Save this org first, then
-                <.link navigate={~p"/operations/affiliations/new"} class="underline text-emerald-600 dark:text-emerald-400">add an affiliation</.link>
-                to link a person.
+                Only people affiliated with this organization appear here.
+                <.link navigate={~p"/operations/affiliations/new"} class="underline text-emerald-600 dark:text-emerald-400">Add an affiliation</.link>
+                first if the person you want isn't listed.
               </p>
             </div>
           </div>
