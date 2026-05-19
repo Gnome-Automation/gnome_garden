@@ -198,8 +198,8 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
       </.page_header>
 
       <.section
-        title="Agreement Actions"
-        description="Use explicit transitions so delivery and finance automation can trust the agreement lifecycle."
+        title="Agreement Status"
+        description={agreement_status_description(@agreement)}
       >
         <div class="flex flex-wrap gap-3">
           <.button
@@ -210,6 +210,9 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
+          <p :if={agreement_actions(@agreement) == []} class="text-sm text-base-content/50">
+            No further transitions available for this agreement.
+          </p>
         </div>
       </.section>
 
@@ -532,6 +535,26 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
 
   defp can_create_project?(_agreement), do: true
 
+  defp agreement_status_description(%{status: :draft}),
+    do: "Draft — activate this agreement to start delivery and enable project creation."
+
+  defp agreement_status_description(%{status: :pending_signature}),
+    do: "Waiting on signature — activate once signed to start delivery."
+
+  defp agreement_status_description(%{status: :active}),
+    do: "Active — delivery and billing are live. Create projects or suspend if work pauses."
+
+  defp agreement_status_description(%{status: :suspended}),
+    do: "Suspended — reopen to resume delivery, or complete/terminate to close it out."
+
+  defp agreement_status_description(%{status: :completed}),
+    do: "Completed — all work is done. Reopen if you need to create more projects or log more time against this agreement."
+
+  defp agreement_status_description(%{status: :terminated}),
+    do: "Terminated — this agreement was ended early. Reopen only if this was a mistake."
+
+  defp agreement_status_description(_), do: "Manage the agreement lifecycle below."
+
   defp agreement_actions(%{status: :draft}) do
     [
       %{
@@ -569,6 +592,12 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
   end
 
   defp agreement_actions(%{status: :terminated}) do
+    [
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+    ]
+  end
+
+  defp agreement_actions(%{status: :completed}) do
     [
       %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
     ]
