@@ -297,7 +297,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
       id: "ops-finance-settings",
       section: "Operations",
       icon: "hero-cog-6-tooth",
-      label: "Settings",
+      label: "Billing Reminders",
       path: "/finance/settings",
       badge: 0,
       hot: false,

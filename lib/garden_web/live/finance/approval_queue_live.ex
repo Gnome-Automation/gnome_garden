@@ -87,7 +87,7 @@ defmodule GnomeGardenWeb.Finance.ApprovalQueueLive do
                   </div>
                 </td>
                 <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
-                  {display_email(entry.member_user)}
+                  {display_email(entry.member_team_member && entry.member_team_member.user)}
                 </td>
                 <td class="px-5 py-4 align-top text-zinc-600 dark:text-zinc-300">
                   {(entry.agreement && entry.agreement.name) || "-"}
@@ -167,7 +167,7 @@ defmodule GnomeGardenWeb.Finance.ApprovalQueueLive do
     case Finance.list_time_entries(
            actor: actor,
            query: [filter: [status: :submitted], sort: [work_date: :asc, inserted_at: :asc]],
-           load: [:status_variant, organization: [], agreement: [], project: [], member_user: []]
+           load: [:status_variant, organization: [], agreement: [], project: [], member_team_member: [:user]]
          ) do
       {:ok, entries} -> entries
       {:error, error} -> raise "failed to load approval queue: #{inspect(error)}"

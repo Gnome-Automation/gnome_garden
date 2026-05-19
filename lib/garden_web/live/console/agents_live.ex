@@ -621,7 +621,6 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
   defp requester_label(%{requested_by_team_member: %{display_name: display_name}}),
     do: display_name
 
-  defp requester_label(%{requested_by_user: %{email: email}}), do: email
   defp requester_label(_run), do: "System"
 
   defp output_breakdown(run) do

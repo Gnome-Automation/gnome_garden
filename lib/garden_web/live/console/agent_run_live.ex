@@ -504,7 +504,6 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
       load: [
         :agent,
         :deployment,
-        :requested_by_user,
         :requested_by_team_member,
         :parent_run,
         :failure_category,
@@ -533,7 +532,6 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
   defp requester_label(%{requested_by_team_member: %{display_name: display_name}}),
     do: display_name
 
-  defp requester_label(%{requested_by_user: %{email: email}}), do: email
   defp requester_label(_run), do: "System"
 
   defp template_label(%{agent: %{template: template}}), do: template
