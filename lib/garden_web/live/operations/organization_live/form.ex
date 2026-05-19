@@ -116,11 +116,9 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
                 prompt="None — use any affiliated contact"
                 options={billing_contact_options(@organization)}
               />
-              <p :if={is_nil(@organization)} class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-                Save this org first, then add people via
-                <.link navigate={~p"/operations/people/new"} class="underline">People</.link>
-                and link them via
-                <.link navigate={~p"/operations/affiliations/new"} class="underline">Affiliations</.link>.
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/operations/people/new"} class="underline text-emerald-600 dark:text-emerald-400">Create a new person</.link>.
               </p>
             </div>
           </div>
