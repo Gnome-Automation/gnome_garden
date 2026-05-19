@@ -132,13 +132,13 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
-    form = AshPhoenix.Form.validate(socket.assigns.form, params)
+    form = AshPhoenix.Form.validate(socket.assigns.form, sanitize_params(params))
     {:noreply, assign(socket, form: to_form(form))}
   end
 
   @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
+    case AshPhoenix.Form.submit(socket.assigns.form, params: sanitize_params(params)) do
       {:ok, affiliation} ->
         {flash, path} =
           if socket.assigns.affiliation do
@@ -152,6 +152,12 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
       {:error, form} ->
         {:noreply, assign(socket, form: to_form(form))}
     end
+  end
+
+  defp sanitize_params(params) do
+    Map.update(params, "contact_roles", [], fn roles ->
+      Enum.reject(roles, &(&1 == ""))
+    end)
   end
 
   defp maybe_set_billing_contact(affiliation, actor) do
