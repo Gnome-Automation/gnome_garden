@@ -170,6 +170,12 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           <.button navigate={~p"/commercial/agreements"}>
             Back
           </.button>
+          <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
+            Invoice T&amp;E
+          </.button>
+          <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"}>
+            New Change Order
+          </.button>
           <.button navigate={~p"/commercial/agreements/#{@agreement}/edit"}>
             Edit
           </.button>
@@ -180,39 +186,60 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
         title="Agreement Status"
         description={agreement_status_description(@agreement)}
       >
-        <div class="flex flex-wrap items-center gap-3">
+        <%!-- Draft / Pending Signature: Activate is the primary action; project creation not yet available --%>
+        <div
+          :if={@agreement.status in [:draft, :pending_signature]}
+          class="flex flex-wrap gap-3"
+        >
           <.button
-            :if={can_create_project?(@agreement)}
-            navigate={~p"/execution/projects/new?agreement_id=#{@agreement.id}"}
-            variant="primary"
-          >
-            <.icon name="hero-folder-plus" class="size-4" /> Create Project
-          </.button>
-          <.button
-            :if={@agreement.status == :active}
-            phx-click="generate_invoice"
-            phx-disable-with="Generating..."
-            variant="primary"
-          >
-            <.icon name="hero-document-plus" class="size-4" /> Invoice Milestone
-          </.button>
-          <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
-            Invoice Time &amp; Expenses
-          </.button>
-          <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"}>
-            New Change Order
-          </.button>
-        </div>
-        <div :if={agreement_actions(@agreement) != []} class="mt-4 flex flex-wrap gap-x-4 gap-y-1">
-          <span class="text-xs text-base-content/40 self-center">Lifecycle:</span>
-          <button
             :for={action <- agreement_actions(@agreement)}
             phx-click="transition"
             phx-value-action={action.action}
-            class="text-xs text-base-content/50 hover:text-base-content underline"
+            variant={action.variant}
           >
-            {action.label}
-          </button>
+            <.icon name={action.icon} class="size-4" /> {action.label}
+          </.button>
+        </div>
+
+        <%!-- Active: Create Project is primary CTA; Invoice Milestone secondary; lifecycle as small links --%>
+        <div :if={@agreement.status == :active} class="space-y-4">
+          <div class="flex flex-wrap gap-3">
+            <.button
+              navigate={~p"/execution/projects/new?agreement_id=#{@agreement.id}"}
+              variant="primary"
+            >
+              <.icon name="hero-folder-plus" class="size-4" /> Create Project
+            </.button>
+            <.button phx-click="generate_invoice" phx-disable-with="Generating...">
+              <.icon name="hero-document-plus" class="size-4" /> Invoice Milestone
+            </.button>
+          </div>
+          <div class="flex flex-wrap gap-x-4 gap-y-1 items-center">
+            <span class="text-xs text-base-content/40">Lifecycle:</span>
+            <button
+              :for={action <- agreement_actions(@agreement)}
+              phx-click="transition"
+              phx-value-action={action.action}
+              class="text-xs text-base-content/50 hover:text-base-content underline"
+            >
+              {action.label}
+            </button>
+          </div>
+        </div>
+
+        <%!-- Suspended / Completed / Terminated: Reopen is the primary action --%>
+        <div
+          :if={@agreement.status in [:suspended, :completed, :terminated]}
+          class="flex flex-wrap gap-3"
+        >
+          <.button
+            :for={action <- agreement_actions(@agreement)}
+            phx-click="transition"
+            phx-value-action={action.action}
+            variant={action.variant}
+          >
+            <.icon name={action.icon} class="size-4" /> {action.label}
+          </.button>
         </div>
       </.section>
 

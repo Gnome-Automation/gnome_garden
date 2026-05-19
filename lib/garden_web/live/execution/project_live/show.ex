@@ -358,10 +358,10 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
   defp project_actions(_project), do: []
 
   defp project_status_description(%{status: :planned}),
-    do: "Planned — the project is defined but not started. Mark it ready once resourcing and scope are confirmed."
+    do: "Planned — review the scope and budget, then Approve when ready for sign-off. Skip straight to Start if you don't need a formal approval step."
 
   defp project_status_description(%{status: :ready}),
-    do: "Ready — everything is in place to start. Activate it to begin logging time and work orders."
+    do: "Approved — scope and budget have been signed off. Hit Start when the team is ready to begin work."
 
   defp project_status_description(%{status: :active}),
     do: "Active — delivery is underway. Create work orders and log time entries against this project."
