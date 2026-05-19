@@ -69,13 +69,24 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
               <.input field={@form[:department]} label="Department" />
             </div>
             <div class="col-span-full">
-              <.input
-                field={@form[:contact_roles]}
-                type="select"
-                multiple
-                label="Contact Roles"
-                options={contact_role_options()}
-              />
+              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">
+                Contact Roles
+              </label>
+              <div class="mt-2 flex flex-wrap gap-x-6 gap-y-2">
+                <%= for {label, value} <- contact_role_options() do %>
+                  <label class="flex items-center gap-2 text-sm text-gray-900 dark:text-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name={"#{@form[:contact_roles].name}[]"}
+                      value={value}
+                      checked={value in ((@form[:contact_roles].value || []) |> Enum.map(&to_string/1))}
+                      class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-600 dark:border-white/20 dark:bg-white/5"
+                    />
+                    {label}
+                  </label>
+                <% end %>
+                <input type="hidden" name={"#{@form[:contact_roles].name}[]"} value="" />
+              </div>
             </div>
             <div class="sm:col-span-3">
               <.input
