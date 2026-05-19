@@ -19,6 +19,7 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Form do
      socket
      |> assign(:proposal, proposal)
      |> assign(:pursuit, pursuit)
+     |> assign(:return_to, params["return_to"])
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:pursuits, load_pursuits(socket.assigns.current_user))
      |> assign(:page_title, page_title(proposal, pursuit))
@@ -122,7 +123,7 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/commercial/proposals"}
+            cancel_path={@return_to || ~p"/commercial/proposals"}
             submit_label={if @proposal, do: "Update Proposal", else: "Create Proposal"}
           />
         </.section>

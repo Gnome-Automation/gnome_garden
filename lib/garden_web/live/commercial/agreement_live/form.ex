@@ -97,7 +97,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
               />
               <p :if={is_nil(@proposal)} class="mt-1.5 text-xs text-base-content/50">
                 Optional — agreements can exist without a proposal.
-                <.link navigate={~p"/commercial/proposals/new"} class="underline text-emerald-600 dark:text-emerald-400">Create a proposal first</.link>
+                <.link navigate={~p"/commercial/proposals/new?return_to=/commercial/agreements/new"} class="underline text-emerald-600 dark:text-emerald-400">Create a proposal first</.link>
                 if you want to link one.
               </p>
             </div>
