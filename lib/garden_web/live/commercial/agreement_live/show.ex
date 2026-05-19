@@ -170,27 +170,6 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           <.button navigate={~p"/commercial/agreements"}>
             Back
           </.button>
-          <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"}>
-            New Change Order
-          </.button>
-          <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
-            Invoice Time &amp; Expenses
-          </.button>
-          <.button
-            :if={@agreement.status == :active}
-            phx-click="generate_invoice"
-            phx-disable-with="Generating..."
-            variant="primary"
-          >
-            <.icon name="hero-document-plus" class="size-4" /> Invoice Milestone
-          </.button>
-          <.button
-            :if={can_create_project?(@agreement)}
-            navigate={~p"/execution/projects/new?agreement_id=#{@agreement.id}"}
-            variant="primary"
-          >
-            Create Project
-          </.button>
           <.button navigate={~p"/commercial/agreements/#{@agreement}/edit"}>
             Edit
           </.button>
@@ -201,18 +180,39 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
         title="Agreement Status"
         description={agreement_status_description(@agreement)}
       >
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap items-center gap-3">
           <.button
+            :if={can_create_project?(@agreement)}
+            navigate={~p"/execution/projects/new?agreement_id=#{@agreement.id}"}
+            variant="primary"
+          >
+            <.icon name="hero-folder-plus" class="size-4" /> Create Project
+          </.button>
+          <.button
+            :if={@agreement.status == :active}
+            phx-click="generate_invoice"
+            phx-disable-with="Generating..."
+            variant="primary"
+          >
+            <.icon name="hero-document-plus" class="size-4" /> Invoice Milestone
+          </.button>
+          <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
+            Invoice Time &amp; Expenses
+          </.button>
+          <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"}>
+            New Change Order
+          </.button>
+        </div>
+        <div :if={agreement_actions(@agreement) != []} class="mt-4 flex flex-wrap gap-x-4 gap-y-1">
+          <span class="text-xs text-base-content/40 self-center">Lifecycle:</span>
+          <button
             :for={action <- agreement_actions(@agreement)}
             phx-click="transition"
             phx-value-action={action.action}
-            variant={action.variant}
+            class="text-xs text-base-content/50 hover:text-base-content underline"
           >
-            <.icon name={action.icon} class="size-4" /> {action.label}
-          </.button>
-          <p :if={agreement_actions(@agreement) == []} class="text-sm text-base-content/50">
-            No further transitions available for this agreement.
-          </p>
+            {action.label}
+          </button>
         </div>
       </.section>
 
