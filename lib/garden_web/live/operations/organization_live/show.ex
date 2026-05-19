@@ -21,6 +21,26 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
   end
 
   @impl true
+  def handle_event("archive", _params, socket) do
+    case Operations.update_organization(socket.assigns.organization, %{status: :archived}, actor: socket.assigns.current_user) do
+      {:ok, organization} ->
+        {:noreply, socket |> assign(:organization, organization) |> put_flash(:info, "Organization archived")}
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not archive organization: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete", _params, socket) do
+    case Operations.delete_organization(socket.assigns.organization, actor: socket.assigns.current_user) do
+      :ok ->
+        {:noreply, socket |> put_flash(:info, "Organization deleted") |> push_navigate(to: ~p"/operations/organizations")}
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not delete organization: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
   def handle_event("merge_organization", %{"organization_id" => organization_id}, socket) do
     case Operations.merge_organization(
            socket.assigns.organization,
@@ -94,6 +114,21 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
           </.button>
           <.button navigate={~p"/operations/organizations/#{@organization}/edit"} variant="primary">
             Edit
+          </.button>
+          <.button
+            :if={@organization.status != :archived}
+            phx-click="archive"
+            data-confirm="Archive this organization?"
+          >
+            Archive
+          </.button>
+          <.button
+            :if={@organization.status == :archived}
+            phx-click="delete"
+            data-confirm="Permanently delete this organization? This cannot be undone."
+            variant="danger"
+          >
+            Delete
           </.button>
         </:actions>
       </.page_header>

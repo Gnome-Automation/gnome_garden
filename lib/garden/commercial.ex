@@ -160,6 +160,7 @@ defmodule GnomeGarden.Commercial do
       define :lose_pursuit, action: :mark_lost
       define :archive_pursuit, action: :archive
       define :reopen_pursuit, action: :reopen
+      define :delete_pursuit, action: :destroy
       define :list_active_pursuits, action: :active
       define :list_pursuits_for_organization, action: :for_organization, args: [:organization_id]
     end
@@ -175,6 +176,7 @@ defmodule GnomeGarden.Commercial do
       define :expire_proposal, action: :expire
       define :supersede_proposal, action: :supersede
       define :reopen_proposal, action: :reopen
+      define :delete_proposal, action: :destroy
       define :list_active_proposals, action: :active
       define :list_proposals_for_pursuit, action: :for_pursuit
     end

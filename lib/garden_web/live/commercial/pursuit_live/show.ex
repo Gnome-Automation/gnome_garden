@@ -16,6 +16,16 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   end
 
   @impl true
+  def handle_event("delete", _params, socket) do
+    case Commercial.delete_pursuit(socket.assigns.pursuit, actor: socket.assigns.current_user) do
+      :ok ->
+        {:noreply, socket |> put_flash(:info, "Pursuit deleted") |> push_navigate(to: ~p"/commercial/pursuits")}
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not delete pursuit: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
   def handle_event("transition", %{"action" => action}, socket) do
     pursuit = socket.assigns.pursuit
 
@@ -61,6 +71,14 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
           </.button>
           <.button navigate={~p"/commercial/pursuits/#{@pursuit}/edit"}>
             Edit
+          </.button>
+          <.button
+            :if={@pursuit.stage == :archived}
+            phx-click="delete"
+            data-confirm="Permanently delete this pursuit? This cannot be undone."
+            variant="danger"
+          >
+            Delete
           </.button>
         </:actions>
       </.page_header>

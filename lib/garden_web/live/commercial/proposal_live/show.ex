@@ -16,6 +16,26 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Show do
   end
 
   @impl true
+  def handle_event("archive", _params, socket) do
+    case Commercial.update_proposal(socket.assigns.proposal, %{status: :archived}, actor: socket.assigns.current_user) do
+      {:ok, proposal} ->
+        {:noreply, socket |> assign(:proposal, proposal) |> put_flash(:info, "Proposal archived")}
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not archive proposal: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete", _params, socket) do
+    case Commercial.delete_proposal(socket.assigns.proposal, actor: socket.assigns.current_user) do
+      :ok ->
+        {:noreply, socket |> put_flash(:info, "Proposal deleted") |> push_navigate(to: ~p"/commercial/proposals")}
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not delete proposal: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
   def handle_event("transition", %{"action" => action}, socket) do
     proposal = socket.assigns.proposal
 
@@ -63,6 +83,21 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Show do
           </.button>
           <.button navigate={~p"/commercial/proposals/#{@proposal}/edit"}>
             Edit
+          </.button>
+          <.button
+            :if={@proposal.status != :archived}
+            phx-click="archive"
+            data-confirm="Archive this proposal?"
+          >
+            Archive
+          </.button>
+          <.button
+            :if={@proposal.status == :archived}
+            phx-click="delete"
+            data-confirm="Permanently delete this proposal? This cannot be undone."
+            variant="danger"
+          >
+            Delete
           </.button>
         </:actions>
       </.page_header>

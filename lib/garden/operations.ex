@@ -41,6 +41,7 @@ defmodule GnomeGarden.Operations do
 
       define :create_organization, action: :create
       define :update_organization, action: :update
+      define :delete_organization, action: :destroy
       define :merge_organization, action: :merge_into
     end
 
