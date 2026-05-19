@@ -117,8 +117,9 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
                 options={billing_contact_options(@organization)}
               />
               <p class="mt-1.5 text-xs text-base-content/50">
-                Not in the list?
-                <.link navigate={~p"/operations/people/new"} class="underline text-emerald-600 dark:text-emerald-400">Create a new person</.link>.
+                Only affiliated people appear here. Save this org first, then
+                <.link navigate={~p"/operations/affiliations/new"} class="underline text-emerald-600 dark:text-emerald-400">add an affiliation</.link>
+                to link a person.
               </p>
             </div>
           </div>
