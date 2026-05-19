@@ -240,6 +240,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Form do
     %{
       "agreement_id" => agreement.id,
       "organization_id" => agreement.organization_id,
+      "name" => agreement.name,
       "start_on" => agreement.start_on,
       "target_end_on" => agreement.end_on,
       "budget_amount" => agreement.contract_value,
