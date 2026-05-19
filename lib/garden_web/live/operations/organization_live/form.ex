@@ -10,6 +10,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
     {:ok,
      socket
      |> assign(:organization, organization)
+     |> assign(:return_to, params["return_to"])
      |> assign(:highlight_billing_contact, params["highlight"] == "billing_contact")
      |> assign(:page_title, if(organization, do: "Edit Organization", else: "New Organization"))
      |> assign_form()}
@@ -128,7 +129,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/operations/organizations"}
+            cancel_path={@return_to || ~p"/operations/organizations"}
             submit_label={if @organization, do: "Update Organization", else: "Create Organization"}
           />
         </.section>

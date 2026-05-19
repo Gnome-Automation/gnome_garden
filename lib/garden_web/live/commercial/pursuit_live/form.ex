@@ -20,6 +20,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Form do
      socket
      |> assign(:pursuit, pursuit)
      |> assign(:signal, signal)
+     |> assign(:return_to, params["return_to"])
      |> assign(:organizations, organizations)
      |> assign(:page_title, page_title(pursuit, signal))
      |> assign_form()}
@@ -172,7 +173,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/commercial/pursuits"}
+            cancel_path={@return_to || ~p"/commercial/pursuits"}
             submit_label={submit_label(@pursuit, @signal)}
           />
         </.section>
