@@ -205,12 +205,16 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
           </.button>
         </:actions>
         <div id="person-organizations" class="space-y-3">
-          <div :if={Enum.empty?(@person.organizations || [])}>
+          <div :if={Enum.empty?(@person.organizations || [])} class="space-y-3">
             <.empty_state
               icon="hero-building-office-2"
               title="No organizations linked"
-              description="Create affiliations to connect this person to customers, prospects, or partners."
+              description="To link this person to an organization, first make sure the organization exists, then click Add Affiliation."
             />
+            <p class="text-center text-xs text-amber-600 dark:text-amber-400">
+              Don't have an organization yet?
+              <.link navigate={~p"/operations/organizations/new"} class="underline">Create one first</.link>.
+            </p>
           </div>
 
           <.link
