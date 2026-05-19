@@ -68,8 +68,8 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Show do
       </.page_header>
 
       <.section
-        title="Ticket Actions"
-        description="Advance the customer-facing service record explicitly so operators can see whether work is waiting on triage, execution, or the customer."
+        title="Ticket Status"
+        description={service_ticket_status_description(@service_ticket)}
       >
         <div class="flex flex-wrap gap-3">
           <.button
@@ -307,6 +307,29 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Show do
   end
 
   defp service_ticket_actions(_service_ticket), do: []
+
+  defp service_ticket_status_description(%{status: :new}),
+    do: "New — triage this ticket to assess priority and assign it to the right team."
+
+  defp service_ticket_status_description(%{status: :triaged}),
+    do: "Triaged — assessed and prioritized. Start work when the team is ready."
+
+  defp service_ticket_status_description(%{status: :in_progress}),
+    do: "In Progress — work is underway. Mark it waiting on customer if you need a response, or resolved when done."
+
+  defp service_ticket_status_description(%{status: :waiting_on_customer}),
+    do: "Waiting on Customer — work is blocked until the customer responds. Resume once you hear back."
+
+  defp service_ticket_status_description(%{status: :resolved}),
+    do: "Resolved — the issue has been fixed. Close it once the customer confirms or after a reasonable wait."
+
+  defp service_ticket_status_description(%{status: :closed}),
+    do: "Closed — this ticket is done. No further action needed."
+
+  defp service_ticket_status_description(%{status: :cancelled}),
+    do: "Cancelled — this ticket was withdrawn. Reopen only if work needs to resume."
+
+  defp service_ticket_status_description(_), do: "Manage this ticket's status below."
 
   defp transition_service_ticket(service_ticket, :triage, actor),
     do: Execution.triage_service_ticket(service_ticket, actor: actor)

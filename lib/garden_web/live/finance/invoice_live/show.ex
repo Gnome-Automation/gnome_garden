@@ -62,8 +62,8 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
       </.page_header>
 
       <.section
-        title="Invoice Actions"
-        description="Advance invoices explicitly so receivables and downstream finance reporting stay trustworthy."
+        title="Invoice Status"
+        description={invoice_status_description(@invoice)}
       >
         <div class="flex flex-wrap gap-3">
           <.button
@@ -349,6 +349,20 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
   end
 
   defp invoice_actions(_invoice), do: []
+
+  defp invoice_status_description(%{status: :draft}),
+    do: "Draft — review the line items, then issue it to send to the customer."
+
+  defp invoice_status_description(%{status: :issued}),
+    do: "Issued — the invoice has been sent. Mark it paid once payment is received, or void it if it was sent in error."
+
+  defp invoice_status_description(%{status: :paid}),
+    do: "Paid — payment received. No further action needed."
+
+  defp invoice_status_description(%{status: :void}),
+    do: "Void — this invoice was cancelled. It will not appear in receivables."
+
+  defp invoice_status_description(_), do: "Manage this invoice's billing status below."
 
   defp transition_invoice(invoice, :issue, actor),
     do: Finance.issue_invoice(invoice, actor: actor)

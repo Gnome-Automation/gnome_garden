@@ -84,8 +84,8 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
       </.page_header>
 
       <.section
-        title="Work Order Actions"
-        description="Drive execution through explicit scheduling and completion states so the downstream financial and entitlement automation can trust it."
+        title="Work Order Status"
+        description={work_order_status_description(@work_order)}
       >
         <div class="flex flex-wrap gap-3">
           <.button
@@ -356,6 +356,26 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
   end
 
   defp work_order_actions(_work_order), do: []
+
+  defp work_order_status_description(%{status: :new}),
+    do: "New — schedule this work order once you know when and who will do the work."
+
+  defp work_order_status_description(%{status: :scheduled}),
+    do: "Scheduled — work is planned. Dispatch it when the crew is ready to go."
+
+  defp work_order_status_description(%{status: :dispatched}),
+    do: "Dispatched — the crew has been sent. Mark it in progress once work begins on site."
+
+  defp work_order_status_description(%{status: :in_progress}),
+    do: "In Progress — work is happening. Complete it once everything is done."
+
+  defp work_order_status_description(%{status: :completed}),
+    do: "Completed — work is done. Time entries and expenses can still be logged against this work order."
+
+  defp work_order_status_description(%{status: :cancelled}),
+    do: "Cancelled — this work order will not be executed. Reopen only if this was a mistake."
+
+  defp work_order_status_description(_), do: "Manage this work order's execution status below."
 
   defp transition_work_order(work_order, :schedule, actor),
     do: Execution.schedule_work_order(work_order, actor: actor)

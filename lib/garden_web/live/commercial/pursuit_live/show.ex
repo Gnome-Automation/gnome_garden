@@ -84,8 +84,8 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
       </.page_header>
 
       <.section
-        title="Stage Actions"
-        description="Advance only with clear intent so the pipeline stays operationally meaningful."
+        title="Pursuit Status"
+        description={pursuit_status_description(@pursuit)}
       >
         <div class="flex flex-wrap gap-3">
           <.button
@@ -302,6 +302,35 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   end
 
   defp pursuit_actions(_pursuit), do: []
+
+  defp pursuit_status_description(%{stage: :new}),
+    do: "New — qualify this pursuit to confirm it's worth chasing before investing more time."
+
+  defp pursuit_status_description(%{stage: :reopened}),
+    do: "Reopened — re-evaluate and qualify again to move this back into the active pipeline."
+
+  defp pursuit_status_description(%{stage: :qualified}),
+    do: "Qualified — you've confirmed this is worth pursuing. Estimate the scope and value next."
+
+  defp pursuit_status_description(%{stage: :estimating}),
+    do: "Estimating — scope and pricing are being worked out. Create a proposal when ready."
+
+  defp pursuit_status_description(%{stage: :proposed}),
+    do: "Proposed — a priced offer has been sent. Move to negotiation or mark won/lost based on the outcome."
+
+  defp pursuit_status_description(%{stage: :negotiating}),
+    do: "Negotiating — terms are being discussed. Mark won once agreed, or lost if it falls through."
+
+  defp pursuit_status_description(%{stage: :won}),
+    do: "Won — great news. Create an agreement to formalize the commitment and start delivery."
+
+  defp pursuit_status_description(%{stage: :lost}),
+    do: "Lost — the deal didn't close. Archive it to clean up the pipeline, or reopen if circumstances change."
+
+  defp pursuit_status_description(%{stage: :archived}),
+    do: "Archived — this pursuit is no longer active. Delete it if it was created by mistake."
+
+  defp pursuit_status_description(_), do: "Manage this pursuit through the pipeline below."
 
   defp transition_pursuit(pursuit, :qualify, actor),
     do: Commercial.qualify_pursuit(pursuit, actor: actor)

@@ -77,8 +77,8 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
       </.page_header>
 
       <.section
-        title="Project Actions"
-        description="Advance delivery through explicit state transitions so work planning, field service, and billing stay aligned."
+        title="Project Status"
+        description={project_status_description(@project)}
       >
         <div class="flex flex-wrap gap-3">
           <.button
@@ -356,6 +356,26 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
   end
 
   defp project_actions(_project), do: []
+
+  defp project_status_description(%{status: :planned}),
+    do: "Planned — the project is defined but not started. Mark it ready once resourcing and scope are confirmed."
+
+  defp project_status_description(%{status: :ready}),
+    do: "Ready — everything is in place to start. Activate it to begin logging time and work orders."
+
+  defp project_status_description(%{status: :active}),
+    do: "Active — delivery is underway. Create work orders and log time entries against this project."
+
+  defp project_status_description(%{status: :on_hold}),
+    do: "On Hold — work is paused. Reactivate when ready to resume, or cancel if it won't continue."
+
+  defp project_status_description(%{status: :completed}),
+    do: "Completed — all work is done. No further time or work orders should be logged."
+
+  defp project_status_description(%{status: :cancelled}),
+    do: "Cancelled — this project will not be delivered. Reopen only if this was a mistake."
+
+  defp project_status_description(_), do: "Manage this project's delivery status below."
 
   defp transition_project(project, :approve, actor),
     do: Execution.approve_project(project, actor: actor)

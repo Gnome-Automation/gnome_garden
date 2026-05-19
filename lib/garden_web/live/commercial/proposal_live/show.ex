@@ -103,8 +103,8 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Show do
       </.page_header>
 
       <.section
-        title="Proposal Actions"
-        description="Issue, accept, reject, or reopen priced offers explicitly so downstream agreements stay trustworthy."
+        title="Proposal Status"
+        description={proposal_status_description(@proposal)}
       >
         <div class="flex flex-wrap gap-3">
           <.button
@@ -305,6 +305,26 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Show do
   end
 
   defp proposal_actions(_proposal), do: []
+
+  defp proposal_status_description(%{status: :draft}),
+    do: "Draft — finish filling out the details, then issue it to send it to the customer."
+
+  defp proposal_status_description(%{status: :issued}),
+    do: "Issued — the proposal has been sent. Accept it once the customer agrees, or reject/expire if it falls through."
+
+  defp proposal_status_description(%{status: :accepted}),
+    do: "Accepted — the customer agreed. Create an agreement to formalize the commitment."
+
+  defp proposal_status_description(%{status: :rejected}),
+    do: "Rejected — the customer declined. Reissue with changes or reopen as a draft to revise."
+
+  defp proposal_status_description(%{status: :expired}),
+    do: "Expired — the offer window passed. Reissue with an updated date or reopen as a draft."
+
+  defp proposal_status_description(%{status: :superseded}),
+    do: "Superseded — a newer version replaced this one. Reopen only if you need to reference or revise it."
+
+  defp proposal_status_description(_), do: "Manage this proposal's lifecycle below."
 
   defp transition_proposal(proposal, :issue, actor),
     do: Commercial.issue_proposal(proposal, actor: actor)
