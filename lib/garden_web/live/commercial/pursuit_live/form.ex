@@ -192,10 +192,17 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Form do
   def handle_event("save", %{"form" => params}, socket) do
     case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, pursuit} ->
+        path =
+          if is_nil(socket.assigns.pursuit) && socket.assigns.return_to do
+            socket.assigns.return_to
+          else
+            ~p"/commercial/pursuits/#{pursuit}"
+          end
+
         {:noreply,
          socket
          |> put_flash(:info, "Pursuit #{success_label(socket.assigns.pursuit)}")
-         |> push_navigate(to: ~p"/commercial/pursuits/#{pursuit}")}
+         |> push_navigate(to: path)}
 
       {:error, form} ->
         {:noreply, assign(socket, form: to_form(form))}

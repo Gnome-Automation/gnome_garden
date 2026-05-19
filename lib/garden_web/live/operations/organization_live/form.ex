@@ -148,13 +148,17 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
   def handle_event("save", %{"form" => params}, socket) do
     case AshPhoenix.Form.submit(socket.assigns.form, params: sanitize_params(params)) do
       {:ok, organization} ->
+        path =
+          if is_nil(socket.assigns.organization) && socket.assigns.return_to do
+            socket.assigns.return_to
+          else
+            ~p"/operations/organizations/#{organization}"
+          end
+
         {:noreply,
          socket
-         |> put_flash(
-           :info,
-           "Organization #{if socket.assigns.organization, do: "updated", else: "created"}"
-         )
-         |> push_navigate(to: ~p"/operations/organizations/#{organization}")}
+         |> put_flash(:info, "Organization #{if socket.assigns.organization, do: "updated", else: "created"}")
+         |> push_navigate(to: path)}
 
       {:error, form} ->
         {:noreply, assign(socket, form: to_form(form))}
