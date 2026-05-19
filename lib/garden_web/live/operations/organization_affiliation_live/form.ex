@@ -52,6 +52,10 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
                 prompt="Select organization..."
                 options={Enum.map(@organizations, &{&1.name, &1.id})}
               />
+              <p :if={Enum.empty?(@organizations)} class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                No organizations yet —
+                <.link navigate={~p"/operations/organizations/new"} class="underline">create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -61,6 +65,10 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
                 prompt="Select person..."
                 options={Enum.map(@people, &{&1.full_name, &1.id})}
               />
+              <p :if={Enum.empty?(@people)} class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                No people yet —
+                <.link navigate={~p"/operations/people/new"} class="underline">create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:title]} label="Title" />
