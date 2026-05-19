@@ -77,13 +77,24 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
               />
             </div>
             <div class="col-span-full">
-              <.input
-                field={@form[:relationship_roles]}
-                type="select"
-                multiple
-                label="Relationship Roles"
-                options={role_options()}
-              />
+              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">
+                Relationship Roles
+              </label>
+              <div class="mt-2 flex flex-wrap gap-x-6 gap-y-2">
+                <%= for {label, value} <- role_options() do %>
+                  <label class="flex items-center gap-2 text-sm text-gray-900 dark:text-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name={"#{@form[:relationship_roles].name}[]"}
+                      value={value}
+                      checked={value in ((@form[:relationship_roles].value || []) |> Enum.map(&to_string/1))}
+                      class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-600 dark:border-white/20 dark:bg-white/5"
+                    />
+                    {label}
+                  </label>
+                <% end %>
+                <input type="hidden" name={"#{@form[:relationship_roles].name}[]"} value="" />
+              </div>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:website]} label="Website" />
@@ -105,6 +116,12 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
                 prompt="None — use any affiliated contact"
                 options={billing_contact_options(@organization)}
               />
+              <p :if={is_nil(@organization)} class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                Save this org first, then add people via
+                <.link navigate={~p"/operations/people/new"} class="underline">People</.link>
+                and link them via
+                <.link navigate={~p"/operations/affiliations/new"} class="underline">Affiliations</.link>.
+              </p>
             </div>
           </div>
         </.form_section>

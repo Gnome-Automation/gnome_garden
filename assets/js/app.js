@@ -36,11 +36,23 @@ const ShowModal = {
   }
 }
 
+// TabStripScroll — preserves horizontal scroll position across LiveView navigations
+// Prevents the browser from auto-scrolling the tab bar to the active tab on click
+const TabStripScroll = {
+  mounted() {
+    this._saved = 0
+    this.el.addEventListener("click", () => { this._saved = this.el.scrollLeft })
+  },
+  updated() {
+    this.el.scrollLeft = this._saved
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ShowModal},
+  hooks: {...colocatedHooks, ShowModal, TabStripScroll},
 })
 
 // Show progress bar on live navigation and form submits

@@ -93,6 +93,10 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
                 prompt="Select agreement..."
                 options={Enum.map(@agreements, &{agreement_label(&1), &1.id})}
               />
+              <p :if={Enum.empty?(@agreements)} class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                No agreements yet —
+                <.link navigate={~p"/commercial/agreements/new"} class="underline">create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input

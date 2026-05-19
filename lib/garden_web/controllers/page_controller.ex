@@ -5,6 +5,9 @@ defmodule GnomeGardenWeb.PageController do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Execution
   alias GnomeGarden.Finance
+  alias GnomeGarden.Mercury
+
+  import Ash.Query
 
   def access_denied(conn, _params) do
     conn
@@ -29,7 +32,9 @@ defmodule GnomeGardenWeb.PageController do
     unbilled_time_entries = list_unbilled_time_entries(actor)
     unbilled_expenses = list_unbilled_expenses(actor)
     overdue_invoices = list_overdue_invoices(actor)
+    pending_invoices = list_pending_invoices(actor)
     unapplied_payments = list_unapplied_payments(actor)
+    unmatched_transactions = list_unmatched_transactions(actor)
 
     render(conn, :home,
       layout: {GnomeGardenWeb.Layouts, :app},
@@ -58,8 +63,12 @@ defmodule GnomeGardenWeb.PageController do
       unbilled_expenses: Enum.take(unbilled_expenses, 5),
       overdue_invoice_count: length(overdue_invoices),
       overdue_invoices: Enum.take(overdue_invoices, 5),
+      pending_invoice_count: length(pending_invoices),
+      pending_invoices: Enum.take(pending_invoices, 5),
       unapplied_payment_count: length(unapplied_payments),
-      unapplied_payments: Enum.take(unapplied_payments, 5)
+      unapplied_payments: Enum.take(unapplied_payments, 5),
+      unmatched_transaction_count: length(unmatched_transactions),
+      unmatched_transactions: Enum.take(unmatched_transactions, 5)
     )
   end
 
@@ -187,6 +196,30 @@ defmodule GnomeGardenWeb.PageController do
         actor: actor,
         load: [:status_variant, organization: [], agreement: []]
       )
+    end)
+  end
+
+  defp list_pending_invoices(actor) do
+    today = Date.utc_today()
+
+    safe_list(fn ->
+      Finance.list_open_invoices(
+        actor: actor,
+        query: [filter: [due_on: [gte: today]]],
+        load: [:status_variant, organization: [], agreement: []]
+      )
+    end)
+  end
+
+  defp list_unmatched_transactions(actor) do
+    safe_list(fn ->
+      query =
+        GnomeGarden.Mercury.Transaction
+        |> filter(match_confidence == :unmatched)
+        |> filter(status != :pending)
+        |> sort(occurred_at: :desc)
+
+      {:ok, Ash.read!(query, actor: actor, domain: Mercury)}
     end)
   end
 

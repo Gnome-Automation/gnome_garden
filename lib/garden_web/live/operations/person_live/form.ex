@@ -72,7 +72,13 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Form do
               />
             </div>
             <div class="sm:col-span-3">
-              <.input field={@form[:timezone]} label="Timezone" />
+              <.input
+                field={@form[:timezone]}
+                type="select"
+                label="Timezone"
+                prompt="Select timezone..."
+                options={timezone_options()}
+              />
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:do_not_call]} type="checkbox" label="Do Not Call" />
@@ -141,6 +147,12 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Form do
       {"Inactive", :inactive},
       {"Archived", :archived}
     ]
+  end
+
+  defp timezone_options do
+    Tzdata.canonical_zone_list()
+    |> Enum.sort()
+    |> Enum.map(&{&1, &1})
   end
 
   defp contact_method_options do

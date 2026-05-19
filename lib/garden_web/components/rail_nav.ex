@@ -264,6 +264,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/execution/work-orders"]
     },
     %{
+      id: "ops-approval-queue",
+      section: "Operations",
+      icon: "hero-check-circle",
+      label: "Approvals",
+      path: "/finance/time-entries/approval-queue",
+      badge: 0,
+      hot: false,
+      match: ["/finance/time-entries/approval-queue"]
+    },
+    %{
       id: "ops-invoices",
       section: "Operations",
       icon: "hero-banknotes",
@@ -272,16 +282,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       badge: 0,
       hot: false,
       match: ["/finance/invoices"]
-    },
-    %{
-      id: "ops-mercury",
-      section: "Operations",
-      icon: "hero-building-library",
-      label: "Mercury",
-      path: "/finance/mercury",
-      badge: 0,
-      hot: false,
-      match: ["/finance/mercury"]
     },
     %{
       id: "ops-ar-aging",
@@ -294,16 +294,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/ar-aging"]
     },
     %{
-      id: "ops-finance-settings",
-      section: "Operations",
-      icon: "hero-cog-6-tooth",
-      label: "Billing Reminders",
-      path: "/finance/settings",
-      badge: 0,
-      hot: false,
-      match: ["/finance/settings"]
-    },
-    %{
       id: "ops-credit-notes",
       section: "Operations",
       icon: "hero-minus-circle",
@@ -314,14 +304,24 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/credit-notes"]
     },
     %{
-      id: "ops-approval-queue",
+      id: "ops-mercury",
       section: "Operations",
-      icon: "hero-check-circle",
-      label: "Approvals",
-      path: "/finance/time-entries/approval-queue",
+      icon: "hero-building-library",
+      label: "Mercury",
+      path: "/finance/mercury",
       badge: 0,
       hot: false,
-      match: ["/finance/time-entries/approval-queue"]
+      match: ["/finance/mercury"]
+    },
+    %{
+      id: "ops-finance-settings",
+      section: "Operations",
+      icon: "hero-cog-6-tooth",
+      label: "Billing Reminders",
+      path: "/finance/settings",
+      badge: 0,
+      hot: false,
+      match: ["/finance/settings"]
     },
 
     # Reports
@@ -502,12 +502,12 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
   def tab_strip(assigns) do
     ~H"""
-    <div class="flex items-end gap-0.5 border-b border-base-content/10 bg-base-200 px-2 overflow-x-auto">
+    <div id="tab-strip" phx-hook="TabStripScroll" class="flex items-end gap-0.5 border-b border-base-content/10 bg-base-200 px-2 overflow-x-auto">
       <.link
         :for={d <- area_dests(@area)}
         navigate={d.path}
         class={[
-          "group relative top-px flex h-8 min-w-[140px] max-w-[220px] items-center gap-2 rounded-t-lg pl-3 pr-2.5 text-[12px] transition",
+          "group relative top-px flex h-8 shrink-0 items-center gap-2 rounded-t-lg pl-3 pr-2.5 text-[12px] transition",
           @active_id == d.id &&
             "z-10 border border-b-0 border-base-content/10 bg-base-100 font-semibold",
           @active_id != d.id &&
@@ -515,7 +515,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
         ]}
       >
         <.icon name={d.icon} class="size-3.5 shrink-0" />
-        <span class="flex-1 truncate text-left">{d.label}</span>
+        <span class="whitespace-nowrap text-left">{d.label}</span>
         <span
           :if={d.badge > 0}
           class={[
