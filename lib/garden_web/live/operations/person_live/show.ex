@@ -201,7 +201,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
             navigate={~p"/operations/affiliations/new?#{[person_id: @person.id]}"}
             variant="primary"
           >
-            Add Affiliation
+            Add to Organization
           </.button>
         </:actions>
         <div id="person-organizations" class="space-y-3">
