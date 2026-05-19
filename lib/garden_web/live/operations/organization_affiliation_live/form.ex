@@ -144,14 +144,27 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
           if socket.assigns.affiliation do
             {"Affiliation updated", ~p"/operations/affiliations/#{affiliation}"}
           else
-            {"Affiliation created — you can now set a billing contact for this organization",
-             ~p"/operations/organizations/#{affiliation.organization_id}/edit?highlight=billing_contact"}
+            maybe_set_billing_contact(affiliation, socket.assigns.current_user)
           end
 
         {:noreply, socket |> put_flash(:info, flash) |> push_navigate(to: path)}
 
       {:error, form} ->
         {:noreply, assign(socket, form: to_form(form))}
+    end
+  end
+
+  defp maybe_set_billing_contact(affiliation, actor) do
+    if "billing_contact" in (affiliation.contact_roles |> Enum.map(&to_string/1)) do
+      with {:ok, org} <- Operations.get_organization(affiliation.organization_id, actor: actor) do
+        Operations.update_organization(org, %{billing_contact_id: affiliation.person_id}, actor: actor)
+      end
+
+      {"Affiliation created — billing contact set automatically",
+       ~p"/operations/organizations/#{affiliation.organization_id}"}
+    else
+      {"Affiliation created — you can now set a billing contact for this organization",
+       ~p"/operations/organizations/#{affiliation.organization_id}/edit?highlight=billing_contact"}
     end
   end
 
