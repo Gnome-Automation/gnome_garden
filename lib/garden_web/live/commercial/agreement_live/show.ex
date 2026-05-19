@@ -530,7 +530,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
     end)
   end
 
-  defp can_create_project?(agreement), do: agreement.status == :active
+  defp can_create_project?(_agreement), do: true
 
   defp agreement_actions(%{status: :draft}) do
     [
