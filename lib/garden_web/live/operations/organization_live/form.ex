@@ -139,13 +139,13 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
-    form = AshPhoenix.Form.validate(socket.assigns.form, params)
+    form = AshPhoenix.Form.validate(socket.assigns.form, sanitize_params(params))
     {:noreply, assign(socket, form: to_form(form))}
   end
 
   @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
+    case AshPhoenix.Form.submit(socket.assigns.form, params: sanitize_params(params)) do
       {:ok, organization} ->
         {:noreply,
          socket
@@ -189,6 +189,12 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
   defp billing_contact_options(organization) do
     (organization.people || [])
     |> Enum.map(fn person -> {person.full_name, person.id} end)
+  end
+
+  defp sanitize_params(params) do
+    Map.update(params, "relationship_roles", [], fn roles ->
+      Enum.reject(roles, &(&1 == ""))
+    end)
   end
 
   defp role_options do
