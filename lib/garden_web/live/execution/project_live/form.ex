@@ -94,14 +94,13 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Form do
               />
             </div>
             <div :if={!is_nil(@agreement)} class="sm:col-span-3">
-              <div class="space-y-2">
-                <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">
-                  Agreement
-                </label>
-                <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm text-zinc-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300">
-                  {@agreement.name}
-                </div>
-              </div>
+              <.input
+                field={@form[:agreement_id]}
+                type="select"
+                label="Agreement"
+                prompt="Select agreement..."
+                options={Enum.map(@agreements, &{&1.name, &1.id})}
+              />
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -241,7 +240,6 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Form do
     %{
       "agreement_id" => agreement.id,
       "organization_id" => agreement.organization_id,
-      "name" => agreement.name,
       "start_on" => agreement.start_on,
       "target_end_on" => agreement.end_on,
       "budget_amount" => agreement.contract_value,
