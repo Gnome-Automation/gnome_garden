@@ -20,6 +20,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
      |> assign(:invoice, invoice)
      |> assign(:agreement, agreement)
      |> assign(:agreement_selected, not is_nil(agreement))
+     |> assign(:override_amounts, false)
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:projects, load_projects(socket.assigns.current_user))
@@ -109,20 +110,32 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 <.link navigate={~p"/execution/projects/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
               </p>
             </div>
-            <div :if={not @agreement_selected} class="sm:col-span-3">
-              <.input field={@form[:currency_code]} label="Currency Code" />
+            <div class="sm:col-span-3">
+              <.input field={@form[:currency_code]} label="Currency Code" readonly={@agreement_selected && not @override_amounts} />
             </div>
-            <div :if={not @agreement_selected} class="sm:col-span-2">
-              <.input field={@form[:subtotal]} label="Subtotal" type="number" step="0.01" />
+            <div :if={@agreement_selected} class="col-span-full">
+              <div class="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+                <p class="text-sm text-base-content/60">Amounts will be calculated from the agreement on save.</p>
+                <button
+                  type="button"
+                  phx-click="toggle_override_amounts"
+                  class="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
+                >
+                  {if @override_amounts, do: "Use agreement amounts", else: "Override amounts manually"}
+                </button>
+              </div>
             </div>
-            <div :if={not @agreement_selected} class="sm:col-span-2">
-              <.input field={@form[:tax_total]} label="Tax Total" type="number" step="0.01" />
+            <div class="sm:col-span-2">
+              <.input field={@form[:subtotal]} label="Subtotal" type="number" step="0.01" readonly={@agreement_selected && not @override_amounts} />
             </div>
-            <div :if={not @agreement_selected} class="sm:col-span-2">
-              <.input field={@form[:total_amount]} label="Total Amount" type="number" step="0.01" />
+            <div class="sm:col-span-2">
+              <.input field={@form[:tax_total]} label="Tax Total" type="number" step="0.01" readonly={@agreement_selected && not @override_amounts} />
             </div>
-            <div :if={not @agreement_selected} class="sm:col-span-3">
-              <.input field={@form[:balance_amount]} label="Balance Amount" type="number" step="0.01" />
+            <div class="sm:col-span-2">
+              <.input field={@form[:total_amount]} label="Total Amount" type="number" step="0.01" readonly={@agreement_selected && not @override_amounts} />
+            </div>
+            <div class="sm:col-span-3">
+              <.input field={@form[:balance_amount]} label="Balance Amount" type="number" step="0.01" readonly={@agreement_selected && not @override_amounts} />
             </div>
             <div class="col-span-full">
               <.input field={@form[:notes]} type="textarea" label="Notes" />
@@ -144,7 +157,14 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
-    {:noreply, assign(socket, form: to_form(form), agreement_selected: not_blank?(params["agreement_id"]))}
+    agreement_selected = not_blank?(params["agreement_id"])
+    override_amounts = if agreement_selected, do: socket.assigns.override_amounts, else: false
+    {:noreply, assign(socket, form: to_form(form), agreement_selected: agreement_selected, override_amounts: override_amounts)}
+  end
+
+  @impl true
+  def handle_event("toggle_override_amounts", _params, socket) do
+    {:noreply, assign(socket, :override_amounts, not socket.assigns.override_amounts)}
   end
 
   @impl true
