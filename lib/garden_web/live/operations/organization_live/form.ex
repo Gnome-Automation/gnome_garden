@@ -100,6 +100,9 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:website]} label="Website" />
+              <p :if={@form[:website_domain].errors != []} class="mt-1 text-sm text-red-600">
+                Website domain has already been taken — use a different URL or leave it blank.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:phone]} label="Phone" />
@@ -163,7 +166,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
       {:error, form} ->
         {:noreply,
          socket
-         |> put_flash(:error, "Error: #{inspect(form.errors)}")
+         |> put_flash(:error, "Please fix the errors below.")
          |> assign(form: to_form(form))}
     end
   end
