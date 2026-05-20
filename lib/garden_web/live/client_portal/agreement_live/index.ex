@@ -47,7 +47,7 @@ defmodule GnomeGardenWeb.ClientPortal.AgreementLive.Index do
                   </.link>
                 </td>
                 <td class="px-4 py-3 text-sm text-base-content/60 capitalize"><%= ag.agreement_type || "—" %></td>
-                <td class="px-4 py-3 text-sm text-base-content/60 capitalize"><%= ag.billing_model %></td>
+                <td class="px-4 py-3 text-sm text-base-content/60"><%= ag.billing_model |> to_string() |> String.replace("_", " ") |> String.capitalize() %></td>
                 <td class="px-4 py-3">
                   <.status_badge status={agreement_status_variant(ag.status)}>
                     <%= String.capitalize(to_string(ag.status)) %>

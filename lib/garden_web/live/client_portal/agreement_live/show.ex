@@ -53,7 +53,7 @@ defmodule GnomeGardenWeb.ClientPortal.AgreementLive.Show do
               <span class="capitalize"><%= @agreement.agreement_type || "—" %></span>
             </.property>
             <.property name="Billing">
-              <span class="capitalize"><%= @agreement.billing_model %></span>
+              <span><%= @agreement.billing_model |> to_string() |> String.replace("_", " ") |> String.capitalize() %></span>
             </.property>
             <.property name="Status">
               <.status_badge status={agreement_status_variant(@agreement.status)}>
