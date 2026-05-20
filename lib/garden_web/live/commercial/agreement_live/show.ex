@@ -207,14 +207,6 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           <.button :if={@agreement.status != :archived} phx-click="archive" data-confirm="Archive this agreement?">
             Archive
           </.button>
-          <button
-            :if={@agreement.status == :archived}
-            phx-click="delete"
-            data-confirm="Permanently delete this agreement? This cannot be undone."
-            class="rounded-md px-3 py-2 text-sm font-semibold text-white shadow-xs bg-red-600 hover:bg-red-500"
-          >
-            Delete
-          </button>
           <.button navigate={~p"/commercial/agreements/#{@agreement}/edit"}>
             Edit
           </.button>

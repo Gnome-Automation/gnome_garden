@@ -101,14 +101,6 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
           <.button :if={@project.status != :archived} phx-click="archive" data-confirm="Archive this project?">
             Archive
           </.button>
-          <button
-            :if={@project.status == :archived}
-            phx-click="delete"
-            data-confirm="Permanently delete this project? This cannot be undone."
-            class="rounded-md px-3 py-2 text-sm font-semibold text-white shadow-xs bg-red-600 hover:bg-red-500"
-          >
-            Delete
-          </button>
           <.button navigate={~p"/execution/projects/#{@project}/edit"}>
             Edit
           </.button>
