@@ -14,7 +14,9 @@ defmodule GnomeGardenWeb.ClientPortal.DashboardLive do
     outstanding_balance =
       invoices
       |> Enum.filter(&(&1.status in [:issued, :partial]))
-      |> Enum.reduce(Decimal.new("0"), fn inv, acc -> Decimal.add(acc, inv.balance_amount) end)
+      |> Enum.reduce(Decimal.new("0"), fn inv, acc ->
+        Decimal.add(acc, inv.balance_amount || Decimal.new("0"))
+      end)
 
     recent_invoices = Enum.take(Enum.sort_by(invoices, & &1.inserted_at, {:desc, DateTime}), 5)
 
