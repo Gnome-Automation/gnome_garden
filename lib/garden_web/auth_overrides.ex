@@ -71,7 +71,7 @@ defmodule GnomeGardenWeb.AuthOverrides do
 
   override Components.MagicLink.Input do
     set :submit_class, "gg-auth-submit"
-    set :submit_label, "Send sign-in link"
+    set :submit_label, "Sign in"
     set :input_debounce, 350
     set :remember_me_class, "gg-auth-remember"
     set :remember_me_input_label, "Remember me"

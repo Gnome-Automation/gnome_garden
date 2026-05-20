@@ -68,8 +68,8 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Index do
                 <td class="px-4 py-3 text-sm text-base-content/60">
                   <%= if inv.due_on, do: Date.to_string(inv.due_on), else: "—" %>
                 </td>
-                <td class="px-4 py-3 text-sm text-base-content">$<%= Decimal.to_string(inv.total_amount) %></td>
-                <td class="px-4 py-3 text-sm font-medium text-base-content">$<%= Decimal.to_string(inv.balance_amount) %></td>
+                <td class="px-4 py-3 text-sm text-base-content">$<%= if inv.total_amount, do: Decimal.to_string(inv.total_amount), else: "—" %></td>
+                <td class="px-4 py-3 text-sm font-medium text-base-content">$<%= if inv.balance_amount, do: Decimal.to_string(inv.balance_amount), else: "—" %></td>
                 <td class="px-4 py-3">
                   <.status_badge status={invoice_status_variant(inv.status)}>
                     <%= String.capitalize(to_string(inv.status)) %>
