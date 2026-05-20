@@ -19,6 +19,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
      socket
      |> assign(:invoice, invoice)
      |> assign(:agreement, agreement)
+     |> assign(:agreement_selected, not is_nil(agreement))
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:projects, load_projects(socket.assigns.current_user))
@@ -69,7 +70,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
             <div class="sm:col-span-3">
               <.input field={@form[:due_on]} type="date" label="Due On" />
             </div>
-            <div :if={is_nil(@agreement)} class="sm:col-span-3">
+            <div :if={not @agreement_selected} class="sm:col-span-3">
               <.input
                 field={@form[:organization_id]}
                 type="select"
@@ -82,7 +83,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
               </p>
             </div>
-            <div :if={is_nil(@agreement)} class="sm:col-span-3">
+            <div :if={not @agreement_selected} class="sm:col-span-3">
               <.input
                 field={@form[:agreement_id]}
                 type="select"
@@ -90,12 +91,12 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 prompt="Select agreement..."
                 options={Enum.map(@agreements, &{&1.name, &1.id})}
               />
-              <p :if={is_nil(@agreement) && Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
+              <p :if={not @agreement_selected && Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
                 No agreements yet —
                 <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
               </p>
             </div>
-            <div :if={is_nil(@agreement)} class="sm:col-span-3">
+            <div :if={not @agreement_selected} class="sm:col-span-3">
               <.input
                 field={@form[:project_id]}
                 type="select"
@@ -103,24 +104,24 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 prompt="Select project..."
                 options={Enum.map(@projects, &{&1.name, &1.id})}
               />
-              <p :if={is_nil(@agreement) && Enum.empty?(@projects)} class="mt-1.5 text-xs text-base-content/50">
+              <p :if={not @agreement_selected && Enum.empty?(@projects)} class="mt-1.5 text-xs text-base-content/50">
                 No projects yet —
                 <.link navigate={~p"/execution/projects/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
               </p>
             </div>
-            <div :if={is_nil(@agreement)} class="sm:col-span-3">
+            <div :if={not @agreement_selected} class="sm:col-span-3">
               <.input field={@form[:currency_code]} label="Currency Code" />
             </div>
-            <div :if={is_nil(@agreement)} class="sm:col-span-2">
+            <div :if={not @agreement_selected} class="sm:col-span-2">
               <.input field={@form[:subtotal]} label="Subtotal" type="number" step="0.01" />
             </div>
-            <div :if={is_nil(@agreement)} class="sm:col-span-2">
+            <div :if={not @agreement_selected} class="sm:col-span-2">
               <.input field={@form[:tax_total]} label="Tax Total" type="number" step="0.01" />
             </div>
-            <div :if={is_nil(@agreement)} class="sm:col-span-2">
+            <div :if={not @agreement_selected} class="sm:col-span-2">
               <.input field={@form[:total_amount]} label="Total Amount" type="number" step="0.01" />
             </div>
-            <div :if={is_nil(@agreement)} class="sm:col-span-3">
+            <div :if={not @agreement_selected} class="sm:col-span-3">
               <.input field={@form[:balance_amount]} label="Balance Amount" type="number" step="0.01" />
             </div>
             <div class="col-span-full">
@@ -143,7 +144,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
-    {:noreply, assign(socket, form: to_form(form))}
+    {:noreply, assign(socket, form: to_form(form), agreement_selected: not_blank?(params["agreement_id"]))}
   end
 
   @impl true
@@ -247,4 +248,8 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
   defp success_label(invoice, _agreement) when not is_nil(invoice), do: "updated"
   defp success_label(nil, agreement) when not is_nil(agreement), do: "drafted"
   defp success_label(nil, nil), do: "created"
+
+  defp not_blank?(nil), do: false
+  defp not_blank?(""), do: false
+  defp not_blank?(_), do: true
 end
