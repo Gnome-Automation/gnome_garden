@@ -79,6 +79,8 @@ defmodule GnomeGarden.Execution.Project do
         :budget_amount,
         :notes
       ]
+
+      change GnomeGarden.Execution.Changes.GenerateProjectCode
     end
 
     create :create_from_agreement do
@@ -100,6 +102,7 @@ defmodule GnomeGarden.Execution.Project do
       ]
 
       change GnomeGarden.Execution.Changes.CreateProjectFromAgreement
+      change GnomeGarden.Execution.Changes.GenerateProjectCode
     end
 
     update :update do
