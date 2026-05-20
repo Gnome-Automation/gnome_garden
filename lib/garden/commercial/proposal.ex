@@ -30,7 +30,7 @@ defmodule GnomeGarden.Commercial.Proposal do
     repo GnomeGarden.Repo
 
     references do
-      reference :pursuit, on_delete: :delete
+      reference :pursuit, on_delete: :nilify
       reference :organization, on_delete: :delete
       reference :site, on_delete: :nilify
       reference :managed_system, on_delete: :nilify
