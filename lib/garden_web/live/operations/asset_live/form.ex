@@ -48,6 +48,10 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Form do
                 prompt="Select organization..."
                 options={Enum.map(@organizations, &{&1.name, &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Organization not in the list?
+                <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/operations/assets/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input

@@ -77,6 +77,10 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 prompt="Select organization..."
                 options={Enum.map(@organizations, &{&1.name, &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Organization not in the list?
+                <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+              </p>
             </div>
             <div :if={is_nil(@agreement)} class="sm:col-span-3">
               <.input
@@ -86,6 +90,10 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 prompt="Select agreement..."
                 options={Enum.map(@agreements, &{&1.name, &1.id})}
               />
+              <p :if={is_nil(@agreement) && Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
+                No agreements yet —
+                <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+              </p>
             </div>
             <div :if={is_nil(@agreement)} class="sm:col-span-3">
               <.input
@@ -95,6 +103,10 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 prompt="Select project..."
                 options={Enum.map(@projects, &{&1.name, &1.id})}
               />
+              <p :if={is_nil(@agreement) && Enum.empty?(@projects)} class="mt-1.5 text-xs text-base-content/50">
+                No projects yet —
+                <.link navigate={~p"/execution/projects/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+              </p>
             </div>
             <div :if={is_nil(@agreement)} class="sm:col-span-3">
               <.input field={@form[:currency_code]} label="Currency Code" />

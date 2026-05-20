@@ -63,6 +63,10 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Form do
                 prompt="Select organization..."
                 options={Enum.map(@organizations, &{&1.name, &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Organization not in the list?
+                <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/execution/maintenance-plans/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -72,6 +76,10 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Form do
                 prompt="Select agreement..."
                 options={Enum.map(@agreements, &{agreement_label(&1), &1.id})}
               />
+              <p :if={Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
+                No agreements yet —
+                <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/execution/maintenance-plans/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
