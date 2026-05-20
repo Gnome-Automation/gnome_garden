@@ -591,8 +591,6 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
     end)
   end
 
-  defp can_create_project?(_agreement), do: true
-
   defp agreement_status_description(%{status: :draft}),
     do: "Draft — activate this agreement to start delivery and enable project creation."
 

@@ -16,22 +16,6 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
   end
 
   @impl true
-  def handle_event("transition", %{"action" => action}, socket) do
-    invoice = socket.assigns.invoice
-
-    case transition_invoice(invoice, String.to_existing_atom(action), socket.assigns.current_user) do
-      {:ok, updated_invoice} ->
-        {:noreply,
-         socket
-         |> assign(:invoice, load_invoice!(updated_invoice.id, socket.assigns.current_user))
-         |> put_flash(:info, "Invoice updated")}
-
-      {:error, error} ->
-        {:noreply, put_flash(socket, :error, "Could not update invoice: #{inspect(error)}")}
-    end
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <.page class="pb-8">
@@ -234,6 +218,22 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
       </.section>
     </.page>
     """
+  end
+
+  @impl true
+  def handle_event("transition", %{"action" => action}, socket) do
+    invoice = socket.assigns.invoice
+
+    case transition_invoice(invoice, String.to_existing_atom(action), socket.assigns.current_user) do
+      {:ok, updated_invoice} ->
+        {:noreply,
+         socket
+         |> assign(:invoice, load_invoice!(updated_invoice.id, socket.assigns.current_user))
+         |> put_flash(:info, "Invoice updated")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not update invoice: #{inspect(error)}")}
+    end
   end
 
   @impl true
