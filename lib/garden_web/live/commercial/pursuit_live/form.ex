@@ -198,7 +198,9 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Form do
       {:ok, pursuit} ->
         path =
           if is_nil(socket.assigns.pursuit) && socket.assigns.return_to do
-            socket.assigns.return_to
+            return_to = socket.assigns.return_to
+            separator = if String.contains?(return_to, "?"), do: "&", else: "?"
+            "#{return_to}#{separator}pursuit_id=#{pursuit.id}"
           else
             ~p"/commercial/pursuits/#{pursuit}"
           end
