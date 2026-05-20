@@ -70,7 +70,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Form do
         >
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-3">
-              <.input field={@form[:code]} label="Project Code" />
+              <.input field={@form[:code]} label="Project Code" placeholder="Auto-generated if left blank" />
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:name]} label="Name" required />

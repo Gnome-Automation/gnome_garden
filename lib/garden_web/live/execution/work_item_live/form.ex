@@ -65,7 +65,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
               />
             </div>
             <div class="sm:col-span-2">
-              <.input field={@form[:code]} label="Code" />
+              <.input field={@form[:code]} label="Code" placeholder="Auto-generated if left blank" />
             </div>
             <div class="sm:col-span-4">
               <.input field={@form[:title]} label="Title" required />
