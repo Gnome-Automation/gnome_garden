@@ -165,15 +165,34 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
 
   defp maybe_set_billing_contact(affiliation, actor) do
     if "billing_contact" in (affiliation.contact_roles |> Enum.map(&to_string/1)) do
-      with {:ok, org} <- Operations.get_organization(affiliation.organization_id, actor: actor) do
-        Operations.update_organization(org, %{billing_contact_id: affiliation.person_id}, actor: actor)
-      end
+      with {:ok, org} <- Operations.get_organization(affiliation.organization_id,
+                           actor: actor, load: [:billing_contact]) do
+        previous = org.billing_contact
 
-      {"Affiliation created — billing contact set automatically",
-       ~p"/operations/organizations/#{affiliation.organization_id}"}
+        Operations.update_organization(org, %{billing_contact_id: affiliation.person_id}, actor: actor)
+
+        flash =
+          if previous && previous.id != affiliation.person_id do
+            "Affiliation created — billing contact updated from #{previous.full_name} to the new contact"
+          else
+            "Affiliation created — billing contact set automatically"
+          end
+
+        {flash, ~p"/operations/organizations/#{affiliation.organization_id}"}
+      end
     else
-      {"Affiliation created — you can now set a billing contact for this organization",
-       ~p"/operations/organizations/#{affiliation.organization_id}/edit?highlight=billing_contact"}
+      if_org_has_no_billing_contact(affiliation, actor)
+    end
+  end
+
+  defp if_org_has_no_billing_contact(affiliation, actor) do
+    case Operations.get_organization(affiliation.organization_id, actor: actor) do
+      {:ok, org} when not is_nil(org.billing_contact_id) ->
+        {"Affiliation created", ~p"/operations/organizations/#{affiliation.organization_id}"}
+
+      _ ->
+        {"Affiliation created — you can now set a billing contact for this organization",
+         ~p"/operations/organizations/#{affiliation.organization_id}/edit?highlight=billing_contact"}
     end
   end
 
