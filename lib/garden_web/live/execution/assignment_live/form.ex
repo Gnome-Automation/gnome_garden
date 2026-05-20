@@ -293,15 +293,11 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Form do
   defp back_path(_project_id, _work_order_id), do: ~p"/execution/assignments"
 
   defp project_label(project) do
-    [project.name, project.code]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(" · ")
+    if project.code, do: "#{project.name} (#{project.code})", else: project.name
   end
 
   defp work_item_label(work_item) do
-    [work_item.title, work_item.code]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(" · ")
+    if work_item.code, do: "#{work_item.title} (#{work_item.code})", else: work_item.title
   end
 
   defp work_order_label(work_order) do
