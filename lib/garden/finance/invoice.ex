@@ -85,6 +85,8 @@ defmodule GnomeGarden.Finance.Invoice do
         :due_on,
         :notes
       ]
+
+      change GnomeGarden.Finance.Changes.GenerateInvoiceNumber
     end
 
     create :create_from_agreement_sources do
@@ -98,6 +100,7 @@ defmodule GnomeGarden.Finance.Invoice do
       ]
 
       change GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSources
+      change GnomeGarden.Finance.Changes.GenerateInvoiceNumber
     end
 
     update :update do

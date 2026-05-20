@@ -64,7 +64,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
         >
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-3">
-              <.input field={@form[:invoice_number]} label="Invoice Number" />
+              <.input field={@form[:invoice_number]} label="Invoice Number" placeholder="Auto-generated if left blank" />
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:due_on]} type="date" label="Due On" />
