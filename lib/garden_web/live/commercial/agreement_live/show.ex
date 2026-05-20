@@ -28,6 +28,34 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
   end
 
   @impl true
+  def handle_event("archive", _params, socket) do
+    case Commercial.archive_agreement(socket.assigns.agreement, actor: socket.assigns.current_user) do
+      {:ok, updated} ->
+        {:noreply,
+         socket
+         |> assign(:agreement, load_agreement!(updated.id, socket.assigns.current_user))
+         |> put_flash(:info, "Agreement archived")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not archive agreement: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete", _params, socket) do
+    case Commercial.delete_agreement(socket.assigns.agreement, actor: socket.assigns.current_user) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Agreement deleted")
+         |> push_navigate(to: ~p"/commercial/agreements")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not delete agreement: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
   def handle_event("transition", %{"action" => action}, socket) do
     agreement = socket.assigns.agreement
 
@@ -176,6 +204,17 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"}>
             New Change Order
           </.button>
+          <.button :if={@agreement.status != :archived} phx-click="archive" data-confirm="Archive this agreement?">
+            Archive
+          </.button>
+          <button
+            :if={@agreement.status == :archived}
+            phx-click="delete"
+            data-confirm="Permanently delete this agreement? This cannot be undone."
+            class="rounded-md px-3 py-2 text-sm font-semibold text-white shadow-xs bg-red-600 hover:bg-red-500"
+          >
+            Delete
+          </button>
           <.button navigate={~p"/commercial/agreements/#{@agreement}/edit"}>
             Edit
           </.button>
@@ -579,6 +618,9 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
 
   defp agreement_status_description(%{status: :terminated}),
     do: "Terminated — this agreement was ended early. Reopen only if this was a mistake."
+
+  defp agreement_status_description(%{status: :archived}),
+    do: "Archived — this agreement is no longer active. Delete it if it was created by mistake."
 
   defp agreement_status_description(_), do: "Manage the agreement lifecycle below."
 

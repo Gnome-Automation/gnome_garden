@@ -201,6 +201,8 @@ defmodule GnomeGarden.Commercial do
       define :complete_agreement, action: :complete
       define :terminate_agreement, action: :terminate
       define :reopen_agreement, action: :reopen
+      define :archive_agreement, action: :archive
+      define :delete_agreement, action: :destroy
       define :list_active_agreements, action: :active
       define :list_expiring_agreements, action: :expiring_soon
       define :list_portal_agreements, action: :portal_index

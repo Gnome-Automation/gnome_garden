@@ -59,6 +59,10 @@ defmodule GnomeGarden.Commercial.Agreement do
         to: :terminated
 
       transition :reopen, from: [:suspended, :terminated, :completed], to: :active
+
+      transition :archive,
+        from: [:draft, :pending_signature, :suspended, :completed, :terminated],
+        to: :archived
     end
   end
 
@@ -180,6 +184,11 @@ defmodule GnomeGarden.Commercial.Agreement do
       change transition_state(:active)
     end
 
+    update :archive do
+      accept []
+      change transition_state(:archived)
+    end
+
     read :active do
       filter expr(status == :active)
 
@@ -283,7 +292,8 @@ defmodule GnomeGarden.Commercial.Agreement do
                     :active,
                     :suspended,
                     :completed,
-                    :terminated
+                    :terminated,
+                    :archived
                   ]
     end
 
@@ -450,7 +460,8 @@ defmodule GnomeGarden.Commercial.Agreement do
                  active: :success,
                  suspended: :warning,
                  completed: :info,
-                 terminated: :error
+                 terminated: :error,
+                 archived: :default
                ],
                default: :default}
   end
