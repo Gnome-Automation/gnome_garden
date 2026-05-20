@@ -19,6 +19,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
      socket
      |> assign(:agreement, agreement)
      |> assign(:proposal, proposal)
+     |> assign(:return_to, params["return_to"])
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:proposals, load_proposals(socket.assigns.current_user))
      |> assign(:page_title, page_title(agreement, proposal))
@@ -153,7 +154,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/commercial/agreements"}
+            cancel_path={@return_to || ~p"/commercial/agreements"}
             submit_label={if @agreement, do: "Update Agreement", else: "Create Agreement"}
           />
         </.section>

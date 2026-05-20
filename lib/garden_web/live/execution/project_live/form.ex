@@ -20,6 +20,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Form do
      socket
      |> assign(:project, project)
      |> assign(:agreement, agreement)
+     |> assign(:return_to, params["return_to"])
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:page_title, page_title(project, agreement))
@@ -149,7 +150,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/execution/projects"}
+            cancel_path={@return_to || ~p"/execution/projects"}
             submit_label={if @project, do: "Update Project", else: "Create Project"}
           />
         </.section>
