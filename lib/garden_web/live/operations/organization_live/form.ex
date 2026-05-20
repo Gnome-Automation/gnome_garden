@@ -161,9 +161,10 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Form do
          |> push_navigate(to: path)}
 
       {:error, form} ->
+        errors = form.source.errors |> Enum.map(&inspect/1) |> Enum.join(", ")
         {:noreply,
          socket
-         |> put_flash(:error, "Please fix the errors below.")
+         |> put_flash(:error, "Error: #{errors}")
          |> assign(form: to_form(form))}
     end
   end
