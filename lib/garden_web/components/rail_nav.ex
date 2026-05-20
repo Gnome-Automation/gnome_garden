@@ -30,15 +30,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
     %{id: "Procurement", icon: "hero-viewfinder-circle", label: "Procurement"},
     %{id: "Commercial", icon: "hero-rocket-launch", label: "Commercial"},
     %{id: "Operations", icon: "hero-building-office", label: "Operations"},
+    %{id: "Finance", icon: "hero-banknotes", label: "Finance"},
     %{id: "Reports", icon: "hero-chart-bar", label: "Reports"},
     %{id: "Settings", icon: "hero-cog-6-tooth", label: "Settings"}
   ]
 
   @bottom_areas [
     %{id: "Acquisition", icon: "hero-inbox-stack", label: "Acquire"},
-    %{id: "Procurement", icon: "hero-viewfinder-circle", label: "Procure"},
     %{id: "Commercial", icon: "hero-rocket-launch", label: "Pursue"},
     %{id: "Operations", icon: "hero-building-office", label: "Ops"},
+    %{id: "Finance", icon: "hero-banknotes", label: "Finance"},
     %{id: "more", icon: "hero-ellipsis-horizontal", label: "More"}
   ]
 
@@ -273,10 +274,11 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/finance/time-entries/approval-queue"]
     },
+    # Finance
     %{
-      id: "ops-invoices",
-      section: "Operations",
-      icon: "hero-banknotes",
+      id: "fin-invoices",
+      section: "Finance",
+      icon: "hero-document-text",
       label: "Invoices",
       path: "/finance/invoices",
       badge: 0,
@@ -284,8 +286,18 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/invoices"]
     },
     %{
-      id: "ops-ar-aging",
-      section: "Operations",
+      id: "fin-payments",
+      section: "Finance",
+      icon: "hero-credit-card",
+      label: "Payments",
+      path: "/finance/payments",
+      badge: 0,
+      hot: false,
+      match: ["/finance/payments"]
+    },
+    %{
+      id: "fin-ar-aging",
+      section: "Finance",
       icon: "hero-clock",
       label: "AR Aging",
       path: "/finance/ar-aging",
@@ -294,8 +306,8 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/ar-aging"]
     },
     %{
-      id: "ops-credit-notes",
-      section: "Operations",
+      id: "fin-credit-notes",
+      section: "Finance",
       icon: "hero-minus-circle",
       label: "Credit Notes",
       path: "/finance/credit-notes",
@@ -304,8 +316,8 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/credit-notes"]
     },
     %{
-      id: "ops-mercury",
-      section: "Operations",
+      id: "fin-mercury",
+      section: "Finance",
       icon: "hero-building-library",
       label: "Mercury",
       path: "/finance/mercury",
@@ -314,9 +326,9 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/mercury"]
     },
     %{
-      id: "ops-finance-settings",
-      section: "Operations",
-      icon: "hero-cog-6-tooth",
+      id: "fin-billing-reminders",
+      section: "Finance",
+      icon: "hero-bell",
       label: "Billing Reminders",
       path: "/finance/settings",
       badge: 0,
@@ -381,7 +393,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
       String.starts_with?(path, "/commercial") -> "Commercial"
       String.starts_with?(path, "/operations") -> "Operations"
       String.starts_with?(path, "/execution") -> "Operations"
-      String.starts_with?(path, "/finance") -> "Operations"
+      String.starts_with?(path, "/finance") -> "Finance"
       String.starts_with?(path, "/console") -> "Settings"
       String.starts_with?(path, "/settings") -> "Settings"
       true -> "Workspace"
@@ -683,6 +695,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
     |> JS.add_class("hidden", to: "##{"mobile-sheet-Procurement"}")
     |> JS.add_class("hidden", to: "##{"mobile-sheet-Commercial"}")
     |> JS.add_class("hidden", to: "##{"mobile-sheet-Operations"}")
+    |> JS.add_class("hidden", to: "##{"mobile-sheet-Finance"}")
     |> JS.add_class("hidden", to: "##{"mobile-sheet-more"}")
   end
 end
