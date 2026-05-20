@@ -235,7 +235,8 @@ defmodule GnomeGarden.Execution.Project do
                     :active,
                     :on_hold,
                     :completed,
-                    :cancelled
+                    :cancelled,
+                    :archived
                   ]
     end
 
