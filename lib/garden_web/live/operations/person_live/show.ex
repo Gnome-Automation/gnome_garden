@@ -240,12 +240,14 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
             <.empty_state
               icon="hero-building-office-2"
               title="No organizations linked"
-              description="To link this person to an organization, first make sure the organization exists, then click Add Affiliation."
-            />
-            <p class="text-center text-xs text-amber-600 dark:text-amber-400">
-              Don't have an organization yet?
-              <.link navigate={~p"/operations/organizations/new"} class="underline">Create one first</.link>.
-            </p>
+              description="Create an organization first, then use Add Affiliation to link this person to it."
+            >
+              <:action>
+                <.button navigate={~p"/operations/organizations/new?return_to=#{~p"/operations/people/#{@person}"}"}>
+                  Create Organization
+                </.button>
+              </:action>
+            </.empty_state>
           </div>
 
           <.link

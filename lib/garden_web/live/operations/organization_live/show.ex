@@ -277,7 +277,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
                 description="Create a person first, then use Add Affiliation to link them to this organization."
               >
                 <:action>
-                  <.button navigate={~p"/operations/people/new"}>
+                  <.button navigate={~p"/operations/people/new?return_to=#{~p"/operations/organizations/#{@organization}"}"}>
                     Create Person
                   </.button>
                 </:action>

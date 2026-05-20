@@ -81,9 +81,9 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
                 prompt="Select organization..."
                 options={Enum.map(@organizations, &{&1.name, &1.id})}
               />
-              <p :if={Enum.empty?(@organizations)} class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <p :if={Enum.empty?(@organizations)} class="mt-1.5 text-xs text-base-content/50">
                 No organizations yet —
-                <.link navigate={~p"/operations/organizations/new"} class="underline">create one first</.link>.
+                <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/commercial/agreements/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
               </p>
             </div>
             <div class="sm:col-span-3">

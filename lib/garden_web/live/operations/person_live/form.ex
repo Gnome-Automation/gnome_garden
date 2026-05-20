@@ -10,6 +10,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Form do
     {:ok,
      socket
      |> assign(:person, person)
+     |> assign(:return_to, params["return_to"])
      |> assign(:page_title, if(person, do: "Edit Person", else: "New Person"))
      |> assign_form()}
   end
@@ -24,7 +25,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Form do
           Create the durable external person record that commercial, service, and delivery contexts should share.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/operations/people"}>
+          <.button navigate={@return_to || ~p"/operations/people"}>
             Back to people
           </.button>
         </:actions>
@@ -94,7 +95,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/operations/people"}
+            cancel_path={@return_to || ~p"/operations/people"}
             submit_label={if @person, do: "Update Person", else: "Create Person"}
           />
         </.section>
@@ -113,10 +114,17 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Form do
   def handle_event("save", %{"form" => params}, socket) do
     case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, person} ->
+        path =
+          if is_nil(socket.assigns.person) && socket.assigns.return_to do
+            socket.assigns.return_to
+          else
+            ~p"/operations/people/#{person}"
+          end
+
         {:noreply,
          socket
          |> put_flash(:info, "Person #{if socket.assigns.person, do: "updated", else: "created"}")
-         |> push_navigate(to: ~p"/operations/people/#{person}")}
+         |> push_navigate(to: path)}
 
       {:error, form} ->
         {:noreply,

@@ -92,6 +92,10 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
                 prompt="Select agreement..."
                 options={Enum.map(@agreements, &{agreement_label(&1), &1.id})}
               />
+              <p :if={Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
+                No agreements yet —
+                <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/expenses/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -101,6 +105,10 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
                 prompt="Select project..."
                 options={Enum.map(@projects, &{project_label(&1), &1.id})}
               />
+              <p :if={Enum.empty?(@projects)} class="mt-1.5 text-xs text-base-content/50">
+                No projects yet —
+                <.link navigate={~p"/execution/projects/new?return_to=#{~p"/finance/expenses/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input

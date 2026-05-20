@@ -54,7 +54,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
               />
               <p class="mt-1.5 text-xs text-base-content/50">
                 Organization not in the list?
-                <.link navigate={~p"/operations/organizations/new"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/operations/affiliations/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
               </p>
             </div>
             <div class="sm:col-span-3">
@@ -67,7 +67,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
               />
               <p class="mt-1.5 text-xs text-base-content/50">
                 Person not in the list?
-                <.link navigate={~p"/operations/people/new"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                <.link navigate={~p"/operations/people/new?return_to=#{~p"/operations/affiliations/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
               </p>
             </div>
             <div class="sm:col-span-3">
