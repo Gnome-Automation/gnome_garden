@@ -71,7 +71,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
             <div class="sm:col-span-3">
               <.input field={@form[:due_on]} type="date" label="Due On" />
             </div>
-            <div :if={not @agreement_selected} class="sm:col-span-3">
+            <div class="sm:col-span-3">
               <.input
                 field={@form[:organization_id]}
                 type="select"
@@ -84,7 +84,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
               </p>
             </div>
-            <div :if={not @agreement_selected} class="sm:col-span-3">
+            <div class="sm:col-span-3">
               <.input
                 field={@form[:agreement_id]}
                 type="select"
@@ -92,12 +92,12 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 prompt="Select agreement..."
                 options={Enum.map(@agreements, &{&1.name, &1.id})}
               />
-              <p :if={not @agreement_selected && Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
+              <p :if={Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
                 No agreements yet —
                 <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
               </p>
             </div>
-            <div :if={not @agreement_selected} class="sm:col-span-3">
+            <div class="sm:col-span-3">
               <.input
                 field={@form[:project_id]}
                 type="select"
@@ -105,7 +105,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 prompt="Select project..."
                 options={Enum.map(@projects, &{&1.name, &1.id})}
               />
-              <p :if={not @agreement_selected && Enum.empty?(@projects)} class="mt-1.5 text-xs text-base-content/50">
+              <p :if={Enum.empty?(@projects)} class="mt-1.5 text-xs text-base-content/50">
                 No projects yet —
                 <.link navigate={~p"/execution/projects/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
               </p>
