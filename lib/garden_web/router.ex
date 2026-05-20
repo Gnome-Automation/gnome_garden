@@ -310,6 +310,13 @@ defmodule GnomeGardenWeb.Router do
       ]
   end
 
+  # Portal — plain controller routes (auth handled in controller)
+  scope "/", GnomeGardenWeb do
+    pipe_through :browser
+
+    get "/portal/agreements/:id/export", ClientPortal.AgreementExportController, :show
+  end
+
   # Portal — authenticated routes (ClientUser session required)
   scope "/", GnomeGardenWeb do
     pipe_through :browser

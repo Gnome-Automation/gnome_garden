@@ -43,6 +43,13 @@ defmodule GnomeGardenWeb.ClientPortal.AgreementLive.Show do
             </.status_badge>
           </:subtitle>
           <:actions>
+            <a
+              href={~p"/portal/agreements/#{@agreement.id}/export"}
+              target="_blank"
+              class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+            >
+              <.icon name="hero-arrow-down-tray" class="size-4" /> Export PDF
+            </a>
             <.button navigate={~p"/portal/agreements"}>← Agreements</.button>
           </:actions>
         </.page_header>
