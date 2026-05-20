@@ -181,7 +181,10 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
          |> push_navigate(to: ~p"/commercial/agreements/#{agreement}")}
 
       {:error, form} ->
-        {:noreply, assign(socket, form: to_form(form))}
+        {:noreply,
+         socket
+         |> put_flash(:error, "Please fix the errors below.")
+         |> assign(form: to_form(form))}
     end
   end
 

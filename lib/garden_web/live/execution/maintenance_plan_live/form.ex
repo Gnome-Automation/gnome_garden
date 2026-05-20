@@ -198,7 +198,10 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Form do
          |> push_navigate(to: ~p"/execution/maintenance-plans/#{maintenance_plan}")}
 
       {:error, form} ->
-        {:noreply, assign(socket, form: to_form(form))}
+        {:noreply,
+         socket
+         |> put_flash(:error, "Please fix the errors below.")
+         |> assign(form: to_form(form))}
     end
   end
 

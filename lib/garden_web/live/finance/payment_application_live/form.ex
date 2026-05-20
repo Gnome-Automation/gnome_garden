@@ -112,7 +112,10 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
          |> push_navigate(to: ~p"/finance/payment-applications/#{payment_application}")}
 
       {:error, form} ->
-        {:noreply, assign(socket, form: to_form(form))}
+        {:noreply,
+         socket
+         |> put_flash(:error, "Please fix the errors below.")
+         |> assign(form: to_form(form))}
     end
   end
 

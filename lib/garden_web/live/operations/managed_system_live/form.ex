@@ -153,7 +153,10 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Form do
          |> push_navigate(to: ~p"/operations/managed-systems/#{managed_system}")}
 
       {:error, form} ->
-        {:noreply, assign(socket, form: to_form(form))}
+        {:noreply,
+         socket
+         |> put_flash(:error, "Please fix the errors below.")
+         |> assign(form: to_form(form))}
     end
   end
 

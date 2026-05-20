@@ -190,7 +190,10 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Form do
          |> push_navigate(to: ~p"/commercial/change-orders/#{change_order}")}
 
       {:error, form} ->
-        {:noreply, assign(socket, form: to_form(form))}
+        {:noreply,
+         socket
+         |> put_flash(:error, "Please fix the errors below.")
+         |> assign(form: to_form(form))}
     end
   end
 

@@ -117,7 +117,10 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Form do
          |> push_navigate(to: ~p"/operations/sites/#{site}")}
 
       {:error, form} ->
-        {:noreply, assign(socket, form: to_form(form))}
+        {:noreply,
+         socket
+         |> put_flash(:error, "Please fix the errors below.")
+         |> assign(form: to_form(form))}
     end
   end
 
