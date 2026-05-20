@@ -79,11 +79,11 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Form do
                 label="Pursuit"
                 prompt="Select pursuit..."
                 options={Enum.map(@pursuits, &{&1.name, &1.id})}
+                required
               />
               <p class="mt-1.5 text-xs text-base-content/50">
-                Optional — proposals can exist without a pursuit.
-                <.link navigate={~p"/commercial/pursuits/new?return_to=/commercial/proposals/new"} class="underline text-emerald-600 dark:text-emerald-400">Create a pursuit first</.link>
-                if you want to link one.
+                No pursuit yet?
+                <.link navigate={~p"/commercial/pursuits/new?return_to=/commercial/proposals/new"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
               </p>
             </div>
             <div class="sm:col-span-3">
