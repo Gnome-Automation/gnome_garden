@@ -51,6 +51,7 @@ defmodule GnomeGarden.Execution.Project do
       transition :complete, from: [:active, :on_hold], to: :completed
       transition :cancel, from: [:planned, :ready, :on_hold], to: :cancelled
       transition :reopen, from: [:completed, :cancelled], to: :ready
+      transition :archive, from: [:planned, :ready, :on_hold, :completed, :cancelled], to: :archived
     end
   end
 
@@ -152,6 +153,11 @@ defmodule GnomeGarden.Execution.Project do
     update :reopen do
       accept []
       change transition_state(:ready)
+    end
+
+    update :archive do
+      accept []
+      change transition_state(:archived)
     end
 
     read :active do
@@ -322,7 +328,8 @@ defmodule GnomeGarden.Execution.Project do
                  active: :success,
                  on_hold: :warning,
                  completed: :info,
-                 cancelled: :error
+                 cancelled: :error,
+                 archived: :default
                ],
                default: :default}
 

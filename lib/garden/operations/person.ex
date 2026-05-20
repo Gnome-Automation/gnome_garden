@@ -87,6 +87,11 @@ defmodule GnomeGarden.Operations.Person do
       change {GnomeGarden.Operations.Changes.NormalizePersonIdentity, []}
     end
 
+    update :archive do
+      accept []
+      change set_attribute(:status, :archived)
+    end
+
     update :merge_into do
       require_atomic? false
       accept []

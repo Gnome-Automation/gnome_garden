@@ -48,6 +48,8 @@ defmodule GnomeGarden.Execution do
       define :complete_project, action: :complete
       define :cancel_project, action: :cancel
       define :reopen_project, action: :reopen
+      define :archive_project, action: :archive
+      define :delete_project, action: :destroy
       define :list_active_projects, action: :active
       define :list_projects_for_organization, action: :for_organization, args: [:organization_id]
     end

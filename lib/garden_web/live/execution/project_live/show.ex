@@ -18,6 +18,34 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
   end
 
   @impl true
+  def handle_event("archive", _params, socket) do
+    case Execution.archive_project(socket.assigns.project, actor: socket.assigns.current_user) do
+      {:ok, updated} ->
+        {:noreply,
+         socket
+         |> assign(:project, load_project!(updated.id, socket.assigns.current_user))
+         |> put_flash(:info, "Project archived")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not archive project: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete", _params, socket) do
+    case Execution.delete_project(socket.assigns.project, actor: socket.assigns.current_user) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Project deleted")
+         |> push_navigate(to: ~p"/execution/projects")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not delete project: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
   def handle_event("transition", %{"action" => action}, socket) do
     project = socket.assigns.project
 
@@ -70,6 +98,17 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
           <.button navigate={~p"/commercial/change-orders/new?project_id=#{@project.id}"}>
             New Change Order
           </.button>
+          <.button :if={@project.status != :archived} phx-click="archive" data-confirm="Archive this project?">
+            Archive
+          </.button>
+          <button
+            :if={@project.status == :archived}
+            phx-click="delete"
+            data-confirm="Permanently delete this project? This cannot be undone."
+            class="rounded-md px-3 py-2 text-sm font-semibold text-white shadow-xs bg-red-600 hover:bg-red-500"
+          >
+            Delete
+          </button>
           <.button navigate={~p"/execution/projects/#{@project}/edit"}>
             Edit
           </.button>
@@ -374,6 +413,9 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
 
   defp project_status_description(%{status: :cancelled}),
     do: "Cancelled — this project will not be delivered. Reopen only if this was a mistake."
+
+  defp project_status_description(%{status: :archived}),
+    do: "Archived — this project is no longer active. Delete it if it was created by mistake."
 
   defp project_status_description(_), do: "Manage this project's delivery status below."
 

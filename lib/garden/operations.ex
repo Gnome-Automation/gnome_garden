@@ -52,6 +52,8 @@ defmodule GnomeGarden.Operations do
       define :create_person, action: :create
       define :update_person, action: :update
       define :merge_person, action: :merge_into
+      define :archive_person, action: :archive
+      define :delete_person, action: :destroy
       define :list_active_people, action: :active
       define :list_people_for_organization, action: :for_organization, args: [:organization_id]
 
@@ -77,6 +79,7 @@ defmodule GnomeGarden.Operations do
         args: [:organization_id]
 
       define :list_affiliations_for_person, action: :for_person, args: [:person_id]
+      define :delete_organization_affiliation, action: :destroy
     end
 
     resource GnomeGarden.Operations.Site do

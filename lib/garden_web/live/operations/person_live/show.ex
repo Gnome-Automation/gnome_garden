@@ -19,6 +19,34 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
   end
 
   @impl true
+  def handle_event("archive", _params, socket) do
+    case Operations.archive_person(socket.assigns.person, actor: socket.assigns.current_user) do
+      {:ok, updated} ->
+        {:noreply,
+         socket
+         |> assign(:person, load_person!(updated.id, socket.assigns.current_user))
+         |> put_flash(:info, "Person archived")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not archive person: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete", _params, socket) do
+    case Operations.delete_person(socket.assigns.person, actor: socket.assigns.current_user) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Person deleted")
+         |> push_navigate(to: ~p"/operations/people")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not delete person: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
   def handle_event("merge_person", %{"person_id" => person_id}, socket) do
     case Operations.merge_person(
            socket.assigns.person,
@@ -55,6 +83,17 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
           <.button navigate={~p"/operations/people"}>
             Back
           </.button>
+          <.button :if={@person.status != :archived} phx-click="archive" data-confirm="Archive this person?">
+            Archive
+          </.button>
+          <button
+            :if={@person.status == :archived}
+            phx-click="delete"
+            data-confirm="Permanently delete this person? This cannot be undone."
+            class="rounded-md px-3 py-2 text-sm font-semibold text-white shadow-xs bg-red-600 hover:bg-red-500"
+          >
+            Delete
+          </button>
           <.button navigate={~p"/operations/people/#{@person}/edit"} variant="primary">
             Edit
           </.button>
