@@ -256,9 +256,11 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
   defp back_path(project_id), do: ~p"/execution/projects/#{project_id}"
 
   defp project_label(project) do
-    [project.name, project.code]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(" · ")
+    if project.code do
+      "#{project.name} (#{project.code})"
+    else
+      project.name
+    end
   end
 
   defp parent_work_item_label(work_item) do

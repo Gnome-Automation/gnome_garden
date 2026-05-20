@@ -72,6 +72,8 @@ defmodule GnomeGarden.Execution.WorkItem do
         :due_on,
         :sort_order
       ]
+
+      change GnomeGarden.Execution.Changes.GenerateWorkItemCode
     end
 
     update :update do
