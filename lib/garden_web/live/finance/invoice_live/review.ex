@@ -31,19 +31,31 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
           Review the generated line items, set a due date, then issue to send the invoice email.
         </:subtitle>
         <:actions>
-          <a
-            href={~p"/finance/invoices/#{@invoice}/export?format=csv"}
-            class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
-          >
-            <.icon name="hero-arrow-down-tray" class="size-4" /> Export CSV
-          </a>
-          <a
-            href={~p"/finance/invoices/#{@invoice}/export?format=pdf"}
-            target="_blank"
-            class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
-          >
-            <.icon name="hero-arrow-down-tray" class="size-4" /> Export PDF
-          </a>
+          <span title={if @invoice.status not in [:issued, :partial, :paid], do: "Issue the invoice before exporting"}>
+            <a
+              href={if @invoice.status in [:issued, :partial, :paid], do: ~p"/finance/invoices/#{@invoice}/export?format=csv"}
+              class={[
+                "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold",
+                @invoice.status in [:issued, :partial, :paid] && "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10",
+                @invoice.status not in [:issued, :partial, :paid] && "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-white/5 dark:bg-white/[0.03] dark:text-white/30"
+              ]}
+            >
+              <.icon name="hero-arrow-down-tray" class="size-4" /> Export CSV
+            </a>
+          </span>
+          <span title={if @invoice.status not in [:issued, :partial, :paid], do: "Issue the invoice before exporting"}>
+            <a
+              href={if @invoice.status in [:issued, :partial, :paid], do: ~p"/finance/invoices/#{@invoice}/export?format=pdf"}
+              target={if @invoice.status in [:issued, :partial, :paid], do: "_blank"}
+              class={[
+                "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold",
+                @invoice.status in [:issued, :partial, :paid] && "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10",
+                @invoice.status not in [:issued, :partial, :paid] && "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-white/5 dark:bg-white/[0.03] dark:text-white/30"
+              ]}
+            >
+              <.icon name="hero-arrow-down-tray" class="size-4" /> Export PDF
+            </a>
+          </span>
           <.button navigate={~p"/finance/invoices/#{@invoice}"}>
             <.icon name="hero-arrow-left" class="size-4" /> View Invoice
           </.button>
