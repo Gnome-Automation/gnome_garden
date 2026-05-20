@@ -110,8 +110,8 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 <.link navigate={~p"/execution/projects/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
               </p>
             </div>
-            <div class="sm:col-span-3">
-              <.input field={@form[:currency_code]} label="Currency Code" readonly={@agreement_selected && not @override_amounts} />
+            <div :if={not @agreement_selected} class="sm:col-span-3">
+              <.input field={@form[:currency_code]} label="Currency Code" />
             </div>
             <div :if={@agreement_selected} class="col-span-full">
               <div class="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
@@ -125,17 +125,17 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 </button>
               </div>
             </div>
-            <div class="sm:col-span-2">
-              <.input field={@form[:subtotal]} label="Subtotal" type="number" step="0.01" readonly={@agreement_selected && not @override_amounts} />
+            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
+              <.input field={@form[:subtotal]} label="Subtotal" type="number" step="0.01" />
             </div>
-            <div class="sm:col-span-2">
-              <.input field={@form[:tax_total]} label="Tax Total" type="number" step="0.01" readonly={@agreement_selected && not @override_amounts} />
+            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
+              <.input field={@form[:tax_total]} label="Tax Total" type="number" step="0.01" />
             </div>
-            <div class="sm:col-span-2">
-              <.input field={@form[:total_amount]} label="Total Amount" type="number" step="0.01" readonly={@agreement_selected && not @override_amounts} />
+            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
+              <.input field={@form[:total_amount]} label="Total Amount" type="number" step="0.01" />
             </div>
-            <div class="sm:col-span-3">
-              <.input field={@form[:balance_amount]} label="Balance Amount" type="number" step="0.01" readonly={@agreement_selected && not @override_amounts} />
+            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-3">
+              <.input field={@form[:balance_amount]} label="Balance Amount" type="number" step="0.01" />
             </div>
             <div class="col-span-full">
               <.input field={@form[:notes]} type="textarea" label="Notes" />
