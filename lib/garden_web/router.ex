@@ -303,7 +303,11 @@ defmodule GnomeGardenWeb.Router do
     magic_sign_in_route GnomeGarden.Accounts.ClientUser, :magic_link,
       path: "/sign-in",
       as: :portal,
-      auth_routes_prefix: {:unscoped, "/portal/auth"}
+      auth_routes_prefix: {:unscoped, "/portal/auth"},
+      overrides: [
+        GnomeGardenWeb.AuthOverrides,
+        AshAuthentication.Phoenix.Overrides.DaisyUI
+      ]
   end
 
   # Portal — authenticated routes (ClientUser session required)
