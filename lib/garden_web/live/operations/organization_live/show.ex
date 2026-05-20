@@ -273,9 +273,15 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
             <div :if={Enum.empty?(@organization.people || [])}>
               <.empty_state
                 icon="hero-users"
-                title="No people linked"
-                description="Agent-discovered or manually curated contacts will appear here."
-              />
+                title="No people linked yet"
+                description="Create a person first, then use Add Affiliation to link them to this organization."
+              >
+                <:action>
+                  <.button navigate={~p"/operations/people/new"}>
+                    Create Person
+                  </.button>
+                </:action>
+              </.empty_state>
             </div>
 
             <.link
