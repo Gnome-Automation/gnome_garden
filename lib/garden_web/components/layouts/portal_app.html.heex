@@ -24,9 +24,10 @@
           </.link>
         </nav>
       </div>
-      <div class="text-sm text-base-content/60">
+      <div class="flex items-center gap-4">
         <%= if assigns[:current_client_user] do %>
-          <%= @current_client_user.email %>
+          <span class="text-sm text-base-content/60"><%= @current_client_user.email %></span>
+          <a href={~p"/portal/sign-out"} class="text-sm text-base-content/50 hover:text-base-content transition-colors">Sign out</a>
         <% end %>
       </div>
     </div>

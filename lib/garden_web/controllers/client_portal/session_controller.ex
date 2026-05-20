@@ -17,6 +17,13 @@ defmodule GnomeGardenWeb.ClientPortal.SessionController do
     |> render(:new, layout: {GnomeGardenWeb.Layouts, :root}, page_title: "Sign In")
   end
 
+  def sign_out(conn, _params) do
+    conn
+    |> clear_session()
+    |> put_flash(:info, "You have been signed out.")
+    |> redirect(to: ~p"/portal/login")
+  end
+
   defp maybe_send_magic_link(email) do
     with {:ok, person} <- Operations.get_person_by_email(email),
          {:ok, affiliations} <- Operations.list_affiliations_for_person(person.id),

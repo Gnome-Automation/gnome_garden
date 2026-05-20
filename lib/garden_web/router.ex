@@ -295,6 +295,7 @@ defmodule GnomeGardenWeb.Router do
 
     get "/login", ClientPortal.SessionController, :new
     post "/login", ClientPortal.SessionController, :create
+    get "/sign-out", ClientPortal.SessionController, :sign_out
 
     # AshAuthentication magic link callback for ClientUser
     # IMPORTANT: path is "/sign-in" (not "/portal/sign-in") because this scope
