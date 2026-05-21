@@ -95,6 +95,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
               <p :if={Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
                 No agreements yet —
                 <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+                (optional)
               </p>
             </div>
             <div class="sm:col-span-3">
@@ -108,6 +109,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
               <p :if={Enum.empty?(@projects)} class="mt-1.5 text-xs text-base-content/50">
                 No projects yet —
                 <.link navigate={~p"/execution/projects/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+                (optional)
               </p>
             </div>
             <div :if={not @agreement_selected} class="sm:col-span-3">
