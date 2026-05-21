@@ -266,16 +266,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
     },
     # Finance
     %{
-      id: "fin-approval-queue",
-      section: "Finance",
-      icon: "hero-check-circle",
-      label: "Approvals",
-      path: "/finance/time-entries/approval-queue",
-      badge: 0,
-      hot: false,
-      match: ["/finance/time-entries/approval-queue"]
-    },
-    %{
       id: "fin-time-entries",
       section: "Finance",
       icon: "hero-clock",
@@ -284,6 +274,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       badge: 0,
       hot: false,
       match: ["/finance/time-entries"]
+    },
+    %{
+      id: "fin-approval-queue",
+      section: "Finance",
+      icon: "hero-check-circle",
+      label: "Approvals",
+      path: "/finance/time-entries/approval-queue",
+      badge: 0,
+      hot: false,
+      match: ["/finance/time-entries/approval-queue"]
     },
     %{
       id: "fin-invoices",
@@ -414,12 +414,22 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
   def active_dest(path, area) do
     area_dests(area)
-    |> Enum.find(&path_matches?(&1, path))
+    |> Enum.filter(&path_matches?(&1, path))
+    |> Enum.max_by(&match_specificity(&1, path), fn -> nil end)
     |> case do
       nil -> List.first(area_dests(area))
       d -> d
     end
   end
+
+  defp match_specificity(%{match: matches}, path) when is_list(matches) and matches != [] do
+    matches
+    |> Enum.filter(fn m -> path == m or String.starts_with?(path, m <> "/") end)
+    |> Enum.map(&String.length/1)
+    |> Enum.max(fn -> 0 end)
+  end
+
+  defp match_specificity(%{path: dest_path}, _path), do: String.length(dest_path)
 
   defp path_matches?(%{match: matches}, path) when is_list(matches) and matches != [] do
     Enum.any?(matches, fn m -> path == m or String.starts_with?(path, m <> "/") end)
