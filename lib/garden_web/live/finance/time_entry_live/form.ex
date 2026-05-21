@@ -125,6 +125,11 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
                 prompt="Select work item..."
                 options={Enum.map(@project_work_items, &{work_item_label(&1), &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/execution/work-items/new?return_to=#{~p"/finance/time-entries/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                (optional)
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -134,6 +139,11 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
                 prompt="Select work order..."
                 options={Enum.map(@work_orders, &{work_order_label(&1), &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/execution/work-orders/new?return_to=#{~p"/finance/time-entries/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                (optional)
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:bill_rate]} type="number" step="0.01" label="Bill Rate" />
