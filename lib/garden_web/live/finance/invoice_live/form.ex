@@ -253,7 +253,6 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
 
   defp invoice_defaults_from_agreement(agreement) do
     %{
-      "invoice_number" => agreement.reference_number,
       "due_on" => agreement.end_on,
       "notes" => agreement.notes
     }
