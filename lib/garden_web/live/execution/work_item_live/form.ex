@@ -19,6 +19,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
        :parent_work_items,
        load_parent_work_items(socket.assigns.current_user, selected_project_id, work_item)
      )
+     |> assign(:return_to, params["return_to"])
      |> assign(:page_title, if(work_item, do: "Edit Work Item", else: "New Work Item"))
      |> assign_form(params)}
   end
@@ -120,7 +121,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={back_path(@selected_project_id)}
+            cancel_path={@return_to || back_path(@selected_project_id)}
             submit_label={if @work_item, do: "Update Work Item", else: "Create Work Item"}
           />
         </.section>
@@ -158,7 +159,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
            :info,
            "Work item #{if socket.assigns.work_item, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/execution/work-items/#{work_item}")}
+         |> push_navigate(to: socket.assigns.return_to || ~p"/execution/work-items/#{work_item}")}
 
       {:error, form} ->
         {:noreply,

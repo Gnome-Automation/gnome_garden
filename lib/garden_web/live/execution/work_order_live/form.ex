@@ -25,6 +25,7 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
      |> assign(:maintenance_plans, load_maintenance_plans(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:projects, load_projects(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"])
      |> assign(:page_title, if(work_order, do: "Edit Work Order", else: "New Work Order"))
      |> assign_form(params)}
   end
@@ -216,7 +217,7 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/execution/work-orders"}
+            cancel_path={@return_to || ~p"/execution/work-orders"}
             submit_label={if @work_order, do: "Update Work Order", else: "Create Work Order"}
           />
         </.section>
@@ -241,7 +242,7 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
            :info,
            "Work order #{if socket.assigns.work_order, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/execution/work-orders/#{work_order}")}
+         |> push_navigate(to: socket.assigns.return_to || ~p"/execution/work-orders/#{work_order}")}
 
       {:error, form} ->
         {:noreply,
