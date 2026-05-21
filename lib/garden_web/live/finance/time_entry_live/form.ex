@@ -147,9 +147,15 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:bill_rate]} type="number" step="0.01" label="Bill Rate" />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Hourly rate charged to the client ($/hr). Auto-filled from the agreement's default rate. Required to generate an invoice.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:cost_rate]} type="number" step="0.01" label="Cost Rate" />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Internal cost of this labor ($/hr). Used for margin tracking only — never shown to the client. (optional)
+              </p>
             </div>
             <div class="col-span-full">
               <.input field={@form[:description]} type="textarea" label="Description" required />
