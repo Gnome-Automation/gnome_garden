@@ -264,9 +264,20 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/execution/work-orders"]
     },
+    # Finance
     %{
-      id: "ops-approval-queue",
-      section: "Operations",
+      id: "fin-time-entries",
+      section: "Finance",
+      icon: "hero-clock",
+      label: "Time Entries",
+      path: "/finance/time-entries",
+      badge: 0,
+      hot: false,
+      match: ["/finance/time-entries"]
+    },
+    %{
+      id: "fin-approval-queue",
+      section: "Finance",
       icon: "hero-check-circle",
       label: "Approvals",
       path: "/finance/time-entries/approval-queue",
@@ -274,7 +285,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/finance/time-entries/approval-queue"]
     },
-    # Finance
     %{
       id: "fin-invoices",
       section: "Finance",
