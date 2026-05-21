@@ -136,6 +136,9 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
             </div>
             <div class="sm:col-span-2">
               <.input field={@form[:default_bill_rate]} label="Default Bill Rate" type="number" step="0.01" />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Auto-fills the bill rate on new time entries for this agreement. (optional)
+              </p>
             </div>
             <div class="sm:col-span-2">
               <.input field={@form[:renewal_notice_days]} label="Renewal Notice Days" type="number" />
