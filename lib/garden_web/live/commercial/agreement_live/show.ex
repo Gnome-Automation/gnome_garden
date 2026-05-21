@@ -239,7 +239,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
               navigate={~p"/execution/projects/new?agreement_id=#{@agreement.id}"}
               variant="primary"
             >
-              <.icon name="hero-folder-plus" class="size-4" /> Create Project
+              <.icon name="hero-folder-plus" class="size-4" /> New Project
             </.button>
             <.button phx-click="generate_invoice" phx-disable-with="Generating...">
               <.icon name="hero-document-plus" class="size-4" /> Invoice Milestone
