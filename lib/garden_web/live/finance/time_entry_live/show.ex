@@ -52,6 +52,9 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
           <.button navigate={~p"/finance/time-entries"}>
             Back
           </.button>
+          <.button :if={@time_entry.agreement} navigate={~p"/commercial/agreements/#{@time_entry.agreement}"}>
+            Agreement
+          </.button>
           <.button :if={@time_entry.project} navigate={~p"/execution/projects/#{@time_entry.project}"}>
             Project
           </.button>
