@@ -14,6 +14,7 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Form do
      |> assign(:sites, load_sites(socket.assigns.current_user))
      |> assign(:managed_systems, load_managed_systems(socket.assigns.current_user))
      |> assign(:assets, load_parent_assets(socket.assigns.current_user, asset))
+     |> assign(:return_to, params["return_to"])
      |> assign(:page_title, if(asset, do: "Edit Asset", else: "New Asset"))
      |> assign_form(params)}
   end
@@ -144,7 +145,7 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/operations/assets"}
+            cancel_path={@return_to || ~p"/operations/assets"}
             submit_label={if @asset, do: "Update Asset", else: "Create Asset"}
           />
         </.section>
@@ -166,7 +167,7 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Asset #{if socket.assigns.asset, do: "updated", else: "created"}")
-         |> push_navigate(to: ~p"/operations/assets/#{asset}")}
+         |> push_navigate(to: socket.assigns.return_to || ~p"/operations/assets/#{asset}")}
 
       {:error, form} ->
         {:noreply,

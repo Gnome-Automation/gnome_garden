@@ -22,6 +22,7 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Form do
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:people, load_people(socket.assigns.current_user))
      |> assign(:service_level_policies, load_service_level_policies(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"])
      |> assign(
        :page_title,
        if(service_ticket, do: "Edit Service Ticket", else: "New Service Ticket")
@@ -189,7 +190,7 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/execution/service-tickets"}
+            cancel_path={@return_to || ~p"/execution/service-tickets"}
             submit_label={
               if @service_ticket, do: "Update Service Ticket", else: "Create Service Ticket"
             }
@@ -216,7 +217,7 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Form do
            :info,
            "Service ticket #{if socket.assigns.service_ticket, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/execution/service-tickets/#{service_ticket}")}
+         |> push_navigate(to: socket.assigns.return_to || ~p"/execution/service-tickets/#{service_ticket}")}
 
       {:error, form} ->
         {:noreply,

@@ -100,6 +100,11 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
                 prompt="Select ticket..."
                 options={Enum.map(@service_tickets, &{service_ticket_label(&1), &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/execution/service-tickets/new?return_to=#{~p"/execution/work-orders/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                (optional)
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -109,6 +114,11 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
                 prompt="Select plan..."
                 options={Enum.map(@maintenance_plans, &{maintenance_plan_label(&1), &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/execution/maintenance-plans/new?return_to=#{~p"/execution/work-orders/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                (optional)
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -118,6 +128,11 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
                 prompt="Select site..."
                 options={Enum.map(@sites, &{site_label(&1), &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/operations/sites/new?return_to=#{~p"/execution/work-orders/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                (optional)
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -127,6 +142,11 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
                 prompt="Select system..."
                 options={Enum.map(@managed_systems, &{system_label(&1), &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/operations/managed-systems/new?return_to=#{~p"/execution/work-orders/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                (optional)
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -136,6 +156,11 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
                 prompt="Select asset..."
                 options={Enum.map(@assets, &{asset_label(&1), &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/operations/assets/new?return_to=#{~p"/execution/work-orders/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                (optional)
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -145,9 +170,10 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
                 prompt="Select agreement..."
                 options={Enum.map(@agreements, &{agreement_label(&1), &1.id})}
               />
-              <p :if={Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
-                No agreements yet —
-                <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/execution/work-orders/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/execution/work-orders/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                (optional)
               </p>
             </div>
             <div class="sm:col-span-3">
@@ -158,9 +184,10 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Form do
                 prompt="Select project..."
                 options={Enum.map(@projects, &{project_label(&1), &1.id})}
               />
-              <p :if={Enum.empty?(@projects)} class="mt-1.5 text-xs text-base-content/50">
-                No projects yet —
-                <.link navigate={~p"/execution/projects/new?return_to=#{~p"/execution/work-orders/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/execution/projects/new?return_to=#{~p"/execution/work-orders/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                (optional)
               </p>
             </div>
             <div class="sm:col-span-2">

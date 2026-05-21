@@ -245,6 +245,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/execution/projects"]
     },
     %{
+      id: "ops-work-items",
+      section: "Operations",
+      icon: "hero-list-bullet",
+      label: "Work Items",
+      path: "/execution/work-items",
+      badge: 0,
+      hot: false,
+      match: ["/execution/work-items"]
+    },
+    %{
       id: "ops-tickets",
       section: "Operations",
       icon: "hero-wrench-screwdriver",

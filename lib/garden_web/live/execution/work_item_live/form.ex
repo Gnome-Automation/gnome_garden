@@ -55,6 +55,10 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
                 options={Enum.map(@projects, &{project_label(&1), &1.id})}
                 required
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/execution/projects/new?return_to=#{~p"/execution/work-items/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -64,6 +68,9 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Form do
                 prompt="No parent"
                 options={Enum.map(@parent_work_items, &{parent_work_item_label(&1), &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Groups this item under another work item. (optional)
+              </p>
             </div>
             <div class="sm:col-span-2">
               <.input field={@form[:code]} label="Code" placeholder="Auto-generated if left blank" />

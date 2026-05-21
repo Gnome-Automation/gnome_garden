@@ -15,6 +15,7 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Form do
      |> assign(:managed_system, managed_system)
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:sites, load_sites(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"])
      |> assign(
        :page_title,
        if(managed_system, do: "Edit Managed System", else: "New Managed System")
@@ -127,7 +128,7 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/operations/managed-systems"}
+            cancel_path={@return_to || ~p"/operations/managed-systems"}
             submit_label={
               if @managed_system, do: "Update Managed System", else: "Create Managed System"
             }
@@ -154,7 +155,7 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Form do
            :info,
            "Managed system #{if socket.assigns.managed_system, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/operations/managed-systems/#{managed_system}")}
+         |> push_navigate(to: socket.assigns.return_to || ~p"/operations/managed-systems/#{managed_system}")}
 
       {:error, form} ->
         {:noreply,

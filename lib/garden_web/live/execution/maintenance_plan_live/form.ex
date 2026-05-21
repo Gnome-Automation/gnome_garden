@@ -20,6 +20,7 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Form do
      |> assign(:managed_systems, load_managed_systems(socket.assigns.current_user))
      |> assign(:assets, load_assets(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"])
      |> assign(
        :page_title,
        if(maintenance_plan, do: "Edit Maintenance Plan", else: "New Maintenance Plan")
@@ -176,7 +177,7 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/execution/maintenance-plans"}
+            cancel_path={@return_to || ~p"/execution/maintenance-plans"}
             submit_label={
               if @maintenance_plan, do: "Update Maintenance Plan", else: "Create Maintenance Plan"
             }
@@ -203,7 +204,7 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Form do
            :info,
            "Maintenance plan #{if socket.assigns.maintenance_plan, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/execution/maintenance-plans/#{maintenance_plan}")}
+         |> push_navigate(to: socket.assigns.return_to || ~p"/execution/maintenance-plans/#{maintenance_plan}")}
 
       {:error, form} ->
         {:noreply,

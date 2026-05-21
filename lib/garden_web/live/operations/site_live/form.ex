@@ -11,6 +11,7 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Form do
      socket
      |> assign(:site, site)
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"])
      |> assign(:page_title, if(site, do: "Edit Site", else: "New Site"))
      |> assign_form(params)}
   end
@@ -96,7 +97,7 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/operations/sites"}
+            cancel_path={@return_to || ~p"/operations/sites"}
             submit_label={if @site, do: "Update Site", else: "Create Site"}
           />
         </.section>
@@ -118,7 +119,7 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Site #{if socket.assigns.site, do: "updated", else: "created"}")
-         |> push_navigate(to: ~p"/operations/sites/#{site}")}
+         |> push_navigate(to: socket.assigns.return_to || ~p"/operations/sites/#{site}")}
 
       {:error, form} ->
         {:noreply,
