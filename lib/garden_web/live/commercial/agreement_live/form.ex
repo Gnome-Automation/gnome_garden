@@ -70,9 +70,15 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-3">
               <.input field={@form[:reference_number]} label="Reference Number" />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Your internal contract or PO number. (optional)
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:name]} label="Name" required />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                A short descriptive name for this agreement, e.g. "MSA 2026" or "Phase 1 SOW".
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -82,9 +88,9 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
                 prompt="Select organization..."
                 options={Enum.map(@organizations, &{&1.name, &1.id})}
               />
-              <p :if={Enum.empty?(@organizations)} class="mt-1.5 text-xs text-base-content/50">
-                No organizations yet —
-                <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/commercial/agreements/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/commercial/agreements/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
               </p>
             </div>
             <div class="sm:col-span-3">
