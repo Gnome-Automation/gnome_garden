@@ -59,10 +59,10 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
           <.button navigate={~p"/commercial/agreements"}>
             Agreements
           </.button>
-          <.button phx-click="toggle_export_form">
+          <.button phx-click="toggle_export_form" title="Export multiple invoices at once — filter by date range and client">
             <.icon name="hero-arrow-down-tray" class="size-4" /> Batch Export
           </.button>
-          <.button navigate={~p"/finance/invoices/new"} variant="primary">
+          <.button navigate={~p"/finance/invoices/new"} variant="primary" title="Create a new invoice directly, or draft one from an agreement">
             New Invoice
           </.button>
         </:actions>
@@ -207,7 +207,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
           </div>
         </:col>
 
-        <:col :let={invoice} field="status" sort label="Status">
+        <:col :let={invoice} field="status" sort filter={:select} filter_options={[options: [{"Draft", "draft"}, {"Issued", "issued"}, {"Partial", "partial"}, {"Paid", "paid"}, {"Void", "void"}, {"Write-off", "write_off"}]]} label="Status">
           <.status_badge status={invoice.status_variant}>
             {format_atom(invoice.status)}
           </.status_badge>

@@ -25,6 +25,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
        load_project_work_items(socket.assigns.current_user, selected_project_id)
      )
      |> assign(:page_title, if(time_entry, do: "Edit Time Entry", else: "New Time Entry"))
+     |> assign(:return_to, params["return_to"] || ~p"/finance/time-entries")
      |> assign_form(params)}
   end
 
@@ -38,8 +39,8 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
           Capture labor against the right commercial and execution context before approvals and invoice drafting happen.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/time-entries"}>
-            Back to time entries
+          <.button navigate={@return_to}>
+            Back
           </.button>
         </:actions>
       </.page_header>
@@ -168,7 +169,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/finance/time-entries"}
+            cancel_path={@return_to}
             submit_label={if @time_entry, do: "Update Time Entry", else: "Create Time Entry"}
           />
         </.section>

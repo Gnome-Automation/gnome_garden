@@ -6,7 +6,7 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
   alias GnomeGarden.Execution
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     actor = socket.assigns.current_user
     work_order = load_work_order!(id, actor)
 
@@ -14,7 +14,8 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
      socket
      |> assign(:page_title, work_order.title)
      |> assign(:work_order, work_order)
-     |> assign(:work_order_assignments, load_work_order_assignments!(work_order.id, actor))}
+     |> assign(:work_order_assignments, load_work_order_assignments!(work_order.id, actor))
+     |> assign(:return_to, params["return_to"] || ~p"/execution/work-orders")}
   end
 
   @impl true
@@ -59,7 +60,7 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/execution/work-orders"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button
@@ -68,7 +69,7 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
           >
             Service Ticket
           </.button>
-          <.button navigate={~p"/finance/time-entries/new?#{time_entry_params(@work_order)}"}>
+          <.button navigate={~p"/finance/time-entries/new?#{Map.put(time_entry_params(@work_order), :return_to, ~p"/execution/work-orders/#{@work_order}")}"}>
             New Time Entry
           </.button>
           <.button navigate={~p"/finance/expenses/new?#{expense_params(@work_order)}"}>

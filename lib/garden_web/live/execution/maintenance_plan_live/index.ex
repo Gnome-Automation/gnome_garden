@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Index do
           <.button navigate={~p"/operations/assets"}>
             Assets
           </.button>
-          <.button navigate={~p"/execution/maintenance-plans/new"} variant="primary">
+          <.button navigate={~p"/execution/maintenance-plans/new"} variant="primary" title="Create a new preventive maintenance schedule for an asset or managed system">
             New Maintenance Plan
           </.button>
         </:actions>
@@ -122,7 +122,7 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Index do
           </div>
         </:col>
 
-        <:col :let={plan} field="status" sort label="Status">
+        <:col :let={plan} field="status" sort filter={:select} filter_options={[options: [{"Active", "active"}, {"Suspended", "suspended"}, {"Retired", "retired"}]]} label="Status">
           <div class="space-y-1">
             <.status_badge status={plan.status_variant}>
               {format_atom(plan.status)}

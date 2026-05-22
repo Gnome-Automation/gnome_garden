@@ -37,7 +37,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Index do
           <.button navigate={~p"/operations/people"}>
             People
           </.button>
-          <.button navigate={~p"/operations/organizations/new"} variant="primary">
+          <.button navigate={~p"/operations/organizations/new"} variant="primary" title="Create a new account, customer, partner, or vendor organization">
             New Organization
           </.button>
         </:actions>
@@ -104,7 +104,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Index do
           </div>
         </:col>
 
-        <:col :let={org} field="status" sort label="Status">
+        <:col :let={org} field="status" sort filter={:select} filter_options={[options: [{"Prospect", "prospect"}, {"Active", "active"}, {"Inactive", "inactive"}, {"Former", "former"}, {"Archived", "archived"}]]} label="Status">
           <.status_badge status={org.status_variant}>
             {format_atom(org.status)}
           </.status_badge>

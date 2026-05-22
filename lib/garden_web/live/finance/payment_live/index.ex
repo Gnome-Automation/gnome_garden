@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Index do
           <.button navigate={~p"/finance/invoices"}>
             Invoices
           </.button>
-          <.button navigate={~p"/finance/payments/new"} variant="primary">
+          <.button navigate={~p"/finance/payments/new"} variant="primary" title="Record a new payment receipt — then allocate it against invoices">
             New Payment
           </.button>
         </:actions>
@@ -119,7 +119,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Index do
           </div>
         </:col>
 
-        <:col :let={payment} field="status" sort label="Status">
+        <:col :let={payment} field="status" sort filter={:select} filter_options={[options: [{"Received", "received"}, {"Deposited", "deposited"}, {"Reversed", "reversed"}]]} label="Status">
           <div class="space-y-1">
             <.status_badge status={payment.status_variant}>
               {format_atom(payment.status)}

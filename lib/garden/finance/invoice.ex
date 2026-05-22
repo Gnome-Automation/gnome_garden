@@ -50,7 +50,7 @@ defmodule GnomeGarden.Finance.Invoice do
       transition :partial, from: [:issued, :partial], to: :partial
       transition :mark_paid, from: [:issued, :partial], to: :paid
       transition :void, from: [:draft, :issued], to: :void
-      transition :reopen, from: [:void, :paid], to: :draft
+      transition :reopen, from: [:void, :paid, :partial], to: :draft
       transition :write_off, from: [:issued, :partial], to: :write_off
     end
   end
@@ -160,14 +160,36 @@ defmodule GnomeGarden.Finance.Invoice do
       change after_action(fn changeset, invoice, _context ->
         actor = changeset.context[:private][:actor]
 
-        invoice
-        |> Ash.load!([invoice_lines: [:time_entry]], actor: actor, authorize?: false)
+        loaded =
+          Ash.load!(invoice, [invoice_lines: [:time_entry]], actor: actor, authorize?: false)
+
+        loaded
         |> Map.get(:invoice_lines, [])
         |> Enum.each(fn line ->
           if line.time_entry && line.time_entry.status == :billed do
             Ash.update!(line.time_entry, %{}, action: :unmark_billed, actor: actor, authorize?: false)
           end
         end)
+
+        if loaded.organization_id do
+          {:ok, %{rows: [[val]]}} =
+            GnomeGarden.Repo.query("SELECT nextval('finance_credit_note_number_seq')", [])
+
+          cn_number = "CN-" <> String.pad_leading("#{val}", 4, "0")
+
+          GnomeGarden.Finance.create_credit_note(
+            %{
+              credit_note_number: cn_number,
+              invoice_id: loaded.id,
+              organization_id: loaded.organization_id,
+              total_amount: loaded.total_amount || Decimal.new("0"),
+              currency_code: loaded.currency_code || "USD",
+              reason: "Invoice #{loaded.invoice_number || loaded.id} voided"
+            },
+            actor: actor,
+            authorize?: false
+          )
+        end
 
         {:ok, invoice}
       end)
@@ -191,7 +213,9 @@ defmodule GnomeGarden.Finance.Invoice do
                   :project,
                   :work_order,
                   :invoice_lines,
-                  :payment_applications
+                  :payment_applications,
+                  :balance_amount,
+                  :total_amount
                 ]
               )
     end

@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Index do
           <.button navigate={~p"/operations/assets"}>
             Assets
           </.button>
-          <.button navigate={~p"/execution/service-tickets/new"} variant="primary">
+          <.button navigate={~p"/execution/service-tickets/new"} variant="primary" title="Log a new support or maintenance request before converting it to a work order">
             New Service Ticket
           </.button>
         </:actions>
@@ -121,7 +121,7 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Index do
           </div>
         </:col>
 
-        <:col :let={ticket} field="status" sort label="Status">
+        <:col :let={ticket} field="status" sort filter={:select} filter_options={[options: [{"New", "new"}, {"Triaged", "triaged"}, {"In Progress", "in_progress"}, {"Waiting on Customer", "waiting_on_customer"}, {"Resolved", "resolved"}, {"Closed", "closed"}, {"Cancelled", "cancelled"}]]} label="Status">
           <.status_badge status={ticket.status_variant}>
             {format_atom(ticket.status)}
           </.status_badge>

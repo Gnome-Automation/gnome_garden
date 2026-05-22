@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Index do
           <.button navigate={~p"/operations/organizations"}>
             Organizations
           </.button>
-          <.button navigate={~p"/operations/sites/new"} variant="primary">
+          <.button navigate={~p"/operations/sites/new"} variant="primary" title="Add a new operating site — physical facility, office, lab, or cloud environment">
             New Site
           </.button>
         </:actions>
@@ -108,7 +108,7 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Index do
           </div>
         </:col>
 
-        <:col :let={site} field="status" sort label="Status">
+        <:col :let={site} field="status" sort filter={:select} filter_options={[options: [{"Active", "active"}, {"Inactive", "inactive"}, {"Retired", "retired"}]]} label="Status">
           <.status_badge status={site.status_variant}>
             {format_atom(site.status)}
           </.status_badge>

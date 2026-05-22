@@ -41,7 +41,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Index do
           <.button navigate={~p"/commercial/agreements"}>
             Agreements
           </.button>
-          <.button navigate={~p"/execution/projects/new"} variant="primary">
+          <.button navigate={~p"/execution/projects/new"} variant="primary" title="Create a new delivery project under an active agreement">
             New Project
           </.button>
         </:actions>
@@ -130,7 +130,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Index do
           </div>
         </:col>
 
-        <:col :let={project} field="status" sort label="Status">
+        <:col :let={project} field="status" sort filter={:select} filter_options={[options: [{"Planned", "planned"}, {"Ready", "ready"}, {"Active", "active"}, {"On Hold", "on_hold"}, {"Completed", "completed"}, {"Cancelled", "cancelled"}, {"Archived", "archived"}]]} label="Status">
           <.status_badge status={project.status_variant}>
             {format_atom(project.status)}
           </.status_badge>

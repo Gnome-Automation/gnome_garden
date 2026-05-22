@@ -8,13 +8,14 @@ defmodule GnomeGardenWeb.Finance.CreditNoteLive.Show do
   alias GnomeGarden.Mailer.CreditNoteEmail
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     credit_note = load_credit_note!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, credit_note.credit_note_number)
-     |> assign(:credit_note, credit_note)}
+     |> assign(:credit_note, credit_note)
+     |> assign(:return_to, params["return_to"] || ~p"/finance/credit-notes")}
   end
 
   @impl true
@@ -55,6 +56,20 @@ defmodule GnomeGardenWeb.Finance.CreditNoteLive.Show do
   end
 
   @impl true
+  def handle_event("resend", _params, socket) do
+    actor = socket.assigns.current_user
+    loaded = load_credit_note!(socket.assigns.credit_note.id, actor)
+
+    case loaded |> CreditNoteEmail.build() |> Mailer.deliver() do
+      {:ok, _} ->
+        {:noreply, put_flash(socket, :info, "Credit note resent to #{recipient_email(loaded)}")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Email delivery failed — please try again.")}
+    end
+  end
+
+  @impl true
   def handle_event("save_reason", %{"reason" => reason}, socket) do
     case Finance.update_credit_note(socket.assigns.credit_note, %{reason: reason},
            actor: socket.assigns.current_user
@@ -89,15 +104,23 @@ defmodule GnomeGardenWeb.Finance.CreditNoteLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/credit-notes"}>
+          <.button navigate={@return_to}>
             <.icon name="hero-arrow-left" class="size-4" /> Back
           </.button>
           <.button
             :if={@credit_note.status == :draft}
             phx-click="issue_and_send"
             variant="primary"
+            title="Finalize and email this credit note to the client's billing contact"
           >
             <.icon name="hero-paper-airplane" class="size-4" /> Issue & Send
+          </.button>
+          <.button
+            :if={@credit_note.status == :issued}
+            phx-click="resend"
+            title="Re-send the credit note email to the billing contact"
+          >
+            <.icon name="hero-paper-airplane" class="size-4" /> Resend
           </.button>
         </:actions>
       </.page_header>

@@ -45,6 +45,7 @@ defmodule GnomeGarden.Mercury.Account do
 
     update :update do
       primary? true
+      require_atomic? false
 
       accept [
         :name,

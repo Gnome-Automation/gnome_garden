@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Show do
   alias GnomeGarden.Operations
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     site = load_site!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, site.name)
-     |> assign(:site, site)}
+     |> assign(:site, site)
+     |> assign(:return_to, params["return_to"] || ~p"/operations/sites")}
   end
 
   @impl true
@@ -31,7 +32,7 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/operations/sites"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button navigate={~p"/operations/managed-systems/new?site_id=#{@site.id}"}>

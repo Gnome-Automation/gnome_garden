@@ -13,6 +13,8 @@ defmodule GnomeGarden.Mailer.PaymentReminderEmail do
 
   alias GnomeGarden.Mailer.InvoiceEmail
 
+  @logo_url "https://gnomeautomation.com/images/gnome-icon-clean-192.png"
+
   @spec build(map(), :day_7 | :day_14 | :day_30, keyword()) :: Swoosh.Email.t()
   def build(invoice, threshold, opts \\ []) do
     org = invoice.organization
@@ -32,14 +34,13 @@ defmodule GnomeGarden.Mailer.PaymentReminderEmail do
     end
   end
 
-  defp subject_for(:day_7, number, days),
-    do: "Friendly reminder: Invoice #{number} was due #{days} days ago"
-
-  defp subject_for(:day_14, number, days),
-    do: "Follow-up: Invoice #{number} is #{days} days overdue"
-
-  defp subject_for(:day_30, number, days),
-    do: "URGENT: Invoice #{number} is #{days} days overdue — immediate payment required"
+  defp subject_for(_threshold, number, days) do
+    cond do
+      days >= 30 -> "URGENT: Invoice #{number} is #{days} days overdue — immediate payment required"
+      days >= 14 -> "Follow-up: Invoice #{number} is #{days} days overdue"
+      true -> "Friendly reminder: Invoice #{number} was due #{days} days ago"
+    end
+  end
 
   defp body_for(threshold, invoice, days_overdue) do
     org_name = (invoice.organization && invoice.organization.name) || "Client"
@@ -48,10 +49,10 @@ defmodule GnomeGarden.Mailer.PaymentReminderEmail do
     routing_number = Keyword.get(mercury_info, :routing_number, "")
 
     tone =
-      case threshold do
-        :day_7 -> "This is a friendly reminder that"
-        :day_14 -> "We wanted to follow up as"
-        :day_30 -> "This is an urgent notice that"
+      cond do
+        days_overdue >= 30 -> "This is an urgent notice that"
+        days_overdue >= 14 -> "We wanted to follow up as"
+        true -> "This is a friendly reminder that"
       end
 
     """
@@ -63,8 +64,18 @@ defmodule GnomeGarden.Mailer.PaymentReminderEmail do
         <tr><td align="center">
           <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
             <tr>
-              <td style="background:#0f172a;padding:24px 40px;">
-                <p style="margin:0;font-size:16px;font-weight:700;color:#ffffff;">Gnome Automation — Payment Reminder</p>
+              <td style="background:#0f172a;padding:28px 40px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td>
+                      <img src="#{@logo_url}" width="36" height="36" alt="Gnome Automation" style="display:block;border-radius:6px;">
+                    </td>
+                    <td style="padding-left:12px;vertical-align:middle;">
+                      <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">Gnome Automation</p>
+                      <p style="margin:2px 0 0;font-size:12px;color:#94a3b8;">Payment Reminder</p>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>

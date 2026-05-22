@@ -15,6 +15,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
      |> assign(:payment_application, payment_application)
      |> assign(:payments, load_payments(socket.assigns.current_user))
      |> assign(:invoices, load_invoices(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"])
      |> assign(
        :page_title,
        if(payment_application, do: "Edit Payment Application", else: "New Payment Application")
@@ -32,7 +33,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
           Allocate receipts to invoices explicitly so cash application stays auditable.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/payment-applications"}>
+          <.button navigate={@return_to || ~p"/finance/payment-applications"}>
             Back to applications
           </.button>
         </:actions>
@@ -58,6 +59,15 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
                 prompt="Select payment..."
                 options={Enum.map(@payments, &{payment_label(&1), &1.id})}
               />
+              <p class="mt-1 text-xs text-base-content/50">
+                Not in the list?
+                <.link
+                  navigate={~p"/finance/payments/new?return_to=#{~p"/finance/payment-applications/new"}"}
+                  class="text-emerald-600 hover:underline"
+                >
+                  Create a payment first.
+                </.link>
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -67,6 +77,15 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
                 prompt="Select invoice..."
                 options={Enum.map(@invoices, &{invoice_label(&1), &1.id})}
               />
+              <p class="mt-1 text-xs text-base-content/50">
+                Not in the list?
+                <.link
+                  navigate={~p"/finance/invoices/new?return_to=#{~p"/finance/payment-applications/new"}"}
+                  class="text-emerald-600 hover:underline"
+                >
+                  Create an invoice first.
+                </.link>
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:amount]} label="Amount" type="number" step="0.01" />
@@ -82,7 +101,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/finance/payment-applications"}
+            cancel_path={@return_to || ~p"/finance/payment-applications"}
             submit_label={
               if @payment_application, do: "Update Application", else: "Create Application"
             }
@@ -109,7 +128,9 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
            :info,
            "Payment application #{if socket.assigns.payment_application, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/finance/payment-applications/#{payment_application}")}
+         |> push_navigate(
+           to: socket.assigns.return_to || ~p"/finance/payment-applications/#{payment_application}"
+         )}
 
       {:error, form} ->
         {:noreply,

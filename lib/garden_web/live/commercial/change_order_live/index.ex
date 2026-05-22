@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Index do
           <.button navigate={~p"/commercial/agreements"}>
             Agreements
           </.button>
-          <.button navigate={~p"/commercial/change-orders/new"} variant="primary">
+          <.button navigate={~p"/commercial/change-orders/new"} variant="primary" title="Document a post-award scope, schedule, or pricing change against an existing agreement">
             New Change Order
           </.button>
         </:actions>
@@ -119,7 +119,7 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Index do
           </div>
         </:col>
 
-        <:col :let={change_order} field="status" sort label="Status">
+        <:col :let={change_order} field="status" sort filter={:select} filter_options={[options: [{"Draft", "draft"}, {"Submitted", "submitted"}, {"Under Review", "under_review"}, {"Approved", "approved"}, {"Rejected", "rejected"}, {"Implemented", "implemented"}, {"Cancelled", "cancelled"}]]} label="Status">
           <.status_badge status={change_order.status_variant}>
             {format_atom(change_order.status)}
           </.status_badge>

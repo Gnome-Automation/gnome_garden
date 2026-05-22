@@ -37,7 +37,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Index do
           <.button navigate={~p"/operations/organizations"}>
             Organizations
           </.button>
-          <.button navigate={~p"/operations/affiliations/new"} variant="primary">
+          <.button navigate={~p"/operations/affiliations/new"} variant="primary" title="Link an existing person to an organization with a role and contact type">
             New Affiliation
           </.button>
         </:actions>
@@ -112,7 +112,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Index do
           </div>
         </:col>
 
-        <:col :let={affiliation} field="status" sort label="Status">
+        <:col :let={affiliation} field="status" sort filter={:select} filter_options={[options: [{"Active", "active"}, {"Inactive", "inactive"}, {"Former", "former"}]]} label="Status">
           <div class="flex flex-wrap items-center gap-2">
             <.status_badge status={affiliation.status_variant}>
               {format_atom(affiliation.status)}

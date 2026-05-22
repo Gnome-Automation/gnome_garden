@@ -3,16 +3,21 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   import GnomeGardenWeb.Finance.Helpers
 
+  require Logger
+
   alias GnomeGarden.Finance
+  alias GnomeGarden.Mailer
+  alias GnomeGarden.Mailer.InvoiceEmail
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     invoice = load_invoice!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, invoice.invoice_number || "Invoice")
-     |> assign(:invoice, invoice)}
+     |> assign(:invoice, invoice)
+     |> assign(:return_to, params["return_to"] || ~p"/finance/invoices")}
   end
 
   @impl true
@@ -33,10 +38,36 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/invoices"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/finance/payment-applications/new?invoice_id=#{@invoice.id}"}>
+          <.button
+            :if={@invoice.status in [:issued, :partial, :paid]}
+            phx-click="resend"
+            title="Re-send the invoice email to the billing contact"
+          >
+            <.icon name="hero-paper-airplane" class="size-4" /> Resend
+          </.button>
+          <span :if={@invoice.status in [:issued, :partial, :paid]}>
+            <a
+              href={~p"/finance/invoices/#{@invoice}/export?format=csv"}
+              title="Download a CSV spreadsheet of this invoice"
+              class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+            >
+              <.icon name="hero-arrow-down-tray" class="size-4" /> Export CSV
+            </a>
+          </span>
+          <span :if={@invoice.status in [:issued, :partial, :paid]}>
+            <a
+              href={~p"/finance/invoices/#{@invoice}/export?format=pdf"}
+              target="_blank"
+              title="Download a print-ready PDF of this invoice"
+              class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+            >
+              <.icon name="hero-arrow-down-tray" class="size-4" /> Export PDF
+            </a>
+          </span>
+          <.button navigate={~p"/finance/payment-applications/new?invoice_id=#{@invoice.id}"} title="Record a payment received against this invoice">
             Apply Payment
           </.button>
           <.button navigate={~p"/finance/invoices/#{@invoice}/edit"}>
@@ -54,6 +85,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             :if={@invoice.status == :draft}
             navigate={~p"/finance/invoices/#{@invoice}/review"}
             variant="primary"
+            title="Review line items, set a due date, and send the invoice to the client"
           >
             <.icon name="hero-paper-airplane" class="size-4" /> Review & Issue
           </.button>
@@ -62,6 +94,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             phx-click="transition"
             phx-value-action={action.action}
             variant={action.variant}
+            title={action.title}
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
@@ -174,7 +207,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
         <div :if={!Enum.empty?(@invoice.payment_applications || [])} class="space-y-3">
           <.link
             :for={application <- @invoice.payment_applications}
-            navigate={~p"/finance/payment-applications/#{application}"}
+            navigate={~p"/finance/payment-applications/#{application}?return_to=#{~p"/finance/invoices/#{@invoice}"}"}
             class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
@@ -210,7 +243,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             <p class="text-sm text-zinc-400 italic mb-3">
               No credit note has been created yet. Create one to give the client a reconcilable document.
             </p>
-            <.button phx-click="create_credit_note" variant="primary">
+            <.button phx-click="create_credit_note" variant="primary" title="Generate a credit note to offset or cancel this invoice — used when issuing a refund or correcting a billing error">
               Create Credit Note
             </.button>
           <% end %>
@@ -221,6 +254,28 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
   end
 
   @impl true
+  def handle_event("resend", _params, socket) do
+    actor = socket.assigns.current_user
+    invoice = socket.assigns.invoice
+
+    case Finance.get_invoice(invoice.id, actor: actor, load: [:invoice_lines, :organization]) do
+      {:ok, loaded} ->
+        mercury_info = Application.get_env(:gnome_garden, :mercury_payment_info, [])
+
+        case loaded |> InvoiceEmail.build(mercury_info) |> Mailer.deliver() do
+          {:ok, _} ->
+            {:noreply, put_flash(socket, :info, "Invoice resent to #{InvoiceEmail.find_billing_email(loaded.organization || %{}) || "billing@gnomeautomation.io"}")}
+
+          {:error, reason} ->
+            Logger.warning("Invoice resend failed", reason: inspect(reason))
+            {:noreply, put_flash(socket, :error, "Email delivery failed — please try again.")}
+        end
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not load invoice for resend.")}
+    end
+  end
+
   def handle_event("transition", %{"action" => action}, socket) do
     invoice = socket.assigns.invoice
 
@@ -325,26 +380,26 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp invoice_actions(%{status: :draft}) do
     [
-      %{action: "void", label: "Void", icon: "hero-x-circle", variant: nil}
+      %{action: "void", label: "Void", icon: "hero-x-circle", variant: nil, title: "Cancel this invoice — it will be removed from receivables"}
     ]
   end
 
   defp invoice_actions(%{status: :issued}) do
     [
-      %{action: "mark_paid", label: "Mark Paid", icon: "hero-check-badge", variant: "primary"},
-      %{action: "void", label: "Void", icon: "hero-x-circle", variant: nil}
+      %{action: "mark_paid", label: "Mark Paid", icon: "hero-check-badge", variant: "primary", title: "Manually mark this invoice as paid without recording a specific payment"},
+      %{action: "void", label: "Void", icon: "hero-x-circle", variant: nil, title: "Cancel this invoice — a credit note will be generated automatically"}
     ]
   end
 
   defp invoice_actions(%{status: :paid}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Move this invoice back to draft so it can be re-issued"}
     ]
   end
 
   defp invoice_actions(%{status: :void}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Move this invoice back to draft so it can be re-issued"}
     ]
   end
 

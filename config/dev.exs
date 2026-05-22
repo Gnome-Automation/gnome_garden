@@ -105,3 +105,5 @@ config :swoosh, :api_client, false
 config :gnome_garden, :mercury_payment_info,
   account_number: "123456789",
   routing_number: "021000021"
+
+config :gnome_garden, :portal_base_url, "http://localhost:4000"

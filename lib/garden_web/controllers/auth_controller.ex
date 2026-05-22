@@ -45,9 +45,12 @@ defmodule GnomeGardenWeb.AuthController do
           "Incorrect email or password"
       end
 
+    redirect_path =
+      if String.starts_with?(conn.request_path, "/portal"), do: ~p"/portal/login", else: ~p"/sign-in"
+
     conn
     |> put_flash(:error, message)
-    |> redirect(to: ~p"/sign-in")
+    |> redirect(to: redirect_path)
   end
 
   def sign_out(conn, _params) do

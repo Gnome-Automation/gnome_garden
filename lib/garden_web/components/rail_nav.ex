@@ -313,7 +313,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
       path: "/finance/payments",
       badge: 0,
       hot: false,
-      match: ["/finance/payments"]
+      match: ["/finance/payments", "/finance/payment-applications"]
     },
     %{
       id: "fin-ar-aging",

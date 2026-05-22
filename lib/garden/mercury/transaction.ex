@@ -81,7 +81,8 @@ defmodule GnomeGarden.Mercury.Transaction do
         :posted_date,
         :failed_at,
         :company_id,
-        :match_confidence
+        :match_confidence,
+        :reconciliation_note
       ]
     end
   end
@@ -149,6 +150,12 @@ defmodule GnomeGarden.Mercury.Transaction do
       constraints one_of: [:exact, :probable, :possible, :unmatched]
     end
 
+    attribute :reconciliation_note, :string do
+      allow_nil? true
+      public? true
+      description "Required reason when a transaction is manually reconciled with a remaining unmatched balance."
+    end
+
     timestamps()
   end
 
@@ -159,6 +166,11 @@ defmodule GnomeGarden.Mercury.Transaction do
     end
 
     has_many :payment_matches, GnomeGarden.Mercury.PaymentMatch do
+      destination_attribute :mercury_transaction_id
+      public? true
+    end
+
+    has_many :transaction_events, GnomeGarden.Mercury.TransactionEvent do
       destination_attribute :mercury_transaction_id
       public? true
     end

@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Index do
           <.button navigate={~p"/commercial/pursuits"}>
             Pursuits
           </.button>
-          <.button navigate={~p"/commercial/proposals/new"} variant="primary">
+          <.button navigate={~p"/commercial/proposals/new"} variant="primary" title="Draft a new commercial proposal to send to a client">
             New Proposal
           </.button>
         </:actions>
@@ -119,7 +119,7 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Index do
           </div>
         </:col>
 
-        <:col :let={proposal} field="status" sort label="Status">
+        <:col :let={proposal} field="status" sort filter={:select} filter_options={[options: [{"Draft", "draft"}, {"Issued", "issued"}, {"Accepted", "accepted"}, {"Rejected", "rejected"}, {"Expired", "expired"}, {"Superseded", "superseded"}]]} label="Status">
           <.status_badge status={proposal.status_variant}>
             {format_atom(proposal.status)}
           </.status_badge>

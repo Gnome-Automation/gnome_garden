@@ -122,6 +122,12 @@
 
 /* This file is for your main application CSS */
 
+/* Fix native select option visibility in dark mode */
+[data-theme="dark"] select option {
+  background-color: #1c2f2b;
+  color: #e5f3ef;
+}
+
 /* =============================================================================
    Ash Authentication - Garden Sign In
    ============================================================================= */

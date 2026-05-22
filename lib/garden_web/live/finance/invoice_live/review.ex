@@ -133,6 +133,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
             :if={@invoice.status == :draft}
             type="submit"
             phx-disable-with="Issuing..."
+            title="Finalize and email this invoice to the client's billing contact"
             class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
           >
             <.icon name="hero-paper-airplane" class="size-4" /> Issue & Send Invoice

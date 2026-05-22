@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Show do
   alias GnomeGarden.Operations
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     affiliation = load_affiliation!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, affiliation.person.full_name)
-     |> assign(:affiliation, affiliation)}
+     |> assign(:affiliation, affiliation)
+     |> assign(:return_to, params["return_to"] || ~p"/operations/affiliations")}
   end
 
   @impl true
@@ -39,7 +40,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Show do
           {@affiliation.organization.name}
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/operations/affiliations"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button phx-click="delete" data-confirm="Remove this affiliation? This cannot be undone.">

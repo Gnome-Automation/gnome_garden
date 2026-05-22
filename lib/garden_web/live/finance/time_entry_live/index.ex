@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Index do
           <.button navigate={~p"/execution/assignments"}>
             Assignments
           </.button>
-          <.button navigate={~p"/finance/time-entries/new"} variant="primary">
+          <.button navigate={~p"/finance/time-entries/new"} variant="primary" title="Log a new labor record against an agreement, project, or work order">
             New Time Entry
           </.button>
         </:actions>
@@ -117,7 +117,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Index do
           </div>
         </:col>
 
-        <:col :let={time_entry} field="status" sort label="Status">
+        <:col :let={time_entry} field="status" sort filter={:select} filter_options={[options: [{"Draft", "draft"}, {"Submitted", "submitted"}, {"Approved", "approved"}, {"Rejected", "rejected"}, {"Billed", "billed"}]]} label="Status">
           <.status_badge status={time_entry.status_variant}>
             {format_atom(time_entry.status)}
           </.status_badge>

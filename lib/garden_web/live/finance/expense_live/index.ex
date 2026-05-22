@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Index do
           <.button navigate={~p"/execution/work-orders"}>
             Work Orders
           </.button>
-          <.button navigate={~p"/finance/expenses/new"} variant="primary">
+          <.button navigate={~p"/finance/expenses/new"} variant="primary" title="Log a new non-labor operational cost against a project, work order, or agreement">
             New Expense
           </.button>
         </:actions>
@@ -123,7 +123,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Index do
           </div>
         </:col>
 
-        <:col :let={expense} field="status" sort label="Status">
+        <:col :let={expense} field="status" sort filter={:select} filter_options={[options: [{"Draft", "draft"}, {"Submitted", "submitted"}, {"Approved", "approved"}, {"Rejected", "rejected"}, {"Billed", "billed"}, {"Reimbursed", "reimbursed"}]]} label="Status">
           <.status_badge status={expense.status_variant}>
             {format_atom(expense.status)}
           </.status_badge>

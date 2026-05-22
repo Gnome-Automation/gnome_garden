@@ -75,6 +75,8 @@ defmodule GnomeGarden.Commercial.Proposal do
         :delivery_model,
         :notes
       ]
+
+      change GnomeGarden.Commercial.Changes.GenerateProposalNumber
     end
 
     update :update do
@@ -153,7 +155,7 @@ defmodule GnomeGarden.Commercial.Proposal do
     uuid_primary_key :id
 
     attribute :proposal_number, :string do
-      allow_nil? false
+      allow_nil? true
       public? true
     end
 

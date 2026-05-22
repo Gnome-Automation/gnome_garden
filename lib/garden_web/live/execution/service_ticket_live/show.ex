@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Show do
   alias GnomeGarden.Execution
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     service_ticket = load_service_ticket!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, service_ticket.title)
-     |> assign(:service_ticket, service_ticket)}
+     |> assign(:service_ticket, service_ticket)
+     |> assign(:return_to, params["return_to"] || ~p"/execution/service-tickets")}
   end
 
   @impl true
@@ -55,7 +56,7 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/execution/service-tickets"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button navigate={~p"/execution/work-orders/new?service_ticket_id=#{@service_ticket.id}"}>

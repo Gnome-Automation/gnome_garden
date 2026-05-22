@@ -166,7 +166,7 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
           Orchestrate templates, deployments, durable runs, and runtime cache from one operational workspace.
         </:subtitle>
         <:actions>
-          <button type="button" class="btn btn-sm" phx-click="bootstrap_defaults">
+          <button type="button" class="btn btn-sm" phx-click="bootstrap_defaults" title="Seed the default agent templates and deployment configurations for this environment">
             Bootstrap Defaults
           </button>
 

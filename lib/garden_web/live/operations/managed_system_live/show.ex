@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Show do
   alias GnomeGarden.Operations
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     managed_system = load_managed_system!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, managed_system.name)
-     |> assign(:managed_system, managed_system)}
+     |> assign(:managed_system, managed_system)
+     |> assign(:return_to, params["return_to"] || ~p"/operations/managed-systems")}
   end
 
   @impl true
@@ -31,7 +32,7 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/operations/managed-systems"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button navigate={~p"/operations/assets/new?managed_system_id=#{@managed_system.id}"}>

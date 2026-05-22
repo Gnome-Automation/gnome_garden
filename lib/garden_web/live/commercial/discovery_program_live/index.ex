@@ -73,7 +73,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
           title="Programs"
           value={Integer.to_string(@program_count)}
           description="Defined outbound and market-discovery motions."
-          icon="hero-radar"
+          icon="hero-signal"
         />
         <.stat_card
           title="Active"
@@ -207,7 +207,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
 
         <:empty>
           <.empty_state
-            icon="hero-radar"
+            icon="hero-signal"
             title="No discovery programs yet"
             description="Create a program for a region, industry, or target hunt before scaling discovery."
           >

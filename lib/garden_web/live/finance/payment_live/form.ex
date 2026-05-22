@@ -14,6 +14,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Form do
      |> assign(:payment, payment)
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"])
      |> assign(:page_title, if(payment, do: "Edit Payment", else: "New Payment"))
      |> assign_form(params)}
   end
@@ -28,7 +29,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Form do
           Record operational receipt events before allocating them to invoices.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/payments"}>
+          <.button navigate={@return_to || ~p"/finance/payments"}>
             Back to payments
           </.button>
         </:actions>
@@ -61,13 +62,13 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Form do
                 prompt="Select agreement..."
                 options={Enum.map(@agreements, &{agreement_label(&1), &1.id})}
               />
-              <p :if={Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
-                No agreements yet —
-                <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/payments/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
+              <p class="mt-1 text-xs text-base-content/50">
+                Optional. Not in the list?
+                <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/payments/new"}"} class="text-emerald-600 hover:underline">Create one first.</.link>
               </p>
             </div>
             <div class="sm:col-span-3">
-              <.input field={@form[:payment_number]} label="Payment Number" />
+              <.input field={@form[:payment_number]} label="Payment Number" placeholder="Auto-generated if left blank" />
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:received_on]} type="date" label="Received On" />
@@ -88,6 +89,9 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Form do
             </div>
             <div class="col-span-full">
               <.input field={@form[:reference]} label="Reference" />
+              <p class="mt-1 text-xs text-base-content/50">
+                Optional. Any external ID tied to this payment — bank transaction ID, wire confirmation number, check number, or memo from the sender.
+              </p>
             </div>
             <div class="col-span-full">
               <.input field={@form[:notes]} type="textarea" label="Notes" />
@@ -97,7 +101,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/finance/payments"}
+            cancel_path={@return_to || ~p"/finance/payments"}
             submit_label={if @payment, do: "Update Payment", else: "Create Payment"}
           />
         </.section>
@@ -122,7 +126,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Form do
            :info,
            "Payment #{if socket.assigns.payment, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/finance/payments/#{payment}")}
+         |> push_navigate(to: socket.assigns.return_to || ~p"/finance/payments/#{payment}")}
 
       {:error, form} ->
         {:noreply,

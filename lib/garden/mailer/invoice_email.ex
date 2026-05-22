@@ -16,6 +16,7 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
   alias GnomeGarden.Operations
 
   @logo_url "https://gnomeautomation.com/images/gnome-icon-clean-192.png"
+  @portal_base_url Application.compile_env(:gnome_garden, :portal_base_url, "https://app.gnomeautomation.io")
 
   @spec build(map(), keyword()) :: Swoosh.Email.t()
   def build(invoice, mercury_info \\ []) do
@@ -72,6 +73,7 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
   defp build_html(invoice, org_name, mercury_info) do
     account_number = Keyword.get(mercury_info, :account_number, "")
     routing_number = Keyword.get(mercury_info, :routing_number, "")
+    portal_url = "#{@portal_base_url}/portal/invoices/#{invoice.id}"
 
     lines_html =
       (invoice.invoice_lines || [])
@@ -139,6 +141,10 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
                     <tr><td style="padding:2px 0;color:#64748b;">Routing #:</td><td style="color:#0f172a;font-weight:500;">#{routing_number}</td></tr>
                     <tr><td style="padding:2px 0;color:#64748b;">Reference:</td><td style="color:#0f172a;font-weight:500;">#{invoice.invoice_number}</td></tr>
                   </table>
+                </div>
+                <div style="text-align:center;margin-bottom:24px;">
+                  <a href="#{portal_url}" style="display:inline-block;background:#059669;color:#ffffff;font-weight:600;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">View &amp; Pay Invoice &rarr;</a>
+                  <p style="margin:8px 0 0;font-size:12px;color:#94a3b8;">Sign in with your email to view this invoice in your client portal.</p>
                 </div>
                 <p style="margin:0;color:#64748b;font-size:13px;">Questions? Contact billing@gnomeautomation.io</p>
               </td>

@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Show do
   alias GnomeGarden.Finance
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     payment = load_payment!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, payment.payment_number || "Payment")
-     |> assign(:payment, payment)}
+     |> assign(:payment, payment)
+     |> assign(:return_to, params["return_to"] || ~p"/finance/payments")}
   end
 
   @impl true
@@ -49,7 +50,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/payments"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button navigate={~p"/finance/payment-applications/new?payment_id=#{@payment.id}"}>

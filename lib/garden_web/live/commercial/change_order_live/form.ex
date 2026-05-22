@@ -31,6 +31,15 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Form do
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:projects, load_projects(socket.assigns.current_user))
      |> assign(:page_title, page_title(change_order, agreement, project))
+     |> assign(
+       :return_to,
+       params["return_to"] ||
+         cond do
+           agreement -> ~p"/commercial/agreements/#{agreement}"
+           project -> ~p"/execution/projects/#{project}"
+           true -> ~p"/commercial/change-orders"
+         end
+     )
      |> assign_form()}
   end
 
@@ -44,8 +53,8 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Form do
           Capture post-award commercial deltas without mutating the original contract history.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/commercial/change-orders"}>
-            Back to change orders
+          <.button navigate={@return_to}>
+            Back
           </.button>
         </:actions>
       </.page_header>
@@ -174,7 +183,7 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/commercial/change-orders"}
+            cancel_path={@return_to}
             submit_label={if @change_order, do: "Update Change Order", else: "Create Change Order"}
           />
         </.section>

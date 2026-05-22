@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Show do
   alias GnomeGarden.Commercial
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     change_order = load_change_order!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, change_order.title)
-     |> assign(:change_order, change_order)}
+     |> assign(:change_order, change_order)
+     |> assign(:return_to, params["return_to"] || ~p"/commercial/change-orders")}
   end
 
   @impl true
@@ -54,10 +55,10 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/commercial/change-orders"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/commercial/change-orders/#{@change_order}/edit"}>
+          <.button navigate={~p"/commercial/change-orders/#{@change_order}/edit?return_to=#{~p"/commercial/change-orders/#{@change_order}"}"}>
             Edit
           </.button>
         </:actions>
@@ -73,6 +74,7 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Show do
             phx-click="transition"
             phx-value-action={action.action}
             variant={action.variant}
+            title={action.title}
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
@@ -203,40 +205,35 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Show do
 
   defp change_order_actions(%{status: :draft}) do
     [
-      %{action: "submit", label: "Submit", icon: "hero-paper-airplane", variant: "primary"},
-      %{action: "cancel", label: "Cancel", icon: "hero-x-circle", variant: nil}
+      %{action: "submit", label: "Submit", icon: "hero-paper-airplane", variant: "primary", title: "Send this change order for client approval"},
+      %{action: "cancel", label: "Cancel", icon: "hero-x-circle", variant: nil, title: "Cancel this change order — it will no longer be pending"}
     ]
   end
 
   defp change_order_actions(%{status: :submitted}) do
     [
-      %{action: "approve", label: "Approve", icon: "hero-check-badge", variant: "primary"},
-      %{action: "reject", label: "Reject", icon: "hero-x-circle", variant: nil},
-      %{action: "cancel", label: "Cancel", icon: "hero-no-symbol", variant: nil}
+      %{action: "approve", label: "Approve", icon: "hero-check-badge", variant: "primary", title: "Approve this change order — the scope and price changes will take effect"},
+      %{action: "reject", label: "Reject", icon: "hero-x-circle", variant: nil, title: "Reject this change order — it will not be implemented"},
+      %{action: "cancel", label: "Cancel", icon: "hero-no-symbol", variant: nil, title: "Cancel this change order"}
     ]
   end
 
   defp change_order_actions(%{status: :approved}) do
     [
-      %{
-        action: "implement",
-        label: "Implement",
-        icon: "hero-wrench-screwdriver",
-        variant: "primary"
-      },
-      %{action: "cancel", label: "Cancel", icon: "hero-no-symbol", variant: nil}
+      %{action: "implement", label: "Implement", icon: "hero-wrench-screwdriver", variant: "primary", title: "Mark this change order as implemented — work has begun under the new scope"},
+      %{action: "cancel", label: "Cancel", icon: "hero-no-symbol", variant: nil, title: "Cancel this change order"}
     ]
   end
 
   defp change_order_actions(%{status: :rejected}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Reopen this change order for revision and resubmission"}
     ]
   end
 
   defp change_order_actions(%{status: :cancelled}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Reopen this change order"}
     ]
   end
 

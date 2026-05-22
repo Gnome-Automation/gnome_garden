@@ -60,6 +60,8 @@ defmodule GnomeGarden.Finance.Payment do
         :reference,
         :notes
       ]
+
+      change GnomeGarden.Finance.Changes.GeneratePaymentNumber
     end
 
     update :update do

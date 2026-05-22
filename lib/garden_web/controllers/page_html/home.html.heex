@@ -18,7 +18,7 @@
       title="Runnable Sources"
       value={Integer.to_string(@runnable_source_count)}
       description="Acquisition sources that can launch scanning right now."
-      icon="hero-radar"
+      icon="hero-signal"
       accent="sky"
     />
     <.stat_card
@@ -109,21 +109,20 @@
 
   <div class="grid gap-6 xl:grid-cols-2">
     <.section
+      class="xl:col-span-2"
       title="Acquisition Flow"
       description="The intake spine: source coverage, active programs, unified findings, and the commercial handoff."
     >
-      <div class="grid gap-4 xl:grid-cols-5">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1 min-h-[4.5rem]">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Sources</p>
-              <p class="text-xs text-base-content/50">
-                Runnable scan targets in the acquisition registry.
-              </p>
+              <.button navigate={~p"/acquisition/sources"}>Open Sources</.button>
             </div>
-            <.button navigate={~p"/acquisition/sources"} class="px-2.5 py-1.5 text-xs">
-              Open Sources
-            </.button>
+            <p class="text-xs text-base-content/50">
+              Runnable scan targets in the acquisition registry.
+            </p>
           </div>
 
           <div :if={Enum.empty?(@runnable_sources)}>
@@ -134,6 +133,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={source <- @runnable_sources}
             navigate={
@@ -162,29 +162,29 @@
               </.status_badge>
             </div>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1 min-h-[4.5rem]">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Programs</p>
-              <p class="text-xs text-base-content/50">
-                Acquisition programs that can launch ongoing target-discovery work right now.
-              </p>
+              <.button navigate={~p"/acquisition/programs"}>Open Programs</.button>
             </div>
-            <.button navigate={~p"/acquisition/programs"} class="px-2.5 py-1.5 text-xs">
-              Open Programs
-            </.button>
+            <p class="text-xs text-base-content/50">
+              Acquisition programs that can launch ongoing target-discovery work right now.
+            </p>
           </div>
 
           <div :if={Enum.empty?(@runnable_programs)}>
             <.empty_state
-              icon="hero-radar"
+              icon="hero-signal"
               title="No runnable programs"
               description="There are no acquisition programs ready to launch right now."
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={program <- @runnable_programs}
             navigate={
@@ -213,19 +213,18 @@
               </.status_badge>
             </div>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1 min-h-[4.5rem]">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Intake</p>
-              <p class="text-xs text-base-content/50">
-                Unified procurement and discovery findings waiting on operator review.
-              </p>
+              <.button navigate={~p"/acquisition/findings"}>Open Intake</.button>
             </div>
-            <.button navigate={~p"/acquisition/findings"} class="px-2.5 py-1.5 text-xs">
-              Open Intake
-            </.button>
+            <p class="text-xs text-base-content/50">
+              Unified procurement and discovery findings waiting on operator review.
+            </p>
           </div>
 
           <div :if={Enum.empty?(@review_findings)}>
@@ -236,6 +235,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={finding <- @review_findings}
             navigate={~p"/acquisition/findings/#{finding}"}
@@ -256,19 +256,18 @@
               {format_atom(finding.status)}
             </.status_badge>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1 min-h-[4.5rem]">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Signals</p>
-              <p class="text-xs text-base-content/50">
-                Accepted intake already handed into commercial review.
-              </p>
+              <.button navigate={~p"/commercial/signals"}>Open Signals</.button>
             </div>
-            <.button navigate={~p"/commercial/signals"} class="px-2.5 py-1.5 text-xs">
-              Open Signals
-            </.button>
+            <p class="text-xs text-base-content/50">
+              Accepted intake already handed into commercial review.
+            </p>
           </div>
 
           <div :if={Enum.empty?(@open_signals)}>
@@ -279,6 +278,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={signal <- @open_signals}
             navigate={~p"/commercial/signals/#{signal}"}
@@ -297,19 +297,18 @@
               {format_atom(signal.status)}
             </.status_badge>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1 min-h-[4.5rem]">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Pursuits</p>
-              <p class="text-xs text-base-content/50">
-                Commercial work already in motion.
-              </p>
+              <.button navigate={~p"/commercial/pursuits"}>View Pursuits</.button>
             </div>
-            <.button navigate={~p"/commercial/pursuits"} class="px-2.5 py-1.5 text-xs">
-              View Pursuits
-            </.button>
+            <p class="text-xs text-base-content/50">
+              Commercial work already in motion.
+            </p>
           </div>
 
           <div :if={Enum.empty?(@active_pursuits)}>
@@ -320,6 +319,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={pursuit <- @active_pursuits}
             navigate={~p"/commercial/pursuits/#{pursuit}"}
@@ -343,24 +343,24 @@
               </.status_badge>
             </div>
           </.link>
+          </div>
         </div>
       </div>
     </.section>
 
     <.section
+      class="xl:col-span-2"
       title="Execution Queue"
       description="What field and delivery work needs attention right now."
     >
       <div class="grid gap-4 lg:grid-cols-3">
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Maintenance</p>
-              <p class="text-xs text-base-content/50">Preventive plans due soon.</p>
+              <.button navigate={~p"/execution/maintenance-plans"}>Open Plans</.button>
             </div>
-            <.button navigate={~p"/execution/maintenance-plans"} class="px-2.5 py-1.5 text-xs">
-              Open Plans
-            </.button>
+            <p class="text-xs text-base-content/50">Preventive plans due soon.</p>
           </div>
 
           <div :if={Enum.empty?(@due_soon_maintenance_plans)}>
@@ -371,6 +371,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={maintenance_plan <- @due_soon_maintenance_plans}
             navigate={~p"/execution/maintenance-plans/#{maintenance_plan}"}
@@ -389,19 +390,16 @@
               {maintenance_plan.due_status_label}
             </.status_badge>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Service Tickets</p>
-              <p class="text-xs text-base-content/50">
-                Customer-facing support queue.
-              </p>
+              <.button navigate={~p"/execution/service-tickets"}>Open Tickets</.button>
             </div>
-            <.button navigate={~p"/execution/service-tickets"} class="px-2.5 py-1.5 text-xs">
-              Open Tickets
-            </.button>
+            <p class="text-xs text-base-content/50">Customer-facing support queue.</p>
           </div>
 
           <div :if={Enum.empty?(@open_service_tickets)}>
@@ -412,6 +410,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={service_ticket <- @open_service_tickets}
             navigate={~p"/execution/service-tickets/#{service_ticket}"}
@@ -433,19 +432,16 @@
               </.status_badge>
             </div>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Work Orders</p>
-              <p class="text-xs text-base-content/50">
-                Dispatch and execution pressure.
-              </p>
+              <.button navigate={~p"/execution/work-orders"}>Open Orders</.button>
             </div>
-            <.button navigate={~p"/execution/work-orders"} class="px-2.5 py-1.5 text-xs">
-              Open Orders
-            </.button>
+            <p class="text-xs text-base-content/50">Dispatch and execution pressure.</p>
           </div>
 
           <div :if={Enum.empty?(@open_work_orders)}>
@@ -456,6 +452,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={work_order <- @open_work_orders}
             navigate={~p"/execution/work-orders/#{work_order}"}
@@ -476,26 +473,24 @@
               {format_atom(work_order.status)}
             </.status_badge>
           </.link>
+          </div>
         </div>
       </div>
     </.section>
 
     <.section
+      class="xl:col-span-2"
       title="Finance Queue"
       description="What is approved, overdue, or received but still unfinished in operations finance."
     >
       <div class="grid gap-4 lg:grid-cols-2">
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Overdue Invoices</p>
-              <p class="text-xs text-base-content/50">
-                Receivables that need follow-up.
-              </p>
+              <.button navigate={~p"/finance/invoices"}>Open Invoices</.button>
             </div>
-            <.button navigate={~p"/finance/invoices"} class="px-2.5 py-1.5 text-xs">
-              Open Invoices
-            </.button>
+            <p class="text-xs text-base-content/50">Receivables that need follow-up.</p>
           </div>
 
           <div :if={Enum.empty?(@overdue_invoices)}>
@@ -506,6 +501,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={invoice <- @overdue_invoices}
             navigate={~p"/finance/invoices/#{invoice}"}
@@ -531,17 +527,16 @@
               </p>
             </div>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Pending Invoices</p>
-              <p class="text-xs text-base-content/50">Issued and awaiting payment.</p>
+              <.button navigate={~p"/finance/invoices"}>Open Invoices</.button>
             </div>
-            <.button navigate={~p"/finance/invoices"} class="px-2.5 py-1.5 text-xs">
-              Open Invoices
-            </.button>
+            <p class="text-xs text-base-content/50">Issued and awaiting payment.</p>
           </div>
 
           <div :if={Enum.empty?(@pending_invoices)}>
@@ -552,6 +547,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={invoice <- @pending_invoices}
             navigate={~p"/finance/invoices/#{invoice}"}
@@ -577,17 +573,16 @@
               </p>
             </div>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Unmatched Transactions</p>
-              <p class="text-xs text-base-content/50">Mercury payments without an invoice match.</p>
+              <.button navigate={~p"/finance/mercury"}>Open Mercury</.button>
             </div>
-            <.button navigate={~p"/finance/mercury"} class="px-2.5 py-1.5 text-xs">
-              Open Mercury
-            </.button>
+            <p class="text-xs text-base-content/50">Mercury payments without an invoice match.</p>
           </div>
 
           <div :if={Enum.empty?(@unmatched_transactions)}>
@@ -598,9 +593,11 @@
             />
           </div>
 
-          <div
+          <div class="space-y-2 max-h-72 overflow-y-auto">
+          <.link
             :for={txn <- @unmatched_transactions}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 dark:border-white/10 dark:bg-zinc-950/30"
+            navigate={~p"/finance/mercury"}
+            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">
@@ -613,22 +610,17 @@
             <p class="text-sm font-medium text-emerald-600 dark:text-emerald-400">
               {format_amount(txn.amount)}
             </p>
+          </.link>
           </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-semibold text-base-content">
-                Unapplied Payments
-              </p>
-              <p class="text-xs text-base-content/50">
-                Cash received but not fully allocated.
-              </p>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-semibold text-base-content">Unapplied Payments</p>
+              <.button navigate={~p"/finance/payments"}>Open Payments</.button>
             </div>
-            <.button navigate={~p"/finance/payments"} class="px-2.5 py-1.5 text-xs">
-              Open Payments
-            </.button>
+            <p class="text-xs text-base-content/50">Cash received but not fully allocated.</p>
           </div>
 
           <div :if={Enum.empty?(@unapplied_payments)}>
@@ -639,6 +631,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={payment <- @unapplied_payments}
             navigate={~p"/finance/payments/#{payment}"}
@@ -664,17 +657,16 @@
               </p>
             </div>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Approved Time</p>
-              <p class="text-xs text-base-content/50">Labor ready for billing.</p>
+              <.button navigate={~p"/finance/time-entries"}>Open Time</.button>
             </div>
-            <.button navigate={~p"/finance/time-entries"} class="px-2.5 py-1.5 text-xs">
-              Open Time
-            </.button>
+            <p class="text-xs text-base-content/50">Labor ready for billing.</p>
           </div>
 
           <div :if={Enum.empty?(@unbilled_time_entries)}>
@@ -685,6 +677,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={time_entry <- @unbilled_time_entries}
             navigate={~p"/finance/time-entries/#{time_entry}"}
@@ -705,17 +698,16 @@
               {format_minutes(time_entry.minutes)}
             </p>
           </.link>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-base-content">Approved Expenses</p>
-              <p class="text-xs text-base-content/50">Costs ready for billing.</p>
+              <.button navigate={~p"/finance/expenses"}>Open Expenses</.button>
             </div>
-            <.button navigate={~p"/finance/expenses"} class="px-2.5 py-1.5 text-xs">
-              Open Expenses
-            </.button>
+            <p class="text-xs text-base-content/50">Costs ready for billing.</p>
           </div>
 
           <div :if={Enum.empty?(@unbilled_expenses)}>
@@ -726,6 +718,7 @@
             />
           </div>
 
+          <div class="space-y-2 max-h-72 overflow-y-auto">
           <.link
             :for={expense <- @unbilled_expenses}
             navigate={~p"/finance/expenses/#{expense}"}
@@ -746,11 +739,13 @@
               {format_amount(expense.amount)}
             </p>
           </.link>
+          </div>
         </div>
       </div>
     </.section>
 
     <.section
+      class="xl:col-span-2"
       title="Launch Points"
       description="Jump straight into the main operating surfaces instead of the old intake-management shells."
     >
@@ -759,7 +754,7 @@
           navigate={~p"/commercial/discovery-programs"}
           title="Discovery Programs"
           description="Define the discovery motions that should keep feeding the unified intake queue."
-          icon="hero-radar"
+          icon="hero-signal"
         />
         <.action_card
           navigate={~p"/acquisition/findings?family=discovery"}

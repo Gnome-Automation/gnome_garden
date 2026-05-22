@@ -15,12 +15,15 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
         load_agreement!(params["agreement_id"], socket.assigns.current_user)
       end
 
+    return_to = params["return_to"] || (if agreement, do: ~p"/commercial/agreements/#{agreement}", else: ~p"/finance/invoices")
+
     {:ok,
      socket
      |> assign(:invoice, invoice)
      |> assign(:agreement, agreement)
      |> assign(:agreement_selected, not is_nil(agreement))
      |> assign(:override_amounts, false)
+     |> assign(:return_to, return_to)
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:projects, load_projects(socket.assigns.current_user))
@@ -38,8 +41,8 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
           Create operational invoices explicitly, or draft them from agreement-backed billable source records.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/invoices"}>
-            Back to invoices
+          <.button navigate={@return_to}>
+            Back
           </.button>
         </:actions>
       </.page_header>
@@ -97,6 +100,11 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
                 <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
                 (optional)
               </p>
+              <p :if={not Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
+                Agreement not in the list?
+                <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/invoices/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+                When selected, amounts are auto-calculated from billable time entries and expenses.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -147,7 +155,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/finance/invoices"}
+            cancel_path={@return_to}
             submit_label={submit_label(@invoice, @agreement)}
           />
         </.section>
@@ -159,8 +167,16 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
-    agreement_selected = not_blank?(params["agreement_id"])
-    override_amounts = if agreement_selected, do: socket.assigns.override_amounts, else: false
+
+    {agreement_selected, override_amounts} =
+      if socket.assigns.invoice do
+        # Edit mode: always show amount fields directly
+        {false, false}
+      else
+        selected = not_blank?(params["agreement_id"])
+        {selected, if(selected, do: socket.assigns.override_amounts, else: false)}
+      end
+
     {:noreply, assign(socket, form: to_form(form), agreement_selected: agreement_selected, override_amounts: override_amounts)}
   end
 

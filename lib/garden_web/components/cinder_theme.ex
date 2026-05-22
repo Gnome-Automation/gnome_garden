@@ -40,7 +40,7 @@ defmodule GnomeGardenWeb.CinderTheme do
   set :page_size_dropdown_class,
       "rounded-md border border-base-content/10 bg-base-100 px-2 py-1 text-xs text-base-content focus:border-primary focus:outline-none"
 
-  # Controls / filters section — search only, filters hidden
+  # Controls / filters section
   set :controls_class, "px-4 py-3 sm:px-5"
   set :filter_header_class, "hidden"
   set :filter_title_class, "hidden"
@@ -48,12 +48,38 @@ defmodule GnomeGardenWeb.CinderTheme do
   set :filter_group_class, ""
   set :filter_count_class, "hidden"
   set :filter_label_class, "hidden"
+  set :filter_inputs_class, "flex flex-wrap items-center gap-3"
+  set :filter_input_wrapper_class, ""
+  set :filter_clear_button_class,
+      "ml-1 rounded px-1 py-0.5 text-sm text-base-content/40 hover:text-base-content"
+
+  set :filter_clear_all_class,
+      "text-xs text-base-content/50 hover:text-base-content ml-2"
+
+  # Select filter (dropdown)
+  set :filter_select_container_class, "relative"
+
+  set :filter_select_input_class,
+      "min-w-[9rem] rounded-md border border-base-content/10 bg-base-100 px-3 py-1.5 text-sm text-base-content cursor-pointer hover:bg-base-200 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+
+  set :filter_select_placeholder_class, "text-base-content/40"
+  set :filter_select_arrow_class, "size-4 text-base-content/40 ml-2 flex-shrink-0"
+
+  set :filter_select_dropdown_class,
+      "absolute z-20 left-0 top-full mt-1 min-w-full rounded-md border border-base-content/10 bg-base-100 shadow-lg"
+
+  set :filter_select_option_class,
+      "px-3 py-2 hover:bg-base-300 text-sm text-base-content cursor-pointer"
+
+  set :filter_select_label_class, ""
+  set :filter_select_empty_class, "px-3 py-2 text-sm text-base-content/50 italic"
 
   # Search input
   set :search_container_class, ""
+  set :search_icon_class, "size-4 text-base-content/40"
 
   set :search_input_class,
-      "w-full max-w-md rounded-md border border-base-content/10 bg-base-100 px-3 py-1.5 text-sm text-base-content placeholder:text-base-content/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      "w-full max-w-md rounded-md border border-base-content/10 bg-base-100 pl-9 pr-3 py-1.5 text-sm text-base-content placeholder:text-base-content/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
 
   # Sort indicators
   set :sort_indicator_class, "inline-block ml-1"
@@ -69,7 +95,7 @@ defmodule GnomeGardenWeb.CinderTheme do
   set :loading_spinner_path_class, "opacity-75"
 
   # Empty
-  set :empty_class, "py-10"
+  set :empty_class, "py-10 text-center"
   set :empty_container_class, "text-center text-sm text-base-content/50"
 
   # Grid layout

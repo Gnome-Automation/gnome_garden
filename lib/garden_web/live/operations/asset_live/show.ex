@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Show do
   alias GnomeGarden.Operations
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     asset = load_asset!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, asset.name)
-     |> assign(:asset, asset)}
+     |> assign(:asset, asset)
+     |> assign(:return_to, params["return_to"] || ~p"/operations/assets")}
   end
 
   @impl true
@@ -31,7 +32,7 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/operations/assets"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button navigate={~p"/execution/maintenance-plans/new?asset_id=#{@asset.id}"}>

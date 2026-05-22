@@ -42,9 +42,16 @@ defmodule GnomeGarden.Finance.PaymentApplication do
         :applied_on,
         :notes
       ]
+
+      change after_action(fn _changeset, payment_application, context ->
+        reconcile_invoice(payment_application.invoice_id, context.actor)
+        {:ok, payment_application}
+      end)
     end
 
     update :update do
+      require_atomic? false
+
       accept [
         :payment_id,
         :invoice_id,
@@ -52,6 +59,11 @@ defmodule GnomeGarden.Finance.PaymentApplication do
         :applied_on,
         :notes
       ]
+
+      change after_action(fn _changeset, payment_application, context ->
+        reconcile_invoice(payment_application.invoice_id, context.actor)
+        {:ok, payment_application}
+      end)
     end
 
     read :for_invoice do
@@ -100,5 +112,32 @@ defmodule GnomeGarden.Finance.PaymentApplication do
 
   identities do
     identity :unique_payment_invoice_pair, [:payment_id, :invoice_id]
+  end
+
+  defp reconcile_invoice(invoice_id, actor) do
+    case GnomeGarden.Finance.get_invoice(invoice_id,
+           actor: actor,
+           authorize?: false,
+           load: [:applied_amount]
+         ) do
+      {:ok, invoice} when invoice.status in [:issued, :partial] ->
+        applied = invoice.applied_amount || Decimal.new("0")
+        total = invoice.total_amount || Decimal.new("0")
+
+        cond do
+          Decimal.compare(applied, total) != :lt ->
+            Ash.update!(invoice, %{}, action: :mark_paid, actor: actor, authorize?: false)
+
+          Decimal.compare(applied, Decimal.new("0")) == :gt ->
+            balance = Decimal.sub(total, applied)
+            Ash.update!(invoice, %{balance_amount: balance}, action: :partial, actor: actor, authorize?: false)
+
+          true ->
+            :ok
+        end
+
+      _ ->
+        :ok
+    end
   end
 end

@@ -8,7 +8,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
   alias GnomeGarden.Commercial
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     discovery_program = load_discovery_program!(id, socket.assigns.current_user)
 
     acquisition_program =
@@ -21,7 +21,8 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
      |> assign(:acquisition_program, acquisition_program)
      |> assign(:acquisition_program_id, acquisition_program && acquisition_program.id)
      |> assign(:latest_run, load_latest_run(discovery_program))
-     |> assign(:findings, load_findings(acquisition_program, socket.assigns.current_user))}
+     |> assign(:findings, load_findings(acquisition_program, socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"] || ~p"/commercial/discovery-programs")}
   end
 
   @impl true
@@ -119,7 +120,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
           >
             Discovery Intake
           </.button>
-          <.button navigate={~p"/commercial/discovery-programs"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button navigate={~p"/commercial/discovery-programs/#{@discovery_program}/edit"}>

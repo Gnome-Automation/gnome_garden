@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Index do
           <.button navigate={~p"/execution/projects"}>
             Projects
           </.button>
-          <.button navigate={~p"/execution/work-items/new"} variant="primary">
+          <.button navigate={~p"/execution/work-items/new"} variant="primary" title="Create a new task, phase, milestone, or deliverable within a project">
             New Work Item
           </.button>
         </:actions>
@@ -119,7 +119,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Index do
           </div>
         </:col>
 
-        <:col :let={work_item} field="status" sort label="Status">
+        <:col :let={work_item} field="status" sort filter={:select} filter_options={[options: [{"Backlog", "backlog"}, {"Ready", "ready"}, {"In Progress", "in_progress"}, {"Blocked", "blocked"}, {"Review", "review"}, {"Done", "done"}, {"Cancelled", "cancelled"}]]} label="Status">
           <div class="space-y-2">
             <.status_badge status={work_item.status_variant}>
               {format_atom(work_item.status)}

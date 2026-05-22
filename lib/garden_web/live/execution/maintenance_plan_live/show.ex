@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
   alias GnomeGarden.Execution
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     maintenance_plan = load_maintenance_plan!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, maintenance_plan.name)
-     |> assign(:maintenance_plan, maintenance_plan)}
+     |> assign(:maintenance_plan, maintenance_plan)
+     |> assign(:return_to, params["return_to"] || ~p"/execution/maintenance-plans")}
   end
 
   @impl true
@@ -55,10 +56,10 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/execution/maintenance-plans"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
-          <.button phx-click="transition" phx-value-action="generate_work_order">
+          <.button phx-click="transition" phx-value-action="generate_work_order" title="Create a work order from this maintenance plan for the next scheduled run">
             Generate Work Order
           </.button>
           <.button navigate={~p"/execution/maintenance-plans/#{@maintenance_plan}/edit"}>

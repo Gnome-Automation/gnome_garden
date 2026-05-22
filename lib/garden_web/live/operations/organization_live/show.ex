@@ -7,7 +7,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
   alias GnomeGarden.Operations.IdentityMergeReview
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     organization = load_organization!(id, socket.assigns.current_user)
     merge_review = load_merge_review!(organization, socket.assigns.current_user)
 
@@ -17,7 +17,8 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
      |> assign(:organization, organization)
      |> assign(:merge_review, merge_review)
      |> assign(:invite_ok, false)
-     |> assign(:invite_error, nil)}
+     |> assign(:invite_error, nil)
+     |> assign(:return_to, params["return_to"] || ~p"/operations/organizations")}
   end
 
   @impl true
@@ -109,7 +110,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/operations/organizations"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button navigate={~p"/operations/organizations/#{@organization}/edit"} variant="primary">
@@ -390,7 +391,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
               class="rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500 w-full"
             />
           </div>
-          <button type="submit" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500">
+          <button type="submit" title="Send a magic-link sign-in email so this contact can view their invoices and agreements in the client portal" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500">
             Invite to portal
           </button>
         </form>

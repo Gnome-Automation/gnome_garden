@@ -7,7 +7,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
   alias GnomeGarden.Commercial
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     signal = load_signal!(id, socket.assigns.current_user)
     finding_id = load_finding_id(signal.id)
 
@@ -15,7 +15,8 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
      socket
      |> assign(:page_title, signal.title)
      |> assign(:finding_id, finding_id)
-     |> assign(:signal, signal)}
+     |> assign(:signal, signal)
+     |> assign(:return_to, params["return_to"] || ~p"/commercial/signals")}
   end
 
   @impl true
@@ -50,7 +51,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/commercial/signals"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button

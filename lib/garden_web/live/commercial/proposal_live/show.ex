@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Show do
   alias GnomeGarden.Commercial
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     proposal = load_proposal!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, proposal.name)
-     |> assign(:proposal, proposal)}
+     |> assign(:proposal, proposal)
+     |> assign(:return_to, params["return_to"] || ~p"/commercial/proposals")}
   end
 
   @impl true
@@ -71,7 +72,7 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/commercial/proposals"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button
@@ -104,6 +105,7 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Show do
             phx-click="transition"
             phx-value-action={action.action}
             variant={action.variant}
+            title={action.title}
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
@@ -263,36 +265,36 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Show do
 
   defp proposal_actions(%{status: :draft}) do
     [
-      %{action: "issue", label: "Issue", icon: "hero-paper-airplane", variant: "primary"},
-      %{action: "supersede", label: "Supersede", icon: "hero-arrow-path", variant: nil}
+      %{action: "issue", label: "Issue", icon: "hero-paper-airplane", variant: "primary", title: "Send this proposal to the client for review and acceptance"},
+      %{action: "supersede", label: "Supersede", icon: "hero-arrow-path", variant: nil, title: "Replace this proposal with a newer version — the current one will be marked superseded"}
     ]
   end
 
   defp proposal_actions(%{status: :issued}) do
     [
-      %{action: "accept", label: "Accept", icon: "hero-check-badge", variant: "primary"},
-      %{action: "reject", label: "Reject", icon: "hero-x-circle", variant: nil},
-      %{action: "expire", label: "Expire", icon: "hero-clock", variant: nil}
+      %{action: "accept", label: "Accept", icon: "hero-check-badge", variant: "primary", title: "Record that the client accepted this proposal — you can then create an agreement"},
+      %{action: "reject", label: "Reject", icon: "hero-x-circle", variant: nil, title: "Record that the client rejected this proposal"},
+      %{action: "expire", label: "Expire", icon: "hero-clock", variant: nil, title: "Mark this proposal as expired — the offer is no longer valid"}
     ]
   end
 
   defp proposal_actions(%{status: :rejected}) do
     [
-      %{action: "issue", label: "Reissue", icon: "hero-paper-airplane", variant: "primary"},
-      %{action: "reopen", label: "Reopen Draft", icon: "hero-arrow-path", variant: nil}
+      %{action: "issue", label: "Reissue", icon: "hero-paper-airplane", variant: "primary", title: "Send a revised version of this proposal to the client"},
+      %{action: "reopen", label: "Reopen Draft", icon: "hero-arrow-path", variant: nil, title: "Move this proposal back to draft for editing"}
     ]
   end
 
   defp proposal_actions(%{status: :expired}) do
     [
-      %{action: "issue", label: "Reissue", icon: "hero-paper-airplane", variant: "primary"},
-      %{action: "reopen", label: "Reopen Draft", icon: "hero-arrow-path", variant: nil}
+      %{action: "issue", label: "Reissue", icon: "hero-paper-airplane", variant: "primary", title: "Re-send this proposal to the client"},
+      %{action: "reopen", label: "Reopen Draft", icon: "hero-arrow-path", variant: nil, title: "Move this proposal back to draft for editing"}
     ]
   end
 
   defp proposal_actions(%{status: :superseded}) do
     [
-      %{action: "reopen", label: "Reopen Draft", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen Draft", icon: "hero-arrow-path", variant: "primary", title: "Restore this proposal to draft"}
     ]
   end
 

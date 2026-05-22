@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Index do
           <.button navigate={~p"/execution/service-tickets"}>
             Service Tickets
           </.button>
-          <.button navigate={~p"/execution/work-orders/new"} variant="primary">
+          <.button navigate={~p"/execution/work-orders/new"} variant="primary" title="Create a new work order for service, installation, or maintenance work">
             New Work Order
           </.button>
         </:actions>
@@ -121,7 +121,7 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Index do
           </div>
         </:col>
 
-        <:col :let={work_order} field="status" sort label="Status">
+        <:col :let={work_order} field="status" sort filter={:select} filter_options={[options: [{"New", "new"}, {"Scheduled", "scheduled"}, {"Dispatched", "dispatched"}, {"In Progress", "in_progress"}, {"Completed", "completed"}, {"Cancelled", "cancelled"}]]} label="Status">
           <.status_badge status={work_order.status_variant}>
             {format_atom(work_order.status)}
           </.status_badge>

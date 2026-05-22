@@ -6,13 +6,14 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   alias GnomeGarden.Commercial
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     pursuit = load_pursuit!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, pursuit.name)
-     |> assign(:pursuit, pursuit)}
+     |> assign(:pursuit, pursuit)
+     |> assign(:return_to, params["return_to"] || ~p"/commercial/pursuits")}
   end
 
   @impl true
@@ -59,7 +60,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/commercial/pursuits"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button
@@ -85,6 +86,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
             phx-click="transition"
             phx-value-action={action.action}
             variant={action.variant}
+            title={action.title}
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
@@ -223,73 +225,58 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
 
   defp pursuit_actions(%{stage: :new}) do
     [
-      %{action: "qualify", label: "Qualify", icon: "hero-check-badge", variant: "primary"},
-      %{action: "archive", label: "Archive", icon: "hero-archive-box", variant: nil}
+      %{action: "qualify", label: "Qualify", icon: "hero-check-badge", variant: "primary", title: "Mark this pursuit as qualified — confirms it's worth pursuing"},
+      %{action: "archive", label: "Archive", icon: "hero-archive-box", variant: nil, title: "Archive this pursuit — removes it from active view without deleting it"}
     ]
   end
 
   defp pursuit_actions(%{stage: :reopened}) do
     [
-      %{action: "qualify", label: "Re-qualify", icon: "hero-check-badge", variant: "primary"},
-      %{action: "archive", label: "Archive", icon: "hero-archive-box", variant: nil}
+      %{action: "qualify", label: "Re-qualify", icon: "hero-check-badge", variant: "primary", title: "Re-qualify this pursuit and move it back into the active pipeline"},
+      %{action: "archive", label: "Archive", icon: "hero-archive-box", variant: nil, title: "Archive this pursuit"}
     ]
   end
 
   defp pursuit_actions(%{stage: :qualified}) do
     [
-      %{action: "estimate", label: "Start Estimate", icon: "hero-calculator", variant: nil},
-      %{
-        action: "propose",
-        label: "Move To Proposal",
-        icon: "hero-document-check",
-        variant: "primary"
-      },
-      %{action: "mark_lost", label: "Mark Lost", icon: "hero-x-circle", variant: nil}
+      %{action: "estimate", label: "Start Estimate", icon: "hero-calculator", variant: nil, title: "Begin scoping and estimating the work before writing a proposal"},
+      %{action: "propose", label: "Move To Proposal", icon: "hero-document-check", variant: "primary", title: "Create a formal proposal document for this pursuit"},
+      %{action: "mark_lost", label: "Mark Lost", icon: "hero-x-circle", variant: nil, title: "Record that this opportunity was not won"}
     ]
   end
 
   defp pursuit_actions(%{stage: :estimating}) do
     [
-      %{
-        action: "propose",
-        label: "Move To Proposal",
-        icon: "hero-document-check",
-        variant: "primary"
-      },
-      %{action: "mark_lost", label: "Mark Lost", icon: "hero-x-circle", variant: nil}
+      %{action: "propose", label: "Move To Proposal", icon: "hero-document-check", variant: "primary", title: "Estimation complete — create a formal proposal document"},
+      %{action: "mark_lost", label: "Mark Lost", icon: "hero-x-circle", variant: nil, title: "Record that this opportunity was not won"}
     ]
   end
 
   defp pursuit_actions(%{stage: :proposed}) do
     [
-      %{
-        action: "negotiate",
-        label: "Enter Negotiation",
-        icon: "hero-arrows-right-left",
-        variant: nil
-      },
-      %{action: "mark_won", label: "Mark Won", icon: "hero-trophy", variant: "primary"},
-      %{action: "mark_lost", label: "Mark Lost", icon: "hero-x-circle", variant: nil}
+      %{action: "negotiate", label: "Enter Negotiation", icon: "hero-arrows-right-left", variant: nil, title: "Move into active negotiation with the client before closing"},
+      %{action: "mark_won", label: "Mark Won", icon: "hero-trophy", variant: "primary", title: "Record this pursuit as won — you can then create an agreement"},
+      %{action: "mark_lost", label: "Mark Lost", icon: "hero-x-circle", variant: nil, title: "Record that this opportunity was not won"}
     ]
   end
 
   defp pursuit_actions(%{stage: :negotiating}) do
     [
-      %{action: "mark_won", label: "Mark Won", icon: "hero-trophy", variant: "primary"},
-      %{action: "mark_lost", label: "Mark Lost", icon: "hero-x-circle", variant: nil}
+      %{action: "mark_won", label: "Mark Won", icon: "hero-trophy", variant: "primary", title: "Record this pursuit as won — you can then create an agreement"},
+      %{action: "mark_lost", label: "Mark Lost", icon: "hero-x-circle", variant: nil, title: "Record that this opportunity was not won"}
     ]
   end
 
   defp pursuit_actions(%{stage: :lost}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"},
-      %{action: "archive", label: "Archive", icon: "hero-archive-box", variant: nil}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Reopen this pursuit — the opportunity may still be recoverable"},
+      %{action: "archive", label: "Archive", icon: "hero-archive-box", variant: nil, title: "Archive this pursuit and remove it from active view"}
     ]
   end
 
   defp pursuit_actions(%{stage: :archived}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Bring this pursuit back into the active pipeline"}
     ]
   end
 

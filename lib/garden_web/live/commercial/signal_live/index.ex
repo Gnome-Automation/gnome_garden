@@ -40,7 +40,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Index do
           <.button navigate={~p"/commercial/pursuits"}>
             Pursuits
           </.button>
-          <.button navigate={~p"/commercial/signals/new"} variant="primary">
+          <.button navigate={~p"/commercial/signals/new"} variant="primary" title="Create a new commercial signal from a referral, outbound effort, or manual intake">
             New Signal
           </.button>
         </:actions>
@@ -108,7 +108,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Index do
           {format_datetime(signal.observed_at || signal.inserted_at)}
         </:col>
 
-        <:col :let={signal} field="status" sort label="Status">
+        <:col :let={signal} field="status" sort filter={:select} filter_options={[options: [{"New", "new"}, {"Reviewing", "reviewing"}, {"Accepted", "accepted"}, {"Rejected", "rejected"}, {"Converted", "converted"}, {"Archived", "archived"}]]} label="Status">
           <.status_badge status={signal.status_variant}>
             {format_atom(signal.status)}
           </.status_badge>

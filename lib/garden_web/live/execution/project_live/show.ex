@@ -6,7 +6,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
   alias GnomeGarden.Execution
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     actor = socket.assigns.current_user
     project = load_project!(id, actor)
 
@@ -14,7 +14,8 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
      socket
      |> assign(:page_title, project.name)
      |> assign(:project, project)
-     |> assign(:project_work_items, load_project_work_items!(project.id, actor))}
+     |> assign(:project_work_items, load_project_work_items!(project.id, actor))
+     |> assign(:return_to, params["return_to"] || ~p"/execution/projects")}
   end
 
   @impl true
@@ -83,10 +84,10 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/execution/projects"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/finance/time-entries/new?#{time_entry_params(@project)}"}>
+          <.button navigate={~p"/finance/time-entries/new?#{Map.put(time_entry_params(@project), :return_to, ~p"/execution/projects/#{@project}")}"}>
             New Time Entry
           </.button>
           <.button navigate={~p"/finance/expenses/new?#{expense_params(@project)}"}>
@@ -117,6 +118,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
             phx-click="transition"
             phx-value-action={action.action}
             variant={action.variant}
+            title={action.title}
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
@@ -345,44 +347,44 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
 
   defp project_actions(%{status: :planned}) do
     [
-      %{action: "approve", label: "Approve", icon: "hero-check-badge", variant: nil},
-      %{action: "start", label: "Start", icon: "hero-play", variant: "primary"},
-      %{action: "cancel", label: "Cancel", icon: "hero-x-circle", variant: nil}
+      %{action: "approve", label: "Approve", icon: "hero-check-badge", variant: nil, title: "Approve the scope and budget — time entries can now be logged against this project"},
+      %{action: "start", label: "Start", icon: "hero-play", variant: "primary", title: "Skip formal approval and begin work immediately"},
+      %{action: "cancel", label: "Cancel", icon: "hero-x-circle", variant: nil, title: "Cancel this project — it will be removed from active work"}
     ]
   end
 
   defp project_actions(%{status: :ready}) do
     [
-      %{action: "start", label: "Start", icon: "hero-play", variant: "primary"},
-      %{action: "hold", label: "Hold", icon: "hero-pause", variant: nil},
-      %{action: "cancel", label: "Cancel", icon: "hero-x-circle", variant: nil}
+      %{action: "start", label: "Start", icon: "hero-play", variant: "primary", title: "Begin active work on this project"},
+      %{action: "hold", label: "Hold", icon: "hero-pause", variant: nil, title: "Put this project on hold temporarily"},
+      %{action: "cancel", label: "Cancel", icon: "hero-x-circle", variant: nil, title: "Cancel this project"}
     ]
   end
 
   defp project_actions(%{status: :active}) do
     [
-      %{action: "hold", label: "Hold", icon: "hero-pause", variant: nil},
-      %{action: "complete", label: "Complete", icon: "hero-check", variant: "primary"}
+      %{action: "hold", label: "Hold", icon: "hero-pause", variant: nil, title: "Pause work on this project"},
+      %{action: "complete", label: "Complete", icon: "hero-check", variant: "primary", title: "Mark all work as delivered and close out this project"}
     ]
   end
 
   defp project_actions(%{status: :on_hold}) do
     [
-      %{action: "start", label: "Resume", icon: "hero-play", variant: "primary"},
-      %{action: "complete", label: "Complete", icon: "hero-check", variant: nil},
-      %{action: "cancel", label: "Cancel", icon: "hero-x-circle", variant: nil}
+      %{action: "start", label: "Resume", icon: "hero-play", variant: "primary", title: "Resume active work on this project"},
+      %{action: "complete", label: "Complete", icon: "hero-check", variant: nil, title: "Mark this project as completed"},
+      %{action: "cancel", label: "Cancel", icon: "hero-x-circle", variant: nil, title: "Cancel this project"}
     ]
   end
 
   defp project_actions(%{status: :completed}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Re-open this project for additional work"}
     ]
   end
 
   defp project_actions(%{status: :cancelled}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Re-activate this project"}
     ]
   end
 

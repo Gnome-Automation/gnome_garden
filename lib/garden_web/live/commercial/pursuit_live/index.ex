@@ -37,7 +37,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
           <.button navigate={~p"/commercial/signals"}>
             Signal Queue
           </.button>
-          <.button navigate={~p"/commercial/pursuits/new"} variant="primary">
+          <.button navigate={~p"/commercial/pursuits/new"} variant="primary" title="Open a new pursuit to track a commercial opportunity through qualification and proposal">
             New Pursuit
           </.button>
         </:actions>
@@ -92,7 +92,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Index do
           {(pursuit.organization && pursuit.organization.name) || "-"}
         </:col>
 
-        <:col :let={pursuit} field="stage" sort label="Stage">
+        <:col :let={pursuit} field="stage" sort filter={:select} filter_options={[options: [{"New", "new"}, {"Qualified", "qualified"}, {"Estimating", "estimating"}, {"Proposed", "proposed"}, {"Negotiating", "negotiating"}, {"Won", "won"}, {"Lost", "lost"}, {"Reopened", "reopened"}, {"Archived", "archived"}]]} label="Stage">
           <div class="space-y-2">
             <.status_badge status={pursuit.stage_variant}>
               {format_atom(pursuit.stage)}

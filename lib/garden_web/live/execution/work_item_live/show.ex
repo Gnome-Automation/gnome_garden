@@ -6,7 +6,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Show do
   alias GnomeGarden.Execution
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     actor = socket.assigns.current_user
     work_item = load_work_item!(id, actor)
 
@@ -14,7 +14,8 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Show do
      socket
      |> assign(:page_title, work_item.title)
      |> assign(:work_item, work_item)
-     |> assign(:work_item_assignments, load_work_item_assignments!(work_item.id, actor))}
+     |> assign(:work_item_assignments, load_work_item_assignments!(work_item.id, actor))
+     |> assign(:return_to, params["return_to"] || ~p"/execution/work-items")}
   end
 
   @impl true
@@ -59,7 +60,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/execution/work-items"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button

@@ -19,14 +19,15 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   alias GnomeGarden.Procurement.TargetingFeedback
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     finding = load_finding!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, finding.title)
      |> assign(:action_dialog, nil)
-     |> assign_finding_context(finding)}
+     |> assign_finding_context(finding)
+     |> assign(:return_to, params["return_to"] || ~p"/acquisition/findings")}
   end
 
   @impl true
@@ -281,7 +282,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           Unified intake record with provenance back to its source lane, origin record, and downstream signal.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/acquisition/findings"}>
+          <.button navigate={@return_to}>
             Back To Queue
           </.button>
           <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"} variant="primary">

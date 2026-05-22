@@ -7,13 +7,14 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
   alias GnomeGarden.Operations
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     expense = load_expense!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Expense")
-     |> assign(:expense, expense)}
+     |> assign(:expense, expense)
+     |> assign(:return_to, params["return_to"] || ~p"/finance/expenses")}
   end
 
   @impl true
@@ -49,7 +50,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/expenses"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button :if={@expense.project} navigate={~p"/execution/projects/#{@expense.project}"}>

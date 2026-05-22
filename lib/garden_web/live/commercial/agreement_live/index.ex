@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Index do
           <.button navigate={~p"/commercial/proposals"}>
             Proposals
           </.button>
-          <.button navigate={~p"/commercial/agreements/new"} variant="primary">
+          <.button navigate={~p"/commercial/agreements/new"} variant="primary" title="Create a new commercial agreement to govern delivery, billing, and entitlement">
             New Agreement
           </.button>
         </:actions>
@@ -112,7 +112,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Index do
           </div>
         </:col>
 
-        <:col :let={agreement} field="status" sort label="Status">
+        <:col :let={agreement} field="status" sort filter={:select} filter_options={[options: [{"Draft", "draft"}, {"Pending Signature", "pending_signature"}, {"Active", "active"}, {"On Hold", "on_hold"}, {"Expired", "expired"}, {"Terminated", "terminated"}, {"Completed", "completed"}]]} label="Status">
           <.status_badge status={agreement.status_variant}>
             {format_atom(agreement.status)}
           </.status_badge>

@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Index do
           <.button navigate={~p"/operations/sites"}>
             Sites
           </.button>
-          <.button navigate={~p"/operations/managed-systems/new"} variant="primary">
+          <.button navigate={~p"/operations/managed-systems/new"} variant="primary" title="Register a new automation stack, application, or integration that sits between a site and its assets">
             New Managed System
           </.button>
         </:actions>
@@ -114,7 +114,7 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Index do
           </div>
         </:col>
 
-        <:col :let={managed_system} field="lifecycle_status" sort label="Lifecycle">
+        <:col :let={managed_system} field="lifecycle_status" sort filter={:select} filter_options={[options: [{"Prospective", "prospective"}, {"Active", "active"}, {"On Hold", "on_hold"}, {"Retired", "retired"}]]} label="Lifecycle">
           <.status_badge status={managed_system.lifecycle_variant}>
             {format_atom(managed_system.lifecycle_status)}
           </.status_badge>

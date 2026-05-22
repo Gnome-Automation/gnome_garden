@@ -124,7 +124,7 @@ defmodule GnomeGardenWeb.Acquisition.ProgramLive.Index do
 
             <div :if={@programs == []} class="p-4">
               <.empty_state
-                icon="hero-radar"
+                icon="hero-signal"
                 title="No programs in this queue"
                 description="Change the program queue filter or activate more acquisition programs."
               />

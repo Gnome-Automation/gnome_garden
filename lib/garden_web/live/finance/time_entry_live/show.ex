@@ -7,13 +7,14 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
   alias GnomeGarden.Operations
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     time_entry = load_time_entry!(id, socket.assigns.current_user)
 
     {:ok,
      socket
      |> assign(:page_title, "Time Entry")
-     |> assign(:time_entry, time_entry)}
+     |> assign(:time_entry, time_entry)
+     |> assign(:return_to, params["return_to"] || ~p"/finance/time-entries")}
   end
 
   @impl true
@@ -49,7 +50,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/time-entries"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button :if={@time_entry.agreement} navigate={~p"/commercial/agreements/#{@time_entry.agreement}"}>
@@ -64,7 +65,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Show do
           >
             Work Order
           </.button>
-          <.button navigate={~p"/finance/time-entries/#{@time_entry}/edit"}>
+          <.button navigate={~p"/finance/time-entries/#{@time_entry}/edit?return_to=#{~p"/finance/time-entries/#{@time_entry}"}"}>
             Edit
           </.button>
         </:actions>

@@ -7,7 +7,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
   alias GnomeGarden.Operations.IdentityMergeReview
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     person = load_person!(id, socket.assigns.current_user)
     merge_review = load_merge_review!(person, socket.assigns.current_user)
 
@@ -15,7 +15,8 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
      socket
      |> assign(:page_title, person.full_name)
      |> assign(:person, person)
-     |> assign(:merge_review, merge_review)}
+     |> assign(:merge_review, merge_review)
+     |> assign(:return_to, params["return_to"] || ~p"/operations/people")}
   end
 
   @impl true
@@ -80,7 +81,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
           |> Enum.join(" · ")}
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/operations/people"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
           <.button :if={@person.status != :archived} phx-click="archive" data-confirm="Archive this person?">

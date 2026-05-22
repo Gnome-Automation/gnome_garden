@@ -67,7 +67,8 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Form do
         >
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-3">
-              <.input field={@form[:proposal_number]} label="Proposal Number" required />
+              <.input field={@form[:proposal_number]} label="Proposal Number" placeholder="Auto-generated if left empty" />
+              <p class="mt-1.5 text-xs text-base-content/50">Leave blank to auto-generate (e.g. PROP-0001).</p>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:name]} label="Name" required />

@@ -106,6 +106,7 @@ defmodule GnomeGardenWeb.Finance.ApprovalQueueLive do
                       phx-click="approve"
                       phx-value-id={entry.id}
                       phx-disable-with="Approving..."
+                      title="Approve this time entry — it becomes eligible for invoicing"
                       class="text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
                     >
                       Approve
@@ -114,6 +115,7 @@ defmodule GnomeGardenWeb.Finance.ApprovalQueueLive do
                       phx-click="reject"
                       phx-value-id={entry.id}
                       phx-disable-with="Rejecting..."
+                      title="Reject this time entry — it will be returned to the submitter for correction"
                       class="text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400"
                     >
                       Reject

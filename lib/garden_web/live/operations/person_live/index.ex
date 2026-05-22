@@ -37,7 +37,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Index do
           <.button navigate={~p"/operations/organizations"}>
             Organizations
           </.button>
-          <.button navigate={~p"/operations/people/new"} variant="primary">
+          <.button navigate={~p"/operations/people/new"} variant="primary" title="Create a new external contact, requester, or stakeholder record">
             New Person
           </.button>
         </:actions>
@@ -98,7 +98,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Index do
           {person.organization_count || 0}
         </:col>
 
-        <:col :let={person} field="status" sort label="Status">
+        <:col :let={person} field="status" sort filter={:select} filter_options={[options: [{"Active", "active"}, {"Inactive", "inactive"}, {"Archived", "archived"}]]} label="Status">
           <.status_badge status={person.status_variant}>
             {format_atom(person.status)}
           </.status_badge>

@@ -76,9 +76,15 @@ defmodule GnomeGarden.Finance.TimeEntry do
         :cost_rate,
         :notes
       ]
+
+      validate fn changeset, context ->
+        validate_project_approved(changeset, context)
+      end
     end
 
     update :update do
+      require_atomic? false
+
       accept [
         :organization_id,
         :agreement_id,
@@ -94,6 +100,10 @@ defmodule GnomeGarden.Finance.TimeEntry do
         :cost_rate,
         :notes
       ]
+
+      validate fn changeset, context ->
+        validate_project_approved(changeset, context)
+      end
     end
 
     update :submit do
@@ -287,6 +297,25 @@ defmodule GnomeGarden.Finance.TimeEntry do
   aggregates do
     count :entitlement_usage_count, :service_entitlement_usages do
       public? true
+    end
+  end
+
+  defp validate_project_approved(changeset, _context) do
+    case Ash.Changeset.get_attribute(changeset, :project_id) do
+      nil ->
+        :ok
+
+      project_id ->
+        case GnomeGarden.Execution.get_project(project_id, authorize?: false) do
+          {:ok, project} when project.status in [:ready, :active] ->
+            :ok
+
+          {:ok, _project} ->
+            {:error, field: :project_id, message: "Project must be approved before logging time"}
+
+          _ ->
+            :ok
+        end
     end
   end
 end

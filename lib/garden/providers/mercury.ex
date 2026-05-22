@@ -181,8 +181,8 @@ defmodule GnomeGarden.Providers.Mercury do
     {request, %{response | body: {:error, :unauthorized}}}
   end
 
-  defp handle_errors({request, %Req.Response{status: 404} = response}) do
-    {request, %{response | body: {:error, :not_found}}}
+  defp handle_errors({request, %Req.Response{status: 404, body: body} = response}) do
+    {request, %{response | body: {:error, {:not_found, body}}}}
   end
 
   defp handle_errors({request, %Req.Response{status: 429} = response}) do

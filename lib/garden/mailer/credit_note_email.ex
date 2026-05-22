@@ -64,8 +64,20 @@ defmodule GnomeGarden.Mailer.CreditNoteEmail do
           <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
             <tr>
               <td style="background:#0f172a;padding:28px 40px;">
-                <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">Gnome Automation</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">Credit Note #{credit_note.credit_note_number}</p>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td>
+                      <img src="https://gnomeautomation.com/images/gnome-icon-clean-192.png" width="36" height="36" alt="Gnome Automation" style="display:block;border-radius:6px;">
+                    </td>
+                    <td style="padding-left:12px;vertical-align:middle;">
+                      <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">Gnome Automation</p>
+                      <p style="margin:2px 0 0;font-size:12px;color:#94a3b8;">Credit Note</p>
+                    </td>
+                    <td align="right" style="vertical-align:middle;">
+                      <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;">#{credit_note.credit_note_number}</p>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>

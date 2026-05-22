@@ -7,7 +7,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
   alias GnomeGarden.Finance
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     actor = socket.assigns.current_user
     agreement = load_agreement!(id, actor)
 
@@ -24,7 +24,8 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
      |> assign(:agreement, agreement)
      |> assign(:schedule_pct_total, compute_pct_total(agreement.payment_schedule_items))
      |> assign(:unbilled_expenses, unbilled_expenses)
-     |> assign(:selected_expense_ids, MapSet.new())}
+     |> assign(:selected_expense_ids, MapSet.new())
+     |> assign(:return_to, params["return_to"] || ~p"/commercial/agreements")}
   end
 
   @impl true
@@ -195,13 +196,13 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           </span>
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/commercial/agreements"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
+          <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"} title="Generate an invoice from approved time and expense entries for this agreement">
             Invoice T&amp;E
           </.button>
-          <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"}>
+          <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"} title="Add a change order to modify the scope, timeline, or price of this agreement">
             New Change Order
           </.button>
           <.button :if={@agreement.status != :archived} phx-click="archive" data-confirm="Archive this agreement?">
@@ -227,6 +228,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             phx-click="transition"
             phx-value-action={action.action}
             variant={action.variant}
+            title={action.title}
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
@@ -238,10 +240,11 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             <.button
               navigate={~p"/execution/projects/new?agreement_id=#{@agreement.id}"}
               variant="primary"
+              title="Create a new project to deliver the work under this agreement"
             >
               <.icon name="hero-folder-plus" class="size-4" /> New Project
             </.button>
-            <.button phx-click="generate_invoice" phx-disable-with="Generating...">
+            <.button phx-click="generate_invoice" phx-disable-with="Generating..." title="Generate a fixed-fee milestone invoice for this agreement">
               <.icon name="hero-document-plus" class="size-4" /> Invoice Milestone
             </.button>
           </div>
@@ -251,6 +254,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
               :for={action <- agreement_actions(@agreement)}
               phx-click="transition"
               phx-value-action={action.action}
+              title={action.title}
               class="text-xs text-base-content/50 hover:text-base-content underline"
             >
               {action.label}
@@ -268,6 +272,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             phx-click="transition"
             phx-value-action={action.action}
             variant={action.variant}
+            title={action.title}
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
@@ -392,6 +397,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
               class="border border-zinc-300 rounded px-2 py-1 text-sm w-20" required />
           </div>
           <button type="submit"
+            title="Add a payment milestone to the schedule — define what percentage is due and when"
             class="bg-emerald-600 text-white text-sm px-3 py-1.5 rounded hover:bg-emerald-700">
             Add Item
           </button>
@@ -616,49 +622,44 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
 
   defp agreement_actions(%{status: :draft}) do
     [
-      %{
-        action: "submit_for_signature",
-        label: "Submit For Signature",
-        icon: "hero-pencil-square",
-        variant: nil
-      },
-      %{action: "activate", label: "Activate", icon: "hero-check-badge", variant: "primary"},
-      %{action: "terminate", label: "Terminate", icon: "hero-x-circle", variant: nil}
+      %{action: "submit_for_signature", label: "Submit For Signature", icon: "hero-pencil-square", variant: nil, title: "Send this agreement to the client for signature before activating"},
+      %{action: "activate", label: "Activate", icon: "hero-check-badge", variant: "primary", title: "Mark this agreement as active — enables project creation and invoicing"},
+      %{action: "terminate", label: "Terminate", icon: "hero-x-circle", variant: nil, title: "End this agreement early — it will no longer be billable"}
     ]
   end
 
   defp agreement_actions(%{status: :pending_signature}) do
     [
-      %{action: "activate", label: "Activate", icon: "hero-check-badge", variant: "primary"},
-      %{action: "terminate", label: "Terminate", icon: "hero-x-circle", variant: nil}
+      %{action: "activate", label: "Activate", icon: "hero-check-badge", variant: "primary", title: "Mark as signed and activate — enables project creation and invoicing"},
+      %{action: "terminate", label: "Terminate", icon: "hero-x-circle", variant: nil, title: "End this agreement — it will no longer be billable"}
     ]
   end
 
   defp agreement_actions(%{status: :active}) do
     [
-      %{action: "suspend", label: "Suspend", icon: "hero-pause", variant: nil},
-      %{action: "complete", label: "Complete", icon: "hero-check", variant: "primary"},
-      %{action: "terminate", label: "Terminate", icon: "hero-x-circle", variant: nil}
+      %{action: "suspend", label: "Suspend", icon: "hero-pause", variant: nil, title: "Pause this agreement temporarily — work and billing are put on hold"},
+      %{action: "complete", label: "Complete", icon: "hero-check", variant: "primary", title: "Mark all work as delivered and close out this agreement"},
+      %{action: "terminate", label: "Terminate", icon: "hero-x-circle", variant: nil, title: "End this agreement early"}
     ]
   end
 
   defp agreement_actions(%{status: :suspended}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"},
-      %{action: "complete", label: "Complete", icon: "hero-check", variant: nil},
-      %{action: "terminate", label: "Terminate", icon: "hero-x-circle", variant: nil}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Resume this agreement and re-enable billing"},
+      %{action: "complete", label: "Complete", icon: "hero-check", variant: nil, title: "Mark all work as delivered and close out this agreement"},
+      %{action: "terminate", label: "Terminate", icon: "hero-x-circle", variant: nil, title: "End this agreement permanently"}
     ]
   end
 
   defp agreement_actions(%{status: :terminated}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Re-activate this agreement"}
     ]
   end
 
   defp agreement_actions(%{status: :completed}) do
     [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary"}
+      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Re-open this agreement for additional work or billing"}
     ]
   end
 

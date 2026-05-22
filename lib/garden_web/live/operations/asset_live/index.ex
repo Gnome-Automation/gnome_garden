@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Index do
           <.button navigate={~p"/operations/organizations"}>
             Organizations
           </.button>
-          <.button navigate={~p"/operations/assets/new"} variant="primary">
+          <.button navigate={~p"/operations/assets/new"} variant="primary" title="Register a new physical, digital, or hybrid asset to track service history and maintenance">
             New Asset
           </.button>
         </:actions>
@@ -122,7 +122,7 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Index do
           </div>
         </:col>
 
-        <:col :let={asset} field="lifecycle_status" sort label="Lifecycle">
+        <:col :let={asset} field="lifecycle_status" sort filter={:select} filter_options={[options: [{"Planned", "planned"}, {"Active", "active"}, {"On Hold", "on_hold"}, {"Retired", "retired"}, {"Unsupported", "unsupported"}]]} label="Lifecycle">
           <.status_badge status={asset.lifecycle_variant}>
             {format_atom(asset.lifecycle_status)}
           </.status_badge>
