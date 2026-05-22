@@ -70,7 +70,7 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Show do
           >
             Work Order
           </.button>
-          <.button navigate={~p"/execution/assignments/#{@assignment}/edit"}>
+          <.button navigate={~p"/execution/assignments/#{@assignment}/edit?return_to=#{~p"/execution/assignments/#{@assignment}"}"}>
             Edit
           </.button>
         </:actions>

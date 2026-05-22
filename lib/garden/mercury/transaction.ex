@@ -82,7 +82,8 @@ defmodule GnomeGarden.Mercury.Transaction do
         :failed_at,
         :company_id,
         :match_confidence,
-        :reconciliation_note
+        :reconciliation_note,
+        :reconciliation_category
       ]
     end
   end
@@ -154,6 +155,22 @@ defmodule GnomeGarden.Mercury.Transaction do
       allow_nil? true
       public? true
       description "Required reason when a transaction is manually reconciled with a remaining unmatched balance."
+    end
+
+    attribute :reconciliation_category, :atom do
+      allow_nil? true
+      public? true
+      description "GL category for reconciled transactions — mirrors standard accounting software categorization."
+
+      constraints one_of: [
+                    :bank_fee,
+                    :internal_transfer,
+                    :misc_income,
+                    :refund,
+                    :interest_income,
+                    :owner_draw,
+                    :other
+                  ]
     end
 
     timestamps()

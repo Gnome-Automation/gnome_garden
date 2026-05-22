@@ -60,13 +60,13 @@ defmodule GnomeGardenWeb.CinderTheme do
   set :filter_select_container_class, "relative"
 
   set :filter_select_input_class,
-      "min-w-[9rem] rounded-md border border-base-content/10 bg-base-100 px-3 py-1.5 text-sm text-base-content cursor-pointer hover:bg-base-200 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      "min-w-[9rem] appearance-none rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors cursor-pointer"
 
-  set :filter_select_placeholder_class, "text-base-content/40"
+  set :filter_select_placeholder_class, "text-base-content"
   set :filter_select_arrow_class, "size-4 text-base-content/40 ml-2 flex-shrink-0"
 
   set :filter_select_dropdown_class,
-      "absolute z-20 left-0 top-full mt-1 min-w-full rounded-md border border-base-content/10 bg-base-100 shadow-lg"
+      "absolute z-20 left-0 top-full mt-1 min-w-full rounded-md outline outline-1 outline-base-content/10 bg-base-100 shadow-lg"
 
   set :filter_select_option_class,
       "px-3 py-2 hover:bg-base-300 text-sm text-base-content cursor-pointer"
@@ -79,7 +79,7 @@ defmodule GnomeGardenWeb.CinderTheme do
   set :search_icon_class, "size-4 text-base-content/40"
 
   set :search_input_class,
-      "w-full max-w-md rounded-md border border-base-content/10 bg-base-100 pl-9 pr-3 py-1.5 text-sm text-base-content placeholder:text-base-content/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      "w-full max-w-md rounded-md bg-base-100 pl-9 pr-3 py-1.5 text-sm text-base-content placeholder:text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors"
 
   # Sort indicators
   set :sort_indicator_class, "inline-block ml-1"

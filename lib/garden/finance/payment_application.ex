@@ -126,11 +126,11 @@ defmodule GnomeGarden.Finance.PaymentApplication do
 
         cond do
           Decimal.compare(applied, total) != :lt ->
-            Ash.update!(invoice, %{}, action: :mark_paid, actor: actor, authorize?: false)
+            Ash.update(invoice, %{}, action: :mark_paid, actor: actor, authorize?: false)
 
           Decimal.compare(applied, Decimal.new("0")) == :gt ->
             balance = Decimal.sub(total, applied)
-            Ash.update!(invoice, %{balance_amount: balance}, action: :partial, actor: actor, authorize?: false)
+            Ash.update(invoice, %{balance_amount: balance}, action: :partial, actor: actor, authorize?: false)
 
           true ->
             :ok

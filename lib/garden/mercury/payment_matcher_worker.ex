@@ -67,7 +67,7 @@ defmodule GnomeGarden.Mercury.PaymentMatcherWorker do
       [invoice_number] ->
         GnomeGarden.Finance.Invoice
         |> Ash.Query.filter(invoice_number == ^invoice_number and status in [:issued, :partial])
-        |> Ash.read_one(domain: Finance)
+        |> Ash.read_one(domain: Finance, load: [:applied_amount])
         |> case do
           {:ok, invoice} when not is_nil(invoice) -> {:ok, invoice, :exact}
           _ -> :not_found
@@ -153,41 +153,65 @@ defmodule GnomeGarden.Mercury.PaymentMatcherWorker do
       Ash.transaction(
         [GnomeGarden.Finance.Invoice, GnomeGarden.Mercury.PaymentMatch],
         fn ->
-          with {:ok, payment} <-
-                 Finance.create_payment(%{
-                   organization_id: invoice.organization_id,
-                   agreement_id: invoice.agreement_id,
-                   received_on: DateTime.to_date(txn.occurred_at),
-                   payment_method: kind_to_payment_method(txn.kind),
-                   currency_code: invoice.currency_code || "USD",
-                   amount: txn.amount,
-                   reference: txn.mercury_id
-                 }),
-               {:ok, _application} <-
-                 Finance.create_payment_application(%{
-                   payment_id: payment.id,
-                   invoice_id: invoice.id,
-                   amount: txn.amount,
-                   applied_on: DateTime.to_date(txn.occurred_at)
-                 }),
-               {:ok, _match} <-
-                 Mercury.create_payment_match(%{
-                   mercury_transaction_id: txn.id,
-                   finance_payment_id: payment.id,
-                   match_source: :auto
-                 }),
-               {:ok, _} <- close_or_partial(invoice) do
-            :ok
-          else
-            {:error, reason} ->
-              Ash.DataLayer.rollback(GnomeGarden.Finance.Invoice, reason)
+          # Re-fetch inside the transaction to guard against concurrent workers
+          # claiming the same invoice
+          case Ash.get(GnomeGarden.Finance.Invoice, invoice.id,
+                 domain: Finance,
+                 load: [:applied_amount]
+               ) do
+            {:ok, fresh} when fresh.status in [:issued, :partial] ->
+              apply_amount = Decimal.min(txn.amount, effective_balance(fresh))
+
+              with {:ok, payment} <-
+                     Finance.create_payment(%{
+                       organization_id: fresh.organization_id,
+                       agreement_id: fresh.agreement_id,
+                       received_on: DateTime.to_date(txn.occurred_at),
+                       payment_method: kind_to_payment_method(txn.kind),
+                       currency_code: fresh.currency_code || "USD",
+                       amount: apply_amount,
+                       reference: txn.mercury_id
+                     }),
+                   {:ok, _application} <-
+                     Finance.create_payment_application(%{
+                       payment_id: payment.id,
+                       invoice_id: fresh.id,
+                       amount: apply_amount,
+                       applied_on: DateTime.to_date(txn.occurred_at)
+                     }),
+                   {:ok, _match} <-
+                     Mercury.create_payment_match(%{
+                       mercury_transaction_id: txn.id,
+                       finance_payment_id: payment.id,
+                       match_source: :auto
+                     }) do
+                {:matched, apply_amount}
+              else
+                {:error, reason} ->
+                  Ash.DataLayer.rollback(GnomeGarden.Finance.Invoice, reason)
+              end
+
+            _ ->
+              # Invoice no longer open (claimed by a concurrent worker) — skip
+              :skipped
           end
         end
       )
 
     case result do
-      {:ok, :ok} ->
-        Mercury.update_mercury_transaction(txn, %{match_confidence: confidence})
+      {:ok, {:matched, apply_amount}} ->
+        partial? = Decimal.compare(apply_amount, txn.amount) == :lt
+        final_confidence = if partial?, do: :unmatched, else: confidence
+        Mercury.update_mercury_transaction(txn, %{match_confidence: final_confidence})
+        :ok
+
+      {:ok, :skipped} ->
+        Logger.info("PaymentMatcherWorker: invoice already claimed, skipping",
+          mercury_id: txn.mercury_id,
+          invoice_id: invoice.id
+        )
+
+        Mercury.update_mercury_transaction(txn, %{match_confidence: :unmatched})
         :ok
 
       {:error, reason} ->
@@ -197,19 +221,6 @@ defmodule GnomeGarden.Mercury.PaymentMatcherWorker do
         )
 
         {:error, reason}
-    end
-  end
-
-  defp close_or_partial(invoice) do
-    {:ok, fresh} =
-      Ash.get(GnomeGarden.Finance.Invoice, invoice.id, domain: Finance, load: [:applied_amount])
-
-    new_balance = effective_balance(fresh)
-
-    if Decimal.compare(new_balance, underpayment_tolerance()) != :gt do
-      Finance.pay_invoice(fresh)
-    else
-      Finance.partial_invoice(fresh, %{balance_amount: new_balance})
     end
   end
 

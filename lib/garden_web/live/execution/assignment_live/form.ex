@@ -12,6 +12,7 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Form do
     {:ok,
      socket
      |> assign(:assignment, assignment)
+     |> assign(:return_to, params["return_to"])
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:projects, load_projects(socket.assigns.current_user))
      |> assign(:work_orders, load_work_orders(socket.assigns.current_user))
@@ -35,7 +36,7 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Form do
           Schedule the real owner, time window, and execution context before work starts consuming capacity.
         </:subtitle>
         <:actions>
-          <.button navigate={back_path(@selected_project_id, @form[:work_order_id].value)}>
+          <.button navigate={@return_to || back_path(@selected_project_id, @form[:work_order_id].value)}>
             Back
           </.button>
         </:actions>
@@ -144,7 +145,7 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={back_path(@selected_project_id, @form[:work_order_id].value)}
+            cancel_path={@return_to || back_path(@selected_project_id, @form[:work_order_id].value)}
             submit_label={if @assignment, do: "Update Assignment", else: "Create Assignment"}
           />
         </.section>
@@ -178,7 +179,7 @@ defmodule GnomeGardenWeb.Execution.AssignmentLive.Form do
            :info,
            "Assignment #{if socket.assigns.assignment, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/execution/assignments/#{assignment}")}
+         |> push_navigate(to: socket.assigns.return_to || ~p"/execution/assignments/#{assignment}")}
 
       {:error, form} ->
         {:noreply,

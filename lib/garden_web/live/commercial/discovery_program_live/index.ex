@@ -166,7 +166,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
           </div>
         </:col>
 
-        <:col :let={program} field="status" sort label="Status">
+        <:col :let={program} field="status" sort filter={:select} filter_options={[options: [{"Active", "active"}, {"Paused", "paused"}, {"Archived", "archived"}]]} label="Status">
           <div class="space-y-2">
             <.status_badge status={program.status_variant}>
               {format_atom(program.status)}
