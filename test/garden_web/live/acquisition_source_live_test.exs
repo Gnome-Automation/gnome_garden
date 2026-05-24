@@ -472,6 +472,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     {:ok, _view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
 
     assert html =~ "Traversal Evidence"
+    assert html =~ "Inspect Source"
     assert html =~ "https://example.com/evidence/bids"
     assert html =~ "Pages"
     assert html =~ "Candidates"

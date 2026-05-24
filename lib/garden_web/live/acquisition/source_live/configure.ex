@@ -103,6 +103,22 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   end
 
   @impl true
+  def handle_event("inspect_source", _params, socket) do
+    source = socket.assigns.source.procurement_source
+
+    case Procurement.inspect_procurement_source(source, actor: socket.assigns.current_user) do
+      {:ok, %{run: _run}} ->
+        {:noreply,
+         socket
+         |> assign_crawl_evidence()
+         |> put_flash(:info, "Source page inspected and traversal evidence recorded.")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not inspect source: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
   def handle_event("add_search_filter", %{"search_filter" => params}, socket) do
     source = socket.assigns.source.procurement_source
     attrs = search_filter_attrs(source, params)
@@ -442,6 +458,16 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
                 <span class="font-semibold text-base-content">Diagnosis:</span>
                 {crawl_diagnosis(@latest_crawl_run)}
               </div>
+            </div>
+
+            <div class="mt-3 flex justify-end">
+              <.button
+                type="button"
+                phx-click="inspect_source"
+                phx-disable-with="Inspecting..."
+              >
+                Inspect Source
+              </.button>
             </div>
           </.section>
 

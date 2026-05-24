@@ -24,6 +24,26 @@ defmodule GnomeGarden.Browser do
     end
   end
 
+  @doc "Navigate to a URL and return a bounded page snapshot with links."
+  def inspect_page(url, opts \\ []) when is_binary(url) do
+    max_links = Keyword.get(opts, :max_links, 100)
+    max_text_chars = Keyword.get(opts, :max_text_chars, 20_000)
+
+    with {:ok, navigation} <- navigate(url, opts),
+         {:ok, snapshot} <- evaluate(page_snapshot_js(max_links, max_text_chars)) do
+      {:ok,
+       %{
+         url: url,
+         final_url: Map.get(snapshot, "url") || url,
+         title: Map.get(snapshot, "title") || navigation.title,
+         text: Map.get(snapshot, "text") || "",
+         links: Map.get(snapshot, "links") || [],
+         headings: Map.get(snapshot, "headings") || [],
+         forms: Map.get(snapshot, "forms") || []
+       }}
+    end
+  end
+
   @doc "Evaluate JavaScript in the current browser page and JSON-decode the result when possible."
   def evaluate(js) when is_binary(js) do
     case System.cmd(binary_path(), ["eval", js], stderr_to_stdout: true) do
@@ -114,5 +134,45 @@ defmodule GnomeGarden.Browser do
       |> Path.expand()
 
     Path.join([build_root, "jido_browser-linux_amd64", "agent-browser-linux-x64"])
+  end
+
+  defp page_snapshot_js(max_links, max_text_chars) do
+    """
+    (() => {
+      const clean = value => (value || '').replace(/\\s+/g, ' ').trim();
+      const links = Array.from(document.querySelectorAll('a[href]'))
+        .slice(0, #{max_links})
+        .map((link, index) => ({
+          href: link.href,
+          text: clean(link.innerText || link.getAttribute('aria-label') || link.title),
+          selector: link.id ? `#${link.id}` : null,
+          ordinal: index
+        }))
+        .filter(link => link.href);
+
+      const headings = Array.from(document.querySelectorAll('h1,h2,h3'))
+        .slice(0, 25)
+        .map(heading => clean(heading.innerText))
+        .filter(Boolean);
+
+      const forms = Array.from(document.querySelectorAll('form'))
+        .slice(0, 10)
+        .map((form, index) => ({
+          ordinal: index,
+          action: form.action || '',
+          method: form.method || 'get',
+          text: clean(form.innerText).slice(0, 500)
+        }));
+
+      return {
+        url: window.location.href,
+        title: document.title || '',
+        text: clean(document.body?.innerText || '').slice(0, #{max_text_chars}),
+        links,
+        headings,
+        forms
+      };
+    })()
+    """
   end
 end
