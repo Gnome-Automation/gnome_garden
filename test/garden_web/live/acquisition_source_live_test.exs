@@ -413,6 +413,73 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert html =~ "Discovery Running"
   end
 
+  test "source configuration shows latest traversal evidence", %{conn: conn} do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Evidence Portal",
+        url: "https://example.com/evidence",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, source} =
+      Procurement.configure_procurement_source(source, %{
+        scrape_config: %{
+          listing_url: "https://example.com/evidence/bids",
+          listing_selector: ".bid-row",
+          title_selector: ".bid-title"
+        }
+      })
+
+    {:ok, run} =
+      Procurement.start_crawl_run(%{
+        procurement_source_id: source.id,
+        seed_url: "https://example.com/evidence/bids",
+        run_kind: :scan,
+        max_pages: 1
+      })
+
+    {:ok, page} =
+      Procurement.record_crawl_page(%{
+        crawl_run_id: run.id,
+        url: "https://example.com/evidence/bids",
+        normalized_url: "https://example.com/evidence/bids",
+        fetch_status: :fetched,
+        depth: 0
+      })
+
+    {:ok, _candidate} =
+      Procurement.propose_extraction_candidate(%{
+        crawl_run_id: run.id,
+        crawl_page_id: page.id,
+        candidate_type: :bid,
+        status: :accepted,
+        payload: %{"title" => "Pump station SCADA upgrade"},
+        evidence: %{"ordinal" => 0}
+      })
+
+    {:ok, _run} =
+      Procurement.complete_crawl_run(run, %{
+        summary: %{"extracted" => 3, "saved" => 1},
+        diagnostics: %{"diagnosis" => "saved_candidates"}
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
+
+    {:ok, _view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
+
+    assert html =~ "Traversal Evidence"
+    assert html =~ "https://example.com/evidence/bids"
+    assert html =~ "Pages"
+    assert html =~ "Candidates"
+    assert html =~ "Extracted"
+    assert html =~ "Saved"
+    assert html =~ "saved_candidates"
+  end
+
   test "source configuration shows a clear browser discovery error after discovery failure", %{
     conn: conn
   } do

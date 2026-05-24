@@ -17,6 +17,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       GnomeGardenWeb.Endpoint.subscribe("procurement_source_search_filter:created")
       GnomeGardenWeb.Endpoint.subscribe("procurement_source_search_filter:updated")
       GnomeGardenWeb.Endpoint.subscribe("procurement_source_search_filter:destroyed")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_crawl_run:started")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_crawl_run:completed")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_crawl_run:failed")
     end
 
     case load_source(id, socket.assigns.current_user) do
@@ -26,6 +29,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
          |> assign(:page_title, "Configure Source")
          |> assign(:source, source)
          |> assign_search_filters()
+         |> assign_crawl_evidence()
          |> assign_search_filter_form(%{})
          |> assign_form(config_params(source))}
 
@@ -197,6 +201,10 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
   def handle_info(%{topic: "procurement_source:" <> _event}, socket) do
     {:noreply, refresh_source(socket)}
+  end
+
+  def handle_info(%{topic: "procurement_crawl_run:" <> _event}, socket) do
+    {:noreply, assign_crawl_evidence(socket)}
   end
 
   @impl true
@@ -384,6 +392,55 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
               <div class="flex items-center justify-between gap-3">
                 <span class="text-base-content/60">Region</span>
                 <span class="font-medium">{format_atom(@source.procurement_source.region)}</span>
+              </div>
+            </div>
+          </.section>
+
+          <.section
+            title="Traversal Evidence"
+            description="Stored scan evidence from the browser and extraction pipeline."
+          >
+            <div
+              :if={is_nil(@latest_crawl_run)}
+              class="rounded-lg border border-dashed border-base-content/20 bg-base-200/50 p-3 text-sm text-base-content/65"
+            >
+              No traversal evidence recorded yet. Run a scan after setup and this source will show the pages and candidates the scanner saw.
+            </div>
+
+            <div :if={@latest_crawl_run} class="space-y-3 text-sm">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="truncate font-semibold text-base-content">
+                    {@latest_crawl_run.seed_url}
+                  </p>
+                  <p class="mt-1 text-xs text-base-content/55">
+                    Started {format_datetime(@latest_crawl_run.started_at)}
+                  </p>
+                </div>
+                <.status_badge status={crawl_run_status_variant(@latest_crawl_run.status)}>
+                  {format_atom(@latest_crawl_run.status)}
+                </.status_badge>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <.crawl_metric label="Pages" value={crawl_page_count(@latest_crawl_run)} />
+                <.crawl_metric label="Candidates" value={crawl_candidate_count(@latest_crawl_run)} />
+                <.crawl_metric
+                  label="Extracted"
+                  value={crawl_summary_value(@latest_crawl_run, "extracted")}
+                />
+                <.crawl_metric
+                  label="Saved"
+                  value={crawl_summary_value(@latest_crawl_run, "saved")}
+                />
+              </div>
+
+              <div
+                :if={crawl_diagnosis(@latest_crawl_run)}
+                class="rounded-md border border-base-content/10 bg-base-200/50 px-3 py-2 text-xs leading-5 text-base-content/70"
+              >
+                <span class="font-semibold text-base-content">Diagnosis:</span>
+                {crawl_diagnosis(@latest_crawl_run)}
               </div>
             </div>
           </.section>
@@ -583,6 +640,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
         socket
         |> assign(:source, source)
         |> assign_search_filters()
+        |> assign_crawl_evidence()
         |> assign_form(config_params(source))
 
       {:error, _error} ->
@@ -618,6 +676,22 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
   defp assign_form(socket, params) do
     assign(socket, :form, to_form(params, as: :config))
+  end
+
+  defp assign_crawl_evidence(socket) do
+    latest =
+      case socket.assigns.source.procurement_source do
+        %{id: id} ->
+          case Procurement.list_crawl_runs_for_source(id, actor: socket.assigns.current_user) do
+            {:ok, [run | _]} -> run
+            _ -> nil
+          end
+
+        _ ->
+          nil
+      end
+
+    assign(socket, :latest_crawl_run, latest)
   end
 
   defp config_params(%{procurement_source: %{scrape_config: config, url: url}})
@@ -716,6 +790,18 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       <p class="mt-1.5 text-xs leading-5 text-base-content/55">
         {@hint}
       </p>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :value, :any, required: true
+
+  defp crawl_metric(assigns) do
+    ~H"""
+    <div class="rounded-md border border-base-content/10 bg-base-200/50 p-3">
+      <p class="text-xs uppercase tracking-[0.14em] text-base-content/45">{@label}</p>
+      <p class="mt-1 text-lg font-semibold text-base-content">{@value || 0}</p>
     </div>
     """
   end
@@ -944,6 +1030,38 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   defp procurement_status_variant(:blocked), do: :error
   defp procurement_status_variant(:ignored), do: :default
   defp procurement_status_variant(_status), do: :warning
+
+  defp crawl_run_status_variant(:completed), do: :success
+  defp crawl_run_status_variant(:running), do: :info
+  defp crawl_run_status_variant(:failed), do: :error
+  defp crawl_run_status_variant(_status), do: :default
+
+  defp crawl_page_count(%{pages: pages}) when is_list(pages), do: length(pages)
+  defp crawl_page_count(_run), do: 0
+
+  defp crawl_candidate_count(%{candidates: candidates}) when is_list(candidates),
+    do: length(candidates)
+
+  defp crawl_candidate_count(_run), do: 0
+
+  defp crawl_summary_value(%{summary: summary}, key) when is_map(summary) do
+    Map.get(summary, key) || Map.get(summary, crawl_summary_key_atom(key)) || 0
+  end
+
+  defp crawl_summary_value(_run, _key), do: 0
+
+  defp crawl_summary_key_atom("extracted"), do: :extracted
+  defp crawl_summary_key_atom("saved"), do: :saved
+  defp crawl_summary_key_atom("scored"), do: :scored
+  defp crawl_summary_key_atom("excluded"), do: :excluded
+  defp crawl_summary_key_atom("enriched"), do: :enriched
+  defp crawl_summary_key_atom(_key), do: nil
+
+  defp crawl_diagnosis(%{diagnostics: diagnostics}) when is_map(diagnostics) do
+    Map.get(diagnostics, "diagnosis") || Map.get(diagnostics, :diagnosis)
+  end
+
+  defp crawl_diagnosis(_run), do: nil
 
   defp config_status_variant(:configured), do: :success
   defp config_status_variant(:pending), do: :warning
