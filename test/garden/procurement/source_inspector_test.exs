@@ -76,6 +76,31 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     end
   end
 
+  defmodule FakePublicJobBoardLoginBrowser do
+    def inspect_page(_url, _opts) do
+      {:ok,
+       %{
+         final_url: "https://www.example.com/jobs",
+         title: "Public Jobs",
+         text: "Search jobs and create an account",
+         headings: ["Public Jobs"],
+         forms: [
+           %{
+             "action" => "/login",
+             "method" => "post",
+             "text" => "Username Password Login",
+             "inputs" => [
+               %{"type" => "text", "name" => "username"},
+               %{"type" => "password", "name" => "password"}
+             ],
+             "buttons" => ["Login"]
+           }
+         ],
+         links: [%{"href" => "https://www.example.com/jobs", "text" => "Search jobs"}]
+       }}
+    end
+  end
+
   defmodule FakeAuthorizedUrlBrowser do
     def inspect_page(_url, _opts) do
       {:ok,
@@ -110,6 +135,34 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
          links: []
        }}
     end
+  end
+
+  defmodule FakeStructuredFormValueBrowser do
+    def inspect_page(_url, _opts) do
+      {:ok,
+       %{
+         final_url: "https://www.example.com/jobs",
+         title: "Jobs",
+         text: "Open jobs and careers",
+         headings: ["Jobs"],
+         forms: [
+           %{
+             "action" => "/search",
+             "method" => "get",
+             "text" => %{},
+             "inputs" => [
+               %{"type" => "text", "name" => %{}, "placeholder" => ["Search"]}
+             ],
+             "buttons" => [%{}]
+           }
+         ],
+         links: [%{"href" => "https://www.example.com/jobs/open", "text" => "Open jobs"}]
+       }}
+    end
+  end
+
+  defmodule FakeErrorBrowser do
+    def inspect_page(_url, _opts), do: {:error, "navigation failed"}
   end
 
   test "inspect source records a crawl run, page, snapshot artifact, and edges" do
@@ -219,6 +272,28 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     assert inspection["public_listing_links"] == 2
   end
 
+  test "inspect source does not mark public job boards with login forms as credential gated" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Public Job Board",
+        url: "https://www.example.com/jobs",
+        source_type: :job_board,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, %{source: inspected_source, inspection: inspection}} =
+             Procurement.inspect_procurement_source(source,
+               browser: FakePublicJobBoardLoginBrowser
+             )
+
+    refute inspected_source.requires_login
+    assert inspection["diagnosis"] == "page_inspected"
+    assert inspection["password_inputs"] == 1
+    assert inspection["public_listing_links"] == 1
+  end
+
   test "inspect source does not treat authorized URL paths as auth gates" do
     {:ok, source} =
       Procurement.create_procurement_source(%{
@@ -257,6 +332,46 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     refute inspected_source.requires_login
     assert inspection["diagnosis"] == "page_unavailable"
     assert inspection["password_inputs"] == 1
+  end
+
+  test "inspect source ignores non-text form metadata" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Structured Form",
+        url: "https://www.example.com/jobs",
+        source_type: :job_board,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, %{source: inspected_source, inspection: inspection}} =
+             Procurement.inspect_procurement_source(source,
+               browser: FakeStructuredFormValueBrowser
+             )
+
+    refute inspected_source.requires_login
+    assert inspection["diagnosis"] == "page_inspected"
+  end
+
+  test "inspect source marks crawl run failed when browser inspection fails" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Broken Source",
+        url: "https://broken.example.com",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:error, "navigation failed"} =
+             Procurement.inspect_procurement_source(source, browser: FakeErrorBrowser)
+
+    assert {:ok, [run]} = Procurement.list_crawl_runs_for_source(source.id)
+    assert run.status == :failed
+    assert run.diagnostics["diagnosis"] == "inspection_failed"
+    assert run.diagnostics["reason"] == "navigation failed"
   end
 
   defp restore_env(_name, nil), do: :ok

@@ -18,16 +18,16 @@ defmodule GnomeGarden.Procurement.SourceInspector do
     max_links = Keyword.get(opts, :max_links, 100)
     timeout_ms = Keyword.get(opts, :timeout_ms, 30_000)
 
-    with {:ok, run} <- start_run(source, max_links, actor),
-         {:ok, snapshot} <-
-           browser.inspect_page(source.url, max_links: max_links, timeout_ms: timeout_ms),
-         inspection = classify_snapshot(snapshot),
-         {:ok, source} <- maybe_mark_requires_login(source, inspection, actor),
-         {:ok, page} <- record_page(run, source, snapshot, inspection, actor),
-         {:ok, _artifact} <- record_snapshot_artifact(page, snapshot, actor),
-         :ok <- record_edges(run, page, snapshot.links, actor),
-         {:ok, run} <- complete_run(run, snapshot, inspection, actor) do
-      {:ok, %{run: run, page: page, snapshot: snapshot, source: source, inspection: inspection}}
+    with {:ok, run} <- start_run(source, max_links, actor) do
+      case inspect_started_source(run, source, browser, max_links, timeout_ms, actor) do
+        {:ok, result} ->
+          {:ok, result}
+
+        {:error, error} = failed ->
+          _ = fail_run(run, error, actor)
+          Logger.warning("Source inspection failed for #{source.name}: #{inspect(error)}")
+          failed
+      end
     else
       {:error, error} = failed ->
         Logger.warning("Source inspection failed for #{source.name}: #{inspect(error)}")
@@ -40,6 +40,19 @@ defmodule GnomeGarden.Procurement.SourceInspector do
 
     with {:ok, source} <- Procurement.get_procurement_source(id, actor: actor) do
       inspect_source(source, opts)
+    end
+  end
+
+  defp inspect_started_source(run, source, browser, max_links, timeout_ms, actor) do
+    with {:ok, snapshot} <-
+           browser.inspect_page(source.url, max_links: max_links, timeout_ms: timeout_ms),
+         inspection = classify_snapshot(snapshot),
+         {:ok, source} <- maybe_mark_requires_login(source, inspection, actor),
+         {:ok, page} <- record_page(run, source, snapshot, inspection, actor),
+         {:ok, _artifact} <- record_snapshot_artifact(page, snapshot, actor),
+         :ok <- record_edges(run, page, snapshot.links, actor),
+         {:ok, run} <- complete_run(run, snapshot, inspection, actor) do
+      {:ok, %{run: run, page: page, snapshot: snapshot, source: source, inspection: inspection}}
     end
   end
 
@@ -148,6 +161,23 @@ defmodule GnomeGarden.Procurement.SourceInspector do
     )
   end
 
+  defp fail_run(run, error, actor) do
+    Procurement.fail_crawl_run(
+      run,
+      %{
+        summary: %{"reason" => error_reason(error)},
+        diagnostics: %{
+          "diagnosis" => "inspection_failed",
+          "reason" => error_reason(error)
+        }
+      },
+      actor: actor
+    )
+  end
+
+  defp error_reason(error) when is_binary(error), do: error
+  defp error_reason(error), do: inspect(error)
+
   defp classify_snapshot(snapshot) do
     text = snapshot_text(snapshot)
     form_text = form_text(snapshot.forms || [])
@@ -235,7 +265,8 @@ defmodule GnomeGarden.Procurement.SourceInspector do
             value(input, "autocomplete"),
             value(input, "aria_label")
           ]
-          |> Enum.reject(&is_nil/1)
+          |> Enum.map(&text_value/1)
+          |> Enum.reject(&(&1 == ""))
           |> Enum.join(" ")
         end)
 
@@ -243,10 +274,13 @@ defmodule GnomeGarden.Procurement.SourceInspector do
         form
         |> value("buttons")
         |> List.wrap()
+        |> Enum.map(&text_value/1)
+        |> Enum.reject(&(&1 == ""))
         |> Enum.join(" ")
 
       [value(form, "text"), value(form, "action"), input_text, button_text]
-      |> Enum.reject(&is_nil/1)
+      |> Enum.map(&text_value/1)
+      |> Enum.reject(&(&1 == ""))
       |> Enum.join(" ")
     end)
     |> Enum.join(" ")
@@ -254,9 +288,15 @@ defmodule GnomeGarden.Procurement.SourceInspector do
 
   defp snapshot_text(snapshot) do
     [snapshot.title, snapshot.text, Enum.join(snapshot.headings || [], " ")]
-    |> Enum.reject(&is_nil/1)
+    |> Enum.map(&text_value/1)
+    |> Enum.reject(&(&1 == ""))
     |> Enum.join(" ")
   end
+
+  defp text_value(value) when is_binary(value), do: value
+  defp text_value(value) when is_atom(value), do: Atom.to_string(value)
+  defp text_value(value) when is_number(value), do: to_string(value)
+  defp text_value(_value), do: ""
 
   defp login_url?(url) when is_binary(url) do
     url
@@ -284,7 +324,7 @@ defmodule GnomeGarden.Procurement.SourceInspector do
 
   defp procurement_copy?(copy) when is_binary(copy) do
     Regex.match?(
-      ~r/(bid|bids|rfp|proposal|solicitation|opportunit|contract|addendum|procurement)/i,
+      ~r/(bid|bids|rfp|proposal|solicitation|opportunit|contract|addendum|procurement|job|jobs|career|careers|opening|openings)/i,
       copy
     )
   end
