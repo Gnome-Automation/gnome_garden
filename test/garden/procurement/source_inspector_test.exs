@@ -90,6 +90,28 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     end
   end
 
+  defmodule FakeNotFoundWithHeaderLoginBrowser do
+    def inspect_page(_url, _opts) do
+      {:ok,
+       %{
+         final_url: "https://www.example.com/missing",
+         title: "404 Page Not Found",
+         text: "404 Page Not Found Sign in Password",
+         headings: ["404 Page Not Found"],
+         forms: [
+           %{
+             "action" => "/login",
+             "method" => "post",
+             "text" => "Sign in Password",
+             "inputs" => [%{"type" => "password", "name" => "password"}],
+             "buttons" => ["Sign in"]
+           }
+         ],
+         links: []
+       }}
+    end
+  end
+
   test "inspect source records a crawl run, page, snapshot artifact, and edges" do
     {:ok, source} =
       Procurement.create_procurement_source(%{
@@ -214,6 +236,27 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     refute inspected_source.requires_login
     assert inspection["diagnosis"] == "page_inspected"
     refute "login_url" in inspection["login_evidence"]
+  end
+
+  test "inspect source does not treat unavailable pages with header login as credential gated" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Missing Partner Page",
+        url: "https://www.example.com/missing",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, %{source: inspected_source, inspection: inspection}} =
+             Procurement.inspect_procurement_source(source,
+               browser: FakeNotFoundWithHeaderLoginBrowser
+             )
+
+    refute inspected_source.requires_login
+    assert inspection["diagnosis"] == "page_unavailable"
+    assert inspection["password_inputs"] == 1
   end
 
   defp restore_env(_name, nil), do: :ok

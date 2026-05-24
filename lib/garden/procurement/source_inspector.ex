@@ -155,6 +155,7 @@ defmodule GnomeGarden.Procurement.SourceInspector do
     title = snapshot.title || ""
     password_inputs = password_input_count(snapshot.forms || [])
     public_listing_links = public_listing_link_count(snapshot.links || [])
+    page_unavailable? = page_unavailable?(text)
 
     evidence =
       []
@@ -166,12 +167,13 @@ defmodule GnomeGarden.Procurement.SourceInspector do
     procurement_evidence? = procurement_copy?(text)
 
     login_required? =
-      (password_inputs > 0 and public_listing_links == 0) or
-        (login_url?(final_url) and length(snapshot.forms || []) > 0 and
-           not procurement_evidence? and public_listing_links == 0)
+      not page_unavailable? and
+        ((password_inputs > 0 and public_listing_links == 0) or
+           (login_url?(final_url) and length(snapshot.forms || []) > 0 and
+              not procurement_evidence? and public_listing_links == 0))
 
     %{
-      "diagnosis" => if(login_required?, do: "login_required", else: "page_inspected"),
+      "diagnosis" => diagnosis(login_required?, page_unavailable?),
       "requires_login" => login_required?,
       "login_evidence" => Enum.reverse(evidence),
       "password_inputs" => password_inputs,
@@ -288,6 +290,19 @@ defmodule GnomeGarden.Procurement.SourceInspector do
   end
 
   defp procurement_copy?(_copy), do: false
+
+  defp page_unavailable?(copy) when is_binary(copy) do
+    Regex.match?(
+      ~r/(404|page not found|not found|this page does not exist|resource could not be found)/i,
+      copy
+    )
+  end
+
+  defp page_unavailable?(_copy), do: false
+
+  defp diagnosis(true, _page_unavailable?), do: "login_required"
+  defp diagnosis(false, true), do: "page_unavailable"
+  defp diagnosis(false, false), do: "page_inspected"
 
   defp login_link?(copy) when is_binary(copy) do
     Regex.match?(
