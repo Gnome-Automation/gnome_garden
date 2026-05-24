@@ -20,6 +20,76 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     end
   end
 
+  defmodule FakeLoginBrowser do
+    def inspect_page(_url, _opts) do
+      {:ok,
+       %{
+         final_url: "https://example.com/account/login",
+         title: "Vendor Login",
+         text: "Sign in to continue",
+         headings: ["Vendor Login"],
+         forms: [
+           %{
+             "action" => "https://example.com/account/login",
+             "method" => "post",
+             "text" => "Username Password Sign in",
+             "inputs" => [
+               %{"type" => "text", "name" => "username", "placeholder" => "Username"},
+               %{"type" => "password", "name" => "password", "placeholder" => "Password"}
+             ],
+             "buttons" => ["Sign in"]
+           }
+         ],
+         links: []
+       }}
+    end
+  end
+
+  defmodule FakePublicHeaderLoginBrowser do
+    def inspect_page(_url, _opts) do
+      {:ok,
+       %{
+         final_url: "https://www.bidnetdirect.com/california/example",
+         title: "Example BidNet",
+         text: "Open solicitations and bid search",
+         headings: ["Bid Search"],
+         forms: [
+           %{
+             "action" => "https://www.bidnetdirect.com/public/authentication/login",
+             "method" => "post",
+             "text" => "Email Password Login",
+             "inputs" => [
+               %{"type" => "text", "name" => "email"},
+               %{"type" => "password", "name" => "password"}
+             ],
+             "buttons" => ["Login"]
+           }
+         ],
+         links: [
+           %{"href" => "https://www.bidnetdirect.com/california", "text" => "Bid Search"},
+           %{
+             "href" => "https://www.bidnetdirect.com/california/example/open-bids",
+             "text" => "Open bids"
+           }
+         ]
+       }}
+    end
+  end
+
+  defmodule FakeAuthorizedUrlBrowser do
+    def inspect_page(_url, _opts) do
+      {:ok,
+       %{
+         final_url: "https://www.example.com/support/authorized-integrators",
+         title: "Authorized Integrators",
+         text: "Authorized integrators directory",
+         headings: ["Authorized Integrators"],
+         forms: [%{"action" => "/search", "method" => "get", "text" => "Search"}],
+         links: [%{"href" => "https://www.example.com/support/login", "text" => "Login"}]
+       }}
+    end
+  end
+
   test "inspect source records a crawl run, page, snapshot artifact, and edges" do
     {:ok, source} =
       Procurement.create_procurement_source(%{
@@ -53,4 +123,99 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     assert length(edges) == 2
     assert Enum.any?(edges, &(&1.edge_type == :document))
   end
+
+  test "inspect source marks login-gated pages as requiring credentials" do
+    original_username = System.get_env("PUBLICPURCHASE_USERNAME")
+    original_password = System.get_env("PUBLICPURCHASE_PASSWORD")
+
+    System.delete_env("PUBLICPURCHASE_USERNAME")
+    System.delete_env("PUBLICPURCHASE_PASSWORD")
+
+    on_exit(fn ->
+      restore_env("PUBLICPURCHASE_USERNAME", original_username)
+      restore_env("PUBLICPURCHASE_PASSWORD", original_password)
+    end)
+
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Login Source",
+        url: "https://www.publicpurchase.com/gems/example/buyer/public/home",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, %{run: run, page: page, source: inspected_source, inspection: inspection}} =
+             Procurement.inspect_procurement_source(source, browser: FakeLoginBrowser)
+
+    assert inspected_source.requires_login
+    assert inspection["diagnosis"] == "login_required"
+    assert "password_input" in inspection["login_evidence"]
+
+    assert {:ok, loaded_source} = Procurement.get_procurement_source(source.id)
+    assert loaded_source.requires_login
+    assert loaded_source.metadata["credential_family"] == "publicpurchase"
+
+    assert {:ok, loaded_run} = Procurement.get_crawl_run(run.id)
+    assert loaded_run.diagnostics["diagnosis"] == "login_required"
+
+    assert {:ok, loaded_page} = Procurement.get_crawl_page(page.id)
+    assert loaded_page.diagnostics["diagnosis"] == "login_required"
+    assert loaded_page.diagnostics["password_inputs"] == 1
+
+    assert {:ok, acquisition_source} =
+             GnomeGarden.Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
+
+    assert {:ok, acquisition_source} =
+             GnomeGarden.Acquisition.get_source(acquisition_source.id,
+               load: [:health_status, :health_note, :runnable]
+             )
+
+    assert acquisition_source.health_status == :needs_login
+    assert acquisition_source.health_note =~ "PublicPurchase credentials are missing"
+    refute acquisition_source.runnable
+  end
+
+  test "inspect source does not mark public pages with header login forms as credential gated" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Public Header Login",
+        url: "https://www.bidnetdirect.com/california/example",
+        source_type: :bidnet,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, %{source: inspected_source, inspection: inspection}} =
+             Procurement.inspect_procurement_source(source, browser: FakePublicHeaderLoginBrowser)
+
+    refute inspected_source.requires_login
+    assert inspection["diagnosis"] == "page_inspected"
+    assert inspection["password_inputs"] == 1
+    assert inspection["public_listing_links"] == 2
+  end
+
+  test "inspect source does not treat authorized URL paths as auth gates" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Authorized Directory",
+        url: "https://www.example.com/support/authorized-integrators",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, %{source: inspected_source, inspection: inspection}} =
+             Procurement.inspect_procurement_source(source, browser: FakeAuthorizedUrlBrowser)
+
+    refute inspected_source.requires_login
+    assert inspection["diagnosis"] == "page_inspected"
+    refute "login_url" in inspection["login_evidence"]
+  end
+
+  defp restore_env(_name, nil), do: :ok
+  defp restore_env(name, value), do: System.put_env(name, value)
 end

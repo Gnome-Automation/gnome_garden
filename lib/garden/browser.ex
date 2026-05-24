@@ -161,7 +161,22 @@ defmodule GnomeGarden.Browser do
           ordinal: index,
           action: form.action || '',
           method: form.method || 'get',
-          text: clean(form.innerText).slice(0, 500)
+          text: clean(form.innerText).slice(0, 500),
+          inputs: Array.from(form.querySelectorAll('input, textarea, select'))
+            .slice(0, 25)
+            .map(input => ({
+              tag: input.tagName.toLowerCase(),
+              type: input.getAttribute('type') || input.tagName.toLowerCase(),
+              name: input.getAttribute('name') || '',
+              id: input.id || '',
+              placeholder: input.getAttribute('placeholder') || '',
+              autocomplete: input.getAttribute('autocomplete') || '',
+              aria_label: input.getAttribute('aria-label') || ''
+            })),
+          buttons: Array.from(form.querySelectorAll('button, input[type="submit"], input[type="button"]'))
+            .slice(0, 10)
+            .map(button => clean(button.innerText || button.value || button.getAttribute('aria-label')))
+            .filter(Boolean)
         }));
 
       return {

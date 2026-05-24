@@ -305,14 +305,12 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp scanner_failure_note(_diagnosis, _summary), do: "Last run failed."
 
   defp needs_login?(source) do
-    source_type =
-      procurement_source_value(source, :source_type) ||
-        metadata_value(source.metadata, "procurement_source_type")
-
+    credential_family = credential_family(source)
+    source_type = procurement_source_value(source, :source_type) || credential_family
     requires_login = procurement_source_value(source, :requires_login)
 
     credentialed_source?(source.metadata, source_type, requires_login) and
-      not GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type)
+      not GnomeGarden.Procurement.SourceCredentials.credentials_configured?(credential_family)
   end
 
   defp credentialed_source?(metadata, source_type, requires_login) do
@@ -322,19 +320,29 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   end
 
   defp missing_credentials_note(source) do
-    source_type =
-      procurement_source_value(source, :source_type) ||
-        metadata_value(source.metadata, "procurement_source_type")
-
-    source_type
+    source
+    |> credential_family()
     |> GnomeGarden.Procurement.SourceCredentials.missing_credentials_message()
+  end
+
+  defp credential_family(source) do
+    case procurement_source_value(source, :self) do
+      procurement_source when is_map(procurement_source) ->
+        GnomeGarden.Procurement.SourceCredentials.credential_family(procurement_source)
+
+      _ ->
+        metadata_value(source.metadata, "credential_family") ||
+          metadata_value(source.metadata, "procurement_credential_family") ||
+          metadata_value(source.metadata, "procurement_source_type")
+    end
   end
 
   defp procurement_source_value(%{procurement_source: %Ash.NotLoaded{}}, _key), do: nil
   defp procurement_source_value(%{procurement_source: nil}, _key), do: nil
 
   defp procurement_source_value(%{procurement_source: procurement_source}, key)
-       when is_map(procurement_source), do: Map.get(procurement_source, key)
+       when is_map(procurement_source),
+       do: if(key == :self, do: procurement_source, else: Map.get(procurement_source, key))
 
   defp procurement_source_value(_source, _key), do: nil
 

@@ -40,7 +40,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
 
       metadata_requires_credentials?(source.metadata) ->
         source.metadata
-        |> metadata_value("procurement_source_type")
+        |> credential_family_from_metadata()
         |> GnomeGarden.Procurement.SourceCredentials.credentials_configured?()
 
       true ->
@@ -48,13 +48,15 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
     end
   end
 
-  defp procurement_credentials_ready?(%{source_type: source_type, requires_login: requires_login}) do
+  defp procurement_credentials_ready?(
+         %{source_type: source_type, requires_login: requires_login} = source
+       ) do
     cond do
       source_type == :sam_gov ->
         GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type)
 
       requires_login == true ->
-        GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type)
+        GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source)
 
       true ->
         true
@@ -118,6 +120,20 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
   defp metadata_value(metadata, "procurement_source_type"),
     do:
       Map.get(metadata, "procurement_source_type") || Map.get(metadata, :procurement_source_type)
+
+  defp metadata_value(metadata, "credential_family"),
+    do: Map.get(metadata, "credential_family") || Map.get(metadata, :credential_family)
+
+  defp metadata_value(metadata, "procurement_credential_family"),
+    do:
+      Map.get(metadata, "procurement_credential_family") ||
+        Map.get(metadata, :procurement_credential_family)
+
+  defp credential_family_from_metadata(metadata) do
+    metadata_value(metadata, "credential_family") ||
+      metadata_value(metadata, "procurement_credential_family") ||
+      metadata_value(metadata, "procurement_source_type")
+  end
 
   defp default_deployment_name(%{source_kind: source_kind})
        when source_kind in [:company_site, :directory, :job_board, :news_feed],
