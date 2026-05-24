@@ -16,7 +16,7 @@ defmodule GnomeGarden.Agents.Templates do
     "coder" => %{
       module: GnomeGarden.Agents.Workers.Coder,
       description: "Full-capability coding agent with all tools",
-      model: :fast,
+      model: :coding,
       max_iterations: 25
     },
     "test_runner" => %{

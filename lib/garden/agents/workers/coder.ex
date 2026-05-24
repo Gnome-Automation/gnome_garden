@@ -21,7 +21,7 @@ defmodule GnomeGarden.Agents.Workers.Coder do
       GnomeGarden.Agents.Tools.GitCommit,
       GnomeGarden.Agents.Tools.ProjectInfo
     ],
-    model: :fast,
+    model: :coding,
     max_iterations: 15,
     streaming: false,
     tool_timeout_ms: 30_000

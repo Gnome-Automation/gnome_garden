@@ -64,6 +64,11 @@ end
 
 # Z.AI (Zhipu AI) API configuration for GLM models
 if zai_api_key = System.get_env("ZAI_API_KEY") do
+  config :req_llm,
+    zai_api_key: zai_api_key,
+    zai_coder_api_key: zai_api_key,
+    zai_coding_plan_api_key: zai_api_key
+
   config :gnome_garden,
     zai_api_key: zai_api_key
 end

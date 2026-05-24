@@ -88,12 +88,9 @@ config :llm_db,
     ]
   }
 
-# Register Z.AI as a custom ReqLLM provider
-config :req_llm,
-  custom_providers: [GnomeGarden.Providers.Zai]
-
-# Jido AI model aliases - using Z.AI GLM models via Coding Plan
-# Using zai_coding_plan provider for coding plan API key
+# Jido AI model aliases - using ReqLLM's built-in Z.AI Coder/Coding Plan provider.
+# `zai_coding_plan` delegates to the Z.AI Coder endpoint and supports the
+# newest coding-plan models in LLMDB.
 config :jido_ai,
   model_aliases: %{
     fast: "zai_coding_plan:glm-4.5-air",
