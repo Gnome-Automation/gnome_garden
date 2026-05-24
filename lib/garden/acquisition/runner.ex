@@ -2,7 +2,7 @@ defmodule GnomeGarden.Acquisition.Runner do
   @moduledoc """
   Acquisition-native launch routing for sources and programs.
 
-  This module keeps procurement, commercial discovery, Pi, and Jido details
+  This module keeps procurement, commercial discovery, and runtime details
   behind the acquisition boundary. Durable business state remains in Ash
   resources; runtimes are selected per source/program.
   """

@@ -30,7 +30,7 @@ defmodule GnomeGarden.Agents.Procurement.SourceConfigurator do
          :ok <- maybe_run_discovery(prepared_source, actor, async?, mode) do
       {:ok, %{source: prepared_source, mode: mode}}
     else
-      :error -> {:error, "Pi could not get clear data from this source."}
+      :error -> {:error, "Browser discovery could not get clear data from this source."}
       error -> error
     end
   end
@@ -152,7 +152,7 @@ defmodule GnomeGarden.Agents.Procurement.SourceConfigurator do
   end
 
   defp clear_data_error_message(reason) do
-    "Pi could not identify a reliable listing pattern for this source. #{reason}"
+    "Browser discovery could not identify a reliable listing pattern for this source. #{reason}"
   end
 
   defp format_reason(exception) when is_exception(exception), do: Exception.message(exception)

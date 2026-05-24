@@ -96,7 +96,7 @@ defmodule GnomeGarden.Agents.RunFailure do
     do: "Open the persisted messages and app logs for the stack context before rerunning."
 
   def recovery_hint(:runtime_exit),
-    do: "Check runtime process logs and restart the worker or sidecar if it exited unexpectedly."
+    do: "Check runtime process logs and restart the worker if it exited unexpectedly."
 
   def recovery_hint(:runtime_start),
     do:

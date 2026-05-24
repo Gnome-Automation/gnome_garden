@@ -41,7 +41,7 @@ defmodule GnomeGardenWeb.Acquisition.DashboardLive do
       <.page_header eyebrow="Acquisition">
         Lead System Dashboard
         <:subtitle>
-          One place to seed the pilot, launch the next source or program, review saved leads, and judge Pi/Jido runs by what they produced.
+          One place to seed the pilot, launch the next source or program, review saved leads, and judge automation runs by what they produced.
         </:subtitle>
         <:actions>
           <.button phx-click="seed_pilot" variant="primary">
@@ -174,7 +174,7 @@ defmodule GnomeGardenWeb.Acquisition.DashboardLive do
       <div class="grid gap-3 xl:grid-cols-2">
         <.section
           title="Runtime Evidence"
-          description="Pi and Jido should be judged by saved outputs, clean completion, and operator review value."
+          description="Automation should be judged by saved outputs, clean completion, and operator review value."
         >
           <div :if={@recent_runs == []}>
             <.empty_state

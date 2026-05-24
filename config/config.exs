@@ -12,14 +12,7 @@ config :ex_cldr, default_backend: GnomeGarden.Cldr
 config :ash_oban, pro?: false
 config :tzdata, :autoupdate, :disabled
 
-config :gnome_garden, :pi_service_token, System.get_env("PI_SERVICE_TOKEN", "dev-pi-token")
 config :gnome_garden, serve_local_storage?: false, max_agent_run_timeout_ms: 600_000
-
-config :gnome_garden, :pi_runtime,
-  provider: "zai",
-  model: "glm-5",
-  package_version: "0.73.1",
-  sidecar_dir: "sidecar"
 
 # Register Z.AI (Zhipu AI) models in LLMDB catalog
 config :llm_db,
@@ -125,8 +118,7 @@ config :gnome_garden, Oban,
      crontab: [
        {"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker},
        {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker},
-       {"0 6 * * *", GnomeGarden.Mercury.InvoiceSchedulerWorker},
-       {"*/5 * * * *", GnomeGarden.Acquisition.Workers.RetryFailedImports}
+       {"0 6 * * *", GnomeGarden.Mercury.InvoiceSchedulerWorker}
      ],
      timezone: "Etc/UTC"}
   ]

@@ -106,11 +106,6 @@ if present?.(garage_access_key) do
 end
 
 if config_env() == :prod do
-  config :gnome_garden,
-         :pi_service_token,
-         System.get_env("PI_SERVICE_TOKEN") ||
-           raise("PI_SERVICE_TOKEN must be set in production")
-
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

@@ -777,7 +777,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     do: "#{source_name} is already configured."
 
   defp configuration_error_message(source_name, error) do
-    "#{source_name} could not be configured. Pi could not get clear listing data: #{format_configuration_error(error)}"
+    "#{source_name} could not be configured. Browser discovery could not get clear listing data: #{format_configuration_error(error)}"
   end
 
   defp format_configuration_error(error) when is_exception(error), do: Exception.message(error)

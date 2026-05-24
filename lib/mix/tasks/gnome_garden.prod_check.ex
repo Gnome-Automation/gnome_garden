@@ -18,7 +18,6 @@ defmodule Mix.Tasks.GnomeGarden.ProdCheck do
     "SECRET_KEY_BASE",
     "PHX_HOST",
     "TOKEN_SIGNING_SECRET",
-    "PI_SERVICE_TOKEN",
     "MERCURY_WEBHOOK_SECRET",
     "GARAGE_ACCESS_KEY",
     "GARAGE_SECRET_KEY",

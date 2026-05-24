@@ -113,58 +113,6 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
           preferred_engagements: profile_scope.preferred_engagements,
           notes: "Used by commercial discovery programs to run targeted market discovery sweeps."
         }
-      },
-      %{
-        name: "Pi Bid Scanner",
-        template: "pi_bid_scanner",
-        description:
-          "Pi sidecar scans approved procurement sources three times weekly; persists matching bids via save_bid.",
-        visibility: :shared,
-        enabled: true,
-        schedule: "0 14 * * 1,3,5",
-        memory_namespace: "pi.bid_scanner.socal",
-        config: %{
-          "pi_skill" => "scan-bids",
-          timeout_ms: 600_000
-        },
-        source_scope: %{
-          "regions" => ["oc", "la", "ie", "sd"],
-          "source_types" => ["planetbids", "opengov", "bidnet"]
-        }
-      },
-      %{
-        name: "Pi Target Discovery",
-        template: "pi_target_discovery",
-        description:
-          "Pi sidecar finds commercial targets twice weekly; persists reviewable targets via save_target.",
-        visibility: :shared,
-        enabled: true,
-        schedule: "0 15 * * 2,5",
-        memory_namespace: "pi.target_discovery.socal",
-        config: %{
-          "pi_skill" => "discover-targets",
-          timeout_ms: 600_000
-        },
-        source_scope: %{
-          "regions" => ["oc", "la", "ie", "sd"]
-        }
-      },
-      %{
-        name: "Pi Source Discovery",
-        template: "pi_source_discovery",
-        description:
-          "Pi sidecar discovers new procurement portals weekly; persists via save_source.",
-        visibility: :shared,
-        enabled: true,
-        schedule: "0 16 * * 2",
-        memory_namespace: "pi.source_discovery",
-        config: %{
-          "pi_skill" => "discover-sources",
-          timeout_ms: 600_000
-        },
-        source_scope: %{
-          "regions" => ["oc", "la", "ie", "sd"]
-        }
       }
     ]
   end

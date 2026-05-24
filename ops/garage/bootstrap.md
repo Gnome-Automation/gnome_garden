@@ -7,7 +7,7 @@ The application boundary is:
 - `GnomeGarden.Acquisition.Document` owns document records, metadata, lifecycle, and relationships.
 - `AshStorage` owns attachment/blob behavior from inside the Ash resource.
 - Garage owns object bytes only.
-- Pi and other automation clients should ask the app/Ash for documents. Do not give Pi Garage credentials or teach it to construct Garage object keys.
+- Automation clients should ask the app/Ash for documents. Do not give them Garage credentials or teach them to construct Garage object keys.
 
 ## Production Env
 
@@ -26,7 +26,7 @@ export GARAGE_PREFIX="acquisition/"
 
 ## Single-Node Bootstrap
 
-Use this for a small local/Pi deployment. Run it on the host that owns Garage data.
+Use this for a small local deployment. Run it on the host that owns Garage data.
 
 ```sh
 export GARAGE_CONFIG_FILE=/etc/garage.toml
@@ -52,7 +52,7 @@ MIX_ENV=prod mix gnome_garden.prod_check
 curl -fsS "https://$PHX_HOST/ready"
 ```
 
-The smoke script talks directly to Garage because it is an operator storage check. Product code and Pi workflows should go through Ash/app endpoints instead.
+The smoke script talks directly to Garage because it is an operator storage check. Product code and automation workflows should go through Ash/app endpoints instead.
 
 ## Backup Rule
 

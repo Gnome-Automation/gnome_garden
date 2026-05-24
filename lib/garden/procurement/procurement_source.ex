@@ -235,7 +235,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
     end
 
     update :auto_configure do
-      description "Automatically configure this source or run Pi discovery through AshOban"
+      description "Automatically configure this source or queue browser discovery through AshOban"
       require_atomic? false
       accept []
 

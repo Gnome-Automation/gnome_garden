@@ -130,23 +130,6 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
     end
   end
 
-  def handle_event("pi_steer", %{"message" => msg}, socket) when byte_size(msg) > 0 do
-    GnomeGarden.Agents.PiRunner.steer(to_string(socket.assigns.run.id), msg)
-    {:noreply, put_flash(socket, :info, "Steer queued.")}
-  end
-
-  def handle_event("pi_steer", _, socket), do: {:noreply, socket}
-
-  def handle_event("pi_abort", _, socket) do
-    case DeploymentRunner.cancel_run(socket.assigns.run.id, actor: socket.assigns.current_user) do
-      {:ok, refreshed} ->
-        {:noreply, socket |> assign(:run, refreshed) |> put_flash(:info, "Pi run cancelled.")}
-
-      {:error, error} ->
-        {:noreply, put_flash(socket, :error, error_message(error))}
-    end
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -183,36 +166,6 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
           </button>
         </div>
       </div>
-
-      <section
-        :if={@run.state == :running and pi_template?(@run)}
-        class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/30"
-      >
-        <h3 class="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-          Pi sidecar controls
-        </h3>
-        <form phx-submit="pi_steer" class="mt-3 flex gap-2">
-          <input
-            type="text"
-            name="message"
-            placeholder="Steer the agent (delivered after current tool finishes)"
-            class="flex-1 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10"
-          />
-          <button
-            type="submit"
-            class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500 dark:bg-emerald-500"
-          >
-            Steer
-          </button>
-          <button
-            type="button"
-            phx-click="pi_abort"
-            class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-500"
-          >
-            Abort
-          </button>
-        </form>
-      </section>
 
       <section class="grid gap-4 md:grid-cols-4">
         <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -604,9 +557,6 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
 
   defp template_label(%{agent: %{template: template}}), do: template
   defp template_label(_run), do: "-"
-
-  defp pi_template?(%{agent: %{template: "pi_" <> _}}), do: true
-  defp pi_template?(_), do: false
 
   defp run_visibility(%{deployment: %{visibility: visibility}}), do: format_atom(visibility)
   defp run_visibility(_run), do: "-"

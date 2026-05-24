@@ -2,8 +2,8 @@ defmodule GnomeGarden.Acquisition.Workers.IngestFindingDocuments do
   @moduledoc """
   Downloads bid-attached documents from URLs and stores them via ash_storage.
 
-  Pi extracts document URLs (RFP PDF, scope, addenda) when scanning a bid and
-  passes them in `metadata["documents"]`. This worker:
+  Scanners extract document URLs (RFP PDF, scope, addenda) and pass them in
+  `metadata["documents"]`. This worker:
 
     1. Resolves the bid's projected `Acquisition.Finding`.
     2. For each `%{"url", "filename", "document_type"}` descriptor:

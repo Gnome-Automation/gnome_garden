@@ -17,7 +17,6 @@ Required production environment:
 - `SECRET_KEY_BASE`
 - `PHX_HOST`
 - `TOKEN_SIGNING_SECRET`
-- `PI_SERVICE_TOKEN`
 - `MERCURY_WEBHOOK_SECRET`
 - `GARAGE_ACCESS_KEY`
 - `GARAGE_SECRET_KEY`
@@ -37,7 +36,7 @@ ALLOW_LOCAL_STORAGE_IN_PROD=true
 
 Use that only as a temporary operational decision. The app will not expose the local `/storage` disk-serving route in production unless `:serve_local_storage?` is enabled at compile time.
 
-Garage setup and verification lives in `ops/garage/bootstrap.md`. Garage is only the blob backend for AshStorage; Pi and other automation clients should request documents through the app/Ash boundary, not by using Garage credentials directly.
+Garage setup and verification lives in `ops/garage/bootstrap.md`. Garage is only the blob backend for AshStorage; automation clients should request documents through the app/Ash boundary, not by using Garage credentials directly.
 
 Deploy smoke path:
 
@@ -96,8 +95,8 @@ Agent run failure triage:
 - `AgentRun.failure_details` is the durable failure payload. New runner failures include `category`, `phase`, `message`, and `retryable`.
 - Use the failure category before rerunning:
   - `timeout`: reduce task scope or increase deployment timeout.
-  - `runtime_start`: verify runtime startup, API keys, sidecar/service availability, and template configuration.
-  - `runtime_exit`: inspect worker or sidecar logs for an unexpected process exit.
+  - `runtime_start`: verify runtime startup, API keys, service availability, and template configuration.
+  - `runtime_exit`: inspect worker logs for an unexpected process exit.
   - `tool_error`: inspect the tool result and repair the source, credential, or request input.
   - `authorization`: fix the operator/service token or external credential before retrying.
   - `validation`: repair deployment configuration or task input before retrying.

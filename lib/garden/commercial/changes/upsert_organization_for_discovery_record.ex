@@ -6,7 +6,7 @@ defmodule GnomeGarden.Commercial.Changes.UpsertOrganizationForDiscoveryRecord do
 
   Runs inside the changeset's transaction so a failed Organization upsert
   rolls back the DiscoveryRecord create, eliminating the orphan-org problem
-  the previous two-call sidecar shape produced.
+  the previous two-call automation shape produced.
   """
 
   use Ash.Resource.Change

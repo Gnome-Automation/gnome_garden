@@ -206,7 +206,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       <.page_header>
         Configure Source
         <:subtitle>
-          System setup is the default. Manual selectors are only a fallback when Pi cannot identify clear listing data.
+          System setup is the default. Manual selectors are only a fallback when browser discovery cannot identify clear listing data.
         </:subtitle>
         <:actions>
           <.button navigate={~p"/acquisition/sources"}>
@@ -225,7 +225,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
                 <p class="font-semibold">System configuration runs first.</p>
                 <p class="leading-5 text-base-content/70">
                   Known portals like PlanetBids and BidNet are configured immediately. Unknown portals
-                  are sent to Pi/browser discovery. Use manual selectors only after setup fails:
+                  are sent to browser discovery. Use manual selectors only after setup fails:
                   <code class="rounded bg-base-100 px-1 py-0.5 text-xs">.bid-row</code>
                   could mean one listing, and
                   <code class="rounded bg-base-100 px-1 py-0.5 text-xs">.bid-title</code>
@@ -536,7 +536,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
           <.section
             title="Automatic Setup"
-            description="Known portals are configured immediately. Unknown portals are sent to Pi/browser discovery."
+            description="Known portals are configured immediately. Unknown portals are sent to browser discovery."
           >
             <div class="flex flex-col gap-2">
               <.discovery_status_panel source={@source} compact />
@@ -792,7 +792,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
             :if={@config_error}
             class="mt-3 rounded-md border border-error/30 bg-error/10 px-3 py-2 text-error"
           >
-            <p class="font-semibold">Pi could not get clear data from this source.</p>
+            <p class="font-semibold">Browser discovery could not get clear data from this source.</p>
             <p class="mt-1 leading-5">{@config_error}</p>
           </div>
           <p class="mt-2 text-xs font-medium uppercase tracking-[0.14em] text-base-content/45">
@@ -863,7 +863,8 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
     do: "Selectors are saved. This source can be scanned from the source registry."
 
   defp discovery_status_note(%{procurement_source: %{config_status: :config_failed}}),
-    do: "Automatic setup failed because Pi could not produce a usable scanner configuration."
+    do:
+      "Automatic setup failed because browser discovery could not produce a usable scanner configuration."
 
   defp discovery_status_note(%{procurement_source: %{config_status: :scan_failed}}),
     do: "The scanner configuration exists, but the most recent scan failed."
@@ -875,7 +876,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
   defp discovery_next_step(%{procurement_source: %{config_status: :found}}),
     do:
-      "Click Configure. Known portals will be configured immediately; unknown portals will go to Pi/browser discovery."
+      "Click Configure. Known portals will be configured immediately; unknown portals will go to browser discovery."
 
   defp discovery_next_step(%{procurement_source: %{config_status: :pending}}),
     do: "Wait for discovery to finish. If it fails, review the source URL and try again."

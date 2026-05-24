@@ -130,10 +130,7 @@ defmodule GnomeGarden.Procurement do
     actor = Keyword.get(opts, :actor)
 
     with {:ok, source} <- source_from_attrs(attrs, actor) do
-      GnomeGarden.Agents.Procurement.ScannerRouter.scan(source, %{
-        actor: actor,
-        pi_rpc?: true
-      })
+      GnomeGarden.Agents.Procurement.ScannerRouter.scan(source, %{actor: actor})
     end
   end
 

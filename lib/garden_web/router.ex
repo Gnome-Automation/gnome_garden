@@ -41,19 +41,6 @@ defmodule GnomeGardenWeb.Router do
     plug :accepts, ["json"]
   end
 
-  pipeline :pi_service do
-    plug :accepts, ["json"]
-    plug GnomeGardenWeb.Plugs.PiServiceAuth
-  end
-
-  scope "/api/pi", GnomeGardenWeb do
-    pipe_through :pi_service
-    get "/findings/:finding_id/documents", PiDocumentController, :index
-    get "/documents/:id", PiDocumentController, :show
-    get "/documents/:id/download", PiDocumentController, :download
-    post "/run", PiRpcController, :run
-  end
-
   scope "/", GnomeGardenWeb do
     pipe_through :browser
 

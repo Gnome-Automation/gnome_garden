@@ -413,7 +413,9 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert html =~ "Discovery Running"
   end
 
-  test "source configuration shows a clear Pi data error after discovery failure", %{conn: conn} do
+  test "source configuration shows a clear browser discovery error after discovery failure", %{
+    conn: conn
+  } do
     {:ok, source} =
       Procurement.create_procurement_source(%{
         name: "Unclear Portal",
@@ -428,7 +430,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
       Procurement.update_procurement_source(source, %{
         metadata: %{
           "last_config_error" =>
-            "Pi could not identify a reliable listing pattern for this source. No repeated listing rows were found."
+            "Browser discovery could not identify a reliable listing pattern for this source. No repeated listing rows were found."
         }
       })
 
@@ -439,7 +441,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
 
     {:ok, _view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
 
-    assert html =~ "Pi could not get clear data from this source."
+    assert html =~ "Browser discovery could not get clear data from this source."
     assert html =~ "No repeated listing rows were found."
     assert html =~ "manual fallback fields now shown below"
     assert html =~ "Save Configuration"
