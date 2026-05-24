@@ -39,8 +39,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   """
   def scan(procurement_source_id, context \\ %{}) when is_binary(procurement_source_id) do
     case Procurement.get_procurement_source(procurement_source_id) do
-      {:ok, %{config_status: :configured, scrape_config: config} = source}
-      when config != %{} ->
+      {:ok, %{config_status: status, scrape_config: config} = source}
+      when status in [:configured, :scan_failed] and config != %{} ->
         do_scan(source, context)
 
       {:ok, %{config_status: status}} ->
@@ -78,17 +78,31 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     result =
       case source.source_type do
         :planetbids ->
-          with :ok <- ensure_credentials(source) do
-            case do_browser_scan(source, context) do
-              {:ok, _result} = ok ->
-                ok
+          with :ok <- ensure_credentials_if_required(source) do
+            if source.requires_login do
+              case do_browser_scan(source, context) do
+                {:ok, _result} = ok ->
+                  ok
 
-              {:error, browser_reason} ->
-                Logger.warning(
-                  "Browser scan failed for #{source.name}, falling back to HTTP scanner: #{inspect(browser_reason)}"
-                )
+                {:error, browser_reason} ->
+                  Logger.warning(
+                    "Browser scan failed for #{source.name}, falling back to HTTP scanner: #{inspect(browser_reason)}"
+                  )
 
-                do_planetbids_scan(source, context)
+                  do_planetbids_scan(source, context)
+              end
+            else
+              case do_planetbids_scan(source, context) do
+                {:ok, _result} = ok ->
+                  ok
+
+                {:error, http_reason} ->
+                  Logger.warning(
+                    "HTTP PlanetBids scan failed for #{source.name}, falling back to browser scan: #{inspect(http_reason)}"
+                  )
+
+                  do_browser_scan(source, context)
+              end
             end
           end
 
@@ -110,13 +124,15 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     end
   end
 
-  defp ensure_credentials(%{source_type: source_type}) do
+  defp ensure_credentials_if_required(%{requires_login: true, source_type: source_type}) do
     if GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type) do
       :ok
     else
       {:error, GnomeGarden.Procurement.SourceCredentials.missing_credentials_message(source_type)}
     end
   end
+
+  defp ensure_credentials_if_required(_source), do: :ok
 
   defp do_browser_scan(source, context) do
     config = source.scrape_config
@@ -152,12 +168,12 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     with {:ok, %{bids: bids}} <-
            ScanPlanetBids.run(
              %{
-               portal_id: source.portal_id,
+               portal_id: planetbids_portal_id(source),
                portal_name: source.name,
                max_results: 100,
                source_url: source.url
              },
-             %{}
+             context
            ),
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
@@ -179,7 +195,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
                max_results: 20,
                detail_limit: 20
              },
-             %{}
+             context
            ),
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
@@ -188,9 +204,23 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     end
   end
 
+  defp planetbids_portal_id(%{portal_id: portal_id})
+       when is_binary(portal_id) and portal_id != "",
+       do: portal_id
+
+  defp planetbids_portal_id(%{url: url}) when is_binary(url) do
+    case Regex.run(~r{/portal/([^/?#]+)}, url) do
+      [_, portal_id] -> portal_id
+      _ -> nil
+    end
+  end
+
+  defp planetbids_portal_id(_source), do: nil
+
   defp complete_scan(source, bids, excluded, scored, saved, enriched, opts \\ []) do
     source = current_source(source)
     diagnostics = scan_diagnostics(scored, saved, excluded, opts)
+    source = maybe_mark_requires_login(source, diagnostics)
 
     Procurement.mark_procurement_source_scanned!(
       source,
@@ -209,6 +239,19 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
        bids: saved
      }}
   end
+
+  defp maybe_mark_requires_login(source, %{"diagnosis" => "login_required"}) do
+    if source.requires_login do
+      source
+    else
+      case Procurement.update_procurement_source(source, %{requires_login: true}) do
+        {:ok, source} -> source
+        {:error, _error} -> source
+      end
+    end
+  end
+
+  defp maybe_mark_requires_login(source, _diagnostics), do: source
 
   defp current_source(source) do
     case Procurement.get_procurement_source(source.id) do
@@ -351,6 +394,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp scan_diagnosis(scored, _saved, _excluded, top_unsaved, extraction) do
     cond do
+      login_required_extraction?(extraction) ->
+        "login_required"
+
       extraction_count(extraction, "row_count") == 0 ->
         "listing_selector_matched_no_rows"
 
@@ -453,6 +499,20 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       _ -> 0
     end
   end
+
+  defp login_required_extraction?(extraction) when is_map(extraction) do
+    extraction
+    |> extraction_value("row_text_samples")
+    |> case do
+      samples when is_list(samples) ->
+        Enum.any?(samples, &(is_binary(&1) and String.match?(&1, ~r/login|sign in|password/i)))
+
+      _ ->
+        false
+    end
+  end
+
+  defp login_required_extraction?(_extraction), do: false
 
   defp escape_js(nil), do: ""
   defp escape_js(str), do: String.replace(str, "'", "\\'")
@@ -981,7 +1041,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     """
   end
 
-  defp maybe_login(%{source_type: :planetbids}, listing_url) do
+  defp maybe_login(%{source_type: :planetbids, requires_login: true}, listing_url) do
     with {:ok, credentials} <- GnomeGarden.Procurement.SourceCredentials.planetbids_credentials(),
          {:ok, _} <- Navigate.run(%{url: listing_url}, %{}),
          {:ok, %{data: %{"submitted" => submitted?}}} <-

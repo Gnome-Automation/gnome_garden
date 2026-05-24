@@ -66,6 +66,12 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert path == ~p"/acquisition/findings/#{bid_finding.id}"
   end
 
+  test "acquisition queue falls back to review for unsupported queue params", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings?queue=procurement")
+
+    assert render(view) =~ "Review · All"
+  end
+
   test "acquisition queue shows source and run provenance", %{conn: conn} do
     Agents.TemplateCatalog.sync_templates()
     {:ok, template} = Agents.get_agent_template_by_name("procurement_source_scan")

@@ -48,7 +48,19 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources")
 
     assert render(view) =~ "Source Registry"
-    assert render(view) =~ "Configure"
+
+    assert render(view) =~ "Source Registry"
+
+    assert has_element?(
+             view,
+             "#configure-source-#{acquisition_source.id}",
+             "Configure"
+           )
+
+    {:ok, unchanged_source} = Procurement.get_procurement_source(source.id)
+    assert unchanged_source.config_status == :found
+
+    refute render(view) =~ "Manual Fallback"
     refute render(view) =~ "Launch Scan"
   end
 
@@ -193,6 +205,44 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert has_element?(view, "button", "Launch Ready")
   end
 
+  test "source registry separates credential work from general attention", %{conn: conn} do
+    original_username = System.get_env("PLANETBIDS_USERNAME")
+    original_password = System.get_env("PLANETBIDS_PASSWORD")
+
+    System.delete_env("PLANETBIDS_USERNAME")
+    System.delete_env("PLANETBIDS_PASSWORD")
+
+    on_exit(fn ->
+      restore_env("PLANETBIDS_USERNAME", original_username)
+      restore_env("PLANETBIDS_PASSWORD", original_password)
+    end)
+
+    {:ok, _source} =
+      Procurement.create_procurement_source(%{
+        name: "Credential gated portal",
+        url: "https://vendors.planetbids.com/portal/99999/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "99999",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=credentials_needed")
+
+    html = render(view)
+
+    assert html =~ "Credentials needed"
+    assert html =~ "Credential gated portal"
+    assert html =~ "PlanetBids credentials are missing"
+    assert has_element?(view, "a[href='/acquisition/sources?bucket=credentials_needed']", "1")
+
+    {:ok, attention_view, _html} = live(conn, ~p"/acquisition/sources?bucket=attention")
+
+    refute render(attention_view) =~ "Credential gated portal"
+  end
+
   test "source registry shows durable run status and run link", %{conn: conn} do
     {:ok, _source} =
       Acquisition.create_source(%{
@@ -295,6 +345,9 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert html =~ "source_id=#{source.id}"
   end
 
+  defp restore_env(name, nil), do: System.delete_env(name)
+  defp restore_env(name, value), do: System.put_env(name, value)
+
   test "source configuration saves selectors through procurement action", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{
@@ -306,12 +359,15 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
         status: :approved
       })
 
+    {:ok, source} = Procurement.config_fail_procurement_source(source, %{})
+
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
 
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
 
-    assert render(view) =~ "If you do not know these selectors, use discovery first."
+    assert render(view) =~ "System configuration runs first."
+    assert render(view) =~ "Known portals like PlanetBids and BidNet"
     assert render(view) =~ "The repeated wrapper for one bid or opportunity row."
 
     view
@@ -332,6 +388,61 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
 
     assert updated_source.config_status == :configured
     assert Map.get(updated_source.scrape_config, "listing_selector") == ".bid-row"
+  end
+
+  test "source configuration shows discovery running status for pending sources", %{conn: conn} do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Pending Discovery Portal",
+        url: "https://example.com/pending-discovery",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, source} = Procurement.queue_procurement_source(source, %{})
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
+
+    {:ok, _view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
+
+    assert html =~ "Discovery running"
+    assert html =~ "Browser discovery has been queued or is running."
+    assert html =~ "Discovery Running"
+  end
+
+  test "source configuration shows a clear Pi data error after discovery failure", %{conn: conn} do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Unclear Portal",
+        url: "https://example.com/unclear",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, source} =
+      Procurement.update_procurement_source(source, %{
+        metadata: %{
+          "last_config_error" =>
+            "Pi could not identify a reliable listing pattern for this source. No repeated listing rows were found."
+        }
+      })
+
+    {:ok, _source} = Procurement.config_fail_procurement_source(source, %{})
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
+
+    {:ok, _view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
+
+    assert html =~ "Pi could not get clear data from this source."
+    assert html =~ "No repeated listing rows were found."
+    assert html =~ "manual fallback fields now shown below"
+    assert html =~ "Save Configuration"
   end
 
   test "source configuration shows SAM filter performance recommendations", %{conn: conn} do

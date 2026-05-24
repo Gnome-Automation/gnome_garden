@@ -3,12 +3,9 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
   Shared acquisition review components.
   """
 
-  use Phoenix.Component
+  use GnomeGardenWeb, :html
 
-  import GnomeGardenWeb.CoreComponents
   import GnomeGardenWeb.Commercial.Helpers, only: [format_datetime: 1]
-  import GnomeGardenWeb.Components.Protocol, only: [status_badge: 1]
-  import GnomeGardenWeb.Components.WorkspaceUI, only: [section: 1]
 
   alias GnomeGarden.Acquisition.PromotionRules
 

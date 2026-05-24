@@ -31,6 +31,7 @@ defmodule GnomeGarden.Procurement do
       define :reconsider_procurement_source, action: :reconsider
       define :queue_procurement_source, action: :queue
       define :configure_procurement_source, action: :configure
+      define :auto_configure_procurement_source, action: :auto_configure
       define :config_fail_procurement_source, action: :config_fail
       define :scan_procurement_source, action: :scan
       define :scan_fail_procurement_source, action: :scan_fail

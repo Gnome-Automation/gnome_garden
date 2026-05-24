@@ -76,9 +76,78 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
 
-    {:ok, source} = Acquisition.get_source(acquisition_source.id, load: [:runnable])
+    {:ok, source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:runnable, :health_note, :health_status, :health_variant]
+      )
 
     refute source.runnable
+    assert source.health_status == :needs_configuration
+    assert source.health_variant == :info
+    assert source.health_note == "Queued for automatic source setup."
+  end
+
+  test "queued procurement sources show configuration in progress" do
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Queued Configuration Source",
+        url: "https://example.com/procurement/queued-configuration-source",
+        source_type: :utility,
+        portal_id: "queued-configuration-source",
+        region: :ca,
+        priority: :high,
+        status: :approved
+      })
+
+    {:ok, procurement_source} = Procurement.queue_procurement_source(procurement_source)
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:runnable, :health_note, :health_status, :health_variant]
+      )
+
+    refute source.runnable
+    assert source.health_status == :configuring
+    assert source.health_variant == :info
+    assert source.health_note == "Automatic source setup is running."
+  end
+
+  test "configured procurement sources without a first run show ready health" do
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Ready First Scan Source",
+        url: "https://example.com/procurement/ready-first-scan-source",
+        source_type: :utility,
+        portal_id: "ready-first-scan-source",
+        region: :ca,
+        priority: :high,
+        status: :approved
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          listing_selector: ".listing",
+          title_selector: ".title",
+          listing_url: procurement_source.url
+        }
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:runnable, :health_note, :health_status, :health_variant]
+      )
+
+    assert source.runnable
+    assert source.health_status == :ready
+    assert source.health_variant == :success
+    assert source.health_note == "Configured and ready for its first scan."
   end
 
   test "procurement launch metadata updates acquisition source last run timestamp" do
@@ -469,6 +538,93 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
       )
 
     refute source.runnable
+    assert source.health_status == :needs_login
+    assert source.health_variant == :warning
+    assert source.health_label == "Needs login"
+    assert source.health_note =~ "PlanetBids credentials are missing"
+  end
+
+  test "public planetbids sources do not require credentials" do
+    System.delete_env("PLANETBIDS_USERNAME")
+    System.delete_env("PLANETBIDS_PASSWORD")
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Public PlanetBids Source",
+        url: "https://vendors.planetbids.com/portal/23456/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "23456",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: false
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          listing_selector: ".bid-row",
+          title_selector: ".bid-title",
+          listing_url: procurement_source.url
+        }
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:runnable, :health_note, :health_status, :health_variant]
+      )
+
+    assert source.runnable
+    assert source.health_status == :ready
+    assert source.health_variant == :success
+    assert source.health_note == "Configured and ready for its first scan."
+  end
+
+  test "scan diagnostics can move a public source into credentials needed" do
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Login Revealed PlanetBids Source",
+        url: "https://vendors.planetbids.com/portal/34567/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "34567",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: false
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          listing_selector: ".bid-row",
+          title_selector: ".bid-title",
+          listing_url: procurement_source.url
+        }
+      })
+
+    {:ok, procurement_source} =
+      Procurement.update_procurement_source(procurement_source, %{
+        metadata: %{
+          "last_scan_summary" => %{
+            "diagnosis" => "login_required",
+            "extracted" => 0,
+            "scored" => 0,
+            "saved" => 0
+          }
+        }
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:health_label, :health_note, :health_status, :health_variant]
+      )
+
     assert source.health_status == :needs_login
     assert source.health_variant == :warning
     assert source.health_label == "Needs login"

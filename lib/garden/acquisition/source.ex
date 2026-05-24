@@ -239,7 +239,10 @@ defmodule GnomeGarden.Acquisition.Source do
                field: :health_status,
                mapping: [
                  healthy: :success,
+                 ready: :success,
                  running: :info,
+                 configuring: :info,
+                 needs_configuration: :info,
                  needs_login: :warning,
                  no_results: :warning,
                  zero_saved: :warning,

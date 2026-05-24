@@ -61,6 +61,11 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       source.status == :paused -> :paused
       source.enabled == false -> :disabled
       needs_login?(source) -> :needs_login
+      noisy?(source) -> :noisy
+      procurement_config_status(source) == :pending -> :configuring
+      procurement_config_status(source) == :found -> :needs_configuration
+      procurement_config_status(source) == :manual -> :needs_configuration
+      procurement_config_status(source) == :config_failed -> :selector_failed
       run_state == :running -> :running
       run_state == :failed -> :failing
       run_state == :cancelled -> :cancelled
@@ -71,8 +76,8 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       scan_issue(source) == :scan_failed -> :failing
       scan_issue(source) == :no_results -> :no_results
       scan_issue(source) == :zero_saved -> :zero_saved
-      noisy?(source) -> :noisy
       source.scan_strategy == :manual -> :manual
+      ready_without_run?(source) -> :ready
       stale?(source, opts) -> :stale
       source.status in [:active, :candidate] -> :healthy
       true -> :idle
@@ -84,9 +89,26 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp health_note(_source, :paused, _opts), do: "Paused and out of rotation."
   defp health_note(_source, :disabled, _opts), do: "Disabled and not launchable."
   defp health_note(source, :needs_login, _opts), do: missing_credentials_note(source)
+  defp health_note(_source, :configuring, _opts), do: "Automatic source setup is running."
+
+  defp health_note(source, :needs_configuration, _opts) do
+    case procurement_config_status(source) do
+      :manual -> "Waiting for manual source configuration."
+      _ -> "Queued for automatic source setup."
+    end
+  end
+
   defp health_note(_source, :running, _opts), do: "Run currently in progress."
   defp health_note(source, :document_capture_failed, _opts), do: scan_issue_note(source)
-  defp health_note(source, :selector_failed, _opts), do: scan_issue_note(source)
+
+  defp health_note(source, :selector_failed, _opts) do
+    if procurement_config_status(source) == :config_failed do
+      config_failure_note(source)
+    else
+      scan_issue_note(source)
+    end
+  end
+
   defp health_note(source, :no_results, _opts), do: scan_issue_note(source)
   defp health_note(source, :zero_saved, _opts), do: scan_issue_note(source)
 
@@ -106,6 +128,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   end
 
   defp health_note(_source, :manual, _opts), do: "Manual source with no expected scan cadence."
+  defp health_note(_source, :ready, _opts), do: "Configured and ready for its first scan."
 
   defp health_note(source, :stale, _opts) do
     cond do
@@ -168,6 +191,9 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       packet_status == "login_required" ->
         :login_required
 
+      diagnosis == "login_required" ->
+        :login_required
+
       packet_status == "download_failed" ->
         :document_capture_failed
 
@@ -195,6 +221,16 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
 
       true ->
         nil
+    end
+  end
+
+  defp config_failure_note(source) do
+    case procurement_source_metadata_value(source, "last_config_error") do
+      reason when is_binary(reason) and reason != "" ->
+        reason
+
+      _ ->
+        "Automatic setup could not produce a usable scanner configuration."
     end
   end
 
@@ -282,7 +318,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp credentialed_source?(metadata, source_type, requires_login) do
     requires_login == true or
       metadata_value(metadata, "procurement_requires_login") in [true, "true"] or
-      normalize_source_type(source_type) in [:planetbids, :sam_gov]
+      normalize_source_type(source_type) == :sam_gov
   end
 
   defp missing_credentials_note(source) do
@@ -301,6 +337,14 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
        when is_map(procurement_source), do: Map.get(procurement_source, key)
 
   defp procurement_source_value(_source, _key), do: nil
+
+  defp procurement_config_status(source), do: procurement_source_value(source, :config_status)
+
+  defp procurement_source_metadata_value(source, key) do
+    source
+    |> procurement_source_value(:metadata)
+    |> metadata_value(key)
+  end
 
   defp metadata_value(metadata, key) when is_map(metadata) do
     Map.get(metadata, key) || Map.get(metadata, String.to_existing_atom(key))
@@ -324,7 +368,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
 
   defp normalize_source_type(value) when is_binary(value) do
     case value do
-      "planetbids" -> :planetbids
+      "sam_gov" -> :sam_gov
       _ -> nil
     end
   end
@@ -334,6 +378,18 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp stale?(source, opts) do
     source.status in [:active, :candidate] and source.enabled != false and
       stale_reference_missing_or_old?(source, Keyword.fetch!(opts, :stale_after_hours))
+  end
+
+  defp ready_without_run?(source) do
+    source.status in [:active, :candidate] and source.enabled != false and
+      is_nil(source.last_success_at) and is_nil(source.last_run_at) and
+      configured_or_agentic?(source)
+  end
+
+  defp configured_or_agentic?(source) do
+    procurement_config_status(source) in [:configured, :scan_failed] or
+      (is_nil(procurement_source_value(source, :config_status)) and
+         source.scan_strategy in [:agentic, :deterministic])
   end
 
   defp stale_reference_missing_or_old?(source, stale_after_hours) do

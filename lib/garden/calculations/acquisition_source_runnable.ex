@@ -50,7 +50,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
 
   defp procurement_credentials_ready?(%{source_type: source_type, requires_login: requires_login}) do
     cond do
-      source_type in [:planetbids, :sam_gov] ->
+      source_type == :sam_gov ->
         GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type)
 
       requires_login == true ->
@@ -94,8 +94,6 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
   defp metadata_requires_credentials?(metadata) when is_map(metadata) do
     metadata_value(metadata, "procurement_requires_login") in [true, "true"] or
       metadata_value(metadata, "procurement_source_type") in [
-        :planetbids,
-        "planetbids",
         :sam_gov,
         "sam_gov"
       ]

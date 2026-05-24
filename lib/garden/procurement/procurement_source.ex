@@ -62,9 +62,25 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         where expr(
                 enabled == true and
                   status == :approved and
-                  config_status == :configured and
+                  config_status in [:configured, :scan_failed] and
                   (is_nil(last_scanned_at) or
                      last_scanned_at < ago(scan_frequency_hours, :hour))
+              )
+      end
+
+      trigger :auto_configure do
+        action :auto_configure
+        scheduler_cron "*/10 * * * *"
+        worker_module_name __MODULE__.AshOban.Worker.AutoConfigure
+        scheduler_module_name __MODULE__.AshOban.Scheduler.AutoConfigure
+        queue :procurement_configuring
+        max_attempts 1
+
+        where expr(
+                enabled == true and
+                  status == :approved and
+                  requires_login == false and
+                  config_status == :found
               )
       end
     end
@@ -218,6 +234,25 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
+    update :auto_configure do
+      description "Automatically configure this source or run Pi discovery through AshOban"
+      require_atomic? false
+      accept []
+
+      change fn changeset, ctx ->
+        changeset
+        |> Ash.Changeset.after_action(fn _changeset, record ->
+          case GnomeGarden.Agents.Procurement.SourceAutoConfigurator.configure_source(record,
+                 actor: ctx.actor,
+                 async?: false
+               ) do
+            {:ok, %{source: source}} -> {:ok, source}
+            {:error, _error} -> {:ok, record}
+          end
+        end)
+      end
+    end
+
     update :config_fail do
       require_atomic? false
       accept []
@@ -300,7 +335,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       filter expr(
                enabled == true and
                  status == :approved and
-                 config_status == :configured and
+                 config_status in [:configured, :scan_failed] and
                  (is_nil(last_scanned_at) or last_scanned_at < ago(^arg(:since_hours), :hour))
              )
     end

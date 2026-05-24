@@ -31,4 +31,33 @@ defmodule GnomeGarden.Procurement.ProcurementSourceTest do
 
     assert fetched_source.id == source.id
   end
+
+  test "ready for scan includes scan-failed sources for automatic retry" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Retryable Failed Source",
+        url: "https://example.com/retryable-failed-source",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, source} =
+      Procurement.configure_procurement_source(source, %{
+        scrape_config: %{
+          listing_url: "https://example.com/retryable-failed-source",
+          listing_selector: ".listing",
+          title_selector: ".title"
+        }
+      })
+
+    {:ok, failed_source} = Procurement.scan_fail_procurement_source(source)
+
+    assert failed_source.config_status == :scan_failed
+
+    assert {:ok, ready_sources} = Procurement.list_procurement_sources_ready_for_scan(24)
+
+    assert Enum.any?(ready_sources, &(&1.id == source.id))
+  end
 end

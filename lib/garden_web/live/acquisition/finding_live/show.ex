@@ -10,13 +10,28 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     ]
 
   import GnomeGardenWeb.Components.AcquisitionOperatorBrief, only: [operator_brief: 1]
-  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
-  import GnomeGardenWeb.Commercial.Helpers, only: [format_atom: 1, format_datetime: 1]
+
+  import GnomeGardenWeb.Components.Acquisition.LinkedDocuments,
+    only: [linked_documents_section: 1]
+
+  import GnomeGardenWeb.Components.Acquisition.DiscoveryContext,
+    only: [discovery_context_section: 1, discovery_feedback_section: 1, evidence_section: 1]
+
+  import GnomeGardenWeb.Components.Acquisition.IdentityReview, only: [identity_review_section: 1]
+
+  import GnomeGardenWeb.Components.Acquisition.ReviewHistory,
+    only: [review_history_section: 1]
+
+  import GnomeGardenWeb.Components.Acquisition.ShowSections,
+    only: [
+      finding_header_actions: 1,
+      next_actions_section: 1,
+      related_followups_section: 1,
+      review_notes_section: 1
+    ]
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Acquisition.PromotionRules
   alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.DiscoveryFeedback
   alias GnomeGarden.Operations
   alias GnomeGardenWeb.Operations.TaskPubSub
   alias GnomeGarden.Procurement.TargetingFeedback
@@ -116,7 +131,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
        |> put_flash(:info, "Reopened finding")}
     else
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, "Could not reopen finding: #{inspect(error)}")}
+        {:noreply, put_flash(socket, :error, "Could not reopen finding: #{format_error(error)}")}
     end
   end
 
@@ -189,7 +204,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
          |> put_flash(:info, "Rejected finding")}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, "Could not reject finding: #{inspect(error)}")}
+        {:noreply, put_flash(socket, :error, "Could not reject finding: #{format_error(error)}")}
     end
   end
 
@@ -207,7 +222,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
          |> put_flash(:info, "Suppressed finding")}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, "Could not suppress finding: #{inspect(error)}")}
+        {:noreply,
+         put_flash(socket, :error, "Could not suppress finding: #{format_error(error)}")}
     end
   end
 
@@ -225,7 +241,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
          |> put_flash(:info, "Parked finding")}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, "Could not park finding: #{inspect(error)}")}
+        {:noreply, put_flash(socket, :error, "Could not park finding: #{format_error(error)}")}
     end
   end
 
@@ -270,7 +286,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         {:noreply, put_flash(socket, :error, "Select a candidate before resolving identity")}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, "Could not resolve identity: #{inspect(error)}")}
+        {:noreply,
+         put_flash(socket, :error, "Could not resolve identity: #{format_error(error)}")}
     end
   end
 
@@ -293,7 +310,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
 
           {:error, error} ->
             {:noreply,
-             put_flash(socket, :error, "Could not merge organization: #{inspect(error)}")}
+             put_flash(socket, :error, "Could not merge organization: #{format_error(error)}")}
         end
 
       _ ->
@@ -319,7 +336,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
              |> put_flash(:info, "Linked person merged into selected candidate")}
 
           {:error, error} ->
-            {:noreply, put_flash(socket, :error, "Could not merge person: #{inspect(error)}")}
+            {:noreply,
+             put_flash(socket, :error, "Could not merge person: #{format_error(error)}")}
         end
 
       _ ->
@@ -337,34 +355,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
           Unified intake record with provenance back to its source lane, origin record, and downstream signal.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/acquisition/findings"}>
-            Back To Queue
-          </.button>
-          <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"} variant="primary">
-            {document_action_label(@finding)}
-          </.button>
-          <.button
-            :if={@finding.source_discovery_record_id}
-            navigate={~p"/acquisition/findings/#{@finding.id}/evidence/new"}
-          >
-            Add Evidence
-          </.button>
-          <.button
-            :if={@finding.source}
-            navigate={
-              ~p"/acquisition/findings?family=#{@finding.finding_family}&source_id=#{@finding.source_id}"
-            }
-          >
-            Source Queue
-          </.button>
-          <.button
-            :if={@finding.program}
-            navigate={
-              ~p"/acquisition/findings?family=#{@finding.finding_family}&program_id=#{@finding.program_id}"
-            }
-          >
-            Program Queue
-          </.button>
+          <.finding_header_actions finding={@finding} />
         </:actions>
       </.page_header>
 
@@ -376,814 +367,42 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         discovery_evidence={@discovery_evidence}
       />
 
-      <.section
-        :if={@research_requests != []}
-        title="Next Actions"
-        description="Queued follow-up work created from acquisition review decisions."
-        compact
-        body_class="p-0"
-      >
-        <div class="divide-y divide-base-content/10">
-          <div
-            :for={request <- @research_requests}
-            class="grid gap-3 px-3 py-3 text-sm sm:px-4 lg:grid-cols-[minmax(0,1fr)_14rem]"
-          >
-            <div class="min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="font-semibold text-base-content">
-                  {format_atom(request.research_type)}
-                </span>
-                <.status_badge status={research_state_variant(request.state)}>
-                  {format_atom(request.state)}
-                </.status_badge>
-                <span class="badge badge-outline badge-sm">
-                  {format_atom(request.priority)}
-                </span>
-              </div>
-              <p class="mt-2 leading-6 text-base-content/70">{request.notes}</p>
-            </div>
-            <div class="text-xs text-base-content/55 lg:text-right">
-              <p class="font-semibold uppercase tracking-[0.14em] text-base-content/40">Due</p>
-              <p class="mt-1">{format_datetime(request.due_at)}</p>
-            </div>
-          </div>
-        </div>
-      </.section>
+      <.next_actions_section research_requests={@research_requests} />
 
-      <.related_tasks_panel
-        tasks={@related_tasks}
-        description="Operational follow-up linked to this finding."
-        empty_description="Accepted findings that need more work will create tasks here."
-        new_task_path={new_finding_task_path(@finding)}
-      />
+      <.related_followups_section finding={@finding} related_tasks={@related_tasks} />
 
-      <.section
-        title="Review Notes"
-        description="Fill in the minimum explanation needed to accept or promote this finding without leaving the review page."
-      >
-        <.form
-          for={@review_notes_form}
-          id="finding-review-notes-form"
-          phx-change="validate_review_notes"
-          phx-submit="save_review_notes"
-          class="space-y-4"
-        >
-          <div class="grid gap-4 lg:grid-cols-2">
-            <.input
-              field={@review_notes_form[:summary]}
-              type="textarea"
-              label="Finding Summary"
-            />
-            <.input
-              field={@review_notes_form[:work_summary]}
-              type="textarea"
-              label="Work Summary"
-            />
-            <div class="lg:col-span-2">
-              <.input field={@review_notes_form[:source_url]} label="Source URL" />
-            </div>
-          </div>
+      <.review_notes_section review_notes_form={@review_notes_form} />
 
-          <div class="flex justify-end">
-            <.button variant="primary">Save Review Notes</.button>
-          </div>
-        </.form>
-      </.section>
-
-      <.section
-        title="Linked Documents"
-        description="Files that make the finding explainable before it crosses into downstream commercial work."
-        compact
-        body_class="p-0"
-      >
-        <:actions>
-          <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"} variant="primary">
-            Upload Document
-          </.button>
-        </:actions>
-
-        <div
-          :if={Enum.empty?(@finding_documents)}
-          class="m-3 flex flex-col gap-3 rounded-lg border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300 sm:m-4 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div class="flex flex-wrap items-center gap-2">
-            <.status_badge status={:warning}>Needed</.status_badge>
-            <span>No documents linked yet.</span>
-          </div>
-          <.button navigate={~p"/acquisition/findings/#{@finding.id}/documents/new"}>
-            Upload Document
-          </.button>
-        </div>
-
-        <div
-          :if={!Enum.empty?(@finding_documents)}
-          class="divide-y divide-zinc-200 dark:divide-white/10"
-        >
-          <div
-            :for={finding_document <- @finding_documents}
-            class="grid gap-3 px-3 py-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_18rem]"
-          >
-            <div class="min-w-0 space-y-2">
-              <div class="flex flex-wrap items-center gap-2">
-                <p class="text-sm font-semibold text-base-content">
-                  {finding_document.document.title}
-                </p>
-                <span class="badge badge-outline badge-sm">
-                  {format_atom(finding_document.document_role)}
-                </span>
-                <span class="badge badge-outline badge-sm">
-                  {format_atom(finding_document.document.document_type)}
-                </span>
-                <.status_badge status={finding_document.document_state_variant}>
-                  {finding_document.document_state_label}
-                </.status_badge>
-                <span
-                  :if={substantive_procurement_document?(finding_document)}
-                  class="badge badge-success badge-sm"
-                >
-                  Counts for promotion
-                </span>
-                <span
-                  :if={
-                    @finding.finding_family == :procurement and
-                      not substantive_procurement_document?(finding_document)
-                  }
-                  class="badge badge-ghost badge-sm"
-                >
-                  Reference only
-                </span>
-              </div>
-              <p :if={finding_document.document.summary} class="text-sm text-base-content/70">
-                {finding_document.document.summary}
-              </p>
-              <.document_analysis_card analysis={document_analysis(finding_document.document)} />
-              <p :if={finding_document.notes} class="text-sm text-base-content/70">
-                {finding_document.notes}
-              </p>
-            </div>
-
-            <div class="flex flex-wrap items-start gap-2 lg:justify-end">
-              <.link
-                :if={finding_document.document.file_url}
-                href={finding_document.document.file_url}
-                target="_blank"
-                class="btn btn-sm btn-ghost"
-              >
-                Open File
-              </.link>
-              <.link
-                :if={finding_document.document.source_url}
-                href={finding_document.document.source_url}
-                target="_blank"
-                class="btn btn-sm btn-ghost"
-              >
-                Open Source
-              </.link>
-              <.button
-                id={"finding-document-remove-#{finding_document.id}"}
-                phx-click="remove_document"
-                phx-value-id={finding_document.id}
-                class="btn btn-sm btn-ghost text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-200"
-              >
-                Remove Link
-              </.button>
-            </div>
-          </div>
-        </div>
-      </.section>
+      <.linked_documents_section finding={@finding} finding_documents={@finding_documents} />
 
       <div
         :if={@finding.source_discovery_record}
         class="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]"
       >
-        <.section
-          title="Discovery Context"
-          description="Discovery-origin findings keep their discovery record context here so no separate legacy detail page is needed."
-        >
-          <div class="grid gap-5 sm:grid-cols-2">
-            <.property_item
-              label="Website"
-              value={@finding.source_discovery_record.website || "-"}
-            />
-            <.property_item
-              label="Domain"
-              value={@finding.source_discovery_record.website_domain || "-"}
-            />
-            <.property_item
-              label="Discovery Program"
-              value={
-                (@finding.source_discovery_record.discovery_program &&
-                   @finding.source_discovery_record.discovery_program.name) || "-"
-              }
-            />
-            <.property_item
-              label="Linked Organization"
-              value={
-                (@finding.source_discovery_record.organization &&
-                   @finding.source_discovery_record.organization.name) || "-"
-              }
-            />
-            <.property_item
-              label="Contact Person"
-              value={
-                (@finding.source_discovery_record.contact_person &&
-                   @finding.source_discovery_record.contact_person.full_name) || "-"
-              }
-            />
-            <.property_item
-              label="Evidence Count"
-              value={
-                Integer.to_string(@finding.source_discovery_record.discovery_evidence_count || 0)
-              }
-            />
-            <.property_item
-              label="Latest Observed"
-              value={format_datetime(@finding.source_discovery_record.latest_evidence_at)}
-            />
-            <.property_item
-              label="Discovery Record Status"
-              value={format_atom(@finding.source_discovery_record.status)}
-              badge={@finding.source_discovery_record.status_variant}
-            />
-          </div>
+        <.discovery_context_section discovery_record={@finding.source_discovery_record} />
 
-          <div
-            :if={
-              discovery_record_icp_matches(@finding.source_discovery_record) != [] or
-                discovery_record_risk_flags(@finding.source_discovery_record) != []
-            }
-            class="mt-5 grid gap-4 sm:grid-cols-2"
-          >
-            <div
-              :if={discovery_record_icp_matches(@finding.source_discovery_record) != []}
-              id="finding-show-discovery-icp"
-            >
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
-                Why It Fits
-              </p>
-              <div class="mt-2 flex flex-wrap gap-1">
-                <span
-                  :for={match <- discovery_record_icp_matches(@finding.source_discovery_record)}
-                  class="badge badge-success badge-sm"
-                >
-                  {match}
-                </span>
-              </div>
-            </div>
-
-            <div
-              :if={discovery_record_risk_flags(@finding.source_discovery_record) != []}
-              id="finding-show-discovery-risks"
-            >
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
-                Watchouts
-              </p>
-              <div class="mt-2 flex flex-wrap gap-1">
-                <span
-                  :for={flag <- discovery_record_risk_flags(@finding.source_discovery_record)}
-                  class="badge badge-outline badge-sm border-amber-300 bg-white/70 text-amber-700 dark:border-amber-400/30 dark:bg-white/[0.03] dark:text-amber-200"
-                >
-                  {flag}
-                </span>
-              </div>
-            </div>
-          </div>
-        </.section>
-
-        <.section
-          :if={show_identity_review?(@finding.source_discovery_record, @discovery_identity_review)}
-          title="Identity Review"
-          description="Resolve the canonical organization and person here before this finding becomes owned commercial work."
-        >
-          <div class="grid gap-6">
-            <div class="space-y-4">
-              <div class="space-y-2">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
-                  Organization
-                </p>
-                <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
-                  <%= if @finding.source_discovery_record.organization do %>
-                    <div class="flex items-center justify-between gap-3">
-                      <div class="space-y-1">
-                        <.link
-                          navigate={
-                            ~p"/operations/organizations/#{@finding.source_discovery_record.organization}"
-                          }
-                          class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                        >
-                          {@finding.source_discovery_record.organization.name}
-                        </.link>
-                        <p class="text-sm text-base-content/50">
-                          {@finding.source_discovery_record.organization.website_domain ||
-                            @finding.source_discovery_record.organization.primary_region ||
-                            "Linked organization"}
-                        </p>
-                      </div>
-                      <.status_badge status={
-                        @finding.source_discovery_record.organization.status_variant
-                      }>
-                        {format_atom(@finding.source_discovery_record.organization.status)}
-                      </.status_badge>
-                    </div>
-                  <% else %>
-                    <p class="text-sm text-base-content/50">
-                      No durable organization linked yet.
-                    </p>
-                  <% end %>
-                </div>
-              </div>
-
-              <div
-                :if={
-                  @discovery_identity_review &&
-                    @discovery_identity_review.organization_candidates != []
-                }
-                class="space-y-3"
-              >
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
-                  Candidate Organizations
-                </p>
-                <div
-                  :for={organization <- @discovery_identity_review.organization_candidates}
-                  class="rounded-2xl border border-zinc-200 px-4 py-4 dark:border-white/10"
-                >
-                  <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                      <.link
-                        navigate={~p"/operations/organizations/#{organization}"}
-                        class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                      >
-                        {organization.name}
-                      </.link>
-                      <p class="text-sm text-base-content/50">
-                        {organization.website_domain || organization.primary_region || "No domain"}
-                      </p>
-                      <p class="text-xs text-base-content/40">
-                        {organization.people_count} people · {organization.signal_count} signals
-                      </p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                      <.button
-                        id={"finding-use-organization-#{organization.id}"}
-                        phx-click="resolve_identity"
-                        phx-value-organization_id={organization.id}
-                        variant="primary"
-                      >
-                        Use Organization
-                      </.button>
-                      <.button
-                        :if={
-                          @finding.source_discovery_record.organization &&
-                            @finding.source_discovery_record.organization.id != organization.id
-                        }
-                        id={"finding-merge-linked-organization-#{organization.id}"}
-                        phx-click="merge_organization"
-                        phx-value-organization_id={organization.id}
-                      >
-                        Merge Linked Org
-                      </.button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="space-y-4">
-              <div class="space-y-2">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
-                  Contact Person
-                </p>
-                <div class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
-                  <%= if @finding.source_discovery_record.contact_person do %>
-                    <div class="flex items-center justify-between gap-3">
-                      <div class="space-y-1">
-                        <.link
-                          navigate={
-                            ~p"/operations/people/#{@finding.source_discovery_record.contact_person}"
-                          }
-                          class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                        >
-                          {@finding.source_discovery_record.contact_person.full_name}
-                        </.link>
-                        <p class="text-sm text-base-content/50">
-                          {@finding.source_discovery_record.contact_person.email ||
-                            @finding.source_discovery_record.contact_person.phone ||
-                            "No direct contact details"}
-                        </p>
-                      </div>
-                      <.status_badge status={
-                        @finding.source_discovery_record.contact_person.status_variant
-                      }>
-                        {format_atom(@finding.source_discovery_record.contact_person.status)}
-                      </.status_badge>
-                    </div>
-                  <% else %>
-                    <div class="space-y-1">
-                      <p class="text-sm text-base-content/50">
-                        No durable contact linked yet.
-                      </p>
-                      <p
-                        :if={
-                          @discovery_identity_review && @discovery_identity_review.contact_snapshot
-                        }
-                        class="text-sm text-base-content/70"
-                      >
-                        {format_contact_snapshot(@discovery_identity_review.contact_snapshot)}
-                      </p>
-                    </div>
-                  <% end %>
-                </div>
-              </div>
-
-              <div
-                :if={@discovery_identity_review && @discovery_identity_review.person_candidates != []}
-                class="space-y-3"
-              >
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
-                  Candidate People
-                </p>
-                <div
-                  :for={person <- @discovery_identity_review.person_candidates}
-                  class="rounded-2xl border border-zinc-200 px-4 py-4 dark:border-white/10"
-                >
-                  <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                      <.link
-                        navigate={~p"/operations/people/#{person}"}
-                        class="font-medium text-zinc-900 hover:text-emerald-600 dark:text-white"
-                      >
-                        {person.full_name}
-                      </.link>
-                      <p class="text-sm text-base-content/50">
-                        {person.email || person.phone || "No direct contact details"}
-                      </p>
-                      <p class="text-xs text-base-content/40">
-                        {candidate_person_organizations(person)}
-                      </p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                      <.button
-                        id={"finding-use-person-#{person.id}"}
-                        phx-click="resolve_identity"
-                        phx-value-contact_person_id={person.id}
-                        variant="primary"
-                      >
-                        Use Person
-                      </.button>
-                      <.button
-                        :if={
-                          @finding.source_discovery_record.contact_person &&
-                            @finding.source_discovery_record.contact_person.id != person.id
-                        }
-                        id={"finding-merge-linked-person-#{person.id}"}
-                        phx-click="merge_person"
-                        phx-value-person_id={person.id}
-                      >
-                        Merge Linked Person
-                      </.button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </.section>
+        <.identity_review_section
+          discovery_record={@finding.source_discovery_record}
+          identity_review={@discovery_identity_review}
+        />
       </div>
 
-      <.section
-        :if={@finding.source_discovery_record && discovery_feedback(@finding.source_discovery_record)}
-        title="Discovery Feedback"
-        description="Rejected discovery stays explainable and continues teaching the shared targeting model."
-      >
-        <div class="grid gap-5 sm:grid-cols-2">
-          <.property_item
-            label="Disposition"
-            value={format_feedback_reason(discovery_feedback(@finding.source_discovery_record))}
-          />
-          <.property_item
-            label="Feedback Scope"
-            value={
-              format_feedback_scope(
-                discovery_feedback(@finding.source_discovery_record)["feedback_scope"]
-              )
-            }
-          />
-          <.property_item
-            label="Learned Terms"
-            value={
-              render_feedback_terms(
-                discovery_feedback(@finding.source_discovery_record)["exclude_terms"]
-              )
-            }
-          />
-          <.property_item
-            label="Category"
-            value={
-              format_feedback_scope(
-                discovery_feedback(@finding.source_discovery_record)["source_feedback_category"]
-              )
-            }
-          />
-        </div>
-      </.section>
-
-      <.section
+      <.discovery_feedback_section
         :if={@finding.source_discovery_record}
-        title="Evidence"
-        description="Raw discovery evidence stays attached to the finding so promotion remains explainable."
-      >
-        <div :if={Enum.empty?(@discovery_evidence)}>
-          <.empty_state
-            icon="hero-document-magnifying-glass"
-            title="No evidence yet"
-            description="Discovery runs and operators can still attach evidence before or after review."
-          />
-        </div>
+        discovery_record={@finding.source_discovery_record}
+      />
 
-        <div :if={!Enum.empty?(@discovery_evidence)} class="space-y-3">
-          <div
-            :for={evidence <- @discovery_evidence}
-            class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
-          >
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div class="space-y-2">
-                <div class="flex flex-wrap gap-2">
-                  <.tag color={:zinc}>{format_atom(evidence.observation_type)}</.tag>
-                  <.tag color={:sky}>{format_atom(evidence.source_channel)}</.tag>
-                  <.status_badge status={evidence.confidence_variant}>
-                    Confidence {evidence.confidence_score}
-                  </.status_badge>
-                </div>
-                <p class="font-medium text-base-content">{evidence.summary}</p>
-                <p class="text-xs text-base-content/40">
-                  {format_datetime(evidence.observed_at || evidence.inserted_at)}
-                </p>
-              </div>
-              <div class="flex flex-wrap gap-3">
-                <.link
-                  :if={evidence.source_url}
-                  href={evidence.source_url}
-                  target="_blank"
-                  class="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-300"
-                >
-                  Source
-                </.link>
-                <.link
-                  navigate={~p"/acquisition/evidence/#{evidence.id}/edit"}
-                  class="text-sm font-medium text-sky-600 hover:text-sky-500 dark:text-sky-300"
-                >
-                  Edit
-                </.link>
-              </div>
-            </div>
+      <.evidence_section
+        discovery_record={@finding.source_discovery_record}
+        discovery_evidence={@discovery_evidence}
+      />
 
-            <p
-              :if={evidence.raw_excerpt}
-              class="mt-3 whitespace-pre-wrap text-sm leading-6 text-base-content/70"
-            >
-              {evidence.raw_excerpt}
-            </p>
-
-            <div :if={evidence.evidence_points != []} class="mt-3 flex flex-wrap gap-2">
-              <span
-                :for={point <- evidence.evidence_points}
-                class="badge badge-outline badge-sm border-zinc-200 bg-white/80 text-zinc-700 dark:border-white/10 dark:bg-transparent dark:text-zinc-300"
-              >
-                {point}
-              </span>
-            </div>
-          </div>
-        </div>
-      </.section>
-
-      <.section
-        title="Review History"
-        description="Why operators advanced, rejected, suppressed, parked, reopened, or promoted this finding."
-      >
-        <div :if={Enum.empty?(@review_decisions)}>
-          <.empty_state
-            icon="hero-chat-bubble-left-right"
-            title="No review history yet"
-            description="Decision history will appear here as the finding moves through intake review."
-          />
-        </div>
-
-        <div :if={!Enum.empty?(@review_decisions)} class="space-y-3">
-          <div
-            :for={decision <- @review_decisions}
-            class="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]"
-          >
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div class="space-y-2">
-                <div class="flex flex-wrap items-center gap-2">
-                  <.tag color={decision_tag_color(decision.decision)}>
-                    {format_review_decision(decision.decision)}
-                  </.tag>
-                  <span class="text-xs text-base-content/40">
-                    {format_datetime(decision.recorded_at || decision.inserted_at)}
-                  </span>
-                </div>
-                <p :if={decision.reason} class="text-sm text-base-content/80">
-                  {decision.reason}
-                </p>
-                <div class="flex flex-wrap gap-2 text-xs text-base-content/50">
-                  <span :if={decision.reason_code}>
-                    Code: {format_feedback_scope(decision.reason_code)}
-                  </span>
-                  <span :if={decision.feedback_scope}>
-                    Scope: {format_feedback_scope(decision.feedback_scope)}
-                  </span>
-                  <span :if={decision.exclude_terms != []}>
-                    Terms: {Enum.join(decision.exclude_terms, ", ")}
-                  </span>
-                  <span :if={decision.metadata["research"]}>
-                    Research: {decision.metadata["research"]}
-                  </span>
-                </div>
-                <div
-                  :if={decision_snapshot_summary(decision) != []}
-                  class="flex flex-wrap gap-2 text-xs text-base-content/50"
-                >
-                  <span
-                    :for={summary <- decision_snapshot_summary(decision)}
-                    class="rounded-full bg-white px-2 py-1 ring-1 ring-zinc-200 dark:bg-white/[0.04] dark:ring-white/10"
-                  >
-                    {summary}
-                  </span>
-                </div>
-              </div>
-              <p class="text-xs text-base-content/40">
-                {review_actor_name(decision)}
-              </p>
-            </div>
-          </div>
-        </div>
-      </.section>
+      <.review_history_section review_decisions={@review_decisions} />
 
       <.review_dialogs action_dialog={@action_dialog} id_prefix="finding-show" />
     </.page>
     """
   end
-
-  attr :label, :string, required: true
-  attr :value, :string, required: true
-  attr :badge, :atom, default: nil
-
-  defp property_item(assigns) do
-    ~H"""
-    <div class="space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
-        {@label}
-      </p>
-      <p :if={is_nil(@badge)} class="text-sm font-medium text-base-content">
-        {@value}
-      </p>
-      <.status_badge :if={@badge} status={@badge}>{@value}</.status_badge>
-    </div>
-    """
-  end
-
-  defp document_action_label(%{finding_family: :procurement}), do: "Upload Packet"
-  defp document_action_label(%{finding_family: :discovery}), do: "Upload Source Material"
-  defp document_action_label(_finding), do: "Upload Document"
-
-  defp research_state_variant(:requested), do: :warning
-  defp research_state_variant(:in_progress), do: :info
-  defp research_state_variant(:complete), do: :success
-  defp research_state_variant(:cancelled), do: :default
-  defp research_state_variant(_state), do: :default
-
-  defp document_analysis_excerpt(%{file: %{blob: %{metadata: metadata}}}) when is_map(metadata) do
-    metadata
-    |> metadata_value("document_analysis")
-    |> metadata_value("text_excerpt")
-    |> case do
-      text when is_binary(text) and text != "" -> String.slice(text, 0, 360)
-      _ -> nil
-    end
-  end
-
-  defp document_analysis_excerpt(_document), do: nil
-
-  attr :analysis, :map, default: nil
-
-  defp document_analysis_card(assigns) do
-    ~H"""
-    <div
-      :if={@analysis}
-      class="rounded-md border border-base-content/10 bg-base-200/60 px-3 py-3 text-xs leading-5 text-base-content/65"
-    >
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="font-semibold text-base-content">Document Analysis</span>
-        <span :if={metadata_value(@analysis, "status")} class="badge badge-outline badge-xs">
-          {format_feedback_scope(metadata_value(@analysis, "status"))}
-        </span>
-        <span :if={metadata_value(@analysis, "word_count")} class="badge badge-ghost badge-xs">
-          {metadata_value(@analysis, "word_count")} words
-        </span>
-      </div>
-
-      <p :if={metadata_value(@analysis, "scope_summary")} class="mt-2">
-        <span class="font-semibold text-base-content/75">Scope:</span>
-        {metadata_value(@analysis, "scope_summary")}
-      </p>
-
-      <div :if={analysis_list(@analysis, "keyword_hits") != []} class="mt-2 flex flex-wrap gap-1">
-        <span
-          :for={hit <- analysis_list(@analysis, "keyword_hits")}
-          class="badge badge-success badge-xs"
-        >
-          {hit}
-        </span>
-      </div>
-
-      <.analysis_list label="Due" values={analysis_list(@analysis, "due_date_mentions")} />
-      <.analysis_list
-        label="Submission"
-        values={analysis_list(@analysis, "submission_instructions")}
-      />
-      <.analysis_list
-        label="Mandatory meeting"
-        values={analysis_list(@analysis, "mandatory_meeting")}
-      />
-      <.analysis_list
-        label="Licenses/certs"
-        values={analysis_list(@analysis, "required_licenses_certs")}
-      />
-      <.analysis_list
-        label="Bonding/insurance"
-        values={analysis_list(@analysis, "bonding_insurance")}
-      />
-      <.analysis_list label="Red flags" values={analysis_list(@analysis, "red_flags")} />
-
-      <p :if={metadata_value(@analysis, "next_action")} class="mt-2">
-        <span class="font-semibold text-base-content/75">Next:</span>
-        {metadata_value(@analysis, "next_action")}
-      </p>
-
-      <p
-        :if={
-          document_analysis_excerpt(%{
-            file: %{blob: %{metadata: %{"document_analysis" => @analysis}}}
-          })
-        }
-        class="mt-2 line-clamp-3 text-base-content/50"
-      >
-        {document_analysis_excerpt(%{file: %{blob: %{metadata: %{"document_analysis" => @analysis}}}})}
-      </p>
-    </div>
-    """
-  end
-
-  attr :label, :string, required: true
-  attr :values, :list, default: []
-
-  defp analysis_list(assigns) do
-    ~H"""
-    <div :if={@values != []} class="mt-2">
-      <p class="font-semibold text-base-content/75">{@label}</p>
-      <ul class="mt-1 space-y-1">
-        <li :for={value <- @values} class="flex gap-1.5">
-          <span class="text-base-content/35">-</span>
-          <span>{value}</span>
-        </li>
-      </ul>
-    </div>
-    """
-  end
-
-  defp document_analysis(%{file: %{blob: %{metadata: metadata}}}) when is_map(metadata) do
-    case metadata_value(metadata, "document_analysis") do
-      analysis when is_map(analysis) -> analysis
-      _other -> nil
-    end
-  end
-
-  defp document_analysis(_document), do: nil
-
-  defp analysis_list(analysis, key) when is_map(analysis) do
-    analysis
-    |> metadata_value(key)
-    |> List.wrap()
-    |> Enum.reject(&(&1 in [nil, ""]))
-  end
-
-  defp analysis_list(_analysis, _key), do: []
-
-  defp metadata_value(nil, _key), do: nil
-
-  defp metadata_value(map, key) when is_map(map) do
-    Map.get(map, key) || Map.get(map, String.to_existing_atom(key))
-  rescue
-    ArgumentError -> Map.get(map, key)
-  end
-
-  defp metadata_value(_value, _key), do: nil
-
-  defp substantive_procurement_document?(%{document: %{document_type: document_type}}),
-    do: PromotionRules.substantive_procurement_document_type?(document_type)
-
-  defp substantive_procurement_document?(_finding_document), do: false
 
   defp load_finding!(id, actor) do
     Acquisition.get_finding!(
@@ -1318,27 +537,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     end
   end
 
-  defp new_finding_task_path(finding) do
-    query =
-      %{
-        title: "Follow up: #{finding.title}",
-        task_type: :review,
-        origin_domain: :acquisition,
-        origin_resource: "finding",
-        origin_id: finding.id,
-        origin_label: finding.title,
-        origin_url: ~p"/acquisition/findings/#{finding}",
-        finding_id: finding.id,
-        organization_id: finding.organization_id,
-        person_id: finding.person_id,
-        return_to: ~p"/acquisition/findings/#{finding}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
-  end
-
   defp identity_attrs_from_params(params) do
     %{}
     |> maybe_put_identity_attr(:organization_id, Map.get(params, "organization_id"))
@@ -1377,139 +575,4 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   end
 
   defp suggested_terms_for_finding(_finding), do: ""
-
-  defp show_identity_review?(_discovery_record, nil), do: false
-
-  defp show_identity_review?(discovery_record, identity_review) do
-    not is_nil(discovery_record.contact_person_id) or
-      not is_nil(discovery_record.organization_id) or
-      not is_nil(identity_review.contact_snapshot) or
-      identity_review.organization_candidates != [] or
-      identity_review.person_candidates != []
-  end
-
-  defp format_contact_snapshot(snapshot) do
-    [metadata_value(snapshot, :first_name), metadata_value(snapshot, :last_name)]
-    |> Enum.reject(&(&1 in [nil, ""]))
-    |> Enum.join(" ")
-    |> case do
-      "" ->
-        metadata_value(snapshot, :email) || metadata_value(snapshot, :phone) || "Contact snapshot"
-
-      name ->
-        [name, metadata_value(snapshot, :title), metadata_value(snapshot, :email)]
-        |> Enum.reject(&(&1 in [nil, ""]))
-        |> Enum.join(" · ")
-    end
-  end
-
-  defp candidate_person_organizations(person) do
-    case person.organizations || [] do
-      [] -> "No linked organizations"
-      organizations -> organizations |> Enum.map(& &1.name) |> Enum.join(", ")
-    end
-  end
-
-  defp discovery_feedback(discovery_record) do
-    metadata = Map.get(discovery_record, :metadata) || %{}
-    metadata["discovery_feedback"]
-  end
-
-  defp discovery_record_market_focus(discovery_record) do
-    metadata = Map.get(discovery_record, :metadata) || %{}
-    Map.get(metadata, "market_focus", %{})
-  end
-
-  defp discovery_record_icp_matches(discovery_record) do
-    discovery_record
-    |> discovery_record_market_focus()
-    |> Map.get("icp_matches", [])
-    |> List.wrap()
-  end
-
-  defp discovery_record_risk_flags(discovery_record) do
-    discovery_record
-    |> discovery_record_market_focus()
-    |> Map.get("risk_flags", [])
-    |> List.wrap()
-  end
-
-  defp format_feedback_scope(nil), do: "-"
-
-  defp format_feedback_scope(scope) do
-    scope
-    |> to_string()
-    |> String.replace("_", " ")
-  end
-
-  defp render_feedback_terms(nil), do: "-"
-  defp render_feedback_terms([]), do: "-"
-  defp render_feedback_terms(terms), do: Enum.join(List.wrap(terms), ", ")
-
-  defp format_feedback_reason(nil), do: "-"
-
-  defp format_feedback_reason(feedback) when is_map(feedback) do
-    reason_code = Map.get(feedback, "reason_code")
-    reason = metadata_value(feedback, :reason)
-    label = DiscoveryFeedback.reject_reason_label(reason_code)
-
-    if reason in [nil, "", label], do: label, else: "#{label} - #{reason}"
-  end
-
-  defp format_feedback_reason(feedback), do: to_string(feedback)
-
-  defp format_review_decision(decision) do
-    decision
-    |> to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
-  end
-
-  defp decision_tag_color(:accepted), do: :emerald
-  defp decision_tag_color(:promoted), do: :sky
-  defp decision_tag_color(:started_review), do: :zinc
-  defp decision_tag_color(:reopened), do: :sky
-  defp decision_tag_color(:parked), do: :amber
-  defp decision_tag_color(:suppressed), do: :amber
-  defp decision_tag_color(:rejected), do: :rose
-  defp decision_tag_color(_decision), do: :zinc
-
-  defp review_actor_name(%{actor_user: %{full_name: full_name}}) when is_binary(full_name),
-    do: full_name
-
-  defp review_actor_name(%{actor_user: %{email: email}}), do: to_string(email)
-
-  defp review_actor_name(%{actor_user_id: actor_user_id}) when is_binary(actor_user_id),
-    do: "Operator"
-
-  defp review_actor_name(_decision), do: "System"
-
-  defp decision_snapshot_summary(%{metadata: %{"decision_snapshot" => snapshot}})
-       when is_map(snapshot) do
-    finding = Map.get(snapshot, "finding", %{})
-    readiness = Map.get(snapshot, "readiness", %{})
-    material = Map.get(snapshot, "material", %{})
-
-    [
-      snapshot_label("State", Map.get(finding, "status")),
-      snapshot_label("Fit", Map.get(finding, "fit_score")),
-      snapshot_label("Intent", Map.get(finding, "intent_score")),
-      snapshot_label("Docs", Map.get(material, "document_count")),
-      snapshot_label("Packet Docs", Map.get(material, "promotion_document_count")),
-      snapshot_label("Evidence", Map.get(material, "discovery_evidence_count")),
-      readiness_label("Accept Ready", Map.get(readiness, "acceptance_ready")),
-      readiness_label("Promote Ready", Map.get(readiness, "promotion_ready"))
-    ]
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp decision_snapshot_summary(_decision), do: []
-
-  defp snapshot_label(_label, nil), do: nil
-  defp snapshot_label(_label, 0), do: nil
-  defp snapshot_label(label, value), do: "#{label}: #{format_feedback_scope(value)}"
-
-  defp readiness_label(_label, nil), do: nil
-  defp readiness_label(label, true), do: "#{label}: Yes"
-  defp readiness_label(label, false), do: "#{label}: No"
 end

@@ -5,8 +5,10 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.SourceLaunchBatch
+  alias GnomeGarden.Agents.Procurement.SourceAutoConfigurator
 
-  @buckets [:needs_configuration, :ready, :attention, :all]
+  @buckets [:needs_configuration, :ready, :credentials_needed, :attention, :all]
+  @configuration_batch_limit 10
   @source_limit 75
 
   @impl true
@@ -24,6 +26,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
      |> assign(:source_counts, empty_counts())
      |> assign(:next_runnable_source, nil)
      |> assign(:sources, [])
+     |> assign(:configuration_batch_limit, @configuration_batch_limit)
+     |> assign(:configuring_source_ids, MapSet.new())
+     |> assign(:configuring_batch?, false)
      |> assign(:launching_source_ids, MapSet.new())
      |> assign(:launching_ready_batch?, false)}
   end
@@ -42,6 +47,29 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   @impl true
   def handle_event("launch_run", %{"id" => id}, socket) do
     launch_source(socket, id)
+  end
+
+  @impl true
+  def handle_event("configure_source", %{"id" => id}, socket) do
+    configure_source(socket, id)
+  end
+
+  @impl true
+  def handle_event("configure_next_sources", _params, socket) do
+    sources = configurable_sources(socket)
+
+    if sources == [] do
+      {:noreply, put_flash(socket, :error, "No sources are ready for automatic configuration.")}
+    else
+      actor = socket.assigns.current_user
+
+      {:noreply,
+       socket
+       |> assign_configuring_sources(Enum.map(sources, & &1.id), true)
+       |> assign(:configuring_batch?, true)
+       |> put_flash(:info, "Configuring #{length(sources)} sources.")
+       |> start_configuration_batch(sources, actor)}
+    end
   end
 
   @impl true
@@ -95,7 +123,65 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     end
   end
 
+  defp configure_source(socket, id) do
+    with {:ok, source} <-
+           Acquisition.get_source(id,
+             actor: socket.assigns.current_user,
+             load: [:procurement_source]
+           ),
+         true <- auto_configurable?(source),
+         false <- configuring_source?(socket.assigns.configuring_source_ids, source.id) do
+      actor = socket.assigns.current_user
+
+      {:noreply,
+       socket
+       |> assign_configuring_source(source.id, true)
+       |> put_flash(:info, "Configuring #{source.name}.")
+       |> start_source_configuration(source, actor)}
+    else
+      false ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "This source is already configured or discovery is already running."
+         )}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not configure source: #{inspect(error)}")}
+    end
+  end
+
   @impl true
+  def handle_info({:source_configuration_finished, source_id, source_name, result}, socket) do
+    socket = assign_configuring_source(socket, source_id, false)
+
+    case result do
+      {:ok, %{mode: mode}} ->
+        {:noreply,
+         socket
+         |> refresh_sources()
+         |> put_flash(:info, source_configuration_message(source_name, mode))}
+
+      {:error, error} ->
+        {:noreply,
+         socket
+         |> refresh_sources()
+         |> put_flash(:error, configuration_error_message(source_name, error))}
+    end
+  end
+
+  def handle_info({:source_configuration_batch_finished, summary}, socket) do
+    message = configuration_summary_message(summary)
+
+    {:noreply,
+     socket
+     |> assign_configuring_sources(summary.source_ids, false)
+     |> assign(:configuring_batch?, false)
+     |> refresh_sources()
+     |> put_flash(if(summary.errors > 0, do: :error, else: :info), message)}
+  end
+
   def handle_info({:source_launch_finished, source_id, source_name, result}, socket) do
     socket = assign_launching_source(socket, source_id, false)
 
@@ -164,7 +250,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
       >
         <div class="grid min-h-[34rem] lg:grid-cols-[17rem_minmax(0,1fr)]">
           <aside class="border-b border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] lg:border-b-0 lg:border-r">
-            <div class="grid gap-2 sm:grid-cols-4 lg:grid-cols-1">
+            <div class="grid gap-2 sm:grid-cols-5 lg:grid-cols-1">
               <.bucket_link
                 :for={bucket <- @buckets}
                 bucket={bucket}
@@ -176,6 +262,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
             <div class="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-1">
               <.registry_count label="Total" value={@source_counts.total} />
               <.registry_count label="Healthy" value={@source_counts.healthy} />
+              <.registry_count label="Credentials" value={@source_counts.credentials_needed} />
               <.registry_count label="Attention" value={@source_counts.attention} />
               <.registry_count label="Runnable" value={@source_counts.runnable} />
             </div>
@@ -193,7 +280,18 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
               </div>
               <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                 <.button
-                  :if={@next_runnable_source}
+                  :if={@selected_bucket == :needs_configuration}
+                  phx-click="configure_next_sources"
+                  variant="primary"
+                  disabled={@configuring_batch?}
+                  class={["px-3 py-2 text-sm", if(@configuring_batch?, do: "opacity-60")]}
+                >
+                  {if @configuring_batch?,
+                    do: "Configuring...",
+                    else: "Configure Next #{@configuration_batch_limit}"}
+                </.button>
+                <.button
+                  :if={@selected_bucket == :ready and @next_runnable_source}
                   phx-click="launch_next_run"
                   variant="primary"
                   disabled={launching_source?(@launching_source_ids, @next_runnable_source.id)}
@@ -209,7 +307,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                     else: "Launch Next Scan"}
                 </.button>
                 <.button
-                  :if={@source_counts.runnable > 1}
+                  :if={@selected_bucket == :ready and @source_counts.runnable > 1}
                   phx-click="launch_ready_runs"
                   disabled={@launching_ready_batch?}
                   class={["px-3 py-2 text-sm", if(@launching_ready_batch?, do: "opacity-60")]}
@@ -230,6 +328,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
               <.source_card
                 :for={source <- @sources}
                 source={source}
+                configuring_source_ids={@configuring_source_ids}
                 launching_source_ids={@launching_source_ids}
               />
             </div>
@@ -280,6 +379,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   end
 
   attr :source, :map, required: true
+  attr :configuring_source_ids, :any, required: true
   attr :launching_source_ids, :any, required: true
 
   defp source_card(assigns) do
@@ -294,6 +394,12 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
               <span class="badge badge-ghost badge-sm">{@source.scan_strategy_label}</span>
               <span :if={@source.procurement_source} class="badge badge-outline badge-sm">
                 {format_atom(@source.procurement_source.config_status)}
+              </span>
+              <span
+                :if={needs_operator_attention?(@source)}
+                class="badge badge-error badge-sm"
+              >
+                Needs attention
               </span>
             </div>
             <h3 class="mt-2 text-base font-semibold leading-6 text-base-content">
@@ -357,15 +463,34 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         <p :if={extraction_summary(@source)} class="text-xs leading-5 text-base-content/45">
           {extraction_summary(@source)}
         </p>
+        <p :if={configuration_exception(@source)} class="text-xs leading-5 text-error">
+          {configuration_exception(@source)}
+        </p>
       </div>
 
       <div class="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-white/10 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
-        <.link
-          :if={needs_configuration?(@source)}
-          navigate={~p"/acquisition/sources/#{@source.id}/configure"}
-          class="btn btn-sm btn-primary"
+        <.button
+          :if={auto_configurable?(@source)}
+          id={"configure-source-#{@source.id}"}
+          phx-click="configure_source"
+          phx-value-id={@source.id}
+          disabled={configuring_source?(@configuring_source_ids, @source.id)}
+          class={[
+            "px-3 py-2 text-sm",
+            if(configuring_source?(@configuring_source_ids, @source.id), do: "opacity-60")
+          ]}
+          variant="primary"
         >
-          Configure
+          {if configuring_source?(@configuring_source_ids, @source.id),
+            do: "Configuring...",
+            else: "Configure"}
+        </.button>
+        <.link
+          :if={manual_config_available?(@source)}
+          navigate={~p"/acquisition/sources/#{@source.id}/configure"}
+          class="btn btn-sm btn-ghost"
+        >
+          Manual Fallback
         </.link>
         <.link
           :if={configured_source?(@source)}
@@ -455,16 +580,22 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     end
   end
 
+  defp configurable_sources(socket) do
+    socket.assigns.sources
+    |> Enum.filter(&auto_configurable?/1)
+    |> Enum.reject(&configuring_source?(socket.assigns.configuring_source_ids, &1.id))
+    |> Enum.take(@configuration_batch_limit)
+  end
+
   defp source_counts(sources) do
     %{
       total: length(sources),
-      healthy: Enum.count(sources, &(&1.health_status in [:healthy, :running])),
+      healthy: Enum.count(sources, &(&1.health_status in [:healthy, :ready, :running])),
       attention:
         Enum.count(
           sources,
           &(&1.health_status in [
               :blocked,
-              :needs_login,
               :failing,
               :selector_failed,
               :document_capture_failed,
@@ -477,13 +608,23 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         ),
       runnable: Enum.count(sources, &scan_ready?/1),
       needs_configuration: Enum.count(sources, &needs_configuration?/1),
+      credentials_needed: Enum.count(sources, &credentials_needed?/1),
       ready: Enum.count(sources, &scan_ready?/1),
       all: length(sources)
     }
   end
 
   defp empty_counts do
-    %{total: 0, healthy: 0, attention: 0, runnable: 0, needs_configuration: 0, ready: 0, all: 0}
+    %{
+      total: 0,
+      healthy: 0,
+      credentials_needed: 0,
+      attention: 0,
+      runnable: 0,
+      needs_configuration: 0,
+      ready: 0,
+      all: 0
+    }
   end
 
   defp bucket_sources(sources, bucket) do
@@ -516,6 +657,149 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   end
 
   defp launching_source?(source_ids, source_id), do: MapSet.member?(source_ids, source_id)
+
+  defp assign_configuring_source(socket, source_id, configuring?) do
+    assign_configuring_sources(socket, [source_id], configuring?)
+  end
+
+  defp assign_configuring_sources(socket, source_ids, configuring?) do
+    update(socket, :configuring_source_ids, fn current_source_ids ->
+      Enum.reduce(source_ids, current_source_ids, fn source_id, source_ids ->
+        if configuring? do
+          MapSet.put(source_ids, source_id)
+        else
+          MapSet.delete(source_ids, source_id)
+        end
+      end)
+    end)
+  end
+
+  defp configuring_source?(source_ids, source_id), do: MapSet.member?(source_ids, source_id)
+
+  defp start_source_configuration(socket, source, actor) do
+    parent = self()
+
+    case Task.Supervisor.start_child(GnomeGarden.AsyncSupervisor, fn ->
+           result =
+             safe_configuration_result(fn ->
+               SourceAutoConfigurator.configure_source(source.procurement_source, actor: actor)
+             end)
+
+           send(parent, {:source_configuration_finished, source.id, source.name, result})
+         end) do
+      {:ok, _pid} ->
+        socket
+
+      {:error, reason} ->
+        socket
+        |> assign_configuring_source(source.id, false)
+        |> put_flash(:error, "Could not start source configuration: #{inspect(reason)}")
+    end
+  end
+
+  defp start_configuration_batch(socket, sources, actor) do
+    parent = self()
+
+    case Task.Supervisor.start_child(GnomeGarden.AsyncSupervisor, fn ->
+           results =
+             Enum.map(sources, fn source ->
+               result =
+                 safe_configuration_result(fn ->
+                   SourceAutoConfigurator.configure_source(source.procurement_source,
+                     actor: actor
+                   )
+                 end)
+
+               {source, result}
+             end)
+
+           send(parent, {:source_configuration_batch_finished, configuration_summary(results)})
+         end) do
+      {:ok, _pid} ->
+        socket
+
+      {:error, reason} ->
+        socket
+        |> assign_configuring_sources(Enum.map(sources, & &1.id), false)
+        |> assign(:configuring_batch?, false)
+        |> put_flash(:error, "Could not start source configuration batch: #{inspect(reason)}")
+    end
+  end
+
+  defp safe_configuration_result(fun) do
+    fun.()
+  rescue
+    error -> {:error, error}
+  catch
+    kind, reason -> {:error, {kind, reason}}
+  end
+
+  defp configuration_summary(results) do
+    Enum.reduce(
+      results,
+      %{
+        source_ids: Enum.map(results, fn {source, _result} -> source.id end),
+        auto_configured: 0,
+        discovery_started: 0,
+        already_pending: 0,
+        already_configured: 0,
+        errors: 0
+      },
+      fn
+        {_source, {:ok, %{mode: :auto_configured}}}, summary ->
+          update_in(summary.auto_configured, &(&1 + 1))
+
+        {_source, {:ok, %{mode: :discovery_started}}}, summary ->
+          update_in(summary.discovery_started, &(&1 + 1))
+
+        {_source, {:ok, %{mode: :already_pending}}}, summary ->
+          update_in(summary.already_pending, &(&1 + 1))
+
+        {_source, {:ok, %{mode: :already_configured}}}, summary ->
+          update_in(summary.already_configured, &(&1 + 1))
+
+        {_source, {:error, _error}}, summary ->
+          update_in(summary.errors, &(&1 + 1))
+      end
+    )
+  end
+
+  defp source_configuration_message(source_name, :auto_configured),
+    do: "#{source_name} configured automatically."
+
+  defp source_configuration_message(source_name, :discovery_started),
+    do: "#{source_name} sent to browser discovery."
+
+  defp source_configuration_message(source_name, :already_pending),
+    do: "#{source_name} is already queued for discovery."
+
+  defp source_configuration_message(source_name, :already_configured),
+    do: "#{source_name} is already configured."
+
+  defp configuration_error_message(source_name, error) do
+    "#{source_name} could not be configured. Pi could not get clear listing data: #{format_configuration_error(error)}"
+  end
+
+  defp format_configuration_error(error) when is_exception(error), do: Exception.message(error)
+  defp format_configuration_error(error) when is_binary(error), do: error
+  defp format_configuration_error(error), do: inspect(error)
+
+  defp configuration_summary_message(summary) do
+    "Configured #{summary.auto_configured} automatically" <>
+      if(summary.discovery_started > 0,
+        do: "; sent #{summary.discovery_started} to discovery",
+        else: ""
+      ) <>
+      if(summary.already_pending > 0,
+        do: "; #{summary.already_pending} already running",
+        else: ""
+      ) <>
+      if(summary.already_configured > 0,
+        do: "; #{summary.already_configured} already configured",
+        else: ""
+      ) <>
+      if(summary.errors > 0, do: "; #{summary.errors} failed", else: "")
+  end
 
   defp start_source_launch(socket, source, actor) do
     parent = self()
@@ -597,14 +881,23 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   defp extraction_summary(_source), do: nil
 
+  defp configuration_exception(%{procurement_source: %{config_status: :config_failed} = source}) do
+    case metadata_value(source.metadata, "last_config_error") do
+      error when is_binary(error) -> error
+      _ -> nil
+    end
+  end
+
+  defp configuration_exception(_source), do: nil
+
   defp source_in_bucket?(source, :needs_configuration), do: needs_configuration?(source)
   defp source_in_bucket?(source, :ready), do: scan_ready?(source)
+  defp source_in_bucket?(source, :credentials_needed), do: credentials_needed?(source)
 
   defp source_in_bucket?(source, :attention),
     do:
       source.health_status in [
         :blocked,
-        :needs_login,
         :failing,
         :selector_failed,
         :document_capture_failed,
@@ -622,6 +915,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   defp bucket_label(:needs_configuration), do: "Needs configuration"
   defp bucket_label(:ready), do: "Ready"
+  defp bucket_label(:credentials_needed), do: "Credentials needed"
   defp bucket_label(:attention), do: "Attention"
   defp bucket_label(:all), do: "All"
 
@@ -681,6 +975,39 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
        do: true
 
   defp needs_configuration?(_source), do: false
+
+  defp credentials_needed?(%{health_status: :needs_login}), do: true
+  defp credentials_needed?(_source), do: false
+
+  defp auto_configurable?(%{
+         enabled: true,
+         status: :active,
+         procurement_source: %{config_status: status}
+       })
+       when status in [:found, :manual],
+       do: true
+
+  defp auto_configurable?(%{
+         enabled: true,
+         status: :active,
+         procurement_source: %{config_status: :config_failed} = source
+       }) do
+    is_nil(metadata_value(source.metadata, "last_config_error"))
+  end
+
+  defp auto_configurable?(_source), do: false
+
+  defp needs_operator_attention?(%{procurement_source: %{config_status: :config_failed} = source}) do
+    is_binary(metadata_value(source.metadata, "last_config_error"))
+  end
+
+  defp needs_operator_attention?(_source), do: false
+
+  defp manual_config_available?(%{procurement_source: %{config_status: status}})
+       when status in [:config_failed, :manual],
+       do: true
+
+  defp manual_config_available?(_source), do: false
 
   defp configured_source?(%{procurement_source: %{config_status: status}})
        when status in [:configured, :scan_failed],

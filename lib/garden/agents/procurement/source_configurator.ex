@@ -22,15 +22,16 @@ defmodule GnomeGarden.Agents.Procurement.SourceConfigurator do
   @spec discover_source(ProcurementSource.t() | Ecto.UUID.t(), keyword()) :: start_result
   def discover_source(source_or_id, opts \\ []) do
     actor = Keyword.get(opts, :actor)
+    async? = Keyword.get(opts, :async?, true)
 
     with {:ok, source} <- fetch_source(source_or_id, actor),
          :ok <- ensure_discoverable(source),
          {:ok, prepared_source, mode} <- prepare_source(source, actor),
-         {:ok, _pid} <-
-           Task.Supervisor.start_child(GnomeGarden.AsyncSupervisor, fn ->
-             run_discovery(prepared_source.id, actor)
-           end) do
+         :ok <- maybe_run_discovery(prepared_source, actor, async?, mode) do
       {:ok, %{source: prepared_source, mode: mode}}
+    else
+      :error -> {:error, "Pi could not get clear data from this source."}
+      error -> error
     end
   end
 
@@ -74,6 +75,21 @@ defmodule GnomeGarden.Agents.Procurement.SourceConfigurator do
   defp prepare_source(%{config_status: :pending} = source, _actor),
     do: {:ok, source, :already_pending}
 
+  defp maybe_run_discovery(_source, _actor, _async?, :already_pending), do: :ok
+
+  defp maybe_run_discovery(source, actor, false, :started) do
+    run_discovery(source.id, actor)
+  end
+
+  defp maybe_run_discovery(source, actor, true, :started) do
+    case Task.Supervisor.start_child(GnomeGarden.AsyncSupervisor, fn ->
+           run_discovery(source.id, actor)
+         end) do
+      {:ok, _pid} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp run_discovery(source_id, actor) do
     runtime_instance_id =
       "smart_scanner_discovery:#{source_id}:#{System.unique_integer([:positive])}"
@@ -108,16 +124,35 @@ defmodule GnomeGarden.Agents.Procurement.SourceConfigurator do
   end
 
   defp mark_discovery_failed(source_id, actor, reason) do
-    Logger.error(
-      "[SourceConfigurator] Discovery failed for #{source_id}: #{format_reason(reason)}"
-    )
+    formatted_reason = format_reason(reason)
+
+    Logger.error("[SourceConfigurator] Discovery failed for #{source_id}: #{formatted_reason}")
 
     with {:ok, source} <- Procurement.get_procurement_source(source_id, actor_opts(actor)),
          true <- source.config_status in [:found, :pending] do
+      metadata =
+        source.metadata
+        |> Map.put("last_config_error", clear_data_error_message(formatted_reason))
+        |> Map.put("last_config_error_at", DateTime.utc_now() |> DateTime.to_iso8601())
+
+      source =
+        case Procurement.update_procurement_source(
+               source,
+               %{metadata: metadata},
+               actor_opts(actor)
+             ) do
+          {:ok, updated_source} -> updated_source
+          {:error, _error} -> source
+        end
+
       _ = Procurement.config_fail_procurement_source(source, %{}, actor_opts(actor))
     end
 
     :error
+  end
+
+  defp clear_data_error_message(reason) do
+    "Pi could not identify a reliable listing pattern for this source. #{reason}"
   end
 
   defp format_reason(exception) when is_exception(exception), do: Exception.message(exception)

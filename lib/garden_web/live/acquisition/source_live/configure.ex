@@ -1,15 +1,19 @@
 defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   use GnomeGardenWeb, :live_view
 
-  import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1]
+  import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Agents.Procurement.SourceConfigurator
+  alias GnomeGarden.Agents.Procurement.SourceAutoConfigurator
   alias GnomeGarden.Procurement
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("source:updated")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source:queued")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source:configured")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source:config_failed")
       GnomeGardenWeb.Endpoint.subscribe("procurement_source_search_filter:created")
       GnomeGardenWeb.Endpoint.subscribe("procurement_source_search_filter:updated")
       GnomeGardenWeb.Endpoint.subscribe("procurement_source_search_filter:destroyed")
@@ -64,18 +68,30 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   def handle_event("start_discovery", _params, socket) do
     source = socket.assigns.source.procurement_source
 
-    case SourceConfigurator.discover_source(source, actor: socket.assigns.current_user) do
-      {:ok, %{mode: :started}} ->
+    case SourceAutoConfigurator.configure_source(source, actor: socket.assigns.current_user) do
+      {:ok, %{mode: :auto_configured}} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Discovery started for #{source.name}.")
-         |> push_navigate(to: ~p"/acquisition/sources")}
+         |> refresh_source()
+         |> put_flash(:info, "Source configured automatically for #{source.name}.")}
+
+      {:ok, %{mode: :already_configured}} ->
+        {:noreply,
+         socket
+         |> refresh_source()
+         |> put_flash(:info, "#{source.name} is already configured.")}
+
+      {:ok, %{mode: :discovery_started}} ->
+        {:noreply,
+         socket
+         |> refresh_source()
+         |> put_flash(:info, "Discovery started for #{source.name}.")}
 
       {:ok, %{mode: :already_pending}} ->
         {:noreply,
          socket
-         |> put_flash(:info, "#{source.name} is already queued for discovery.")
-         |> push_navigate(to: ~p"/acquisition/sources")}
+         |> refresh_source()
+         |> put_flash(:info, "#{source.name} is already queued for discovery.")}
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not start discovery: #{inspect(error)}")}
@@ -175,6 +191,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
     {:noreply, assign_search_filters(socket)}
   end
 
+  def handle_info(%{topic: "source:updated"}, socket) do
+    {:noreply, refresh_source(socket)}
+  end
+
+  def handle_info(%{topic: "procurement_source:" <> _event}, socket) do
+    {:noreply, refresh_source(socket)}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -182,7 +206,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       <.page_header>
         Configure Source
         <:subtitle>
-          Save the selectors needed for deterministic scans, or start browser discovery for this source.
+          System setup is the default. Manual selectors are only a fallback when Pi cannot identify clear listing data.
         </:subtitle>
         <:actions>
           <.button navigate={~p"/acquisition/sources"}>
@@ -193,16 +217,19 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
       <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <.section title={@source.name} description={@source.url}>
+          <.discovery_status_panel source={@source} />
+
           <div class="mb-4 rounded-lg border border-info/20 bg-info/10 p-3 text-sm text-base-content">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div class="space-y-1">
-                <p class="font-semibold">If you do not know these selectors, use discovery first.</p>
+                <p class="font-semibold">System configuration runs first.</p>
                 <p class="leading-5 text-base-content/70">
-                  Selectors tell the scanner which parts of the portal are bid listings. For example,
+                  Known portals like PlanetBids and BidNet are configured immediately. Unknown portals
+                  are sent to Pi/browser discovery. Use manual selectors only after setup fails:
                   <code class="rounded bg-base-100 px-1 py-0.5 text-xs">.bid-row</code>
                   could mean one listing, and
                   <code class="rounded bg-base-100 px-1 py-0.5 text-xs">.bid-title</code>
-                  could mean the title inside it. Browser discovery is the safer path when nobody has inspected this portal yet.
+                  could mean the title inside it.
                 </p>
               </div>
               <div class="flex shrink-0 flex-wrap gap-2">
@@ -211,9 +238,12 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
                   type="button"
                   variant="primary"
                   phx-click="start_discovery"
+                  disabled={discovery_running?(@source)}
                   phx-disable-with="Starting..."
                 >
-                  Start Discovery
+                  {if discovery_running?(@source),
+                    do: "Discovery Running",
+                    else: "Configure"}
                 </.button>
                 <.link
                   href={@source.url}
@@ -226,7 +256,20 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
             </div>
           </div>
 
-          <.form for={@form} id="source-config-form" phx-change="validate" phx-submit="save">
+          <div
+            :if={!manual_config_available?(@source)}
+            class="rounded-lg border border-dashed border-base-content/20 bg-base-200/40 p-4 text-sm leading-6 text-base-content/65"
+          >
+            Manual selector fields are hidden until the automatic setup path fails or a source is marked for manual configuration.
+          </div>
+
+          <.form
+            :if={manual_config_available?(@source)}
+            for={@form}
+            id="source-config-form"
+            phx-change="validate"
+            phx-submit="save"
+          >
             <div class="grid gap-4 md:grid-cols-2">
               <.config_input
                 field={@form[:listing_url]}
@@ -492,18 +535,22 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
           </.section>
 
           <.section
-            title="Discovery"
-            description="Use browser discovery when selectors are unknown or the portal layout needs inspection."
+            title="Automatic Setup"
+            description="Known portals are configured immediately. Unknown portals are sent to Pi/browser discovery."
           >
             <div class="flex flex-col gap-2">
+              <.discovery_status_panel source={@source} compact />
               <.button
                 :if={discoverable?(@source.procurement_source)}
                 type="button"
                 variant="primary"
                 phx-click="start_discovery"
+                disabled={discovery_running?(@source)}
                 phx-disable-with="Starting..."
               >
-                Start Discovery
+                {if discovery_running?(@source),
+                  do: "Discovery Running",
+                  else: "Configure"}
               </.button>
               <.link
                 href={@source.url}
@@ -527,6 +574,19 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
     else
       %{procurement_source: nil} -> {:error, "Only procurement-backed sources can be configured."}
       error -> error
+    end
+  end
+
+  defp refresh_source(socket) do
+    case load_source(socket.assigns.source.id, socket.assigns.current_user) do
+      {:ok, source} ->
+        socket
+        |> assign(:source, source)
+        |> assign_search_filters()
+        |> assign_form(config_params(source))
+
+      {:error, _error} ->
+        socket
     end
   end
 
@@ -678,6 +738,187 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
        do: true
 
   defp discoverable?(_source), do: false
+
+  defp manual_config_available?(%{procurement_source: %{config_status: status}})
+       when status in [:config_failed, :manual],
+       do: true
+
+  defp manual_config_available?(_source), do: false
+
+  defp discovery_running?(%{procurement_source: %{config_status: :pending}}), do: true
+  defp discovery_running?(_source), do: false
+
+  attr :source, :map, required: true
+  attr :compact, :boolean, default: false
+
+  defp discovery_status_panel(assigns) do
+    assigns =
+      assigns
+      |> assign(:status_label, discovery_status_label(assigns.source))
+      |> assign(:status_variant, discovery_status_variant(assigns.source))
+      |> assign(:status_note, discovery_status_note(assigns.source))
+      |> assign(:next_step, discovery_next_step(assigns.source))
+      |> assign(
+        :run_id,
+        metadata_value(assigns.source.procurement_source.metadata, "last_agent_run_id")
+      )
+      |> assign(
+        :run_state,
+        metadata_value(assigns.source.procurement_source.metadata, "last_agent_run_state")
+      )
+      |> assign(
+        :config_error,
+        metadata_value(assigns.source.procurement_source.metadata, "last_config_error")
+      )
+
+    ~H"""
+    <div class={[
+      "rounded-lg border border-base-content/10 bg-base-200/60 p-3 text-sm",
+      !@compact && "mb-4"
+    ]}>
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="font-semibold text-base-content">Discovery Status</p>
+            <.status_badge status={@status_variant}>{@status_label}</.status_badge>
+            <.status_badge :if={@run_state} status={run_state_variant(@run_state)}>
+              Run {format_run_state(@run_state)}
+            </.status_badge>
+          </div>
+          <p class="mt-1 leading-5 text-base-content/70">
+            {@status_note}
+          </p>
+          <div
+            :if={@config_error}
+            class="mt-3 rounded-md border border-error/30 bg-error/10 px-3 py-2 text-error"
+          >
+            <p class="font-semibold">Pi could not get clear data from this source.</p>
+            <p class="mt-1 leading-5">{@config_error}</p>
+          </div>
+          <p class="mt-2 text-xs font-medium uppercase tracking-[0.14em] text-base-content/45">
+            Next step
+          </p>
+          <p class="mt-1 leading-5 text-base-content/70">
+            {@next_step}
+          </p>
+        </div>
+
+        <div class="shrink-0 text-xs text-base-content/55 sm:text-right">
+          <p>Config changed {format_datetime(@source.procurement_source.updated_at)}</p>
+          <.link
+            :if={@run_id}
+            navigate={~p"/console/agents/runs/#{@run_id}"}
+            class="mt-2 inline-flex font-semibold text-emerald-700 hover:text-emerald-600 dark:text-emerald-300"
+          >
+            Open Run
+          </.link>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp discovery_status_label(%{procurement_source: %{config_status: :found}}),
+    do: "Needs discovery"
+
+  defp discovery_status_label(%{procurement_source: %{config_status: :pending}}),
+    do: "Discovery running"
+
+  defp discovery_status_label(%{procurement_source: %{config_status: :configured}}),
+    do: "Configured"
+
+  defp discovery_status_label(%{procurement_source: %{config_status: :config_failed}}),
+    do: "Discovery failed"
+
+  defp discovery_status_label(%{procurement_source: %{config_status: :scan_failed}}),
+    do: "Scan failed"
+
+  defp discovery_status_label(%{procurement_source: %{config_status: :manual}}),
+    do: "Manual config"
+
+  defp discovery_status_label(%{procurement_source: %{config_status: status}}),
+    do: format_atom(status)
+
+  defp discovery_status_variant(%{procurement_source: %{config_status: :configured}}),
+    do: :success
+
+  defp discovery_status_variant(%{procurement_source: %{config_status: :pending}}), do: :info
+
+  defp discovery_status_variant(%{procurement_source: %{config_status: :config_failed}}),
+    do: :error
+
+  defp discovery_status_variant(%{procurement_source: %{config_status: :scan_failed}}), do: :error
+  defp discovery_status_variant(%{procurement_source: %{config_status: :manual}}), do: :info
+  defp discovery_status_variant(_source), do: :warning
+
+  defp discovery_status_note(%{procurement_source: %{config_status: :found}}),
+    do:
+      "This source exists, but the scanner does not know which page elements contain listings yet."
+
+  defp discovery_status_note(%{procurement_source: %{config_status: :pending}}),
+    do:
+      "Browser discovery has been queued or is running. This page will update when the source becomes configured or fails."
+
+  defp discovery_status_note(%{procurement_source: %{config_status: :configured}}),
+    do: "Selectors are saved. This source can be scanned from the source registry."
+
+  defp discovery_status_note(%{procurement_source: %{config_status: :config_failed}}),
+    do: "Automatic setup failed because Pi could not produce a usable scanner configuration."
+
+  defp discovery_status_note(%{procurement_source: %{config_status: :scan_failed}}),
+    do: "The scanner configuration exists, but the most recent scan failed."
+
+  defp discovery_status_note(%{procurement_source: %{config_status: :manual}}),
+    do: "This source is marked for manual configuration instead of browser discovery."
+
+  defp discovery_status_note(_source), do: "Source state is available below."
+
+  defp discovery_next_step(%{procurement_source: %{config_status: :found}}),
+    do:
+      "Click Configure. Known portals will be configured immediately; unknown portals will go to Pi/browser discovery."
+
+  defp discovery_next_step(%{procurement_source: %{config_status: :pending}}),
+    do: "Wait for discovery to finish. If it fails, review the source URL and try again."
+
+  defp discovery_next_step(%{procurement_source: %{config_status: :configured}}),
+    do: "Return to Sources and launch a scan to create reviewable findings."
+
+  defp discovery_next_step(%{procurement_source: %{config_status: :config_failed}}),
+    do:
+      "Retry Configure after checking the portal page, or use the manual fallback fields now shown below."
+
+  defp discovery_next_step(%{procurement_source: %{config_status: :scan_failed}}),
+    do: "Edit the selectors or launch a retry scan from the source registry."
+
+  defp discovery_next_step(%{procurement_source: %{config_status: :manual}}),
+    do: "Fill in the scanner selectors manually and save configuration."
+
+  defp discovery_next_step(_source), do: "Review the current source state."
+
+  defp run_state_variant("completed"), do: :success
+  defp run_state_variant("running"), do: :info
+  defp run_state_variant("failed"), do: :error
+  defp run_state_variant("cancelled"), do: :warning
+  defp run_state_variant(_state), do: :default
+
+  defp format_run_state(state) do
+    state
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
+
+  defp metadata_value(metadata, key) when is_map(metadata) do
+    Map.get(metadata, key) || Map.get(metadata, metadata_key_atom(key))
+  end
+
+  defp metadata_value(_metadata, _key), do: nil
+
+  defp metadata_key_atom("last_agent_run_id"), do: :last_agent_run_id
+  defp metadata_key_atom("last_agent_run_state"), do: :last_agent_run_state
+  defp metadata_key_atom("last_config_error"), do: :last_config_error
+  defp metadata_key_atom("last_config_error_at"), do: :last_config_error_at
+  defp metadata_key_atom(key), do: config_key_atom(key)
 
   defp sam_gov_source?(%{source_type: :sam_gov}), do: true
   defp sam_gov_source?(_source), do: false
