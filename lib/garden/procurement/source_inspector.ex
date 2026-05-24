@@ -16,9 +16,11 @@ defmodule GnomeGarden.Procurement.SourceInspector do
     actor = Keyword.get(opts, :actor)
     browser = Keyword.get(opts, :browser, GnomeGarden.Browser)
     max_links = Keyword.get(opts, :max_links, 100)
+    timeout_ms = Keyword.get(opts, :timeout_ms, 30_000)
 
     with {:ok, run} <- start_run(source, max_links, actor),
-         {:ok, snapshot} <- browser.inspect_page(source.url, max_links: max_links),
+         {:ok, snapshot} <-
+           browser.inspect_page(source.url, max_links: max_links, timeout_ms: timeout_ms),
          inspection = classify_snapshot(snapshot),
          {:ok, source} <- maybe_mark_requires_login(source, inspection, actor),
          {:ok, page} <- record_page(run, source, snapshot, inspection, actor),
