@@ -101,6 +101,65 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     end
   end
 
+  defmodule FakePublicDirectoryLoginBrowser do
+    def inspect_page(_url, _opts) do
+      {:ok,
+       %{
+         final_url: "https://www.example.com/directory",
+         title: "Integrator Directory",
+         text: "Find an integrator and member list",
+         headings: ["Integrator Directory"],
+         forms: [
+           %{
+             "action" => "/login",
+             "method" => "post",
+             "text" => "Username Password Login",
+             "inputs" => [
+               %{"type" => "text", "name" => "username"},
+               %{"type" => "password", "name" => "password"}
+             ],
+             "buttons" => ["Login"]
+           }
+         ],
+         links: [
+           %{
+             "href" => "https://www.example.com/find-an-integrator",
+             "text" => "Find an Integrator"
+           },
+           %{"href" => "https://www.example.com/member-list", "text" => "Member List"}
+         ]
+       }}
+    end
+  end
+
+  defmodule FakePublicForumLoginBrowser do
+    def inspect_page(_url, _opts) do
+      {:ok,
+       %{
+         final_url: "https://www.example.com/forums",
+         title: "Automation Community",
+         text: "Automation engineering community",
+         headings: ["Community"],
+         forms: [
+           %{
+             "action" => "/login",
+             "method" => "post",
+             "text" => "Username Password Login",
+             "inputs" => [
+               %{"type" => "text", "name" => "username"},
+               %{"type" => "password", "name" => "password"}
+             ],
+             "buttons" => ["Login"]
+           }
+         ],
+         links: [
+           %{"href" => "https://www.example.com/latest/hmi-scada", "text" => "HMIs & SCADA"},
+           %{"href" => "https://www.example.com/forums", "text" => "Forums"}
+         ]
+       }}
+    end
+  end
+
   defmodule FakeAuthorizedUrlBrowser do
     def inspect_page(_url, _opts) do
       {:ok,
@@ -292,6 +351,48 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     assert inspection["diagnosis"] == "page_inspected"
     assert inspection["password_inputs"] == 1
     assert inspection["public_listing_links"] == 1
+  end
+
+  test "inspect source does not mark public directories with login forms as credential gated" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Public Directory",
+        url: "https://www.example.com/directory",
+        source_type: :directory,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, %{source: inspected_source, inspection: inspection}} =
+             Procurement.inspect_procurement_source(source,
+               browser: FakePublicDirectoryLoginBrowser
+             )
+
+    refute inspected_source.requires_login
+    assert inspection["diagnosis"] == "page_inspected"
+    assert inspection["password_inputs"] == 1
+    assert inspection["public_listing_links"] == 2
+  end
+
+  test "inspect source does not mark public forums with login forms as credential gated" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Public Forum",
+        url: "https://www.example.com/forums",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, %{source: inspected_source, inspection: inspection}} =
+             Procurement.inspect_procurement_source(source, browser: FakePublicForumLoginBrowser)
+
+    refute inspected_source.requires_login
+    assert inspection["diagnosis"] == "page_inspected"
+    assert inspection["password_inputs"] == 1
+    assert inspection["public_listing_links"] == 2
   end
 
   test "inspect source does not treat authorized URL paths as auth gates" do

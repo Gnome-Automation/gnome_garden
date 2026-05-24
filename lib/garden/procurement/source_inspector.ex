@@ -326,7 +326,11 @@ defmodule GnomeGarden.Procurement.SourceInspector do
     Regex.match?(
       ~r/(bid|bids|rfp|proposal|solicitation|opportunit|contract|addendum|procurement|job|jobs|career|careers|opening|openings)/i,
       copy
-    )
+    ) or
+      Regex.match?(
+        ~r/(integrator|integrators|supplier|suppliers|member list|members|directory|find a|find an|manufacturer|manufacturers|company|companies|forum|forums|community|latest|article|articles|view all)/i,
+        copy
+      )
   end
 
   defp procurement_copy?(_copy), do: false
