@@ -6,7 +6,7 @@ defmodule GnomeGarden.Agents.Procurement.SourceBootstrapper do
   we can auto-discover them by navigating and saving standard selectors.
   """
 
-  alias GnomeGarden.Agents.Tools.Browser.Navigate
+  alias GnomeGarden.Browser
   alias GnomeGarden.Agents.Tools.Procurement.SaveSourceConfig
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
@@ -77,8 +77,8 @@ defmodule GnomeGarden.Agents.Procurement.SourceBootstrapper do
 
   def discover_one(%ProcurementSource{} = source) do
     # Navigate to the site with headed browser
-    case Navigate.run(%{url: source.url, wait_for_network: true}, %{}) do
-      {:ok, %{status: :ok, title: title}} ->
+    case Browser.navigate(source.url, wait_for_network: true) do
+      {:ok, %{title: title}} ->
         Logger.debug("Loaded: #{title}")
 
         # Save standard PlanetBids selectors
@@ -97,7 +97,7 @@ defmodule GnomeGarden.Agents.Procurement.SourceBootstrapper do
           %{}
         )
 
-      {:ok, %{status: :error, error: err}} ->
+      {:error, err} ->
         {:error, "Navigation failed: #{err}"}
     end
   end

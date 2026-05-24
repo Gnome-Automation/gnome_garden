@@ -7,8 +7,7 @@ defmodule GnomeGarden.Acquisition.DocumentDownloader do
   that unauthenticated HTTP cannot access.
   """
 
-  alias GnomeGarden.Agents.Tools.Browser
-  alias GnomeGarden.Agents.Tools.Browser.{Extract, Navigate}
+  alias GnomeGarden.Browser
   alias GnomeGarden.Procurement.SourceCredentials
 
   @max_bytes 50 * 1024 * 1024
@@ -75,9 +74,9 @@ defmodule GnomeGarden.Acquisition.DocumentDownloader do
     login_url = browser_login_url(descriptor)
 
     with {:ok, credentials} <- SourceCredentials.planetbids_credentials(),
-         {:ok, _} <- Navigate.run(%{url: login_url}, %{}),
-         {:ok, %{data: %{"submitted" => submitted?}}} <-
-           Extract.run(%{js: planetbids_login_js(credentials)}, %{}) do
+         {:ok, _} <- Browser.navigate(login_url),
+         {:ok, %{"submitted" => submitted?}} <-
+           Browser.evaluate(planetbids_login_js(credentials)) do
       if submitted?, do: Process.sleep(3_500)
       :ok
     else
@@ -98,24 +97,18 @@ defmodule GnomeGarden.Acquisition.DocumentDownloader do
 
     id = "gnome-document-download-#{System.unique_integer([:positive])}"
 
-    with {_output, 0} <-
-           System.cmd(Browser.binary_path(), ["eval", inject_link_js(id, url)],
-             stderr_to_stdout: true
-           ),
-         {_output, 0} <-
-           System.cmd(Browser.binary_path(), ["download", "##{id}", temp_path],
-             stderr_to_stdout: true
-           ),
+    with {:ok, _} <- Browser.evaluate(inject_link_js(id, url)),
+         :ok <- Browser.download("##{id}", temp_path),
          :ok <- validate_download(temp_path) do
       {:ok, temp_path}
     else
+      {:error, {:browser_download_failed, output}} ->
+        cleanup(temp_path)
+        {:error, {:browser_download_failed, output}}
+
       {:error, reason} ->
         cleanup(temp_path)
         {:error, reason}
-
-      {output, _code} ->
-        cleanup(temp_path)
-        {:error, {:browser_download_failed, String.trim(output)}}
     end
   end
 

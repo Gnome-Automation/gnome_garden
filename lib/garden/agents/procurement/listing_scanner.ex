@@ -27,7 +27,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.TargetingFilter
   alias GnomeGarden.Commercial.CompanyProfileContext
-  alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
+  alias GnomeGarden.Browser
   alias GnomeGarden.Agents.Tools.Procurement.{SaveBid, ScoreBid, ScanBidNet, ScanPlanetBids}
 
   require Logger
@@ -142,7 +142,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     Logger.info("Scanning #{source.name} at #{listing_url}")
 
     with :ok <- maybe_login(source, listing_url),
-         {:ok, _} <- Navigate.run(%{url: listing_url}, %{}),
+         {:ok, _} <- Browser.navigate(listing_url),
          # Wait for SPA content to load
          :ok <-
            (
@@ -453,17 +453,17 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     })()
     """
 
-    case Extract.run(%{js: js}, %{}) do
-      {:ok, %{data: %{"bids" => bids, "extraction" => extraction}}} when is_list(bids) ->
+    case Browser.evaluate(js) do
+      {:ok, %{"bids" => bids, "extraction" => extraction}} when is_list(bids) ->
         {:ok, bids, normalize_extraction(extraction)}
 
-      {:ok, %{data: %{bids: bids, extraction: extraction}}} when is_list(bids) ->
+      {:ok, %{bids: bids, extraction: extraction}} when is_list(bids) ->
         {:ok, bids, normalize_extraction(extraction)}
 
-      {:ok, %{data: bids}} when is_list(bids) ->
+      {:ok, bids} when is_list(bids) ->
         {:ok, bids, %{}}
 
-      {:ok, %{data: _}} ->
+      {:ok, _} ->
         {:ok, [], %{}}
 
       {:error, reason} ->
@@ -944,9 +944,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     # Strip the #bidInformation fragment for navigation
     url = bid.url |> String.replace(~r/#.*$/, "")
 
-    with {:ok, _} <- Navigate.run(%{url: url}, %{}),
+    with {:ok, _} <- Browser.navigate(url),
          :ok <- (Process.sleep(2500) && :ok) || :ok,
-         {:ok, %{data: data}} when is_map(data) <- Extract.run(%{js: enrich_js()}, %{}) do
+         {:ok, data} when is_map(data) <- Browser.evaluate(enrich_js()) do
       updates =
         %{}
         |> maybe_enrich(:description, data["description"], bid.description)
@@ -1043,9 +1043,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp maybe_login(%{source_type: :planetbids, requires_login: true}, listing_url) do
     with {:ok, credentials} <- GnomeGarden.Procurement.SourceCredentials.planetbids_credentials(),
-         {:ok, _} <- Navigate.run(%{url: listing_url}, %{}),
-         {:ok, %{data: %{"submitted" => submitted?}}} <-
-           Extract.run(%{js: planetbids_login_js(credentials)}, %{}) do
+         {:ok, _} <- Browser.navigate(listing_url),
+         {:ok, %{"submitted" => submitted?}} <-
+           Browser.evaluate(planetbids_login_js(credentials)) do
       if submitted?, do: Process.sleep(3500)
       :ok
     else

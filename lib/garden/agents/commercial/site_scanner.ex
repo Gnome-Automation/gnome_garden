@@ -23,7 +23,7 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
   alias GnomeGarden.Support.WebIdentity
-  alias GnomeGarden.Agents.Tools.Browser.{Navigate, Extract}
+  alias GnomeGarden.Browser
 
   require Logger
 
@@ -125,8 +125,8 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
   end
 
   defp try_extract_page(url) do
-    case Navigate.run(%{url: url, wait_for_network: false}, %{}) do
-      {:ok, %{status: :ok}} ->
+    case Browser.navigate(url, wait_for_network: false) do
+      {:ok, _} ->
         Process.sleep(2000)
 
         js = """
@@ -140,14 +140,14 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
         })()
         """
 
-        case Extract.run(%{js: js}, %{}) do
-          {:ok, %{data: %{"is404" => true}}} -> :not_found
-          {:ok, %{data: %{"body" => body}}} when byte_size(body) > 100 -> {:ok, body}
+        case Browser.evaluate(js) do
+          {:ok, %{"is404" => true}} -> :not_found
+          {:ok, %{"body" => body}} when byte_size(body) > 100 -> {:ok, body}
           {:ok, _} -> :not_found
           {:error, reason} -> {:error, reason}
         end
 
-      {:ok, %{status: :error}} ->
+      {:error, _reason} ->
         :not_found
     end
   end
