@@ -11,7 +11,7 @@ defmodule GnomeGarden.Procurement do
     extensions: [AshAdmin.Domain]
 
   alias GnomeGarden.Procurement.ScanRunner
-  alias GnomeGarden.Procurement.SourceInspector
+  alias GnomeGarden.Procurement.SourcePipeline
 
   admin do
     show? true
@@ -174,14 +174,20 @@ defmodule GnomeGarden.Procurement do
 
   def run_source_scan(attrs, opts \\ []) when is_map(attrs) do
     actor = Keyword.get(opts, :actor)
+    scanner_context = Keyword.get(opts, :scanner_context, %{actor: actor})
 
     with {:ok, source} <- source_from_attrs(attrs, actor) do
-      GnomeGarden.Agents.Procurement.ScannerRouter.scan(source, %{actor: actor})
+      opts =
+        opts
+        |> Keyword.put(:actor, actor)
+        |> Keyword.put(:scanner_context, scanner_context)
+
+      SourcePipeline.scan_source(source, opts)
     end
   end
 
   def inspect_procurement_source(source_or_id, opts \\ []) do
-    SourceInspector.inspect_source(source_or_id, opts)
+    SourcePipeline.inspect_source(source_or_id, opts)
   end
 
   defp source_from_attrs(attrs, actor) do

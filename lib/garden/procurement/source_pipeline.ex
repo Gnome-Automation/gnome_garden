@@ -1,0 +1,363 @@
+defmodule GnomeGarden.Procurement.SourcePipeline do
+  @moduledoc """
+  Lua-backed orchestration for procurement source inspection and configuration.
+
+  Browser execution and persistence remain in Ash/Elixir actions. Lua owns the
+  source workflow decision: inspect, stop for credentials, configure a known
+  provider, or queue browser discovery.
+  """
+
+  alias GnomeGarden.Agents.Procurement.SourceAutoConfigurator
+  alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.ProcurementSource
+  alias GnomeGarden.Procurement.SourceInspector
+  alias GnomeGarden.Agents.Procurement.ScannerRouter
+
+  @inspect_script """
+  local inspection = source.inspect(source_context.id)
+
+  if not inspection.ok then
+    return inspection
+  end
+
+  if inspection.requires_login then
+    inspection.mode = "credentials_needed"
+  elseif inspection.diagnosis == "page_unavailable" then
+    inspection.mode = "page_unavailable"
+  else
+    inspection.mode = "inspected"
+  end
+
+  return inspection
+  """
+
+  @auto_configure_script """
+  if source_context.config_status == "configured" then
+    return {
+      ok = true,
+      mode = "already_configured",
+      source_id = source_context.id
+    }
+  end
+
+  if source_context.config_status == "pending" then
+    return {
+      ok = true,
+      mode = "already_pending",
+      source_id = source_context.id
+    }
+  end
+
+  if source_context.source_type == "planetbids" or source_context.source_type == "bidnet" then
+    return source.configure(source_context.id)
+  end
+
+  local inspection = source.inspect(source_context.id)
+
+  if not inspection.ok then
+    inspection.mode = "inspection_failed"
+    return inspection
+  end
+
+  if inspection.requires_login then
+    inspection.mode = "credentials_needed"
+    return inspection
+  end
+
+  local configured = source.configure(source_context.id)
+  configured.inspection_mode = inspection.mode
+  configured.inspection_run_id = inspection.run_id
+
+  return configured
+  """
+
+  @scan_script """
+  if source_context.requires_login then
+    return {
+      ok = false,
+      mode = "credentials_needed",
+      source_id = source_context.id,
+      error = "Source requires credentials before scanning."
+    }
+  end
+
+  local scan = source.scan(source_context.id)
+
+  if not scan.ok then
+    scan.mode = "scan_failed"
+    return scan
+  end
+
+  scan.mode = "scanned"
+  return scan
+  """
+
+  @type pipeline_result :: {:ok, map()} | {:error, term()}
+
+  @spec inspect_source(ProcurementSource.t() | Ecto.UUID.t(), keyword()) :: pipeline_result
+  def inspect_source(source_or_id, opts \\ []) do
+    with {:ok, source} <- fetch_source(source_or_id, Keyword.get(opts, :actor)),
+         {:ok, script_result, messages} <- run_lua(source, @inspect_script, opts),
+         {:ok, inspection_result} <- source_message(messages, :inspection) do
+      if truthy?(script_result["ok"]) do
+        {:ok, Map.put(inspection_result, :pipeline, script_result)}
+      else
+        {:error, script_result["error"] || "Source inspection pipeline failed."}
+      end
+    end
+  end
+
+  @spec auto_configure_source(ProcurementSource.t() | Ecto.UUID.t(), keyword()) :: pipeline_result
+  def auto_configure_source(source_or_id, opts \\ []) do
+    with {:ok, source} <- fetch_source(source_or_id, Keyword.get(opts, :actor)),
+         {:ok, script_result, messages} <- run_lua(source, @auto_configure_script, opts) do
+      mode = mode_atom(script_result["mode"])
+
+      cond do
+        not truthy?(script_result["ok"]) ->
+          {:error, script_result["error"] || "Source configuration pipeline failed."}
+
+        mode == :credentials_needed ->
+          with {:ok, inspection_result} <- source_message(messages, :inspection) do
+            {:ok,
+             %{
+               source: inspection_result.source,
+               mode: :credentials_needed,
+               inspection: inspection_result,
+               pipeline: script_result
+             }}
+          end
+
+        mode in [:already_configured, :already_pending] ->
+          {:ok, %{source: source, mode: mode, pipeline: script_result}}
+
+        true ->
+          with {:ok, configuration_result} <- source_message(messages, :configuration) do
+            {:ok, Map.put(configuration_result, :pipeline, script_result)}
+          end
+      end
+    end
+  end
+
+  @spec scan_source(ProcurementSource.t() | Ecto.UUID.t(), keyword()) :: pipeline_result
+  def scan_source(source_or_id, opts \\ []) do
+    with {:ok, source} <- fetch_source(source_or_id, Keyword.get(opts, :actor)),
+         {:ok, script_result, messages} <- run_lua(source, @scan_script, opts) do
+      if truthy?(script_result["ok"]) do
+        with {:ok, scan_result} <- source_message(messages, :scan) do
+          {:ok, put_pipeline(scan_result, script_result)}
+        end
+      else
+        {:error, script_result["error"] || "Source scan pipeline failed."}
+      end
+    end
+  end
+
+  defp run_lua(source, script, opts) do
+    actor = Keyword.get(opts, :actor)
+    async? = Keyword.get(opts, :async?, true)
+    scanner = Keyword.get(opts, :scanner, ScannerRouter)
+    scanner_context = Keyword.get(opts, :scanner_context, %{actor: actor})
+    ref = make_ref()
+    caller = self()
+
+    lua =
+      Lua.new()
+      |> Lua.set!([:source_context], source_context(source))
+      |> Lua.set!([:source, :inspect], inspect_function(ref, caller, source, opts))
+      |> Lua.set!([:source, :configure], configure_function(ref, caller, actor, async?))
+      |> Lua.set!([:source, :scan], scan_function(ref, caller, source, scanner, scanner_context))
+
+    try do
+      {[raw_result], _lua} = Lua.eval!(lua, script)
+      {:ok, normalize_lua_value(raw_result), collect_messages(ref, [])}
+    rescue
+      error in [Lua.CompilerException, Lua.RuntimeException] ->
+        {:error, Exception.message(error)}
+    end
+  end
+
+  defp inspect_function(ref, caller, source, opts) do
+    fn [_source_id], lua ->
+      result =
+        SourceInspector.inspect_source(
+          source,
+          opts
+          |> Keyword.delete(:async?)
+          |> Keyword.delete(:pipeline?)
+        )
+
+      send(caller, {ref, :inspection, result})
+      encode_lua_result(lua, serialize_inspection_result(result))
+    end
+  end
+
+  defp configure_function(ref, caller, actor, async?) do
+    fn [source_id], lua ->
+      result =
+        SourceAutoConfigurator.configure_source(source_id,
+          actor: actor,
+          async?: async?
+        )
+
+      send(caller, {ref, :configuration, result})
+      encode_lua_result(lua, serialize_configuration_result(result))
+    end
+  end
+
+  defp scan_function(ref, caller, source, scanner, scanner_context) do
+    fn [_source_id], lua ->
+      result = scanner.scan(source, scanner_context)
+
+      send(caller, {ref, :scan, result})
+      encode_lua_result(lua, serialize_scan_result(result))
+    end
+  end
+
+  defp encode_lua_result(lua, value) do
+    {encoded, lua} = Lua.encode!(lua, value)
+    {[encoded], lua}
+  end
+
+  defp collect_messages(ref, acc) do
+    receive do
+      {^ref, kind, result} -> collect_messages(ref, [{kind, result} | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
+  defp source_message(messages, kind) do
+    case List.keyfind(messages, kind, 0) do
+      {^kind, {:ok, result}} -> {:ok, result}
+      {^kind, {:error, error}} -> {:error, error}
+      nil -> {:error, "Source pipeline did not execute #{kind}."}
+    end
+  end
+
+  defp source_context(source) do
+    %{
+      "id" => source.id,
+      "name" => source.name,
+      "url" => source.url,
+      "source_type" => Atom.to_string(source.source_type),
+      "config_status" => Atom.to_string(source.config_status),
+      "requires_login" => source.requires_login
+    }
+  end
+
+  defp serialize_inspection_result({:ok, result}) do
+    inspection = result.inspection || %{}
+
+    %{
+      "ok" => true,
+      "source_id" => result.source.id,
+      "run_id" => result.run.id,
+      "page_id" => result.page.id,
+      "diagnosis" => inspection["diagnosis"],
+      "requires_login" => truthy?(inspection["requires_login"]),
+      "public_listing_links" => inspection["public_listing_links"] || 0,
+      "password_inputs" => inspection["password_inputs"] || 0,
+      "forms" => inspection["forms"] || 0
+    }
+  end
+
+  defp serialize_inspection_result({:error, error}) do
+    %{
+      "ok" => false,
+      "mode" => "inspection_failed",
+      "error" => format_error(error)
+    }
+  end
+
+  defp serialize_configuration_result({:ok, %{source: source, mode: mode}}) do
+    %{
+      "ok" => true,
+      "source_id" => source.id,
+      "mode" => Atom.to_string(mode),
+      "config_status" => Atom.to_string(source.config_status)
+    }
+  end
+
+  defp serialize_configuration_result({:error, error}) do
+    %{
+      "ok" => false,
+      "mode" => "configuration_failed",
+      "error" => format_error(error)
+    }
+  end
+
+  defp serialize_scan_result({:ok, result}) when is_map(result) do
+    %{
+      "ok" => true,
+      "extracted" => value(result, :extracted) || 0,
+      "excluded" => value(result, :excluded) || 0,
+      "scored" => value(result, :scored) || 0,
+      "saved" => value(result, :saved) || 0,
+      "enriched" => value(result, :enriched) || 0
+    }
+    |> maybe_put_serialized("diagnosis", value(result, :diagnosis))
+    |> maybe_put_serialized("reason", value(result, :reason))
+  end
+
+  defp serialize_scan_result({:ok, _result}) do
+    %{"ok" => true}
+  end
+
+  defp serialize_scan_result({:error, error}) do
+    %{
+      "ok" => false,
+      "mode" => "scan_failed",
+      "error" => format_error(error)
+    }
+  end
+
+  defp fetch_source(%ProcurementSource{} = source, _actor), do: {:ok, source}
+
+  defp fetch_source(id, actor) when is_binary(id) do
+    Procurement.get_procurement_source(id, actor: actor)
+  end
+
+  defp normalize_lua_value(value) when is_list(value) do
+    if Enum.all?(value, &match?({key, _value} when is_binary(key), &1)) do
+      Map.new(value, fn {key, nested_value} -> {key, normalize_lua_value(nested_value)} end)
+    else
+      Enum.map(value, &normalize_lua_value/1)
+    end
+  end
+
+  defp normalize_lua_value(value), do: value
+
+  defp mode_atom("auto_configured"), do: :auto_configured
+  defp mode_atom("already_configured"), do: :already_configured
+  defp mode_atom("discovery_started"), do: :discovery_started
+  defp mode_atom("already_pending"), do: :already_pending
+  defp mode_atom("credentials_needed"), do: :credentials_needed
+  defp mode_atom("inspection_failed"), do: :inspection_failed
+  defp mode_atom("page_unavailable"), do: :page_unavailable
+  defp mode_atom("inspected"), do: :inspected
+  defp mode_atom("scanned"), do: :scanned
+  defp mode_atom("scan_failed"), do: :scan_failed
+  defp mode_atom(_mode), do: :unknown
+
+  defp truthy?(true), do: true
+  defp truthy?(_value), do: false
+
+  defp value(map, key) when is_map(map) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  defp value(_map, _key), do: nil
+
+  defp put_pipeline(result, pipeline) when is_map(result),
+    do: Map.put(result, :pipeline, pipeline)
+
+  defp put_pipeline(result, pipeline), do: %{result: result, pipeline: pipeline}
+
+  defp maybe_put_serialized(map, _key, nil), do: map
+  defp maybe_put_serialized(map, key, value), do: Map.put(map, key, value)
+
+  defp format_error(error) when is_binary(error), do: error
+  defp format_error(error) when is_exception(error), do: Exception.message(error)
+  defp format_error(error), do: inspect(error)
+end

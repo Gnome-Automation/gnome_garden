@@ -5,7 +5,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.SourceLaunchBatch
-  alias GnomeGarden.Agents.Procurement.SourceAutoConfigurator
+  alias GnomeGarden.Procurement.SourcePipeline
 
   @buckets [:needs_configuration, :ready, :credentials_needed, :attention, :all]
   @configuration_batch_limit 10
@@ -682,7 +682,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     case Task.Supervisor.start_child(GnomeGarden.AsyncSupervisor, fn ->
            result =
              safe_configuration_result(fn ->
-               SourceAutoConfigurator.configure_source(source.procurement_source, actor: actor)
+               SourcePipeline.auto_configure_source(source.procurement_source, actor: actor)
              end)
 
            send(parent, {:source_configuration_finished, source.id, source.name, result})
@@ -705,7 +705,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
              Enum.map(sources, fn source ->
                result =
                  safe_configuration_result(fn ->
-                   SourceAutoConfigurator.configure_source(source.procurement_source,
+                   SourcePipeline.auto_configure_source(source.procurement_source,
                      actor: actor
                    )
                  end)
@@ -743,6 +743,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         discovery_started: 0,
         already_pending: 0,
         already_configured: 0,
+        credentials_needed: 0,
         errors: 0
       },
       fn
@@ -757,6 +758,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
         {_source, {:ok, %{mode: :already_configured}}}, summary ->
           update_in(summary.already_configured, &(&1 + 1))
+
+        {_source, {:ok, %{mode: :credentials_needed}}}, summary ->
+          update_in(summary.credentials_needed, &(&1 + 1))
 
         {_source, {:error, _error}}, summary ->
           update_in(summary.errors, &(&1 + 1))
@@ -775,6 +779,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   defp source_configuration_message(source_name, :already_configured),
     do: "#{source_name} is already configured."
+
+  defp source_configuration_message(source_name, :credentials_needed),
+    do: "#{source_name} needs credentials before discovery can continue."
 
   defp configuration_error_message(source_name, error) do
     "#{source_name} could not be configured. Browser discovery could not get clear listing data: #{format_configuration_error(error)}"
@@ -796,6 +803,10 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
       ) <>
       if(summary.already_configured > 0,
         do: "; #{summary.already_configured} already configured",
+        else: ""
+      ) <>
+      if(summary.credentials_needed > 0,
+        do: "; #{summary.credentials_needed} need credentials",
         else: ""
       ) <>
       if(summary.errors > 0, do: "; #{summary.errors} failed", else: "")

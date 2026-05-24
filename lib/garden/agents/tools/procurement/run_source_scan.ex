@@ -17,7 +17,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.RunSourceScan do
   @impl true
   def run(%{source_id: source_id}, context) do
     with {:ok, source} <- Procurement.get_procurement_source(source_id),
-         {:ok, result} <- GnomeGarden.Agents.Procurement.ScannerRouter.scan(source, context) do
+         {:ok, result} <-
+           Procurement.run_source_scan(%{source_id: source_id}, scanner_context: context) do
       RunOutputLogger.log(context, %{
         output_type: :procurement_source,
         output_id: source.id,

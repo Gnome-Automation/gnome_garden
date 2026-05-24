@@ -242,7 +242,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       change fn changeset, ctx ->
         changeset
         |> Ash.Changeset.after_action(fn _changeset, record ->
-          case GnomeGarden.Agents.Procurement.SourceAutoConfigurator.configure_source(record,
+          case GnomeGarden.Procurement.SourcePipeline.auto_configure_source(record,
                  actor: ctx.actor,
                  async?: false
                ) do

@@ -4,8 +4,8 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Agents.Procurement.SourceAutoConfigurator
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.SourcePipeline
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -72,7 +72,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   def handle_event("start_discovery", _params, socket) do
     source = socket.assigns.source.procurement_source
 
-    case SourceAutoConfigurator.configure_source(source, actor: socket.assigns.current_user) do
+    case SourcePipeline.auto_configure_source(source, actor: socket.assigns.current_user) do
       {:ok, %{mode: :auto_configured}} ->
         {:noreply,
          socket
@@ -96,6 +96,12 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
          socket
          |> refresh_source()
          |> put_flash(:info, "#{source.name} is already queued for discovery.")}
+
+      {:ok, %{mode: :credentials_needed}} ->
+        {:noreply,
+         socket
+         |> refresh_source()
+         |> put_flash(:error, "#{source.name} needs credentials before discovery can continue.")}
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not start discovery: #{inspect(error)}")}
