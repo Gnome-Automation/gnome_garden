@@ -156,7 +156,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
          {:ok, scored} <- score_bids(prepared, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, enrich_bids(saved),
-        extraction: extraction
+        extraction: extraction,
+        listing_url: listing_url
       )
     end
   end
@@ -179,7 +180,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
       # Skip detail-page browser enrichment for the HTTP path.
-      complete_scan(source, bids, filtered.excluded, scored, saved, 0)
+      complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
     end
   end
 
@@ -200,7 +201,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
-      complete_scan(source, bids, filtered.excluded, scored, saved, 0)
+      complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
     end
   end
 
@@ -217,7 +218,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp planetbids_portal_id(_source), do: nil
 
-  defp complete_scan(source, bids, excluded, scored, saved, enriched, opts \\ []) do
+  defp complete_scan(source, bids, excluded, scored, saved, enriched, opts) do
     source = current_source(source)
     diagnostics = scan_diagnostics(scored, saved, excluded, opts)
     source = maybe_mark_requires_login(source, diagnostics)
@@ -226,6 +227,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       source,
       %{metadata: scan_metadata(source, bids, excluded, scored, saved, enriched, diagnostics)}
     )
+
+    record_crawl_evidence(source, bids, excluded, scored, saved, enriched, diagnostics, opts)
 
     {:ok,
      %{
@@ -252,6 +255,23 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   end
 
   defp maybe_mark_requires_login(source, _diagnostics), do: source
+
+  defp record_crawl_evidence(source, bids, excluded, scored, saved, enriched, diagnostics, opts) do
+    listing_url = Keyword.get(opts, :listing_url) || source.url
+
+    _ =
+      GnomeGarden.Procurement.CrawlRecorder.record_listing_scan(source, %{
+        listing_url: listing_url,
+        diagnostics: diagnostics,
+        bids: bids,
+        excluded: excluded,
+        scored: scored,
+        saved: saved,
+        enriched: enriched
+      })
+
+    :ok
+  end
 
   defp current_source(source) do
     case Procurement.get_procurement_source(source.id) do

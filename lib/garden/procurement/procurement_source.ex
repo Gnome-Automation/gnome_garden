@@ -486,6 +486,12 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       public? true
       description "Operator-tunable filters used by scanners such as SAM.gov"
     end
+
+    has_many :crawl_runs, GnomeGarden.Procurement.CrawlRun do
+      destination_attribute :procurement_source_id
+      public? true
+      description "Durable traversal and scan evidence for this source"
+    end
   end
 
   calculations do

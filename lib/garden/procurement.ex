@@ -54,6 +54,51 @@ defmodule GnomeGarden.Procurement do
         args: [:organization_id]
     end
 
+    resource GnomeGarden.Procurement.CrawlRun do
+      define :list_crawl_runs, action: :read
+      define :list_crawl_runs_for_source, action: :for_source, args: [:procurement_source_id]
+      define :get_crawl_run, action: :read, get_by: [:id]
+      define :start_crawl_run, action: :start
+      define :complete_crawl_run, action: :complete
+      define :fail_crawl_run, action: :fail
+      define :delete_crawl_run, action: :destroy
+    end
+
+    resource GnomeGarden.Procurement.CrawlPage do
+      define :list_crawl_pages, action: :read
+      define :list_crawl_pages_for_run, action: :for_run, args: [:crawl_run_id]
+      define :get_crawl_page, action: :read, get_by: [:id]
+      define :record_crawl_page, action: :record
+      define :delete_crawl_page, action: :destroy
+    end
+
+    resource GnomeGarden.Procurement.CrawlEdge do
+      define :list_crawl_edges, action: :read
+      define :list_crawl_edges_for_run, action: :for_run, args: [:crawl_run_id]
+      define :get_crawl_edge, action: :read, get_by: [:id]
+      define :record_crawl_edge, action: :record
+      define :delete_crawl_edge, action: :destroy
+    end
+
+    resource GnomeGarden.Procurement.PageArtifact do
+      define :list_page_artifacts, action: :read
+      define :list_page_artifacts_for_page, action: :for_page, args: [:crawl_page_id]
+      define :get_page_artifact, action: :read, get_by: [:id]
+      define :record_page_artifact, action: :record
+      define :delete_page_artifact, action: :destroy
+    end
+
+    resource GnomeGarden.Procurement.ExtractionCandidate do
+      define :list_extraction_candidates, action: :read
+      define :list_extraction_candidates_for_run, action: :for_run, args: [:crawl_run_id]
+      define :get_extraction_candidate, action: :read, get_by: [:id]
+      define :propose_extraction_candidate, action: :propose
+      define :accept_extraction_candidate, action: :accept
+      define :reject_extraction_candidate, action: :reject
+      define :mark_duplicate_extraction_candidate, action: :mark_duplicate
+      define :delete_extraction_candidate, action: :destroy
+    end
+
     resource GnomeGarden.Procurement.SourceSearchFilter do
       define :list_source_search_filters, action: :for_source, args: [:procurement_source_id]
       define :get_source_search_filter, action: :read, get_by: [:id]

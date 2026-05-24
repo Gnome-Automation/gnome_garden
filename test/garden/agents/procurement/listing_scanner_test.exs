@@ -51,6 +51,18 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
 
     assert result.extracted == 1
     assert result.source == source.name
+
+    assert {:ok, [run]} = Procurement.list_crawl_runs_for_source(source.id)
+    assert run.status == :completed
+    assert run.seed_url == @source_url
+    assert run.summary["extracted"] == 1
+
+    assert {:ok, [page]} = Procurement.list_crawl_pages_for_run(run.id)
+    assert page.url == @source_url
+    assert page.fetch_status == :fetched
+
+    assert {:ok, [_artifact]} = Procurement.list_page_artifacts_for_page(page.id)
+    assert {:ok, [_candidate]} = Procurement.list_extraction_candidates_for_run(run.id)
   end
 
   test "login-gated PlanetBids sources still require credentials" do
