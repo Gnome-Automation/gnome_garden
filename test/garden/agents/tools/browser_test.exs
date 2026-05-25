@@ -1,7 +1,7 @@
-defmodule GnomeGarden.Agents.Tools.BrowserTest do
+defmodule GnomeGarden.BrowserTest do
   use ExUnit.Case, async: false
 
-  alias GnomeGarden.Agents.Tools.Browser
+  alias GnomeGarden.Browser
 
   setup do
     original_mode = Application.get_env(:gnome_garden, :browser_mode)

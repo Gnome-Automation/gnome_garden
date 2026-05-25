@@ -1,19 +1,21 @@
 defmodule GnomeGarden.Agents.Procurement.SourceConfigurator do
   @moduledoc """
-  Launches browser-based site discovery for procurement sources.
+  Runs bounded source inspection for procurement sources that do not have a
+  known deterministic provider configuration.
 
-  This is the "figure out the site once" path: SmartScanner uses Jido browser
-  primitives to discover a source's scrape configuration and saves it for later
-  listing scans.
+  The old open-ended Jido SmartScanner path has been removed. Unknown public
+  sources are inspected and recorded in crawl traversal storage; if the system
+  cannot derive a deterministic configuration, the source is moved to
+  `:config_failed` with a clear operator-facing error.
   """
 
   require Logger
 
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
-  alias GnomeGarden.Agents.Workers.Procurement.SmartScanner
+  alias GnomeGarden.Procurement.SourceInspector
 
-  @default_timeout 600_000
+  @default_timeout 60_000
 
   @type start_result ::
           {:ok, %{source: ProcurementSource.t(), mode: :started | :already_pending}}
@@ -91,31 +93,29 @@ defmodule GnomeGarden.Agents.Procurement.SourceConfigurator do
   end
 
   defp run_discovery(source_id, actor) do
-    runtime_instance_id =
-      "smart_scanner_discovery:#{source_id}:#{System.unique_integer([:positive])}"
+    case Procurement.get_procurement_source(source_id, actor_opts(actor)) do
+      {:ok, source} ->
+        case SourceInspector.inspect_source(source,
+               actor: actor,
+               timeout_ms: @default_timeout,
+               max_links: 150
+             ) do
+          {:ok, %{inspection: %{"requires_login" => true}}} ->
+            mark_discovery_failed(
+              source_id,
+              actor,
+              "Credentials are required before this source can be configured."
+            )
 
-    case GnomeGarden.Jido.start_agent(SmartScanner, id: runtime_instance_id) do
-      {:ok, pid} ->
-        try do
-          case SmartScanner.discover_site(pid, source_id, timeout: @default_timeout) do
-            {:ok, result} ->
-              Logger.info(
-                "[SourceConfigurator] Discovery finished for #{source_id}: #{inspect(result, limit: 10)}"
-              )
+          {:ok, %{run: run}} ->
+            mark_discovery_failed(
+              source_id,
+              actor,
+              "Source inspection completed in crawl run #{run.id}, but no deterministic public listing pattern could be derived automatically."
+            )
 
-              :ok
-
-            {:error, reason} ->
-              mark_discovery_failed(source_id, actor, reason)
-          end
-        rescue
-          exception ->
-            mark_discovery_failed(source_id, actor, exception)
-        catch
-          kind, reason ->
-            mark_discovery_failed(source_id, actor, {kind, reason})
-        after
-          _ = GnomeGarden.Jido.stop_agent(runtime_instance_id)
+          {:error, reason} ->
+            mark_discovery_failed(source_id, actor, reason)
         end
 
       {:error, reason} ->

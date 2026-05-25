@@ -19,12 +19,10 @@ defmodule GnomeGarden.Application do
       {Phoenix.PubSub, name: GnomeGarden.PubSub},
       {Task.Supervisor, name: GnomeGarden.AsyncSupervisor},
 
-      # Jido agent infrastructure
+      # Durable run/deployment tracking
       {Registry, keys: :unique, name: GnomeGarden.Agents.SessionRegistry},
       {DynamicSupervisor, name: GnomeGarden.Agents.AgentSupervisor, strategy: :one_for_one},
       GnomeGarden.Agents.AgentTracker,
-      {Jido.Signal.Bus, name: GnomeGarden.SignalBus},
-      GnomeGarden.Jido,
 
       # Start to serve requests, typically the last entry
       GnomeGardenWeb.Endpoint,
@@ -34,9 +32,6 @@ defmodule GnomeGarden.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: GnomeGarden.Supervisor]
-
-    # Attach streaming telemetry handler
-    GnomeGarden.Agents.StreamingHandler.attach()
 
     Supervisor.start_link(children, opts)
   end

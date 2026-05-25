@@ -1,84 +1,18 @@
 defmodule GnomeGarden.Agents.Templates do
   @moduledoc """
-  Registry of agent templates for the swarm system.
+  Registry of durable automation templates.
 
-  Each template maps a name to a configuration that specifies
-  which worker agent module to use and its operational parameters.
+  The old Jido AI worker templates have been removed. Templates now point only
+  at direct application workers that can be launched by `DeploymentRunner`
+  through `execute_run/1`.
   """
 
   @templates %{
-    "base" => %{
-      module: GnomeGarden.Agents.Workers.Base,
-      description: "Full-capability agent with all tools including swarm orchestration",
-      model: :fast,
-      max_iterations: 25
-    },
-    "coder" => %{
-      module: GnomeGarden.Agents.Workers.Coder,
-      description: "Full-capability coding agent with all tools",
-      model: :coding,
-      max_iterations: 25
-    },
-    "test_runner" => %{
-      module: GnomeGarden.Agents.Workers.TestRunner,
-      description: "Runs tests and reports results (read-only)",
-      model: :fast,
-      max_iterations: 15
-    },
-    "reviewer" => %{
-      module: GnomeGarden.Agents.Workers.Reviewer,
-      description: "Reviews code changes for bugs and style issues (read-only)",
-      model: :fast,
-      max_iterations: 15
-    },
-    "docs_writer" => %{
-      module: GnomeGarden.Agents.Workers.DocsWriter,
-      description: "Writes documentation and comments",
-      model: :fast,
-      max_iterations: 15
-    },
-    "researcher" => %{
-      module: GnomeGarden.Agents.Workers.Researcher,
-      description: "Explores and analyzes codebase structure",
-      model: :fast,
-      max_iterations: 15
-    },
-    "refactorer" => %{
-      module: GnomeGarden.Agents.Workers.Refactorer,
-      description: "Refactors code with full tool access",
-      model: :fast,
-      max_iterations: 25
-    },
-    # Procurement and commercial discovery workers
-    "bid_scanner" => %{
-      module: GnomeGarden.Agents.Workers.Procurement.BidScanner,
-      description: "Scans procurement portals for bid opportunities",
-      model: :fast,
-      max_iterations: 30
-    },
     "procurement_source_scan" => %{
       module: GnomeGarden.Agents.Workers.Procurement.SourceScan,
-      description: "Runs a deterministic procurement scan for a single source",
+      description: "Runs a deterministic procurement scan for a single source through AshLua",
       model: :fast,
       max_iterations: 1
-    },
-    "source_discovery" => %{
-      module: GnomeGarden.Agents.Workers.Procurement.SourceDiscovery,
-      description: "Discovers new procurement portals to monitor",
-      model: :fast,
-      max_iterations: 25
-    },
-    "smart_scanner" => %{
-      module: GnomeGarden.Agents.Workers.Procurement.SmartScanner,
-      description: "Autonomous browser-based scanner that figures out any site",
-      model: :capable,
-      max_iterations: 25
-    },
-    "target_discovery" => %{
-      module: GnomeGarden.Agents.Workers.Commercial.TargetDiscovery,
-      description: "Discovers target companies and saves reviewable discovery findings",
-      model: :fast,
-      max_iterations: 30
     }
   }
 

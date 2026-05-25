@@ -14,19 +14,8 @@ defmodule GnomeGarden.Acquisition.Runner do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Procurement
 
-  @source_defaults %{
-    discovery: "Commercial Target Discovery",
-    procurement: "SoCal Bid Scanner",
-    company_site: "Commercial Target Discovery",
-    directory: "Commercial Target Discovery",
-    job_board: "Commercial Target Discovery",
-    news_feed: "Commercial Target Discovery"
-  }
-
-  @program_defaults %{
-    discovery: "Commercial Target Discovery",
-    procurement: "SoCal Source Discovery"
-  }
+  @source_defaults %{}
+  @program_defaults %{}
 
   def launch_source(source_or_id, opts \\ []) do
     actor = Keyword.get(opts, :actor)

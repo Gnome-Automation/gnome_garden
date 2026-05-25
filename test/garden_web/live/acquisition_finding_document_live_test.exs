@@ -18,7 +18,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
         description: "Controls retrofit with a real due date and clear scope.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-24 17:00:00Z],
+        due_at: future_due_at(30),
         region: :oc,
         score_total: 86,
         score_tier: :hot,
@@ -98,7 +98,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
         description: "Controls retrofit with packet URL evidence.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-24 17:00:00Z],
+        due_at: future_due_at(30),
         region: :oc,
         score_total: 85,
         score_tier: :hot
@@ -154,7 +154,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
         description: "Controls retrofit with source packet analysis.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-24 17:00:00Z],
+        due_at: future_due_at(30),
         region: :oc,
         score_total: 84,
         score_tier: :hot
@@ -213,7 +213,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
         description: "Controls retrofit with a packet that may need to be relinked.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-25 17:00:00Z],
+        due_at: future_due_at(30),
         region: :oc,
         score_total: 82,
         score_tier: :hot,
@@ -272,7 +272,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
         description: "Controls retrofit that can reuse a previously captured packet.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-26 17:00:00Z],
+        due_at: future_due_at(30),
         region: :oc,
         score_total: 85,
         score_tier: :hot,
@@ -334,7 +334,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
         description: "Procurement finding that still needs a substantive packet.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-27 17:00:00Z],
+        due_at: future_due_at(30),
         region: :oc,
         score_total: 78,
         score_tier: :hot,
@@ -418,6 +418,12 @@ defmodule GnomeGardenWeb.AcquisitionFindingDocumentLiveTest do
       document_role: :solicitation,
       notes: "Required before commercial handoff."
     })
+  end
+
+  defp future_due_at(days) do
+    DateTime.utc_now()
+    |> DateTime.add(days, :day)
+    |> DateTime.truncate(:second)
   end
 
   defp create_unlinked_document! do

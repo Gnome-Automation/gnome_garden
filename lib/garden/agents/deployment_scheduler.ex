@@ -3,8 +3,8 @@ defmodule GnomeGarden.Agents.DeploymentScheduler do
   Evaluates deployment schedules and launches due runs.
 
   This module is intentionally thin. Oban decides when schedules should be
-  checked, while `DeploymentRunner` remains responsible for creating
-  deployment-centric runs and starting the actual Jido runtime.
+  checked, while `DeploymentRunner` creates deployment-centric runs and starts
+  direct application workers.
   """
 
   require Logger

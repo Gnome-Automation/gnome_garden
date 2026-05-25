@@ -115,7 +115,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFindingTest do
 
   test "logs discovery-record outputs onto the originating agent run when run context is present" do
     _ = TemplateCatalog.sync_templates()
-    {:ok, template} = Agents.get_agent_template_by_name("target_discovery")
+    {:ok, template} = Agents.get_agent_template_by_name("procurement_source_scan")
 
     {:ok, deployment} =
       Agents.create_agent_deployment(%{

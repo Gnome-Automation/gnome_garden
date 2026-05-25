@@ -5,38 +5,11 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
   Includes scoring and deduplication.
   """
 
-  use Jido.Action,
-    name: "save_bid",
-    description: "Save a bid opportunity to the database with scoring",
-    schema: [
-      title: [type: :string, required: true, doc: "Bid title"],
-      url: [type: :string, required: true, doc: "Bid URL"],
-      external_id: [type: :string, doc: "External bid ID"],
-      description: [type: :string, doc: "Bid description"],
-      agency: [type: :string, doc: "Issuing agency"],
-      location: [type: :string, doc: "Location"],
-      region: [type: :atom, doc: "Region code"],
-      source_url: [type: :string, doc: "URL of the source that found this"],
-      procurement_source_id: [type: :string, doc: "ID of the ProcurementSource"],
-      posted_at: [type: :string, doc: "Posted date (ISO8601)"],
-      due_at: [type: :string, doc: "Due date (ISO8601)"],
-      estimated_value: [type: :float, doc: "Estimated value"],
-      score_recommendation: [type: :string, doc: "Human-readable scoring recommendation"],
-      score_icp_matches: [type: {:array, :string}, doc: "Matched ICP lanes from scoring"],
-      score_risk_flags: [type: {:array, :string}, doc: "Risk flags from scoring"],
-      score_company_profile_key: [type: :string, doc: "Company profile key used to score"],
-      score_company_profile_mode: [type: :string, doc: "Company profile mode used to score"],
-      score_source_confidence: [type: :atom, doc: "Confidence level for the source family"],
-      scores: [type: :map, doc: "Pre-calculated scores"],
-      metadata: [type: :map, doc: "Additional source and scoring metadata"]
-    ]
-
   require Logger
 
   alias GnomeGarden.Agents.RunOutputLogger
   alias GnomeGarden.Procurement
 
-  @impl true
   def run(params, context) do
     # Check if bid already exists
     case find_existing(params) do

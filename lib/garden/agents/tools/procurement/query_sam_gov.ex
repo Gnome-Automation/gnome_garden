@@ -16,27 +16,10 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
 
   alias GnomeGarden.Commercial.CompanyProfileContext
 
-  use Jido.Action,
-    name: "query_sam_gov",
-    description: "Query SAM.gov for federal procurement opportunities",
-    schema: [
-      keywords: [type: :string, doc: "Search keywords (e.g., 'SCADA PLC controls')"],
-      naics_codes: [
-        type: {:array, :string},
-        default: [],
-        doc: "NAICS codes to filter by"
-      ],
-      posted_from: [type: :string, doc: "Start date (MM/DD/YYYY)"],
-      posted_to: [type: :string, doc: "End date (MM/DD/YYYY)"],
-      state: [type: :string, default: "CA", doc: "State code to filter by"],
-      limit: [type: :integer, default: 100, doc: "Max results to return"]
-    ]
-
   require Logger
 
   @sam_api_base "https://api.sam.gov/opportunities/v2/search"
 
-  @impl true
   def run(params, context) do
     api_key = get_api_key(context)
 

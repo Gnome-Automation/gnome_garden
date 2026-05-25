@@ -2,54 +2,11 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveSourceConfig do
   @moduledoc """
   Save discovered scraping configuration for a procurement source.
 
-  This tool is used by SmartScanner after it figures out how to scrape a site.
+  This helper is used by deterministic source bootstrap paths after they
+  identify a reliable listing pattern.
   The saved config allows future scans to be deterministic (no LLM needed).
   """
 
-  use Jido.Action,
-    name: "save_source_config",
-    description: """
-    Save discovered scraping configuration for a procurement site.
-    Call this after you've figured out how to extract bids from a site.
-    The saved config will be used for future deterministic (fast, cheap) scans.
-    """,
-    schema: [
-      procurement_source_id: [
-        type: :string,
-        required: true,
-        doc: "ID of the ProcurementSource to update"
-      ],
-      listing_url: [
-        type: :string,
-        required: true,
-        doc: "URL of the bid listings page (after navigation)"
-      ],
-      listing_selector: [
-        type: :string,
-        required: true,
-        doc: "CSS selector for bid rows (e.g., 'table.bids tr', '.bid-item')"
-      ],
-      title_selector: [type: :string, required: true, doc: "CSS selector for title within row"],
-      date_selector: [type: :string, doc: "CSS selector for due date within row"],
-      link_selector: [type: :string, doc: "CSS selector for detail link within row"],
-      description_selector: [
-        type: :string,
-        doc: "CSS selector for description if visible in listing"
-      ],
-      agency_selector: [type: :string, doc: "CSS selector for agency/department"],
-      pagination_type: [
-        type: :string,
-        doc: "Pagination type: 'numbered', 'load_more', 'infinite', 'none'"
-      ],
-      pagination_selector: [
-        type: :string,
-        doc: "CSS selector for pagination (next button or page links)"
-      ],
-      search_selector: [type: :string, doc: "CSS selector for search input if site has search"],
-      notes: [type: :string, doc: "Any notes about the site structure"]
-    ]
-
-  @impl true
   def run(params, _context) do
     scrape_config = %{
       listing_url: params.listing_url,

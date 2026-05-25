@@ -11,26 +11,11 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
   Returns structured bid data for scoring and storage.
   """
 
-  use Jido.Action,
-    name: "scan_planetbids",
-    description: "Scan a PlanetBids procurement portal for bid opportunities",
-    schema: [
-      portal_id: [
-        type: :string,
-        required: true,
-        doc: "PlanetBids portal ID (e.g., '47688' for Irvine)"
-      ],
-      portal_name: [type: :string, doc: "Human-readable name for the portal"],
-      max_results: [type: :integer, default: 50, doc: "Maximum bids to return"],
-      source_url: [type: :string, doc: "Known source URL for the portal"]
-    ]
-
   require Logger
 
   @planetbids_base "https://vendors.planetbids.com/portal"
   @pbsystem_base "https://pbsystem.planetbids.com/portal"
 
-  @impl true
   def run(%{portal_id: portal_id} = params, context) do
     portal_name = Map.get(params, :portal_name, "Portal #{portal_id}")
     max_results = Map.get(params, :max_results, 50)

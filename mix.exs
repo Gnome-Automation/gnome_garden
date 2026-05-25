@@ -41,23 +41,12 @@ defmodule GnomeGarden.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      # Jido ecosystem (Hex packages)
-      {:jido, "~> 2.2", override: true},
-      {:jido_ai, "~> 2.0"},
-      {:jido_action, "~> 2.2", override: true},
-      {:jido_signal, "~> 2.1", override: true},
-      {:jido_composer, "~> 0.4", override: true},
+      # Browser automation engine. jido_browser still pulls the minimal Jido
+      # libraries it needs transitively; the app no longer owns a Jido runtime.
       {:libgraph, "~> 0.16", override: true},
       {:jido_browser, "~> 2.0"},
       {:req_llm, "~> 1.7"},
       {:llm_db, "~> 2026.3"},
-
-      # Extended Jido ecosystem
-      {:ash_jido, github: "agentjido/ash_jido", branch: "main", override: true},
-      {:jido_shell, github: "agentjido/jido_shell", branch: "main"},
-      {:jido_vfs, github: "agentjido/jido_vfs", branch: "main"},
-      {:jido_skill, github: "agentjido/jido_skill", branch: "main"},
-      {:jido_mcp, github: "agentjido/jido_mcp", branch: "main"},
 
       # Data
       {:yaml_elixir, "~> 2.12"},

@@ -2,7 +2,7 @@ defmodule GnomeGarden.Procurement.Bid do
   @moduledoc """
   Discovered bid/RFP opportunity.
 
-  Stores procurement opportunities found by the BidScanner agent,
+  Stores procurement opportunities found by deterministic procurement scans,
   including scoring based on service match, geography, value, and tech fit.
   """
 
@@ -10,8 +10,8 @@ defmodule GnomeGarden.Procurement.Bid do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Procurement,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshLua.Resource, AshJido, AshStateMachine],
-    notifiers: [AshJido.Notifier, Ash.Notifier.PubSub]
+    extensions: [AshLua.Resource, AshStateMachine],
+    notifiers: [Ash.Notifier.PubSub]
 
   postgres do
     table "bids"
@@ -22,13 +22,6 @@ defmodule GnomeGarden.Procurement.Bid do
       reference :signal, on_delete: :nilify
       reference :organization, on_delete: :nilify
     end
-  end
-
-  jido do
-    signal_bus(GnomeGarden.SignalBus)
-
-    publish :create, "procurement.bid.created", include: :all
-    publish :score, "procurement.bid.scored", include: :all
   end
 
   state_machine do

@@ -88,23 +88,6 @@ config :llm_db,
     ]
   }
 
-# Jido AI model aliases - using ReqLLM's built-in Z.AI Coder/Coding Plan provider.
-# `zai_coding_plan` delegates to the Z.AI Coder endpoint and supports the
-# newest coding-plan models in LLMDB.
-config :jido_ai,
-  model_aliases: %{
-    fast: "zai_coding_plan:glm-4.5-air",
-    capable: "zai_coding_plan:glm-4.7",
-    powerful: "zai_coding_plan:glm-5",
-    coding: "zai_coding_plan:glm-4.7"
-  }
-
-config :jido_ai,
-  llm_defaults: %{
-    text: %{model: :fast, temperature: 0.2, max_tokens: 8192, timeout: 120_000},
-    stream: %{model: :fast, temperature: 0.2, max_tokens: 8192, timeout: 120_000}
-  }
-
 config :gnome_garden, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
@@ -146,7 +129,6 @@ config :spark,
         :user_identity,
         :postgres,
         :resource,
-        :jido,
         :state_machine,
         :code_interface,
         :actions,

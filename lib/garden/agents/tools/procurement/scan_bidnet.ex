@@ -7,16 +7,6 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanBidNet do
   extracts the visible AI overview plus timing metadata for scoring.
   """
 
-  use Jido.Action,
-    name: "scan_bidnet",
-    description: "Scan BidNet Direct procurement listings for bid opportunities",
-    schema: [
-      url: [type: :string, required: true, doc: "BidNet listing URL to scan"],
-      source_name: [type: :string, doc: "Human-readable source name"],
-      max_results: [type: :integer, default: 20, doc: "Maximum listing rows to process"],
-      detail_limit: [type: :integer, default: 20, doc: "Maximum detail pages to hydrate"]
-    ]
-
   require Logger
 
   @base_url "https://www.bidnetdirect.com"
@@ -32,7 +22,6 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanBidNet do
     "&nbsp;" => " "
   }
 
-  @impl true
   def run(params, context) do
     url = Map.fetch!(params, :url)
     source_name = Map.get(params, :source_name, "BidNet Direct")

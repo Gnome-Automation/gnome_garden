@@ -2,8 +2,9 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   @moduledoc """
   Deployment-centric orchestration for runtime agent executions.
 
-  The durable source of truth is `AgentRun`. `AgentTracker` is updated as a
-  live cache for active runtime state on the current node.
+    The durable source of truth is `AgentRun`. Runtime execution is now limited
+    to direct application workers that expose `execute_run/1`; open-ended Jido
+    AI agent execution has been removed from production paths.
   """
 
   require Logger
@@ -63,7 +64,6 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
       runtime_instance_id = run.runtime_instance_id || run.id
 
       AgentTracker.mark_complete(runtime_instance_id, :cancelled, "Cancelled by operator")
-      _ = stop_runtime(runtime_instance_id)
 
       case Agents.cancel_agent_run(run, actor: actor) do
         {:ok, cancelled_run} ->
@@ -170,53 +170,9 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
     runtime_instance_id = run.id
     _ = Code.ensure_loaded(template.module)
 
-    if function_exported?(template.module, :execute_run, 1) do
-      start_direct_runtime(run, deployment, template, actor, runtime_instance_id)
-    else
-      start_ai_runtime(run, deployment, template, actor, runtime_instance_id)
-    end
-  end
-
-  defp start_ai_runtime(run, deployment, template, actor, runtime_instance_id) do
-    case GnomeGarden.Jido.start_agent(template.module, id: runtime_instance_id) do
-      {:ok, pid} ->
-        AgentTracker.register(runtime_instance_id, pid, deployment.agent.template, run.task)
-
-        with {:ok, started_run} <-
-               Agents.start_agent_run(
-                 run,
-                 %{runtime_instance_id: runtime_instance_id},
-                 actor: actor
-               ) do
-          persist_message(%{
-            agent_run_id: started_run.id,
-            role: :user,
-            content: started_run.task,
-            metadata: %{
-              deployment_name: deployment.name,
-              template: deployment.agent.template,
-              run_kind: started_run.run_kind,
-              schedule_slot: started_run.schedule_slot,
-              requested_by_user_id: actor && actor.id,
-              requested_by_team_member_id: started_run.requested_by_team_member_id
-            }
-          })
-
-          Task.start(fn ->
-            execute_run(started_run, deployment, template, pid, actor)
-          end)
-
-          {:ok, started_run}
-        else
-          {:error, error} ->
-            AgentTracker.mark_complete(runtime_instance_id, :error, inspect(error))
-            _ = stop_runtime(runtime_instance_id)
-            fail_pending_run(run, error, actor)
-        end
-
-      {:error, reason} ->
-        fail_pending_run(run, reason, actor)
-    end
+    if function_exported?(template.module, :execute_run, 1),
+      do: start_direct_runtime(run, deployment, template, actor, runtime_instance_id),
+      else: fail_pending_run(run, {:unsupported_runtime, template.module}, actor)
   end
 
   defp start_direct_runtime(run, deployment, template, actor, runtime_instance_id) do
@@ -256,49 +212,6 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
       {:error, error} ->
         AgentTracker.mark_complete(runtime_instance_id, :error, inspect(error))
         fail_pending_run(run, error, actor)
-    end
-  end
-
-  defp execute_run(run, deployment, template, pid, actor) do
-    task = run.task
-    runtime_instance_id = run.runtime_instance_id || run.id
-
-    try do
-      result =
-        template.module.ask_sync(
-          pid,
-          task,
-          timeout: timeout_for(deployment),
-          tool_context: %{
-            agent_run_id: run.id,
-            actor_id: actor && actor.id,
-            actor_email: actor && actor.email,
-            deployment_id: deployment.id,
-            deployment_name: deployment.name,
-            run_id: run.id,
-            runtime_instance_id: runtime_instance_id,
-            memory_namespace: deployment.memory_namespace,
-            source_scope: deployment.source_scope,
-            deployment_config: deployment.config,
-            project_dir: File.cwd!()
-          }
-        )
-
-      case result do
-        {:ok, response} ->
-          handle_success(run, runtime_instance_id, response, actor)
-
-        {:error, reason} ->
-          handle_failure(run, runtime_instance_id, reason, actor)
-      end
-    rescue
-      exception ->
-        handle_failure(run, runtime_instance_id, exception, actor)
-    catch
-      kind, reason ->
-        handle_failure(run, runtime_instance_id, {kind, reason}, actor)
-    after
-      _ = stop_runtime(runtime_instance_id)
     end
   end
 
@@ -613,19 +526,6 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
 
   defp metadata_value(metadata, key) when is_map(metadata) do
     Map.get(metadata, key) || Map.get(metadata, Atom.to_string(key))
-  end
-
-  defp stop_runtime(runtime_instance_id) do
-    case GnomeGarden.Jido.stop_agent(runtime_instance_id) do
-      :ok ->
-        :ok
-
-      {:error, :not_found} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to stop runtime #{runtime_instance_id}: #{inspect(reason)}")
-    end
   end
 
   defp timeout_for(%{config: %{"timeout_ms" => timeout_ms}})

@@ -25,7 +25,7 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
         description: "Controls retrofit with enough detail for review gating.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-20 17:00:00Z]
+        due_at: future_due_at(30)
       })
 
     {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
@@ -75,7 +75,7 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
         description: "Controls work that is outside the current geography.",
         agency: "Regional Utility",
         location: "Reno, NV",
-        due_at: ~U[2026-05-24 17:00:00Z],
+        due_at: future_due_at(30),
         score_total: 64,
         score_tier: :prospect
       })
@@ -140,7 +140,7 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
         description: "Federal opportunity outside the current service geography.",
         agency: "Federal Buyer",
         location: "Boise, ID",
-        due_at: ~U[2026-05-24 17:00:00Z],
+        due_at: future_due_at(30),
         score_total: 61,
         score_tier: :prospect,
         metadata: %{
@@ -186,7 +186,7 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
         description: "Controls work that needs source packet review later.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-24 17:00:00Z],
+        due_at: future_due_at(30),
         score_total: 72,
         score_tier: :warm
       })
@@ -230,7 +230,7 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
         description: "Clear procurement finding ready for manual promotion.",
         agency: "City of Anaheim",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-21 17:00:00Z],
+        due_at: future_due_at(5),
         score_total: 84,
         score_tier: :hot
       })
@@ -286,7 +286,7 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
         description: "Controls modernization work with clear scope and urgency.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-28 17:00:00Z],
+        due_at: future_due_at(5),
         score_total: 88,
         score_tier: :hot
       })
@@ -338,7 +338,7 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
         description: "Procurement finding that still needs a real packet.",
         agency: "Regional Utility",
         location: "Anaheim, CA",
-        due_at: ~U[2026-05-29 17:00:00Z],
+        due_at: future_due_at(5),
         score_total: 80,
         score_tier: :hot
       })
@@ -382,6 +382,12 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
       document_role: :solicitation,
       notes: "Required before commercial handoff."
     })
+  end
+
+  defp future_due_at(days) do
+    DateTime.utc_now()
+    |> DateTime.add(days, :day)
+    |> DateTime.truncate(:second)
   end
 
   defp create_intake_note_document!(finding) do

@@ -4,17 +4,9 @@ defmodule GnomeGarden.Agents.Tools.Procurement.RunSourceScan do
   current agent run.
   """
 
-  use Jido.Action,
-    name: "run_source_scan",
-    description: "Run a procurement source scan for a specific source ID",
-    schema: [
-      source_id: [type: :string, required: true, doc: "ID of the ProcurementSource to scan"]
-    ]
-
   alias GnomeGarden.Agents.RunOutputLogger
   alias GnomeGarden.Procurement
 
-  @impl true
   def run(%{source_id: source_id}, context) do
     with {:ok, source} <- Procurement.get_procurement_source(source_id),
          {:ok, result} <-

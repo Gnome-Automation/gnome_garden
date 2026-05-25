@@ -1,14 +1,13 @@
 defmodule GnomeGarden.Agents.DefaultDeployments do
   @moduledoc """
-  Idempotent bootstrap for the first real operator-facing agent deployments.
+  Idempotent bootstrap for operator-facing automation deployments.
 
-  The defaults are created once and then left for operators to tune without
-  subsequent syncs overwriting their edits.
+  Open-ended Jido AI defaults were removed. Source-specific procurement scans
+  are created on demand by `GnomeGarden.Procurement.ScanRunner`.
   """
 
   alias GnomeGarden.Agents
   alias GnomeGarden.Agents.TemplateCatalog
-  alias GnomeGarden.Commercial.CompanyProfileContext
 
   @type sync_result :: %{created: [String.t()], existing: [String.t()]}
 
@@ -44,78 +43,7 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
   @spec specs() :: [map()]
   def specs, do: default_specs()
 
-  defp default_specs do
-    profile_scope = CompanyProfileContext.deployment_scope(mode: :industrial_plus_software)
-    industrial_scope = CompanyProfileContext.deployment_scope(mode: :industrial_core)
-
-    [
-      %{
-        name: "SoCal Source Discovery",
-        template: "source_discovery",
-        description:
-          "Find new public-sector procurement portals weekly across Southern California.",
-        visibility: :shared,
-        enabled: true,
-        schedule: "0 16 * * 2",
-        memory_namespace: "agents.source_discovery.socal",
-        config: %{
-          timeout_ms: 600_000,
-          company_profile_key: profile_scope.company_profile_key
-        },
-        source_scope: %{
-          regions: ["oc", "la", "ie", "sd"],
-          industries: ["water", "wastewater", "utility", "school", "port"],
-          portal_types: ["planetbids", "opengov", "custom"],
-          company_profile_mode: industrial_scope.company_profile_mode,
-          notes: "Find new public-sector procurement portals across Southern California."
-        }
-      },
-      %{
-        name: "SoCal Bid Scanner",
-        template: "bid_scanner",
-        description:
-          "Scan approved procurement sources three times weekly for controller, SCADA, integration, and operations-software opportunities.",
-        visibility: :shared,
-        enabled: true,
-        schedule: "0 14 * * 1,3,5",
-        memory_namespace: "agents.bid_scanner.socal",
-        config: %{
-          timeout_ms: 600_000,
-          company_profile_key: industrial_scope.company_profile_key
-        },
-        source_scope: %{
-          regions: ["oc", "la", "ie", "sd"],
-          source_types: ["planetbids", "opengov", "sam_gov", "bidnet"],
-          keywords: industrial_scope.keywords,
-          bidnet_query_keywords: industrial_scope.bidnet_query_keywords,
-          sam_gov_naics_codes: industrial_scope.sam_gov_naics_codes,
-          industries: industrial_scope.target_industries,
-          company_profile_mode: industrial_scope.company_profile_mode,
-          notes: industrial_scope.notes
-        }
-      },
-      %{
-        name: "Commercial Target Discovery",
-        template: "target_discovery",
-        description:
-          "On-demand focused company discovery sweeps launched from acquisition programs.",
-        visibility: :shared,
-        enabled: true,
-        schedule: nil,
-        memory_namespace: "agents.target_discovery.commercial",
-        config: %{
-          timeout_ms: 600_000,
-          company_profile_key: profile_scope.company_profile_key
-        },
-        source_scope: %{
-          company_profile_mode: profile_scope.company_profile_mode,
-          industries: profile_scope.target_industries,
-          preferred_engagements: profile_scope.preferred_engagements,
-          notes: "Used by commercial discovery programs to run targeted market discovery sweeps."
-        }
-      }
-    ]
-  end
+  defp default_specs, do: []
 
   defp attrs_for(spec, template_ids) do
     agent_id =

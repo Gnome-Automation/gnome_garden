@@ -36,7 +36,8 @@ defmodule GnomeGarden.Repo.Migrations.AddProcurementCrawlTraversal do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create index(:procurement_crawl_runs, [:status, :run_kind])
@@ -69,7 +70,8 @@ defmodule GnomeGarden.Repo.Migrations.AddProcurementCrawlTraversal do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :crawl_page_id, :uuid, null: false
     end
@@ -128,7 +130,8 @@ defmodule GnomeGarden.Repo.Migrations.AddProcurementCrawlTraversal do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :from_page_id, :uuid, null: false
       add :to_page_id, :uuid
@@ -216,7 +219,8 @@ defmodule GnomeGarden.Repo.Migrations.AddProcurementCrawlTraversal do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :first_seen_from_page_id,
           references(:procurement_crawl_pages,

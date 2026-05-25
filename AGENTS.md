@@ -1,6 +1,7 @@
 # GnomeGarden Agent Guidelines
 
-This is a Phoenix + Ash + Jido application. Follow these guidelines strictly.
+This is a Phoenix + Ash + Oban + AshLua application. `jido_browser` is kept only
+as the browser automation engine. Follow these guidelines strictly.
 
 ## Critical: Documentation Lookup
 
@@ -467,7 +468,7 @@ prepare filter expr(user_id == ^actor(:id))  # Scope to current user
    end
    ```
 10. **Don't build Ash queries in callers when the shape has meaning** - If a
-    LiveView, controller, worker, Jido action, or service needs filtering,
+    LiveView, controller, worker, browser action, or service needs filtering,
     sorting, loading, authorization checks, or a single-record lookup, model
     that as an intent-named read/action and expose it through the domain.
 
@@ -745,70 +746,23 @@ mix ash.reset
 mix ash.rollback
 ```
 
-## Jido Agent Framework
+## Agentic Runtime Boundary
 
-Jido is used for autonomous agents with pure functional design. Agents are immutable data structures.
+The app no longer owns a Jido agent runtime. Keep autonomous behavior inside
+Ash actions, AshOban jobs, AshLua/AshAI orchestration, and bounded Elixir
+workers.
 
-### Defining an Agent
-
-```elixir
-defmodule GnomeGarden.Agents.TaskAgent do
-  use Jido.Agent,
-    name: "task_agent",
-    description: "Manages task workflows",
-    schema: [
-      status: [type: :atom, default: :pending],
-      result: [type: :any, default: nil]
-    ],
-    signal_routes: [
-      {"process", GnomeGarden.Actions.ProcessTask},
-      {"complete", GnomeGarden.Actions.CompleteTask}
-    ]
-end
-```
-
-### Defining Actions
-
-```elixir
-defmodule GnomeGarden.Actions.ProcessTask do
-  use Jido.Action,
-    name: "process_task",
-    description: "Processes a task",
-    schema: [
-      task_id: [type: :string, required: true]
-    ]
-
-  def run(params, context) do
-    # Pure function - return new state
-    {:ok, %{status: :processing, task_id: params.task_id}}
-  end
-end
-```
-
-### Using Agents
-
-```elixir
-# Create agent (pure data)
-agent = GnomeGarden.Agents.TaskAgent.new()
-
-# Execute action (pure transformation)
-{agent, directives} = GnomeGarden.Agents.TaskAgent.cmd(agent, {ProcessTask, %{task_id: "123"}})
-
-# Deploy to runtime (OTP process)
-{:ok, pid} = GnomeGarden.Jido.start_agent(TaskAgent, id: "task-1")
-
-# Send signals
-{:ok, agent} = Jido.AgentServer.call(pid, Jido.Signal.new!("process", %{task_id: "123"}))
-```
-
-### Jido Best Practices
-
-1. **Agents are pure data** - No side effects in `cmd/2`
-2. **Actions return state changes** - Not the side effects themselves
-3. **Directives describe effects** - Emit, Spawn, Schedule, Stop
-4. **Test without processes** - Agent logic is deterministic
-5. **Check the wider Jido ecosystem before inventing custom orchestration** - Prefer existing Jido patterns, packages, and runtime primitives when the problem is agent/runtime orchestration
-6. **Keep durable business rules in Ash unless the problem is truly agent orchestration** - Use Jido for coordination and runtime behavior, not as a replacement for core data/domain modeling
+- Keep `jido_browser` only as the browser automation engine behind
+  `GnomeGarden.Browser`.
+- Do not add new `Jido.Agent`, `Jido.AI.Agent`, `Jido.Action`, `AshJido`, or
+  `GnomeGarden.Jido` modules.
+- Browser traversal belongs behind procurement-shaped Ash actions and
+  `GnomeGarden.Browser`, not raw agent click/fill/evaluate loops.
+- Keep durable run/deployment records for audit/history when useful, but run
+  production work through direct workers that expose `execute_run/1` or through
+  AshOban resource actions.
+- Use AshLua transactions when an agentic flow needs to compose multiple Ash
+  writes so failures roll back cleanly.
 
 ## Phoenix & LiveView Guidelines
 

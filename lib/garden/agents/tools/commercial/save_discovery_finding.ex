@@ -8,48 +8,6 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding do
   becomes owned pipeline.
   """
 
-  use Jido.Action,
-    name: "save_discovery_finding",
-    description: """
-    Save a discovered company into Operations + Commercial, then sync an
-    Acquisition finding. Creates or updates the Organization first, optionally
-    records a Person and affiliation, then creates or updates a discovery record
-    plus supporting evidence for human review. Call this for every company you find that may need
-    automation, controls, service, or software work.
-    """,
-    schema: [
-      company_name: [type: :string, required: true, doc: "Company name"],
-      discovery_program_id: [
-        type: :string,
-        doc: "Optional Commercial.DiscoveryProgram id to attach this discovery result to"
-      ],
-      company_description: [
-        type: :string,
-        required: true,
-        doc:
-          "What the company does, 2-3 sentences. Example: 'Craft brewery producing 50K barrels/year in Anaheim. Has 3 production lines with older Allen-Bradley PLCs. Recently expanded to a new canning line.'"
-      ],
-      industry: [
-        type: :string,
-        doc: "Industry: brewery, biotech, manufacturing, water, food_bev, etc."
-      ],
-      location: [type: :string, doc: "City, State"],
-      website: [type: :string, doc: "Company website URL"],
-      signal: [
-        type: :string,
-        required: true,
-        doc:
-          "Why this target matters RIGHT NOW. Be specific: 'Hiring PLC programmer per Indeed posting 3/15', 'Expanding with new $2M production line per press release', 'Posted RFP for SCADA upgrade'"
-      ],
-      employee_count: [type: :integer, doc: "Approximate number of employees"],
-      contact_first_name: [type: :string, doc: "Contact first name if found"],
-      contact_last_name: [type: :string, doc: "Contact last name if found"],
-      contact_title: [type: :string, doc: "Contact job title if found"],
-      contact_email: [type: :string, doc: "Contact email if found"],
-      contact_phone: [type: :string, doc: "Contact phone if found"],
-      source_url: [type: :string, doc: "URL where you found this information"]
-    ]
-
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.DiscoveryIdentityResolver
@@ -58,7 +16,6 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding do
   alias GnomeGarden.Support.WebIdentity
   alias GnomeGarden.Agents.RunOutputLogger
 
-  @impl true
   def run(params, context) do
     existing_discovery_record = existing_discovery_record(params)
     existing_discovery_evidence = existing_discovery_evidence(params)

@@ -55746,11 +55746,10 @@
           "name": "Bid",
           "table": "bids",
           "domain": "GnomeGarden.Procurement",
-          "description": "Discovered bid/RFP opportunity.\n\nStores procurement opportunities found by the BidScanner agent,\nincluding scoring based on service match, geography, value, and tech fit.\n\n\n\n",
+          "description": "Discovered bid/RFP opportunity.\n\nStores procurement opportunities found by deterministic procurement scans,\nincluding scoring based on service match, geography, value, and tech fit.\n\n\n\n",
           "extensions": [
             "Ash.Notifier.PubSub",
             "Ash.Resource.Dsl",
-            "AshJido",
             "AshLua.Resource",
             "AshPostgres.DataLayer",
             "AshStateMachine"
@@ -62649,7 +62648,7 @@
       "resource_count": 9
     }
   ],
-  "generated_at": "2026-05-25T05:24:43Z",
+  "generated_at": "2026-05-25T05:51:07Z",
   "resource_count": 69,
   "resources_by_module": {
     "GnomeGarden.Agents.AgentMessage": {
@@ -93968,11 +93967,10 @@
       "name": "Bid",
       "table": "bids",
       "domain": "GnomeGarden.Procurement",
-      "description": "Discovered bid/RFP opportunity.\n\nStores procurement opportunities found by the BidScanner agent,\nincluding scoring based on service match, geography, value, and tech fit.\n\n\n\n",
+      "description": "Discovered bid/RFP opportunity.\n\nStores procurement opportunities found by deterministic procurement scans,\nincluding scoring based on service match, geography, value, and tech fit.\n\n\n\n",
       "extensions": [
         "Ash.Notifier.PubSub",
         "Ash.Resource.Dsl",
-        "AshJido",
         "AshLua.Resource",
         "AshPostgres.DataLayer",
         "AshStateMachine"

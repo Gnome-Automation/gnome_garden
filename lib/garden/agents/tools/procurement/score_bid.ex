@@ -7,27 +7,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScoreBid do
   work scoring well when it supports operations.
   """
 
-  use Jido.Action,
-    name: "score_bid",
-    description: "Score a bid opportunity using shared procurement and discovery heuristics",
-    schema: [
-      title: [type: :string, required: true, doc: "Bid title"],
-      description: [type: :string, doc: "Bid description or synopsis"],
-      location: [type: :string, doc: "Location (city, state)"],
-      region: [type: :atom, doc: "Region code"],
-      estimated_value: [type: :float, doc: "Estimated contract value in dollars"],
-      agency: [type: :string, doc: "Issuing agency name"],
-      keywords: [type: {:array, :string}, default: [], doc: "Keywords found in the bid"],
-      company_profile_key: [type: :string, doc: "Optional company profile key override"],
-      company_profile_mode: [type: :string, doc: "Optional company profile mode override"],
-      source_type: [type: :atom, doc: "Procurement source family"],
-      source_name: [type: :string, doc: "Human-readable source name"],
-      source_url: [type: :string, doc: "Originating listing URL"]
-    ]
-
   alias GnomeGarden.Commercial.MarketFocus
 
-  @impl true
   def run(params, context) when is_map(context) do
     attrs =
       params

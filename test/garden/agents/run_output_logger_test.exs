@@ -7,7 +7,7 @@ defmodule GnomeGarden.Agents.RunOutputLoggerTest do
 
   test "prefers the durable agent_run_id from tool_context over the runtime request run_id" do
     _ = TemplateCatalog.sync_templates()
-    {:ok, template} = Agents.get_agent_template_by_name("bid_scanner")
+    {:ok, template} = Agents.get_agent_template_by_name("procurement_source_scan")
 
     {:ok, deployment} =
       Agents.create_agent_deployment(%{

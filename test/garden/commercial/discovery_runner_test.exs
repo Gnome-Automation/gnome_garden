@@ -4,7 +4,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
   alias GnomeGarden.Agents
   alias GnomeGarden.Commercial
 
-  test "launch_discovery_program ensures a durable deployment and records launch metadata" do
+  test "launch_discovery_program returns a clear AshLua porting error" do
     {:ok, discovery_program} =
       Commercial.create_discovery_program(%{
         name: "OC Packaging Sweep",
@@ -15,35 +15,15 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         watch_channels: ["job_board", "news_site"]
       })
 
-    run_id = Ecto.UUID.generate()
-
-    assert {:ok, %{program: refreshed_program, deployment: deployment, run: run}} =
+    assert {:error, message} =
              Commercial.launch_discovery_program(
                discovery_program,
-               launch_fun: fn deployment_id, opts ->
-                 assert is_binary(deployment_id)
-                 assert opts[:task] =~ discovery_program.name
-                 assert opts[:task] =~ discovery_program.id
-                 assert opts[:task] =~ "packaging line automation orange county"
-
-                 {:ok, %{id: run_id, deployment_id: deployment_id, state: :pending}}
+               launch_fun: fn _deployment_id, _opts ->
+                 flunk("launch_fun should not be called before the AshLua commercial port")
                end
              )
 
-    assert run.id == run_id
-    assert deployment.name == "Commercial Target Discovery"
-    assert refreshed_program.last_run_at
-    assert metadata_value(refreshed_program.metadata, :last_agent_run_id) == run_id
-    assert metadata_value(refreshed_program.metadata, :last_agent_deployment_id) == deployment.id
-
-    assert metadata_value(refreshed_program.metadata, :last_agent_run_state) in [
-             :pending,
-             "pending"
-           ]
-
-    assert {:ok, template} = Agents.get_agent_template_by_name("target_discovery")
-    assert {:ok, persisted_deployment} = Agents.get_agent_deployment_by_name(deployment.name)
-    assert persisted_deployment.agent_id == template.id
+    assert message =~ "Commercial target discovery has not been ported to AshLua yet"
   end
 
   test "launch_discovery_program refuses archived programs" do
@@ -75,8 +55,14 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
       })
 
     {:ok, discovery_program} = Commercial.activate_discovery_program(discovery_program)
-    {:ok, deployment} = Commercial.DiscoveryRunner.ensure_target_discovery_deployment()
-    {:ok, template} = Agents.get_agent_template_by_name("target_discovery")
+    {:ok, template} = Agents.get_agent_template_by_name("procurement_source_scan")
+
+    {:ok, deployment} =
+      Agents.create_agent_deployment(%{
+        name: "Discovery Overlap Guard #{System.unique_integer([:positive])}",
+        agent_id: template.id,
+        enabled: true
+      })
 
     {:ok, run} =
       Agents.create_agent_run(%{
@@ -100,9 +86,5 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
                  flunk("launch_fun should not be called while a run is active")
                end
              )
-  end
-
-  defp metadata_value(metadata, key) do
-    Map.get(metadata, key) || Map.get(metadata, to_string(key))
   end
 end
