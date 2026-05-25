@@ -37,7 +37,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Procurement,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshOban, AshStateMachine],
+    extensions: [AshLua.Resource, AshOban, AshStateMachine],
     notifiers: [Ash.Notifier.PubSub]
 
   postgres do

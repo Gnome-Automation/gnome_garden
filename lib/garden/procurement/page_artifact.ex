@@ -7,7 +7,7 @@ defmodule GnomeGarden.Procurement.PageArtifact do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Procurement,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource, AshLua.Resource]
 
   admin do
     table_columns [:crawl_page_id, :kind, :byte_size, :content_hash, :inserted_at]

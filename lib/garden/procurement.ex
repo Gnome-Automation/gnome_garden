@@ -8,7 +8,7 @@ defmodule GnomeGarden.Procurement do
 
   use Ash.Domain,
     otp_app: :gnome_garden,
-    extensions: [AshAdmin.Domain]
+    extensions: [AshAdmin.Domain, AshLua.Domain]
 
   alias GnomeGarden.Procurement.ScanRunner
   alias GnomeGarden.Procurement.SourcePipeline

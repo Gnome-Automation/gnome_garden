@@ -107,4 +107,53 @@ defmodule GnomeGarden.Procurement.SourcePipelineTest do
     assert result.pipeline["mode"] == "scanned"
     assert result.pipeline["saved"] == 1
   end
+
+  test "AshLua transactions roll back procurement source writes" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Transactional Lua Source",
+        url: "https://example.com/transactional",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    script = """
+    local _, err = utils.transaction.transact({ "procurement.procurement_source" }, function()
+      assert(procurement.procurement_source.update({
+        id = "#{source.id}",
+        requires_login = true
+      }))
+
+      utils.transaction.rollback("rollback test")
+    end)
+
+    return err
+    """
+
+    {[error], _lua} = AshLua.eval!(script, otp_app: :gnome_garden)
+    error = normalize_lua_value(error)
+
+    assert %{"errors" => [%{"message" => "rollback test"} | _]} = error
+    assert {:ok, reloaded} = Procurement.get_procurement_source(source.id)
+    refute reloaded.requires_login
+  end
+
+  defp normalize_lua_value(value) when is_list(value) do
+    cond do
+      Enum.all?(value, &match?({key, _value} when is_binary(key), &1)) ->
+        Map.new(value, fn {key, nested_value} -> {key, normalize_lua_value(nested_value)} end)
+
+      Enum.all?(value, &match?({key, _value} when is_integer(key), &1)) ->
+        value
+        |> Enum.sort_by(fn {key, _value} -> key end)
+        |> Enum.map(fn {_key, nested_value} -> normalize_lua_value(nested_value) end)
+
+      true ->
+        Enum.map(value, &normalize_lua_value/1)
+    end
+  end
+
+  defp normalize_lua_value(value), do: value
 end

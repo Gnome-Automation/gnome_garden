@@ -7,7 +7,7 @@ defmodule GnomeGarden.Procurement.CrawlEdge do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Procurement,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource, AshLua.Resource]
 
   admin do
     table_columns [:crawl_run_id, :edge_type, :from_page_id, :to_url, :link_text]

@@ -7,7 +7,7 @@ defmodule GnomeGarden.Procurement.CrawlPage do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Procurement,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource],
+    extensions: [AshAdmin.Resource, AshLua.Resource],
     notifiers: [Ash.Notifier.PubSub]
 
   admin do

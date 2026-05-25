@@ -167,6 +167,9 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
       |> Lua.set!([:source, :inspect], inspect_function(ref, caller, source, opts))
       |> Lua.set!([:source, :configure], configure_function(ref, caller, actor, async?))
       |> Lua.set!([:source, :scan], scan_function(ref, caller, source, scanner, scanner_context))
+      |> then(
+        &AshLua.new(otp_app: :gnome_garden, actor: actor, context: lua_context(opts), lua: &1)
+      )
 
     try do
       {[raw_result], _lua} = Lua.eval!(lua, script)
@@ -175,6 +178,14 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
       error in [Lua.CompilerException, Lua.RuntimeException] ->
         {:error, Exception.message(error)}
     end
+  end
+
+  defp lua_context(opts) do
+    case Keyword.get(opts, :context, %{}) do
+      context when is_map(context) -> context
+      _other -> %{}
+    end
+    |> Map.put(:source_pipeline?, true)
   end
 
   defp inspect_function(ref, caller, source, opts) do

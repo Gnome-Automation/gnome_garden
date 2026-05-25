@@ -7,7 +7,7 @@ defmodule GnomeGarden.Procurement.ExtractionCandidate do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Procurement,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource, AshLua.Resource]
 
   admin do
     table_columns [:crawl_run_id, :crawl_page_id, :candidate_type, :status, :confidence]

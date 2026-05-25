@@ -10,7 +10,7 @@ defmodule GnomeGarden.Procurement.Bid do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Procurement,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshJido, AshStateMachine],
+    extensions: [AshLua.Resource, AshJido, AshStateMachine],
     notifiers: [AshJido.Notifier, Ash.Notifier.PubSub]
 
   postgres do

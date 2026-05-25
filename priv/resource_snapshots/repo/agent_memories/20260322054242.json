@@ -129,7 +129,7 @@
     "global": null,
     "strategy": null
   },
-  "repo": "Elixir.GnomeHub.Repo",
+  "repo": "Elixir.GnomeGarden.Repo",
   "schema": null,
   "table": "agent_memories"
 }
