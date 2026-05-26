@@ -136,10 +136,22 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     update :mark_paid do
+      require_atomic? false
       accept []
       change transition_state(:paid)
       change set_attribute(:paid_on, &Date.utc_today/0)
       change set_attribute(:balance_amount, Decimal.new("0"))
+
+      change after_action(fn _changeset, invoice, _context ->
+        loaded = Ash.load!(invoice, [:organization], authorize?: false)
+
+        Task.start(fn ->
+          receipt = GnomeGarden.Mailer.PaymentReceiptEmail.build(loaded)
+          GnomeGarden.Mailer.deliver(receipt)
+        end)
+
+        {:ok, invoice}
+      end)
     end
 
     update :partial do
