@@ -33,7 +33,7 @@ defmodule GnomeGardenWeb.ClientPortal.PaymentShowLive do
         {@payment.payment_number}
         <:actions>
           <.button navigate={~p"/portal/payments"}>Back</.button>
-          <a href={~p"/portal/payments/#{@payment.id}/export"} class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20">
+          <a href={~p"/portal/payments/#{@payment.id}/export"} target="_blank" rel="external" class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20">
             Export CSV
           </a>
           <a href={~p"/portal/payments/#{@payment.id}/export?format=pdf"} target="_blank" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500">

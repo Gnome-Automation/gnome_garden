@@ -207,8 +207,10 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromFixedFeeSchedule do
     end
   end
 
-  defp generate_invoice_number(agreement, position) when is_integer(position) do
-    ref = Map.get(agreement, :reference_number) || String.slice(agreement.id, 0, 8)
-    "#{ref}-#{position}"
+  defp generate_invoice_number(_agreement, _position) do
+    {:ok, %{rows: [[val]]}} =
+      GnomeGarden.Repo.query("SELECT nextval('finance_invoice_number_seq')", [])
+
+    "INV-" <> String.pad_leading("#{val}", 4, "0")
   end
 end

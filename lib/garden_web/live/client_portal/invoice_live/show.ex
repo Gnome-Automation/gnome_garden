@@ -38,6 +38,8 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Show do
           <:actions>
             <a
               href={~p"/finance/invoices/#{@invoice}/export?format=csv"}
+              target="_blank"
+              rel="external"
               class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
             >
               Export CSV

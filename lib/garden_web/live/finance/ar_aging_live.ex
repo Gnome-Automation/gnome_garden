@@ -4,29 +4,46 @@ defmodule GnomeGardenWeb.Finance.ArAgingLive do
   import GnomeGardenWeb.Finance.Helpers
 
   alias GnomeGarden.Finance
+  alias GnomeGarden.Operations
 
   @impl true
   def mount(_params, _session, socket) do
-    invoices = load_open_invoices(socket.assigns.current_user)
+    actor = socket.assigns.current_user
+    invoices = load_open_invoices(actor)
     bucketed = bucket_invoices(invoices)
+    orgs = load_orgs(actor)
 
     {:ok,
      socket
      |> assign(:page_title, "Accounts Receivable Aging")
      |> assign(:bucketed, bucketed)
      |> assign(:grand_total, compute_grand_total(invoices))
-     |> assign(:show_all, false)}
+     |> assign(:show_all, false)
+     |> assign(:org_id, "")
+     |> assign(:orgs, orgs)}
   end
 
   @impl true
   def handle_event("toggle_show_all", _params, socket) do
     show_all = !socket.assigns.show_all
-    invoices = load_invoices_for_report(socket.assigns.current_user, show_all: show_all)
+    invoices = load_invoices_for_report(socket.assigns.current_user, show_all: show_all, org_id: socket.assigns.org_id)
     bucketed = bucket_invoices(invoices)
 
     {:noreply,
      socket
      |> assign(:show_all, show_all)
+     |> assign(:bucketed, bucketed)
+     |> assign(:grand_total, compute_grand_total(invoices))}
+  end
+
+  @impl true
+  def handle_event("filter_org", %{"org_id" => org_id}, socket) do
+    invoices = load_invoices_for_report(socket.assigns.current_user, show_all: socket.assigns.show_all, org_id: org_id)
+    bucketed = bucket_invoices(invoices)
+
+    {:noreply,
+     socket
+     |> assign(:org_id, org_id)
      |> assign(:bucketed, bucketed)
      |> assign(:grand_total, compute_grand_total(invoices))}
   end
@@ -41,12 +58,38 @@ defmodule GnomeGardenWeb.Finance.ArAgingLive do
           All outstanding (unpaid) invoices grouped by how long they have been overdue — Current, 1–30 days, 31–60 days, 61–90 days, and 90+ days. Use this to prioritize collections and spot clients who are habitually slow to pay.
         </:subtitle>
         <:actions>
-          <label class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer">
-            <input type="checkbox" phx-click="toggle_show_all" checked={@show_all} class="rounded" />
-            Show paid/void
-          </label>
+          <a
+            href={"/finance/ar-aging/export?format=csv&show_all=#{@show_all}&org_id=#{@org_id}"}
+            target="_blank"
+            rel="external"
+            class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20"
+          >
+            Export CSV
+          </a>
+          <a
+            href={"/finance/ar-aging/export?format=pdf&show_all=#{@show_all}&org_id=#{@org_id}"}
+            target="_blank"
+            class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500"
+          >
+            Export PDF
+          </a>
         </:actions>
       </.page_header>
+
+      <div class="flex items-center gap-4 mb-6">
+        <form phx-change="filter_org" class="flex-1 max-w-xs">
+          <select name="org_id" class="w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-2 focus:outline-emerald-600 dark:bg-white/10 dark:text-white dark:ring-white/20">
+            <option value="">All clients</option>
+            <%= for org <- @orgs do %>
+              <option value={org.id} selected={@org_id == to_string(org.id)}><%= org.name %></option>
+            <% end %>
+          </select>
+        </form>
+        <label class="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 cursor-pointer select-none">
+          <input type="checkbox" phx-click="toggle_show_all" checked={@show_all} class="rounded" />
+          Show paid / void
+        </label>
+      </div>
 
       <div class="space-y-6">
         <%= for {key, label} <- buckets() do %>
@@ -126,31 +169,46 @@ defmodule GnomeGardenWeb.Finance.ArAgingLive do
   end
 
   defp load_open_invoices(actor) do
-    load_invoices_for_report(actor, show_all: false)
+    load_invoices_for_report(actor, show_all: false, org_id: "")
   end
 
   defp load_invoices_for_report(actor, opts) do
     show_all = Keyword.get(opts, :show_all, false)
+    org_id = Keyword.get(opts, :org_id, "")
 
-    if show_all do
-      case Finance.list_invoices(
-             actor: actor,
-             query: [
-               sort: [due_on: :asc, inserted_at: :desc],
-               load: [:status_variant, organization: []]
-             ]
-           ) do
-        {:ok, invoices} -> invoices
-        {:error, error} -> raise "failed to load AR aging invoices: #{inspect(error)}"
+    invoices =
+      if show_all do
+        case Finance.list_invoices(
+               actor: actor,
+               query: [
+                 sort: [due_on: :asc, inserted_at: :desc],
+                 load: [:status_variant, organization: []]
+               ]
+             ) do
+          {:ok, list} -> list
+          {:error, error} -> raise "failed to load AR aging invoices: #{inspect(error)}"
+        end
+      else
+        case Finance.list_open_invoices(
+               actor: actor,
+               query: [load: [:status_variant, organization: []]]
+             ) do
+          {:ok, list} -> list
+          {:error, error} -> raise "failed to load AR aging invoices: #{inspect(error)}"
+        end
       end
+
+    if org_id && org_id != "" do
+      Enum.filter(invoices, &(to_string(&1.organization_id) == org_id))
     else
-      case Finance.list_open_invoices(
-             actor: actor,
-             query: [load: [:status_variant, organization: []]]
-           ) do
-        {:ok, invoices} -> invoices
-        {:error, error} -> raise "failed to load AR aging invoices: #{inspect(error)}"
-      end
+      invoices
+    end
+  end
+
+  defp load_orgs(actor) do
+    case Operations.list_organizations(actor: actor, query: [sort: [name: :asc]]) do
+      {:ok, orgs} -> orgs
+      _ -> []
     end
   end
 

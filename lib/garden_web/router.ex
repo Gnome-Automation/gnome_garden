@@ -320,6 +320,7 @@ defmodule GnomeGardenWeb.Router do
   scope "/", GnomeGardenWeb do
     pipe_through :browser
 
+    get "/finance/ar-aging/export", ArAgingExportController, :export
     get "/portal/agreements/batch-export", ClientPortal.AgreementExportController, :batch
     get "/portal/agreements/:id/export", ClientPortal.AgreementExportController, :show
     get "/portal/invoices/batch-export", InvoiceExportController, :portal_batch

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AR Aging Report — <%= @today %></title>
+  <style>
+    @page { margin: 0.5in; size: letter landscape; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      color: #111;
+      background: white;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #059669;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-left img { width: 36px; height: 36px; }
+    .company-name { font-size: 20px; font-weight: 700; color: #059669; }
+    .report-title { font-size: 18px; font-weight: 700; color: #111; }
+    .report-date { font-size: 11px; color: #6b7280; margin-top: 2px; }
+    .bucket { margin-bottom: 28px; }
+    .bucket-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #374151;
+      padding: 6px 0;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 0;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      padding: 6px 10px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #f3f4f6;
+      color: #374151;
+    }
+    .text-right { text-align: right; }
+    .subtotal-row td {
+      font-weight: 600;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+    }
+    .empty { padding: 10px; color: #9ca3af; font-style: italic; font-size: 11px; }
+    .grand-total {
+      margin-top: 24px;
+      text-align: right;
+      font-size: 14px;
+      font-weight: 700;
+      color: #111;
+      border-top: 2px solid #059669;
+      padding-top: 10px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .badge-issued { background: #fef3c7; color: #92400e; }
+    .badge-partial { background: #dbeafe; color: #1e40af; }
+    .badge-paid { background: #d1fae5; color: #065f46; }
+    .badge-void { background: #fee2e2; color: #991b1b; }
+    .badge-default { background: #f3f4f6; color: #374151; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <img src="https://gnomeautomation.com/images/gnome-icon-clean-192.png" alt="logo" />
+      <span class="company-name"><%= @company_name %></span>
+    </div>
+    <div style="text-align: right;">
+      <div class="report-title">Accounts Receivable Aging</div>
+      <div class="report-date">Generated <%= @today %></div>
+    </div>
+  </div>
+
+  <%= for {key, label} <- @buckets do %>
+    <% bucket = Map.get(@bucketed, key, []) %>
+    <div class="bucket">
+      <div class="bucket-title"><%= label %> (<%= length(bucket) %>)</div>
+      <%= if bucket == [] do %>
+        <p class="empty">No invoices</p>
+      <% else %>
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Client</th>
+              <th>Issued</th>
+              <th>Due</th>
+              <th>Days Overdue</th>
+              <th class="text-right">Balance Due</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <%= for inv <- bucket do %>
+              <% days = if inv.due_on, do: max(0, Date.diff(@today, inv.due_on)), else: 0 %>
+              <tr>
+                <td><%= inv.invoice_number %></td>
+                <td><%= (inv.organization && inv.organization.name) || "—" %></td>
+                <td><%= if inv.issued_on, do: Date.to_string(inv.issued_on), else: "—" %></td>
+                <td><%= if inv.due_on, do: Date.to_string(inv.due_on), else: "—" %></td>
+                <td><%= if days > 0, do: to_string(days), else: "—" %></td>
+                <td class="text-right"><%= if inv.balance_amount, do: "$#{Decimal.to_string(Decimal.round(inv.balance_amount, 2))}", else: "—" %></td>
+                <td>
+                  <span class={"badge badge-#{inv.status}"}>
+                    <%= String.capitalize(to_string(inv.status)) %>
+                  </span>
+                </td>
+              </tr>
+            <% end %>
+            <% subtotal = Enum.reduce(bucket, Decimal.new("0"), fn inv, acc ->
+              if inv.status in [:issued, :partial],
+                do: Decimal.add(acc, inv.balance_amount || Decimal.new("0")),
+                else: acc
+            end) %>
+            <tr class="subtotal-row">
+              <td colspan="5">Subtotal</td>
+              <td class="text-right">$<%= Decimal.to_string(Decimal.round(subtotal, 2)) %></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="grand-total">
+    Grand Total Outstanding: $<%= Decimal.to_string(Decimal.round(@grand_total, 2)) %>
+  </div>
+</body>
+</html>
