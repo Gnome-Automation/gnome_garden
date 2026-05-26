@@ -27,11 +27,11 @@ defmodule GnomeGardenWeb.ClientPortal.PaymentLive do
         Payment History
         <:subtitle>All payments received from your account.</:subtitle>
         <:actions>
-          <a
-            href={~p"/portal/payments/export"}
-            class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500"
-          >
+          <a href={~p"/portal/payments/export"} class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20">
             Export CSV
+          </a>
+          <a href={~p"/portal/payments/export?format=pdf"} target="_blank" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500">
+            Export PDF
           </a>
         </:actions>
       </.page_header>
@@ -41,21 +41,12 @@ defmodule GnomeGardenWeb.ClientPortal.PaymentLive do
           <table class="min-w-full divide-y divide-base-content/10">
             <thead>
               <tr class="bg-base-200/50">
-                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">
-                  Payment #
-                </th>
-                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">
-                  Date
-                </th>
-                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">
-                  Method
-                </th>
-                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-base-content/60">
-                  Amount
-                </th>
-                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">
-                  Applied To
-                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Payment #</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Date</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Method</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-base-content/60">Amount</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Applied To</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Export</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-base-content/5">
@@ -70,10 +61,17 @@ defmodule GnomeGardenWeb.ClientPortal.PaymentLive do
                   {payment.payment_method |> to_string() |> String.upcase()}
                 </td>
                 <td class="px-4 py-3 text-sm font-medium text-base-content text-right">
-                  ${ Decimal.to_string(Decimal.round(payment.amount, 2)) }
+                  ${Decimal.to_string(Decimal.round(payment.amount, 2))}
                 </td>
                 <td class="px-4 py-3 text-sm text-base-content/60">
                   {invoice_numbers(payment.applications)}
+                </td>
+                <td class="px-4 py-3 text-sm">
+                  <div class="flex items-center gap-2">
+                    <a href={~p"/portal/payments/#{payment.id}/export"} class="text-xs font-medium text-emerald-600 hover:underline">CSV</a>
+                    <span class="text-base-content/20">|</span>
+                    <a href={~p"/portal/payments/#{payment.id}/export?format=pdf"} target="_blank" class="text-xs font-medium text-emerald-600 hover:underline">PDF</a>
+                  </div>
                 </td>
               </tr>
             </tbody>

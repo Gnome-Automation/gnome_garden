@@ -52,9 +52,10 @@ defmodule GnomeGardenWeb.PaymentsExportController do
     end
   end
 
-  # Portal export: GET /portal/payments/export
-  def portal(conn, _params) do
+  # Portal batch export: GET /portal/payments/export?format=csv|pdf
+  def portal(conn, params) do
     actor = conn.assigns[:current_client_user]
+    format = Map.get(params, "format", "csv")
 
     payments =
       case Finance.list_portal_payments(actor: actor) do
@@ -62,7 +63,34 @@ defmodule GnomeGardenWeb.PaymentsExportController do
         _ -> []
       end
 
-    send_csv(conn, payments, filename: "my-payment-history")
+    case format do
+      "pdf" -> render_pdf(conn, payments, title: "my-payment-history")
+      _ -> send_csv(conn, payments, filename: "my-payment-history")
+    end
+  end
+
+  # Portal single payment export: GET /portal/payments/:id/export?format=csv|pdf
+  def portal_show(conn, %{"id" => id} = params) do
+    actor = conn.assigns[:current_client_user]
+    format = Map.get(params, "format", "csv")
+
+    case Ash.get(Payment, id,
+           domain: Finance,
+           load: [:organization, applications: [:invoice]],
+           authorize?: false
+         ) do
+      {:ok, payment} when payment.organization_id == actor.organization_id ->
+        case format do
+          "pdf" -> render_pdf(conn, [payment], title: payment.payment_number)
+          _ -> send_csv(conn, [payment], filename: payment.payment_number)
+        end
+
+      _ ->
+        conn
+        |> put_status(404)
+        |> put_view(html: GnomeGardenWeb.ErrorHTML)
+        |> render(:"404")
+    end
   end
 
   # --- Private ---
