@@ -89,6 +89,9 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:amount]} label="Amount" type="number" step="0.01" />
+              <p class="mt-1 text-xs text-base-content/50">
+                Auto-filled from the selected payment. Override if applying a partial amount.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:applied_on]} type="date" label="Applied On" />
