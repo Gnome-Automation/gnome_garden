@@ -28,10 +28,10 @@ defmodule GnomeGardenWeb.ClientPortal.PaymentLive do
         <:subtitle>All payments received from your account.</:subtitle>
         <:actions>
           <a href={~p"/portal/payments/export"} class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20">
-            Export CSV
+            Batch Export CSV
           </a>
           <a href={~p"/portal/payments/export?format=pdf"} target="_blank" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500">
-            Export PDF
+            Batch Export PDF
           </a>
         </:actions>
       </.page_header>
