@@ -18,7 +18,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
      |> assign(:return_to, params["return_to"])
      |> assign(
        :page_title,
-       if(payment_application, do: "Edit Payment Application", else: "New Payment Application")
+       if(payment_application, do: "Edit Payment", else: "Record Payment")
      )
      |> assign_form(params)}
   end
@@ -30,7 +30,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
       <.page_header eyebrow="Finance">
         {@page_title}
         <:subtitle>
-          Allocate receipts to invoices explicitly so cash application stays auditable.
+          Record money received and apply it to the invoice.
         </:subtitle>
         <:actions>
           <.button navigate={@return_to || ~p"/finance/payment-applications"}>
@@ -103,7 +103,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
           <.form_actions
             cancel_path={@return_to || ~p"/finance/payment-applications"}
             submit_label={
-              if @payment_application, do: "Update Application", else: "Create Application"
+              if @payment_application, do: "Save Changes", else: "Record Payment"
             }
           />
         </.section>

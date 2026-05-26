@@ -92,7 +92,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Index do
           >
             <:action>
               <.button navigate={~p"/finance/payment-applications/new"} variant="primary">
-                Create Application
+                Record Payment
               </.button>
             </:action>
           </.empty_state>
