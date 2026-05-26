@@ -8,18 +8,51 @@ defmodule GnomeGardenWeb.PaymentsExportController do
 
   plug :require_authenticated
 
-  # Staff: GET /finance/payments/export
-  def staff(conn, _params) do
-    payments =
-      Payment
-      |> Ash.Query.load([:organization, applications: [:invoice]])
-      |> Ash.Query.sort(received_on: :desc, inserted_at: :desc)
-      |> Ash.read!(domain: Finance, authorize?: false)
+  # Staff batch export: GET /finance/payments/batch-export?from=&to=&organization_id=&format=csv|pdf
+  def batch(conn, params) do
+    format = Map.get(params, "format", "csv")
 
-    send_csv(conn, payments, "payments-export")
+    with {:ok, from} <- parse_date(params["from"]),
+         {:ok, to} <- parse_date(params["to"]) do
+      payments = query_payments(from, to, params["organization_id"])
+      filename = "payments-#{params["from"]}-to-#{params["to"]}"
+
+      case format do
+        "pdf" -> render_pdf(conn, payments, title: filename)
+        _ -> send_csv(conn, payments, filename: filename)
+      end
+    else
+      _ ->
+        conn
+        |> put_flash(:error, "Please provide a valid date range.")
+        |> redirect(to: ~p"/finance/payments")
+    end
   end
 
-  # Portal: GET /portal/payments/export
+  # Single payment export: GET /finance/payments/:id/export?format=csv|pdf
+  def show(conn, %{"id" => id} = params) do
+    format = Map.get(params, "format", "csv")
+
+    case Ash.get(Payment, id,
+           domain: Finance,
+           load: [:organization, applications: [:invoice]],
+           authorize?: false
+         ) do
+      {:ok, payment} ->
+        case format do
+          "pdf" -> render_pdf(conn, [payment], title: payment.payment_number)
+          _ -> send_csv(conn, [payment], filename: payment.payment_number)
+        end
+
+      {:error, _} ->
+        conn
+        |> put_status(404)
+        |> put_view(html: GnomeGardenWeb.ErrorHTML)
+        |> render(:"404")
+    end
+  end
+
+  # Portal export: GET /portal/payments/export
   def portal(conn, _params) do
     actor = conn.assigns[:current_client_user]
 
@@ -29,11 +62,29 @@ defmodule GnomeGardenWeb.PaymentsExportController do
         _ -> []
       end
 
-    send_csv(conn, payments, "my-payment-history")
+    send_csv(conn, payments, filename: "my-payment-history")
   end
 
-  defp send_csv(conn, payments, filename) do
-    safe_filename = "#{filename}.csv"
+  # --- Private ---
+
+  defp query_payments(from, to, org_id) do
+    Payment
+    |> Ash.Query.filter(received_on >= ^from and received_on <= ^to)
+    |> then(fn q ->
+      if org_id && org_id != "" do
+        Ash.Query.filter(q, organization_id == ^org_id)
+      else
+        q
+      end
+    end)
+    |> Ash.Query.load([:organization, applications: [:invoice]])
+    |> Ash.Query.sort(received_on: :asc, inserted_at: :asc)
+    |> Ash.read!(domain: Finance, authorize?: false)
+  end
+
+  defp send_csv(conn, payments, opts) do
+    raw_filename = Keyword.get(opts, :filename, "payments")
+    safe_filename = String.replace(raw_filename, ~r/[^\w\-.]/, "_") <> ".csv"
     csv = build_csv(payments)
 
     conn
@@ -42,18 +93,28 @@ defmodule GnomeGardenWeb.PaymentsExportController do
     |> send_resp(200, csv)
   end
 
+  defp render_pdf(conn, payments, opts) do
+    title = Keyword.get(opts, :title, "payments")
+    company_name = Application.get_env(:gnome_garden, :company_name, "Gnome Automation")
+
+    conn
+    |> put_layout(false)
+    |> render(:payment_pdf,
+      payments: payments,
+      title: title,
+      company_name: company_name
+    )
+  end
+
   defp build_csv(payments) do
     header = "payment_number,received_on,method,amount,currency,reference,applied_to_invoices,client\n"
 
     rows =
       Enum.map(payments, fn payment ->
         client =
-          cond do
-            Map.has_key?(payment, :organization) && payment.organization ->
-              csv_escape(payment.organization.name)
-            true ->
-              ""
-          end
+          if Map.get(payment, :organization) && payment.organization,
+            do: csv_escape(payment.organization.name),
+            else: ""
 
         invoice_numbers =
           (payment.applications || [])
@@ -94,6 +155,16 @@ defmodule GnomeGardenWeb.PaymentsExportController do
       ~s["#{String.replace(str, "\"", "\"\"")}"]
     else
       str
+    end
+  end
+
+  defp parse_date(nil), do: {:error, :missing}
+  defp parse_date(""), do: {:error, :missing}
+
+  defp parse_date(str) do
+    case Date.from_iso8601(str) do
+      {:ok, date} -> {:ok, date}
+      _ -> {:error, :invalid}
     end
   end
 

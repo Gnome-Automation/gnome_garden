@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= @title %></title>
+  <style>
+    @page {
+      margin: 0.5in;
+      size: letter;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      color: #111;
+      background: white;
+    }
+
+    .payment-page {
+      padding: 48px;
+      max-width: 800px;
+      margin: 0 auto;
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .payment-page:last-child {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #059669;
+    }
+
+    .company-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #059669;
+    }
+
+    .payment-meta { text-align: right; }
+    .payment-meta h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .payment-meta p { color: #555; margin: 2px 0; }
+
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section h3 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #888;
+      margin-bottom: 10px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 24px;
+    }
+
+    .field label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .field p {
+      font-size: 14px;
+      font-weight: 500;
+      color: #111;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+
+    thead th {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    thead th.num { text-align: right; }
+
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+
+    tbody td.num { text-align: right; }
+
+    .total-row {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 16px;
+      border-top: 2px solid #111;
+    }
+
+    .total-row .label {
+      font-weight: 600;
+      margin-right: 32px;
+    }
+
+    .total-row .amount {
+      font-weight: 700;
+      font-size: 16px;
+      min-width: 100px;
+      text-align: right;
+    }
+
+    .no-payments {
+      text-align: center;
+      padding: 80px 48px;
+      color: #888;
+    }
+
+    @media print {
+      body { font-size: 12px; }
+      .payment-page { padding: 32px; }
+      tbody tr { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <%= if @payments == [] do %>
+    <div class="no-payments">
+      <p>No payments found for the selected filters.</p>
+    </div>
+  <% else %>
+    <%= for payment <- @payments do %>
+      <div class="payment-page">
+        <div class="header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img src="https://gnomeautomation.com/images/gnome-icon-clean-192.png" width="36" height="36" alt="Gnome Automation" style="border-radius:6px;" />
+            <div class="company-name"><%= @company_name %></div>
+          </div>
+          <div class="payment-meta">
+            <h2>Payment Receipt</h2>
+            <p><strong><%= payment.payment_number %></strong></p>
+            <p>Received: <%= payment.received_on %></p>
+            <p>Status: <%= payment.status |> to_string() |> String.capitalize() %></p>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Client</h3>
+          <div class="grid-2">
+            <div class="field">
+              <label>Organization</label>
+              <p><%= (payment.organization && payment.organization.name) || "—" %></p>
+            </div>
+            <div class="field">
+              <label>Method</label>
+              <p><%= payment.payment_method |> to_string() |> String.upcase() %></p>
+            </div>
+            <div class="field">
+              <label>Reference</label>
+              <p><%= payment.reference || "—" %></p>
+            </div>
+            <div class="field">
+              <label>Currency</label>
+              <p><%= payment.currency_code || "USD" %></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Applied To</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th>Applied On</th>
+                <th class="num">Amount Applied</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= if (payment.applications || []) == [] do %>
+                <tr>
+                  <td colspan="3" style="color: #888; font-style: italic;">No applications</td>
+                </tr>
+              <% end %>
+              <%= for app <- (payment.applications || []) do %>
+                <tr>
+                  <td><%= (app.invoice && app.invoice.invoice_number) || "—" %></td>
+                  <td><%= app.applied_on || "—" %></td>
+                  <td class="num">$<%= app.amount %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="total-row">
+          <span class="label">Total Received</span>
+          <span class="amount">$<%= payment.amount %></span>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</body>
+</html>

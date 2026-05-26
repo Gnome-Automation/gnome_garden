@@ -61,8 +61,9 @@ defmodule GnomeGardenWeb.Router do
     get "/finance/invoices/batch-export", InvoiceExportController, :batch
     get "/finance/invoices/:id/export", InvoiceExportController, :show
 
-    # Finance - Payments Export
-    get "/finance/payments/export", PaymentsExportController, :staff
+    # Finance - Payments Export (before :id routes to avoid conflicts)
+    get "/finance/payments/batch-export", PaymentsExportController, :batch
+    get "/finance/payments/:id/export", PaymentsExportController, :show
 
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
