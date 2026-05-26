@@ -53,10 +53,10 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <a href={~p"/finance/payments/#{@payment}/export?format=csv"} class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20">
+          <a href={~p"/finance/payments/#{@payment}/export?format=csv"} target="_blank" class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20">
             <.icon name="hero-arrow-down-tray" class="size-4 inline-block -mt-0.5" /> CSV
           </a>
-          <a href={~p"/finance/payments/#{@payment}/export?format=pdf"} class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20">
+          <a href={~p"/finance/payments/#{@payment}/export?format=pdf"} target="_blank" class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20">
             <.icon name="hero-arrow-down-tray" class="size-4 inline-block -mt-0.5" /> PDF
           </a>
           <.button navigate={~p"/finance/payment-applications/new?payment_id=#{@payment.id}&return_to=#{~p"/finance/payments/#{@payment}"}"}>
