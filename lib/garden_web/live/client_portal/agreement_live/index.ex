@@ -26,6 +26,11 @@ defmodule GnomeGardenWeb.ClientPortal.AgreementLive.Index do
       <.page_header eyebrow="Client Portal">
         Agreements
         <:subtitle>Your active and historical service agreements.</:subtitle>
+        <:actions>
+          <a href={~p"/portal/agreements/batch-export"} target="_blank" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500">
+            Batch Export PDF
+          </a>
+        </:actions>
       </.page_header>
 
       <.section body_class="p-0">

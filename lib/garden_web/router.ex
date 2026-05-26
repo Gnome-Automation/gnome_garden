@@ -320,6 +320,7 @@ defmodule GnomeGardenWeb.Router do
   scope "/", GnomeGardenWeb do
     pipe_through :browser
 
+    get "/portal/agreements/batch-export", ClientPortal.AgreementExportController, :batch
     get "/portal/agreements/:id/export", ClientPortal.AgreementExportController, :show
     get "/portal/payments/export", PaymentsExportController, :portal
     get "/portal/payments/:id/export", PaymentsExportController, :portal_show
@@ -339,6 +340,7 @@ defmodule GnomeGardenWeb.Router do
       live "/portal/agreements", ClientPortal.AgreementLive.Index, :index
       live "/portal/agreements/:id", ClientPortal.AgreementLive.Show, :show
       live "/portal/payments", ClientPortal.PaymentLive, :index
+      live "/portal/payments/:id", ClientPortal.PaymentShowLive, :show
     end
   end
 

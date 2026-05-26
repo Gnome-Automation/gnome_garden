@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agreements — <%= @company_name %></title>
+  <style>
+    @page { margin: 0.5in; size: letter; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 13px; color: #111; background: white;
+    }
+    .page {
+      padding: 48px; max-width: 800px; margin: 0 auto;
+      page-break-after: always; break-after: page;
+    }
+    .page:last-child { page-break-after: avoid; break-after: avoid; }
+    .header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #059669;
+    }
+    .company-name { font-size: 22px; font-weight: 700; color: #059669; }
+    .meta { text-align: right; }
+    .meta h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .meta p { color: #555; margin: 2px 0; }
+    .section { margin-bottom: 32px; }
+    .section h3 {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #888; margin-bottom: 12px;
+      padding-bottom: 6px; border-bottom: 1px solid #e5e7eb;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 32px; }
+    .field label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 3px; }
+    .field span { font-size: 13px; font-weight: 500; }
+    .no-agreements { text-align: center; padding: 80px 48px; color: #888; }
+    @media print { body { font-size: 12px; } .page { padding: 32px; } }
+  </style>
+</head>
+<body>
+  <%= if @agreements == [] do %>
+    <div class="no-agreements"><p>No agreements found.</p></div>
+  <% else %>
+    <%= for agreement <- @agreements do %>
+      <div class="page">
+        <div class="header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img src="https://gnomeautomation.com/images/gnome-icon-clean-192.png" width="36" height="36" alt="" style="border-radius:6px;" />
+            <div class="company-name"><%= @company_name %></div>
+          </div>
+          <div class="meta">
+            <h2>Service Agreement</h2>
+            <%= if agreement.reference_number do %><p><strong><%= agreement.reference_number %></strong></p><% end %>
+            <p>Status: <%= agreement.status |> to_string() |> String.capitalize() %></p>
+          </div>
+        </div>
+        <div class="section">
+          <h3>Agreement Details</h3>
+          <div class="grid">
+            <div class="field"><label>Name</label><span><%= agreement.name %></span></div>
+            <%= if agreement.agreement_type do %>
+              <div class="field"><label>Type</label><span class="capitalize"><%= agreement.agreement_type %></span></div>
+            <% end %>
+            <%= if agreement.billing_model do %>
+              <div class="field"><label>Billing</label><span><%= agreement.billing_model |> to_string() |> String.replace("_", " ") |> String.capitalize() %></span></div>
+            <% end %>
+            <%= if agreement.contract_value do %>
+              <div class="field"><label>Contract Value</label><span>$<%= Decimal.to_string(agreement.contract_value) %></span></div>
+            <% end %>
+            <%= if agreement.start_on do %>
+              <div class="field"><label>Start Date</label><span><%= Date.to_string(agreement.start_on) %></span></div>
+            <% end %>
+            <%= if agreement.end_on do %>
+              <div class="field"><label>End Date</label><span><%= Date.to_string(agreement.end_on) %></span></div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</body>
+</html>

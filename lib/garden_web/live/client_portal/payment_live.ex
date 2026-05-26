@@ -46,13 +46,14 @@ defmodule GnomeGardenWeb.ClientPortal.PaymentLive do
                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Method</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-base-content/60">Amount</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Applied To</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-base-content/60">Export</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-base-content/5">
-              <tr :for={payment <- @payments} class="hover:bg-base-200/30 transition-colors">
-                <td class="px-4 py-3 text-sm font-medium text-base-content">
-                  {payment.payment_number || "—"}
+              <tr :for={payment <- @payments} class="hover:bg-base-200/30 transition-colors cursor-pointer">
+                <td class="px-4 py-3 text-sm font-medium">
+                  <.link navigate={~p"/portal/payments/#{payment.id}"} class="text-emerald-600 hover:underline">
+                    {payment.payment_number || "—"}
+                  </.link>
                 </td>
                 <td class="px-4 py-3 text-sm text-base-content/60">
                   {if payment.received_on, do: Date.to_string(payment.received_on), else: "—"}
@@ -65,13 +66,6 @@ defmodule GnomeGardenWeb.ClientPortal.PaymentLive do
                 </td>
                 <td class="px-4 py-3 text-sm text-base-content/60">
                   {invoice_numbers(payment.applications)}
-                </td>
-                <td class="px-4 py-3 text-sm">
-                  <div class="flex items-center gap-2">
-                    <a href={~p"/portal/payments/#{payment.id}/export"} class="text-xs font-medium text-emerald-600 hover:underline">CSV</a>
-                    <span class="text-base-content/20">|</span>
-                    <a href={~p"/portal/payments/#{payment.id}/export?format=pdf"} target="_blank" class="text-xs font-medium text-emerald-600 hover:underline">PDF</a>
-                  </div>
                 </td>
               </tr>
             </tbody>

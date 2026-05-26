@@ -26,6 +26,24 @@ defmodule GnomeGardenWeb.ClientPortal.AgreementExportController do
     end
   end
 
+  def batch(conn, _params) do
+    actor = conn.assigns.current_client_user
+    company_name = Application.get_env(:gnome_garden, :company_name, "Gnome Automation")
+
+    agreements =
+      case Commercial.list_portal_agreements(actor: actor) do
+        {:ok, list} -> list
+        _ -> []
+      end
+
+    conn
+    |> put_layout(false)
+    |> render(:agreements_batch_pdf,
+      agreements: agreements,
+      company_name: company_name
+    )
+  end
+
   defp require_client_user(conn, _opts) do
     if conn.assigns[:current_client_user] do
       conn
