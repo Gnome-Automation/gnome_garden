@@ -13,7 +13,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
     {:ok,
      socket
      |> assign(:payment_application, payment_application)
-     |> assign(:payments, load_payments(socket.assigns.current_user))
+     |> assign_payments(socket.assigns.current_user)
      |> assign(:invoices, load_invoices(socket.assigns.current_user))
      |> assign(:return_to, params["return_to"])
      |> assign(
@@ -114,6 +114,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
+    params = maybe_fill_amount(params, socket.assigns.payments_by_id)
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, form: to_form(form))}
   end
@@ -172,12 +173,29 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Form do
     end
   end
 
-  defp load_payments(actor) do
-    case Finance.list_payments(actor: actor, load: [:organization]) do
-      {:ok, payments} -> Enum.sort_by(payments, &String.downcase(payment_label(&1)))
-      {:error, error} -> raise "failed to load payments: #{inspect(error)}"
+  defp assign_payments(socket, actor) do
+    payments =
+      case Finance.list_payments(actor: actor, load: [:organization]) do
+        {:ok, payments} -> Enum.sort_by(payments, &String.downcase(payment_label(&1)))
+        {:error, error} -> raise "failed to load payments: #{inspect(error)}"
+      end
+
+    payments_by_id = Map.new(payments, &{to_string(&1.id), &1})
+
+    socket
+    |> assign(:payments, payments)
+    |> assign(:payments_by_id, payments_by_id)
+  end
+
+  defp maybe_fill_amount(%{"payment_id" => payment_id, "amount" => amount} = params, payments_by_id)
+       when payment_id != "" and (is_nil(amount) or amount == "") do
+    case Map.get(payments_by_id, payment_id) do
+      nil -> params
+      payment -> Map.put(params, "amount", Decimal.to_string(payment.amount))
     end
   end
+
+  defp maybe_fill_amount(params, _), do: params
 
   defp load_invoices(actor) do
     case Finance.list_invoices(actor: actor, load: [:organization]) do
