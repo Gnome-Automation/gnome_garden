@@ -39,6 +39,8 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Index do
             variant={if @filter == :outstanding, do: "primary", else: nil}>Outstanding</.button>
           <.button phx-click="filter" phx-value-status="paid"
             variant={if @filter == :paid, do: "primary", else: nil}>Paid</.button>
+          <.button phx-click="filter" phx-value-status="void"
+            variant={if @filter == :void, do: "primary", else: nil}>Void</.button>
         </:actions>
       </.page_header>
 
@@ -93,6 +95,7 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Index do
   defp filtered_invoices(invoices, :all), do: invoices
   defp filtered_invoices(invoices, :outstanding), do: Enum.filter(invoices, &(&1.status in [:issued, :partial]))
   defp filtered_invoices(invoices, :paid), do: Enum.filter(invoices, &(&1.status == :paid))
+  defp filtered_invoices(invoices, :void), do: Enum.filter(invoices, &(&1.status == :void))
 
   defp invoice_status_variant(:issued), do: :warning
   defp invoice_status_variant(:partial), do: :info
