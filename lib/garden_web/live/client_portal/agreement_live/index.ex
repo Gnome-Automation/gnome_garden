@@ -16,7 +16,13 @@ defmodule GnomeGardenWeb.ClientPortal.AgreementLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Agreements")
-     |> assign(:agreements, agreements)}
+     |> assign(:agreements, agreements)
+     |> assign(:show_export_form, false)}
+  end
+
+  @impl true
+  def handle_event("toggle_export_form", _params, socket) do
+    {:noreply, assign(socket, :show_export_form, !socket.assigns.show_export_form)}
   end
 
   @impl true
@@ -27,11 +33,44 @@ defmodule GnomeGardenWeb.ClientPortal.AgreementLive.Index do
         Agreements
         <:subtitle>Your active and historical service agreements.</:subtitle>
         <:actions>
-          <a href={~p"/portal/agreements/batch-export"} target="_blank" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500">
-            Batch Export PDF
-          </a>
+          <.button phx-click="toggle_export_form">
+            Batch Export
+          </.button>
         </:actions>
       </.page_header>
+
+      <%= if @show_export_form do %>
+        <div class="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Batch Export</h3>
+          <form method="get" action="/portal/agreements/batch-export" target="_blank" class="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
+            <div>
+              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">From</label>
+              <input type="date" name="from" class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10" />
+            </div>
+            <div>
+              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">To</label>
+              <input type="date" name="to" class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10" />
+            </div>
+            <div>
+              <p class="block text-sm/6 font-medium text-gray-900 dark:text-white mb-1">Format</p>
+              <div class="flex gap-3 items-center">
+                <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="radio" name="format" value="pdf" checked={true} /> PDF
+                </label>
+                <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="radio" name="format" value="csv" /> CSV
+                </label>
+              </div>
+            </div>
+            <div>
+              <button type="submit" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 cursor-pointer transition-colors">
+                Download
+              </button>
+            </div>
+          </form>
+          <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Leave dates blank to export all agreements.</p>
+        </div>
+      <% end %>
 
       <.section body_class="p-0">
         <div :if={@agreements != []} class="overflow-x-auto">
