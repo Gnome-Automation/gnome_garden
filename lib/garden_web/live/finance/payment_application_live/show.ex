@@ -39,7 +39,7 @@ defmodule GnomeGardenWeb.Finance.PaymentApplicationLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/finance/payment-applications/#{@payment_application}/edit"}>
+          <.button navigate={~p"/finance/payment-applications/#{@payment_application}/edit?return_to=#{~p"/finance/payment-applications/#{@payment_application}"}"}>
             Edit
           </.button>
         </:actions>

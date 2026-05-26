@@ -65,12 +65,12 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
           </.button>
           <.button
             :if={can_create_proposal?(@pursuit)}
-            navigate={~p"/commercial/proposals/new?pursuit_id=#{@pursuit.id}"}
+            navigate={~p"/commercial/proposals/new?pursuit_id=#{@pursuit.id}&return_to=#{~p"/commercial/pursuits/#{@pursuit}"}"}
             variant="primary"
           >
             Create Proposal
           </.button>
-          <.button navigate={~p"/commercial/pursuits/#{@pursuit}/edit"}>
+          <.button navigate={~p"/commercial/pursuits/#{@pursuit}/edit?return_to=#{~p"/commercial/pursuits/#{@pursuit}"}"}>
             Edit
           </.button>
         </:actions>

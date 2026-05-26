@@ -322,6 +322,7 @@ defmodule GnomeGardenWeb.Router do
 
     get "/portal/agreements/batch-export", ClientPortal.AgreementExportController, :batch
     get "/portal/agreements/:id/export", ClientPortal.AgreementExportController, :show
+    get "/portal/invoices/batch-export", InvoiceExportController, :portal_batch
     get "/portal/payments/export", PaymentsExportController, :portal
     get "/portal/payments/:id/export", PaymentsExportController, :portal_show
   end

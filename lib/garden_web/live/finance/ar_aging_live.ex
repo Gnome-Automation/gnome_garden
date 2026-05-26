@@ -12,7 +12,7 @@ defmodule GnomeGardenWeb.Finance.ArAgingLive do
 
     {:ok,
      socket
-     |> assign(:page_title, "AR Aging")
+     |> assign(:page_title, "Accounts Receivable Aging")
      |> assign(:bucketed, bucketed)
      |> assign(:grand_total, compute_grand_total(invoices))
      |> assign(:show_all, false)}
@@ -36,8 +36,10 @@ defmodule GnomeGardenWeb.Finance.ArAgingLive do
     ~H"""
     <.page class="pb-8">
       <.page_header eyebrow="Finance">
-        AR Aging
-        <:subtitle>Outstanding invoices grouped by how overdue they are.</:subtitle>
+        Accounts Receivable Aging
+        <:subtitle>
+          All outstanding (unpaid) invoices grouped by how long they have been overdue — Current, 1–30 days, 31–60 days, 61–90 days, and 90+ days. Use this to prioritize collections and spot clients who are habitually slow to pay.
+        </:subtitle>
         <:actions>
           <label class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer">
             <input type="checkbox" phx-click="toggle_show_all" checked={@show_all} class="rounded" />

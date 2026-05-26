@@ -18,6 +18,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Form do
        if(discovery_program, do: "Edit Discovery Program", else: "New Discovery Program")
      )
      |> assign(:list_inputs, list_inputs_from_program(discovery_program))
+     |> assign(:return_to, params["return_to"])
      |> assign_form()}
   end
 
@@ -126,7 +127,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/commercial/discovery-programs"}
+            cancel_path={@return_to || ~p"/commercial/discovery-programs"}
             submit_label={if @discovery_program, do: "Update Program", else: "Create Program"}
           />
         </.section>

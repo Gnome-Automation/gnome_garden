@@ -13,7 +13,8 @@ config :gnome_garden, GnomeGarden.Repo,
   database: "gnome_garden_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+  pool_size: 10,
+  parameters: [timezone: "UTC"]
 
 # For development, we disable any cache and enable
 # debugging and code reloading.

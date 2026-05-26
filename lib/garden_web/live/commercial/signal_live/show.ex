@@ -62,12 +62,12 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
           </.button>
           <.button
             :if={can_create_pursuit?(@signal)}
-            navigate={~p"/commercial/pursuits/new?signal_id=#{@signal.id}"}
+            navigate={~p"/commercial/pursuits/new?signal_id=#{@signal.id}&return_to=#{~p"/commercial/signals/#{@signal}"}"}
             variant="primary"
           >
             Create Pursuit
           </.button>
-          <.button navigate={~p"/commercial/signals/#{@signal}/edit"}>
+          <.button navigate={~p"/commercial/signals/#{@signal}/edit?return_to=#{~p"/commercial/signals/#{@signal}"}"}>
             Edit
           </.button>
         </:actions>

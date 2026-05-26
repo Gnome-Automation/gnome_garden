@@ -18,6 +18,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
      |> assign(:projects, load_projects(socket.assigns.current_user))
      |> assign(:work_orders, load_work_orders(socket.assigns.current_user))
      |> assign(:team_members, load_team_members(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"])
      |> assign(:page_title, if(expense, do: "Edit Expense", else: "New Expense"))
      |> assign_form(params)}
   end
@@ -139,7 +140,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/finance/expenses"}
+            cancel_path={@return_to || ~p"/finance/expenses"}
             submit_label={if @expense, do: "Update Expense", else: "Create Expense"}
           />
         </.section>

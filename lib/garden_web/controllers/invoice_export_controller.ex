@@ -35,6 +35,29 @@ defmodule GnomeGardenWeb.InvoiceExportController do
     end
   end
 
+  # Portal batch export — scoped to client's organization
+  def portal_batch(conn, params) do
+    actor = conn.assigns[:current_client_user]
+
+    if is_nil(actor) do
+      conn |> redirect(to: ~p"/portal/sign-in") |> halt()
+    else
+      invoices =
+        case Finance.list_portal_invoices(actor: actor) do
+          {:ok, list} -> filter_portal_by_date(list, params["from"], params["to"])
+          _ -> []
+        end
+
+      format = Map.get(params, "format", "pdf")
+      filename = "invoices-export"
+
+      case format do
+        "csv" -> send_csv(conn, invoices, filename: filename)
+        _ -> render_pdf(conn, invoices, title: filename)
+      end
+    end
+  end
+
   # Batch export
   def batch(conn, params) do
     format = Map.get(params, "format", "csv")
@@ -171,6 +194,28 @@ defmodule GnomeGardenWeb.InvoiceExportController do
       ~s["#{String.replace(str, "\"", "\"\"")}"]
     else
       str
+    end
+  end
+
+  defp filter_portal_by_date(invoices, from_str, to_str) do
+    from = parse_date_optional(from_str)
+    to = parse_date_optional(to_str)
+
+    invoices
+    |> then(fn list ->
+      if from, do: Enum.filter(list, &(&1.issued_on == nil or Date.compare(&1.issued_on, from) != :lt)), else: list
+    end)
+    |> then(fn list ->
+      if to, do: Enum.filter(list, &(&1.issued_on == nil or Date.compare(&1.issued_on, to) != :gt)), else: list
+    end)
+  end
+
+  defp parse_date_optional(nil), do: nil
+  defp parse_date_optional(""), do: nil
+  defp parse_date_optional(str) do
+    case Date.from_iso8601(str) do
+      {:ok, date} -> date
+      _ -> nil
     end
   end
 

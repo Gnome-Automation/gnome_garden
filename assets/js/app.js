@@ -60,6 +60,12 @@ topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
+// Reset a form by id (used after successful alias add)
+window.addEventListener("phx:reset-form", (e) => {
+  const form = document.getElementById(e.detail.id)
+  if (form) form.reset()
+})
+
 // Auto-dismiss flash toasts after a delay
 window.addEventListener("phx:hide-after-delay", (e) => {
   const el = e.target

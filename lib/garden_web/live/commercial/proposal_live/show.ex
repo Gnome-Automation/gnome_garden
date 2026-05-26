@@ -77,12 +77,12 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Show do
           </.button>
           <.button
             :if={can_create_agreement?(@proposal)}
-            navigate={~p"/commercial/agreements/new?proposal_id=#{@proposal.id}"}
+            navigate={~p"/commercial/agreements/new?proposal_id=#{@proposal.id}&return_to=#{~p"/commercial/proposals/#{@proposal}"}"}
             variant="primary"
           >
             Create Agreement
           </.button>
-          <.button navigate={~p"/commercial/proposals/#{@proposal}/edit"}>
+          <.button navigate={~p"/commercial/proposals/#{@proposal}/edit?return_to=#{~p"/commercial/proposals/#{@proposal}"}"}>
             Edit
           </.button>
           <.button

@@ -113,7 +113,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/operations/organizations/#{@organization}/edit"} variant="primary">
+          <.button navigate={~p"/operations/organizations/#{@organization}/edit?return_to=#{~p"/operations/organizations/#{@organization}"}"} variant="primary">
             Edit
           </.button>
           <.button
@@ -264,7 +264,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
         >
           <:actions>
             <.button
-              navigate={~p"/operations/affiliations/new?#{[organization_id: @organization.id]}"}
+              navigate={~p"/operations/affiliations/new?#{[organization_id: @organization.id, return_to: ~p"/operations/organizations/#{@organization}"]}"}
               variant="primary"
             >
               Add Affiliation

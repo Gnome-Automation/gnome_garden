@@ -35,16 +35,16 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/execution/maintenance-plans/new?asset_id=#{@asset.id}"}>
+          <.button navigate={~p"/execution/maintenance-plans/new?asset_id=#{@asset.id}&return_to=#{~p"/operations/assets/#{@asset}"}"}>
             New Maintenance Plan
           </.button>
-          <.button navigate={~p"/execution/work-orders/new?asset_id=#{@asset.id}"}>
+          <.button navigate={~p"/execution/work-orders/new?asset_id=#{@asset.id}&return_to=#{~p"/operations/assets/#{@asset}"}"}>
             New Work Order
           </.button>
-          <.button navigate={~p"/operations/assets/new?parent_asset_id=#{@asset.id}"}>
+          <.button navigate={~p"/operations/assets/new?parent_asset_id=#{@asset.id}&return_to=#{~p"/operations/assets/#{@asset}"}"}>
             Add Child Asset
           </.button>
-          <.button navigate={~p"/operations/assets/#{@asset}/edit"}>
+          <.button navigate={~p"/operations/assets/#{@asset}/edit?return_to=#{~p"/operations/assets/#{@asset}"}"}>
             Edit
           </.button>
         </:actions>
@@ -122,7 +122,7 @@ defmodule GnomeGardenWeb.Operations.AssetLive.Show do
             description="Create preventive schedules here when this asset needs inspections, calibration, patching, or recurring service."
           >
             <:action>
-              <.button navigate={~p"/execution/maintenance-plans/new?asset_id=#{@asset.id}"}>
+              <.button navigate={~p"/execution/maintenance-plans/new?asset_id=#{@asset.id}&return_to=#{~p"/operations/assets/#{@asset}"}"}>
                 Create Maintenance Plan
               </.button>
             </:action>

@@ -35,13 +35,13 @@ defmodule GnomeGardenWeb.Operations.SiteLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/operations/managed-systems/new?site_id=#{@site.id}"}>
+          <.button navigate={~p"/operations/managed-systems/new?site_id=#{@site.id}&return_to=#{~p"/operations/sites/#{@site}"}"}>
             New Managed System
           </.button>
-          <.button navigate={~p"/operations/assets/new?site_id=#{@site.id}"}>
+          <.button navigate={~p"/operations/assets/new?site_id=#{@site.id}&return_to=#{~p"/operations/sites/#{@site}"}"}>
             New Asset
           </.button>
-          <.button navigate={~p"/operations/sites/#{@site}/edit"}>
+          <.button navigate={~p"/operations/sites/#{@site}/edit?return_to=#{~p"/operations/sites/#{@site}"}"}>
             Edit
           </.button>
         </:actions>

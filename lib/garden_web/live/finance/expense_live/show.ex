@@ -62,7 +62,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Show do
           >
             Work Order
           </.button>
-          <.button navigate={~p"/finance/expenses/#{@expense}/edit"}>
+          <.button navigate={~p"/finance/expenses/#{@expense}/edit?return_to=#{~p"/finance/expenses/#{@expense}"}"}>
             Edit
           </.button>
         </:actions>

@@ -12,6 +12,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
      |> assign(:affiliation, affiliation)
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:people, load_people(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"])
      |> assign(:page_title, if(affiliation, do: "Edit Affiliation", else: "New Affiliation"))
      |> assign_form(prefill_params(params))}
   end
@@ -121,7 +122,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/operations/affiliations"}
+            cancel_path={@return_to || ~p"/operations/affiliations"}
             submit_label={if @affiliation, do: "Update Affiliation", else: "Create Affiliation"}
           />
         </.section>

@@ -62,7 +62,7 @@ defmodule GnomeGardenWeb.Execution.MaintenancePlanLive.Show do
           <.button phx-click="transition" phx-value-action="generate_work_order" title="Create a work order from this maintenance plan for the next scheduled run">
             Generate Work Order
           </.button>
-          <.button navigate={~p"/execution/maintenance-plans/#{@maintenance_plan}/edit"}>
+          <.button navigate={~p"/execution/maintenance-plans/#{@maintenance_plan}/edit?return_to=#{~p"/execution/maintenance-plans/#{@maintenance_plan}"}"}>
             Edit
           </.button>
         </:actions>

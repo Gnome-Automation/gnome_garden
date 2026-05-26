@@ -90,19 +90,19 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
           <.button navigate={~p"/finance/time-entries/new?#{Map.put(time_entry_params(@project), :return_to, ~p"/execution/projects/#{@project}")}"}>
             New Time Entry
           </.button>
-          <.button navigate={~p"/finance/expenses/new?#{expense_params(@project)}"}>
+          <.button navigate={~p"/finance/expenses/new?#{Map.put(expense_params(@project), :return_to, ~p"/execution/projects/#{@project}")}"}>
             New Expense
           </.button>
-          <.button navigate={~p"/execution/work-items/new?project_id=#{@project.id}"}>
+          <.button navigate={~p"/execution/work-items/new?project_id=#{@project.id}&return_to=#{~p"/execution/projects/#{@project}"}"}>
             New Work Item
           </.button>
-          <.button navigate={~p"/commercial/change-orders/new?project_id=#{@project.id}"}>
+          <.button navigate={~p"/commercial/change-orders/new?project_id=#{@project.id}&return_to=#{~p"/execution/projects/#{@project}"}"}>
             New Change Order
           </.button>
           <.button :if={@project.status != :archived} phx-click="archive" data-confirm="Archive this project?">
             Archive
           </.button>
-          <.button navigate={~p"/execution/projects/#{@project}/edit"}>
+          <.button navigate={~p"/execution/projects/#{@project}/edit?return_to=#{~p"/execution/projects/#{@project}"}"}>
             Edit
           </.button>
         </:actions>
@@ -190,7 +190,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
             description="Create work items now so project execution has explicit phases, tasks, and deliverables to run through."
           >
             <:action>
-              <.button navigate={~p"/execution/work-items/new?project_id=#{@project.id}"}>
+              <.button navigate={~p"/execution/work-items/new?project_id=#{@project.id}&return_to=#{~p"/execution/projects/#{@project}"}"}>
                 Create Work Item
               </.button>
             </:action>
@@ -249,7 +249,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
             description="Add change orders here when execution uncovers scope, pricing, or schedule changes that need explicit approval."
           >
             <:action>
-              <.button navigate={~p"/commercial/change-orders/new?project_id=#{@project.id}"}>
+              <.button navigate={~p"/commercial/change-orders/new?project_id=#{@project.id}&return_to=#{~p"/execution/projects/#{@project}"}"}>
                 Create Change Order
               </.button>
             </:action>

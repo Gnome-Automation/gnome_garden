@@ -44,6 +44,11 @@ defmodule GnomeGarden.Mercury do
       define :create_transaction_event, action: :create
     end
 
+    resource GnomeGarden.Mercury.AliasEvent do
+      define :list_alias_events, action: :read
+      define :create_alias_event, action: :create
+    end
+
     resource GnomeGarden.Mercury.ClientBankAlias do
       define :list_client_bank_aliases, action: :read
 

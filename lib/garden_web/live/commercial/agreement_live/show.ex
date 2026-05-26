@@ -199,16 +199,16 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"} title="Generate an invoice from approved time and expense entries for this agreement">
+          <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}&return_to=#{~p"/commercial/agreements/#{@agreement}"}"} title="Generate an invoice from approved time and expense entries for this agreement">
             Invoice T&amp;E
           </.button>
-          <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"} title="Add a change order to modify the scope, timeline, or price of this agreement">
+          <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}&return_to=#{~p"/commercial/agreements/#{@agreement}"}"} title="Add a change order to modify the scope, timeline, or price of this agreement">
             New Change Order
           </.button>
           <.button :if={@agreement.status != :archived} phx-click="archive" data-confirm="Archive this agreement?">
             Archive
           </.button>
-          <.button navigate={~p"/commercial/agreements/#{@agreement}/edit"}>
+          <.button navigate={~p"/commercial/agreements/#{@agreement}/edit?return_to=#{~p"/commercial/agreements/#{@agreement}"}"}>
             Edit
           </.button>
         </:actions>
@@ -238,7 +238,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
         <div :if={@agreement.status == :active} class="space-y-4">
           <div class="flex flex-wrap gap-3">
             <.button
-              navigate={~p"/execution/projects/new?agreement_id=#{@agreement.id}"}
+              navigate={~p"/execution/projects/new?agreement_id=#{@agreement.id}&return_to=#{~p"/commercial/agreements/#{@agreement}"}"}
               variant="primary"
               title="Create a new project to deliver the work under this agreement"
             >
@@ -446,7 +446,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             description="Create change orders here when awarded scope shifts after the original commercial commitment."
           >
             <:action>
-              <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}"}>
+              <.button navigate={~p"/commercial/change-orders/new?agreement_id=#{@agreement.id}&return_to=#{~p"/commercial/agreements/#{@agreement}"}"}>
                 Create Change Order
               </.button>
             </:action>
@@ -483,7 +483,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Show do
             description="Draft invoices from this agreement when approved billable work is ready to move into receivables."
           >
             <:action>
-              <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}"}>
+              <.button navigate={~p"/finance/invoices/new?agreement_id=#{@agreement.id}&return_to=#{~p"/commercial/agreements/#{@agreement}"}"}>
                 Invoice Time &amp; Expenses
               </.button>
             </:action>

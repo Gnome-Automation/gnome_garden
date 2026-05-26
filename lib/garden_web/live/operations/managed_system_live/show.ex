@@ -35,10 +35,10 @@ defmodule GnomeGardenWeb.Operations.ManagedSystemLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/operations/assets/new?managed_system_id=#{@managed_system.id}"}>
+          <.button navigate={~p"/operations/assets/new?managed_system_id=#{@managed_system.id}&return_to=#{~p"/operations/managed-systems/#{@managed_system}"}"}>
             New Asset
           </.button>
-          <.button navigate={~p"/operations/managed-systems/#{@managed_system}/edit"}>
+          <.button navigate={~p"/operations/managed-systems/#{@managed_system}/edit?return_to=#{~p"/operations/managed-systems/#{@managed_system}"}"}>
             Edit
           </.button>
         </:actions>

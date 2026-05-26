@@ -59,10 +59,10 @@ defmodule GnomeGardenWeb.Execution.ServiceTicketLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/execution/work-orders/new?service_ticket_id=#{@service_ticket.id}"}>
+          <.button navigate={~p"/execution/work-orders/new?service_ticket_id=#{@service_ticket.id}&return_to=#{~p"/execution/service-tickets/#{@service_ticket}"}"}>
             New Work Order
           </.button>
-          <.button navigate={~p"/execution/service-tickets/#{@service_ticket}/edit"}>
+          <.button navigate={~p"/execution/service-tickets/#{@service_ticket}/edit?return_to=#{~p"/execution/service-tickets/#{@service_ticket}"}"}>
             Edit
           </.button>
         </:actions>

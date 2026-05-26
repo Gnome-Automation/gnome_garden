@@ -123,7 +123,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/commercial/discovery-programs/#{@discovery_program}/edit"}>
+          <.button navigate={~p"/commercial/discovery-programs/#{@discovery_program}/edit?return_to=#{~p"/commercial/discovery-programs/#{@discovery_program}"}"}>
             Edit
           </.button>
         </:actions>

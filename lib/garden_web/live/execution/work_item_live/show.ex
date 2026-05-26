@@ -66,7 +66,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Show do
           <.button
             :if={@work_item.project}
             navigate={
-              ~p"/execution/work-items/new?project_id=#{@work_item.project.id}&parent_work_item_id=#{@work_item.id}"
+              ~p"/execution/work-items/new?project_id=#{@work_item.project.id}&parent_work_item_id=#{@work_item.id}&return_to=#{~p"/execution/work-items/#{@work_item}"}"
             }
           >
             New Child
@@ -83,7 +83,7 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Show do
           >
             Project
           </.button>
-          <.button navigate={~p"/execution/work-items/#{@work_item}/edit"}>
+          <.button navigate={~p"/execution/work-items/#{@work_item}/edit?return_to=#{~p"/execution/work-items/#{@work_item}"}"}>
             Edit
           </.button>
         </:actions>

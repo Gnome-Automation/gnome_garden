@@ -87,7 +87,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
           <.button :if={@person.status != :archived} phx-click="archive" data-confirm="Archive this person?">
             Archive
           </.button>
-          <.button navigate={~p"/operations/people/#{@person}/edit"} variant="primary">
+          <.button navigate={~p"/operations/people/#{@person}/edit?return_to=#{~p"/operations/people/#{@person}"}"} variant="primary">
             Edit
           </.button>
         </:actions>
@@ -230,7 +230,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
       >
         <:actions>
           <.button
-            navigate={~p"/operations/affiliations/new?#{[person_id: @person.id]}"}
+            navigate={~p"/operations/affiliations/new?#{[person_id: @person.id, return_to: ~p"/operations/people/#{@person}"]}"}
             variant="primary"
           >
             Add Affiliation

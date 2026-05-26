@@ -319,7 +319,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
       id: "fin-ar-aging",
       section: "Finance",
       icon: "hero-clock",
-      label: "AR Aging",
+      label: "Accounts Receivable Aging",
       path: "/finance/ar-aging",
       badge: 0,
       hot: false,
@@ -366,27 +366,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/settings"]
     },
 
-    # Reports
-    %{
-      id: "rep-ar-aging",
-      section: "Reports",
-      icon: "hero-clock",
-      label: "AR Aging",
-      path: "/finance/ar-aging",
-      badge: 0,
-      hot: false,
-      match: ["/finance/ar-aging"]
-    },
-    %{
-      id: "rep-billing-reminders",
-      section: "Reports",
-      icon: "hero-bell",
-      label: "Billing Reminders",
-      path: "/finance/settings",
-      badge: 0,
-      hot: false,
-      match: ["/finance/settings"]
-    },
 
     # Settings
     %{
@@ -433,9 +412,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
       String.starts_with?(path, "/commercial") -> "Commercial"
       String.starts_with?(path, "/operations") -> "Operations"
       String.starts_with?(path, "/execution") -> "Operations"
-      path == "/finance/ar-aging" -> "Reports"
-    path == "/finance/settings" -> "Reports"
-    String.starts_with?(path, "/finance") -> "Finance"
+      String.starts_with?(path, "/finance") -> "Finance"
       String.starts_with?(path, "/console") -> "Settings"
       String.starts_with?(path, "/settings") -> "Settings"
       true -> "Workspace"

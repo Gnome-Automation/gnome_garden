@@ -41,6 +41,7 @@ defmodule GnomeGardenWeb.ClientPortal.DashboardLive do
      |> assign(:outstanding_balance, outstanding_balance)
      |> assign(:total_paid_ytd, total_paid_ytd)
      |> assign(:active_agreements_count, length(agreements))
+     |> assign(:agreements, agreements)
      |> assign(:payments_count, length(payments))
      |> assign(:overdue_invoices, overdue_invoices)
      |> assign(:next_due, next_due)
@@ -176,6 +177,33 @@ defmodule GnomeGardenWeb.ClientPortal.DashboardLive do
           </div>
         </.section>
       </div>
+
+      <%!-- Agreements --%>
+      <.section title="Active Agreements" body_class="p-0">
+        <div :if={@agreements != []}>
+          <div :for={ag <- @agreements} class="flex items-center justify-between px-4 py-3 border-b border-base-content/5 last:border-0 hover:bg-base-200/30 transition-colors">
+            <div>
+              <.link navigate={~p"/portal/agreements/#{ag.id}"} class="text-sm font-medium text-emerald-600 hover:underline">
+                {ag.name}
+              </.link>
+              <p class="text-xs text-base-content/40 mt-0.5">
+                {if ag.start_on, do: Date.to_string(ag.start_on), else: "—"}
+                {if ag.end_on, do: " → #{Date.to_string(ag.end_on)}", else: ""}
+              </p>
+            </div>
+            <div class="text-right">
+              <.status_badge status={agreement_status_variant(ag.status)}>
+                {String.capitalize(to_string(ag.status))}
+              </.status_badge>
+              <p class="text-xs text-base-content/40 mt-1 capitalize">{ag.billing_model |> to_string() |> String.replace("_", " ")}</p>
+            </div>
+          </div>
+        </div>
+        <div :if={@agreements == []} class="px-4 py-6 text-sm text-base-content/40 italic">No active agreements.</div>
+        <div class="px-4 py-3 border-t border-base-content/5">
+          <.link navigate={~p"/portal/agreements"} class="text-xs font-medium text-emerald-600 hover:underline">View all agreements →</.link>
+        </div>
+      </.section>
     </.page>
     """
   end
@@ -207,4 +235,11 @@ defmodule GnomeGardenWeb.ClientPortal.DashboardLive do
   defp invoice_status_variant(:void), do: :error
   defp invoice_status_variant(:write_off), do: :error
   defp invoice_status_variant(_), do: :default
+
+  defp agreement_status_variant(:active), do: :success
+  defp agreement_status_variant(:pending_signature), do: :warning
+  defp agreement_status_variant(:suspended), do: :warning
+  defp agreement_status_variant(:completed), do: :default
+  defp agreement_status_variant(:terminated), do: :error
+  defp agreement_status_variant(_), do: :default
 end

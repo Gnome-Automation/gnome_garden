@@ -72,13 +72,13 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
           <.button navigate={~p"/finance/time-entries/new?#{Map.put(time_entry_params(@work_order), :return_to, ~p"/execution/work-orders/#{@work_order}")}"}>
             New Time Entry
           </.button>
-          <.button navigate={~p"/finance/expenses/new?#{expense_params(@work_order)}"}>
+          <.button navigate={~p"/finance/expenses/new?#{Map.put(expense_params(@work_order), :return_to, ~p"/execution/work-orders/#{@work_order}")}"}>
             New Expense
           </.button>
           <.button navigate={~p"/execution/assignments/new?#{assignment_params(@work_order)}"}>
             New Assignment
           </.button>
-          <.button navigate={~p"/execution/work-orders/#{@work_order}/edit"}>
+          <.button navigate={~p"/execution/work-orders/#{@work_order}/edit?return_to=#{~p"/execution/work-orders/#{@work_order}"}"}>
             Edit
           </.button>
         </:actions>

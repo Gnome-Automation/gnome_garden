@@ -46,7 +46,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationAffiliationLive.Show do
           <.button phx-click="delete" data-confirm="Remove this affiliation? This cannot be undone.">
             Remove
           </.button>
-          <.button navigate={~p"/operations/affiliations/#{@affiliation}/edit"} variant="primary">
+          <.button navigate={~p"/operations/affiliations/#{@affiliation}/edit?return_to=#{~p"/operations/affiliations/#{@affiliation}"}"} variant="primary">
             Edit
           </.button>
         </:actions>

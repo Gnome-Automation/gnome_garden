@@ -13,6 +13,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Form do
      socket
      |> assign(:signal, signal)
      |> assign(:organizations, organizations)
+     |> assign(:return_to, params["return_to"])
      |> assign(:page_title, if(signal, do: "Edit Signal", else: "New Signal"))
      |> assign_form()}
   end
@@ -110,7 +111,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/commercial/signals"}
+            cancel_path={@return_to || ~p"/commercial/signals"}
             submit_label={if @signal, do: "Update Signal", else: "Create Signal"}
           />
         </.section>

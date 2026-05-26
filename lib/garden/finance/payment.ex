@@ -105,7 +105,7 @@ defmodule GnomeGarden.Finance.Payment do
 
       prepare build(
                 sort: [received_on: :desc, inserted_at: :desc],
-                load: [applications: [:invoice]]
+                load: [:organization, applications: [:invoice]]
               )
     end
   end
