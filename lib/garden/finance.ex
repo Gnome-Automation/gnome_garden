@@ -77,6 +77,7 @@ defmodule GnomeGarden.Finance do
       define :get_invoice_line, action: :read, get_by: [:id]
       define :create_invoice_line, action: :create
       define :update_invoice_line, action: :update
+      define :destroy_invoice_line, action: :destroy
       define :list_invoice_lines_for_invoice, action: :for_invoice, args: [:invoice_id]
     end
 
@@ -88,6 +89,7 @@ defmodule GnomeGarden.Finance do
       define :deposit_payment, action: :deposit
       define :reverse_payment, action: :reverse
       define :list_open_payments, action: :open
+      define :list_portal_payments, action: :portal_index
     end
 
     resource GnomeGarden.Finance.PaymentScheduleItem

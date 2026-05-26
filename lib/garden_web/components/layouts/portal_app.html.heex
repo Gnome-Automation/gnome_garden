@@ -12,12 +12,16 @@
             dashboard_active = view == GnomeGardenWeb.ClientPortal.DashboardLive
             invoices_active = view in [GnomeGardenWeb.ClientPortal.InvoiceLive.Index, GnomeGardenWeb.ClientPortal.InvoiceLive.Show]
             agreements_active = view in [GnomeGardenWeb.ClientPortal.AgreementLive.Index, GnomeGardenWeb.ClientPortal.AgreementLive.Show]
+            payments_active = view == GnomeGardenWeb.ClientPortal.PaymentLive
           %>
           <.link navigate={~p"/portal"} class={["px-3 py-1.5 rounded-md text-sm font-medium transition-colors", if(dashboard_active, do: "bg-base-200 text-base-content font-semibold", else: "text-base-content/60 hover:text-base-content hover:bg-base-200")]}>
             Dashboard
           </.link>
           <.link navigate={~p"/portal/invoices"} class={["px-3 py-1.5 rounded-md text-sm font-medium transition-colors", if(invoices_active, do: "bg-base-200 text-base-content font-semibold", else: "text-base-content/60 hover:text-base-content hover:bg-base-200")]}>
             Invoices
+          </.link>
+          <.link navigate={~p"/portal/payments"} class={["px-3 py-1.5 rounded-md text-sm font-medium transition-colors", if(payments_active, do: "bg-base-200 text-base-content font-semibold", else: "text-base-content/60 hover:text-base-content hover:bg-base-200")]}>
+            Payments
           </.link>
           <.link navigate={~p"/portal/agreements"} class={["px-3 py-1.5 rounded-md text-sm font-medium transition-colors", if(agreements_active, do: "bg-base-200 text-base-content font-semibold", else: "text-base-content/60 hover:text-base-content hover:bg-base-200")]}>
             Agreements

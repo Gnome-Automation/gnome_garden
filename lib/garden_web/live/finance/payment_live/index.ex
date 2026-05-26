@@ -38,6 +38,9 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Index do
           <.button navigate={~p"/finance/invoices"}>
             Invoices
           </.button>
+          <a href={~p"/finance/payments/export"} class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20">
+            Export CSV
+          </a>
           <.button navigate={~p"/finance/payments/new"} variant="primary" title="Record a new payment receipt — then allocate it against invoices">
             New Payment
           </.button>

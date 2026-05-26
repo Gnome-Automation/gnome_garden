@@ -61,6 +61,9 @@ defmodule GnomeGardenWeb.Router do
     get "/finance/invoices/batch-export", InvoiceExportController, :batch
     get "/finance/invoices/:id/export", InvoiceExportController, :show
 
+    # Finance - Payments Export
+    get "/finance/payments/export", PaymentsExportController, :staff
+
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_required}] do
@@ -238,6 +241,7 @@ defmodule GnomeGardenWeb.Router do
 
       # Finance - Mercury Bank
       live "/finance/mercury", Finance.MercuryLive
+      live "/finance/mercury/aliases", Finance.MercuryAliasLive
 
       # Agents - Procurement targeting
       live "/procurement/targeting", Agents.ProcurementTargetingLive, :index
@@ -316,6 +320,7 @@ defmodule GnomeGardenWeb.Router do
     pipe_through :browser
 
     get "/portal/agreements/:id/export", ClientPortal.AgreementExportController, :show
+    get "/portal/payments/export", PaymentsExportController, :portal
   end
 
   # Portal — authenticated routes (ClientUser session required)
@@ -331,6 +336,7 @@ defmodule GnomeGardenWeb.Router do
       live "/portal/invoices/:id", ClientPortal.InvoiceLive.Show, :show
       live "/portal/agreements", ClientPortal.AgreementLive.Index, :index
       live "/portal/agreements/:id", ClientPortal.AgreementLive.Show, :show
+      live "/portal/payments", ClientPortal.PaymentLive, :index
     end
   end
 

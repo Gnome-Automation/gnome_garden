@@ -98,6 +98,16 @@ defmodule GnomeGarden.Finance.Payment do
                 load: [:organization, :applications]
               )
     end
+
+    read :portal_index do
+      description "Portal-scoped payment list — returns only payments for actor's organization."
+      filter expr(organization_id == ^actor(:organization_id))
+
+      prepare build(
+                sort: [received_on: :desc, inserted_at: :desc],
+                load: [applications: [:invoice]]
+              )
+    end
   end
 
   attributes do
