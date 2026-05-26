@@ -53,10 +53,10 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Show do
           <.button navigate={@return_to}>
             Back
           </.button>
-          <.button navigate={~p"/finance/payment-applications/new?payment_id=#{@payment.id}"}>
+          <.button navigate={~p"/finance/payment-applications/new?payment_id=#{@payment.id}&return_to=#{~p"/finance/payments/#{@payment}"}"}>
             Apply to Invoice
           </.button>
-          <.button navigate={~p"/finance/payments/#{@payment}/edit"}>
+          <.button navigate={~p"/finance/payments/#{@payment}/edit?return_to=#{~p"/finance/payments/#{@payment}"}"}>
             Edit
           </.button>
         </:actions>
@@ -124,11 +124,11 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Show do
           <.empty_state
             icon="hero-link"
             title="No applications yet"
-            description="Create payment applications to allocate this receipt across one or more invoices."
+            description="Record a payment to allocate this receipt across one or more invoices."
           >
             <:action>
-              <.button navigate={~p"/finance/payment-applications/new?payment_id=#{@payment.id}"}>
-                Create Payment Application
+              <.button navigate={~p"/finance/payment-applications/new?payment_id=#{@payment.id}&return_to=#{~p"/finance/payments/#{@payment}"}"}>
+                Record Payment
               </.button>
             </:action>
           </.empty_state>
