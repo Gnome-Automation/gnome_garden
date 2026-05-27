@@ -146,6 +146,10 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
           <.property_item label="Total" value={format_amount(@invoice.total_amount)} />
           <.property_item label="Balance" value={format_amount(@invoice.balance_amount)} />
           <.property_item label="Line Total" value={format_amount(@invoice.line_total_amount)} />
+          <.property_item
+            label="Tax Rate"
+            value={if @invoice.tax_rate && Decimal.positive?(@invoice.tax_rate), do: "#{Decimal.to_string(@invoice.tax_rate)}%", else: "None"}
+          />
         </div>
       </.section>
 
@@ -363,11 +367,9 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
     case Finance.create_invoice_line(attrs, actor: actor) do
       {:ok, _line} ->
         updated_invoice = load_invoice!(invoice.id, actor)
-        new_total = updated_invoice.line_total_amount || Decimal.new("0")
-        applied = updated_invoice.applied_amount || Decimal.new("0")
-        new_balance = Decimal.sub(new_total, applied)
+        totals = compute_invoice_totals(updated_invoice)
 
-        case Finance.update_invoice(updated_invoice, %{total_amount: new_total, balance_amount: new_balance}, actor: actor) do
+        case Finance.update_invoice(updated_invoice, totals, actor: actor) do
           {:ok, _} ->
             {:noreply,
              socket
@@ -395,11 +397,9 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
         case Finance.destroy_invoice_line(line, actor: actor) do
           :ok ->
             updated_invoice = load_invoice!(invoice.id, actor)
-            new_total = updated_invoice.line_total_amount || Decimal.new("0")
-            applied = updated_invoice.applied_amount || Decimal.new("0")
-            new_balance = Decimal.sub(new_total, applied)
+            totals = compute_invoice_totals(updated_invoice)
 
-            Finance.update_invoice(updated_invoice, %{total_amount: new_total, balance_amount: new_balance}, actor: actor)
+            Finance.update_invoice(updated_invoice, totals, actor: actor)
 
             {:noreply,
              socket
@@ -594,4 +594,23 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp transition_invoice(invoice, :reopen, actor),
     do: Finance.reopen_invoice(invoice, actor: actor)
+
+  defp compute_invoice_totals(invoice) do
+    # line_total_amount is the Ash aggregate (sum of all line totals).
+    # We use it as the authoritative subtotal rather than the stored :subtotal
+    # attribute, because it reflects the current state of lines after add/remove.
+    subtotal = invoice.line_total_amount || Decimal.new("0")
+    tax_rate = invoice.tax_rate || Decimal.new("0")
+    tax_total = Decimal.mult(subtotal, Decimal.div(tax_rate, Decimal.new("100")))
+    total_amount = Decimal.add(subtotal, tax_total)
+    applied = invoice.applied_amount || Decimal.new("0")
+    balance_amount = Decimal.sub(total_amount, applied)
+
+    %{
+      subtotal: subtotal,
+      tax_total: tax_total,
+      total_amount: total_amount,
+      balance_amount: balance_amount
+    }
+  end
 end
