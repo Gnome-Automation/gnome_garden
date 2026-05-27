@@ -166,10 +166,19 @@ defmodule GnomeGarden.Mailer.InvoiceEmailTest do
       assert email.html_body =~ "Subtotal"
       assert email.html_body =~ "Tax (8.5%)"
       assert email.html_body =~ "85.00"
+      assert email.html_body =~ "Total Due"
     end
 
     test "html body omits tax rows when tax_rate is 0", %{invoice: invoice} do
-      email = InvoiceEmail.build(invoice, [])
+      {:ok, zero_tax} = Finance.update_invoice(invoice, %{tax_rate: Decimal.new("0")})
+
+      {:ok, loaded} =
+        Finance.get_invoice(zero_tax.id,
+          actor: nil,
+          load: [:invoice_lines, organization: [:billing_contact]]
+        )
+
+      email = InvoiceEmail.build(loaded, [])
 
       refute email.html_body =~ "Subtotal"
       refute email.html_body =~ "Tax ("

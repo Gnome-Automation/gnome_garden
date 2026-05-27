@@ -100,8 +100,8 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
 
     total_row = """
     <tr style="background:#f8fafc;">
-      <td style="padding:12px 16px;font-weight:700;color:#0f172a;">Total Due</td>
-      <td style="padding:12px 16px;text-align:right;font-weight:700;color:#0f172a;font-size:16px;">USD #{format_amount(invoice.total_amount)}</td>
+      <td style="padding:12px 16px;font-weight:700;color:#0f172a;"><strong>Total Due</strong></td>
+      <td style="padding:12px 16px;text-align:right;font-weight:700;color:#0f172a;font-size:16px;"><strong>USD #{format_amount(invoice.total_amount)}</strong></td>
     </tr>
     """
 
