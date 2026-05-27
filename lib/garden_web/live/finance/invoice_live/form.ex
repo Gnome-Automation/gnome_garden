@@ -147,11 +147,11 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
               <div class="rounded-lg border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm dark:border-white/10 dark:bg-white/[0.03]">
                 <div class="flex justify-between text-base-content/60 mb-1">
                   <span>Tax</span>
-                  <span>$<%= Decimal.to_string(Decimal.round(@tax_total_preview, 2)) %></span>
+                  <span>${Decimal.to_string(Decimal.round(@tax_total_preview, 2))}</span>
                 </div>
                 <div class="flex justify-between font-semibold text-base-content">
                   <span>Total</span>
-                  <span>$<%= Decimal.to_string(Decimal.round(@total_amount_preview, 2)) %></span>
+                  <span>${Decimal.to_string(Decimal.round(@total_amount_preview, 2))}</span>
                 </div>
               </div>
             </div>

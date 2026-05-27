@@ -107,7 +107,7 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Show do
               <dt class="text-base-content/60">Subtotal</dt>
               <dd class="text-base-content">$<%= Decimal.to_string(@invoice.subtotal) %></dd>
             </div>
-            <div :if={@invoice.tax_total && Decimal.positive?(@invoice.tax_total)} class="flex justify-between text-sm">
+            <div :if={@invoice.tax_rate && Decimal.positive?(@invoice.tax_rate)} class="flex justify-between text-sm">
               <dt class="text-base-content/60">
                 <%= if @invoice.tax_rate && Decimal.positive?(@invoice.tax_rate) do %>
                   Tax (<%= Decimal.to_string(@invoice.tax_rate, :normal) %>%)
