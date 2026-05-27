@@ -23,8 +23,8 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
      |> assign(:agreement, agreement)
      |> assign(:agreement_selected, not is_nil(agreement))
      |> assign(:override_amounts, false)
-     |> assign(:tax_total_preview, Decimal.new("0"))
-     |> assign(:total_amount_preview, Decimal.new("0"))
+     |> assign(:tax_total_preview, (invoice && invoice.tax_total) || Decimal.new("0"))
+     |> assign(:total_amount_preview, (invoice && invoice.total_amount) || Decimal.new("0"))
      |> assign(:return_to, return_to)
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
@@ -140,7 +140,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
             <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
               <.input field={@form[:subtotal]} label="Subtotal" type="number" step="0.01" />
             </div>
-            <div class="sm:col-span-2">
+            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
               <.input field={@form[:tax_rate]} label="Tax Rate (%)" type="number" step="0.01" min="0" placeholder="0" />
             </div>
             <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-4">
