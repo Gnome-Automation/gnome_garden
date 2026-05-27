@@ -190,6 +190,7 @@ config :gnome_garden,
   ]
 
 config :gnome_garden, :payment_matching, underpayment_tolerance: "1.00"
+config :gnome_garden, default_tax_rate: "0"
 
 # Configure the endpoint
 config :gnome_garden, GnomeGardenWeb.Endpoint,

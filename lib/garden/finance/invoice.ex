@@ -80,6 +80,7 @@ defmodule GnomeGarden.Finance.Invoice do
         :currency_code,
         :subtotal,
         :tax_total,
+        :tax_rate,
         :total_amount,
         :balance_amount,
         :due_on,
@@ -113,6 +114,7 @@ defmodule GnomeGarden.Finance.Invoice do
         :currency_code,
         :subtotal,
         :tax_total,
+        :tax_rate,
         :total_amount,
         :balance_amount,
         :due_on,
@@ -297,6 +299,12 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     attribute :tax_total, :decimal do
+      public? true
+    end
+
+    attribute :tax_rate, :decimal do
+      allow_nil? false
+      default Decimal.new("0")
       public? true
     end
 
