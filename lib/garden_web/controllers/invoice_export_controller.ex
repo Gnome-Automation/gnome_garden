@@ -14,7 +14,7 @@ defmodule GnomeGardenWeb.InvoiceExportController do
   def show(conn, %{"id" => id} = params) do
     format = Map.get(params, "format", "csv")
 
-    case Finance.get_invoice(id, load: [:invoice_lines, :organization], authorize?: false) do
+    case Finance.get_invoice(id, load: [:invoice_lines, :organization, :line_total_amount], authorize?: false) do
       {:ok, invoice} when invoice.status in @exportable_statuses ->
         case format do
           "csv" -> send_csv(conn, [invoice], filename: invoice.invoice_number)
@@ -92,7 +92,7 @@ defmodule GnomeGardenWeb.InvoiceExportController do
         q
       end
     end)
-    |> Ash.Query.load([:invoice_lines, :organization])
+    |> Ash.Query.load([:invoice_lines, :organization, :line_total_amount])
     |> Ash.Query.sort(issued_on: :asc, invoice_number: :asc)
     |> Ash.read!(domain: Finance, authorize?: false)
   end

@@ -95,24 +95,39 @@
 
     tbody td.num { text-align: right; }
 
-    .total-row {
+    .totals-block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      padding-top: 16px;
+      margin-bottom: 40px;
+      gap: 4px;
+    }
+
+    .totals-row {
       display: flex;
       justify-content: flex-end;
-      padding-top: 16px;
-      border-top: 2px solid #111;
-      margin-bottom: 40px;
+      gap: 32px;
+      font-size: 13px;
     }
 
-    .total-row .label {
-      font-weight: 600;
-      margin-right: 32px;
-    }
-
-    .total-row .amount {
-      font-weight: 700;
-      font-size: 16px;
+    .totals-label {
+      color: #555;
       min-width: 100px;
       text-align: right;
+    }
+
+    .totals-amount {
+      min-width: 100px;
+      text-align: right;
+    }
+
+    .totals-final {
+      border-top: 2px solid #111;
+      padding-top: 8px;
+      margin-top: 4px;
+      font-weight: 700;
+      font-size: 15px;
     }
 
     .payment-info {
@@ -204,9 +219,21 @@
           </tbody>
         </table>
 
-        <div class="total-row">
-          <span class="label">Total</span>
-          <span class="amount">$<%= invoice.total_amount %></span>
+        <div class="totals-block">
+          <div class="totals-row">
+            <span class="totals-label">Subtotal</span>
+            <span class="totals-amount">$<%= invoice.line_total_amount || invoice.subtotal || invoice.total_amount %></span>
+          </div>
+          <%= if invoice.tax_rate && Decimal.positive?(invoice.tax_rate) do %>
+            <div class="totals-row">
+              <span class="totals-label">Tax (<%= Decimal.to_string(invoice.tax_rate, :normal) %>%)</span>
+              <span class="totals-amount">$<%= invoice.tax_total %></span>
+            </div>
+          <% end %>
+          <div class="totals-row totals-final">
+            <span class="totals-label">Total</span>
+            <span class="totals-amount">$<%= invoice.total_amount %></span>
+          </div>
         </div>
 
         <%= if @mercury_info && @mercury_info[:routing_number] not in [nil, ""] do %>
