@@ -23,6 +23,8 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
      |> assign(:agreement, agreement)
      |> assign(:agreement_selected, not is_nil(agreement))
      |> assign(:override_amounts, false)
+     |> assign(:tax_total_preview, Decimal.new("0"))
+     |> assign(:total_amount_preview, Decimal.new("0"))
      |> assign(:return_to, return_to)
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
@@ -138,14 +140,20 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
             <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
               <.input field={@form[:subtotal]} label="Subtotal" type="number" step="0.01" />
             </div>
-            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
-              <.input field={@form[:tax_total]} label="Tax Total" type="number" step="0.01" />
+            <div class="sm:col-span-2">
+              <.input field={@form[:tax_rate]} label="Tax Rate (%)" type="number" step="0.01" min="0" placeholder="0" />
             </div>
-            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
-              <.input field={@form[:total_amount]} label="Total Amount" type="number" step="0.01" />
-            </div>
-            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-3">
-              <.input field={@form[:balance_amount]} label="Balance Amount" type="number" step="0.01" />
+            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-4">
+              <div class="rounded-lg border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm dark:border-white/10 dark:bg-white/[0.03]">
+                <div class="flex justify-between text-base-content/60 mb-1">
+                  <span>Tax</span>
+                  <span>$<%= Decimal.to_string(Decimal.round(@tax_total_preview, 2)) %></span>
+                </div>
+                <div class="flex justify-between font-semibold text-base-content">
+                  <span>Total</span>
+                  <span>$<%= Decimal.to_string(Decimal.round(@total_amount_preview, 2)) %></span>
+                </div>
+              </div>
             </div>
             <div class="col-span-full">
               <.input field={@form[:notes]} type="textarea" label="Notes" />
@@ -177,7 +185,24 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
         {selected, if(selected, do: socket.assigns.override_amounts, else: false)}
       end
 
-    {:noreply, assign(socket, form: to_form(form), agreement_selected: agreement_selected, override_amounts: override_amounts)}
+    {tax_total_preview, total_amount_preview} =
+      case {Decimal.parse(params["subtotal"] || ""), Decimal.parse(params["tax_rate"] || "")} do
+        {{subtotal, ""}, {rate, ""}} ->
+          tax = Decimal.mult(subtotal, Decimal.div(rate, Decimal.new("100")))
+          {tax, Decimal.add(subtotal, tax)}
+
+        _ ->
+          {Decimal.new("0"), Decimal.new("0")}
+      end
+
+    {:noreply,
+     assign(socket,
+       form: to_form(form),
+       agreement_selected: agreement_selected,
+       override_amounts: override_amounts,
+       tax_total_preview: tax_total_preview,
+       total_amount_preview: total_amount_preview
+     )}
   end
 
   @impl true
@@ -187,14 +212,36 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
 
   @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
+    # Only compute and inject derived tax fields when subtotal is explicitly
+    # provided in the form (manual path or override-amounts path).
+    # On the agreement path (no subtotal in params), CreateInvoiceFromAgreementSources
+    # computes amounts itself — do not override with zeros.
+    enriched_params =
+      case Decimal.parse(params["subtotal"] || "") do
+        {subtotal, ""} ->
+          rate =
+            case Decimal.parse(params["tax_rate"] || "") do
+              {r, ""} -> r
+              _ -> Decimal.new("0")
+            end
+
+          tax_total = Decimal.mult(subtotal, Decimal.div(rate, Decimal.new("100")))
+          total_amount = Decimal.add(subtotal, tax_total)
+
+          params
+          |> Map.put("tax_total", Decimal.to_string(tax_total))
+          |> Map.put("total_amount", Decimal.to_string(total_amount))
+          |> Map.put("balance_amount", Decimal.to_string(total_amount))
+
+        _ ->
+          params
+      end
+
+    case AshPhoenix.Form.submit(socket.assigns.form, params: enriched_params) do
       {:ok, invoice} ->
         {:noreply,
          socket
-         |> put_flash(
-           :info,
-           "Invoice #{success_label(socket.assigns.invoice, socket.assigns.agreement)}"
-         )
+         |> put_flash(:info, "Invoice #{success_label(socket.assigns.invoice, socket.assigns.agreement)}")
          |> push_navigate(to: ~p"/finance/invoices/#{invoice}")}
 
       {:error, form} ->
@@ -226,7 +273,13 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
           )
 
         true ->
-          AshPhoenix.Form.for_create(Finance.Invoice, :create, actor: actor, domain: Finance)
+          default_rate = Application.get_env(:gnome_garden, :default_tax_rate, "0")
+
+          AshPhoenix.Form.for_create(Finance.Invoice, :create,
+            actor: actor,
+            domain: Finance,
+            params: %{"tax_rate" => to_string(default_rate)}
+          )
       end
 
     assign(socket, :form, to_form(form))
