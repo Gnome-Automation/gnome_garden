@@ -70,6 +70,44 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
   defp format_amount(nil), do: "0.00"
   defp format_amount(d), do: Decimal.to_string(Decimal.round(d, 2), :normal)
 
+  defp tax_footer_rows(invoice) do
+    tax_rate = invoice.tax_rate
+    show_tax = tax_rate && Decimal.positive?(tax_rate)
+
+    subtotal_row =
+      if show_tax do
+        """
+        <tr style="background:#f8fafc;">
+          <td style="padding:8px 16px;color:#64748b;">Subtotal</td>
+          <td style="padding:8px 16px;text-align:right;color:#64748b;">USD #{format_amount(invoice.subtotal)}</td>
+        </tr>
+        """
+      else
+        ""
+      end
+
+    tax_row =
+      if show_tax do
+        """
+        <tr style="background:#f8fafc;">
+          <td style="padding:8px 16px;color:#64748b;">Tax (#{Decimal.to_string(tax_rate, :normal)}%)</td>
+          <td style="padding:8px 16px;text-align:right;color:#64748b;">USD #{format_amount(invoice.tax_total)}</td>
+        </tr>
+        """
+      else
+        ""
+      end
+
+    total_row = """
+    <tr style="background:#f8fafc;">
+      <td style="padding:12px 16px;font-weight:700;color:#0f172a;">Total Due</td>
+      <td style="padding:12px 16px;text-align:right;font-weight:700;color:#0f172a;font-size:16px;">USD #{format_amount(invoice.total_amount)}</td>
+    </tr>
+    """
+
+    subtotal_row <> tax_row <> total_row
+  end
+
   defp build_html(invoice, org_name, mercury_info) do
     account_number = Keyword.get(mercury_info, :account_number, "")
     routing_number = Keyword.get(mercury_info, :routing_number, "")
@@ -125,12 +163,7 @@ defmodule GnomeGarden.Mailer.InvoiceEmail do
                     </tr>
                   </thead>
                   <tbody>#{lines_html}</tbody>
-                  <tfoot>
-                    <tr style="background:#f8fafc;">
-                      <td style="padding:12px 16px;font-weight:700;color:#0f172a;">Total Due</td>
-                      <td style="padding:12px 16px;text-align:right;font-weight:700;color:#0f172a;font-size:16px;">USD #{format_amount(invoice.total_amount)}</td>
-                    </tr>
-                  </tfoot>
+                  <tfoot>#{tax_footer_rows(invoice)}</tfoot>
                 </table>
                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:20px;margin-bottom:24px;">
                   <p style="margin:0 0 12px;font-weight:600;color:#0f172a;">Payment Instructions</p>

@@ -141,4 +141,38 @@ defmodule GnomeGarden.Mailer.InvoiceEmailTest do
     # Should fall back to other_person
     assert InvoiceEmail.find_billing_email(loaded_org) == to_string(other_person.email)
   end
+
+  # --- tax breakdown tests ---
+
+  describe "tax breakdown in email" do
+    test "html body shows subtotal and tax rows when tax_rate > 0", %{invoice: invoice} do
+      {:ok, taxed} =
+        Finance.update_invoice(invoice, %{
+          tax_rate: Decimal.new("8.5"),
+          subtotal: Decimal.new("1000.00"),
+          tax_total: Decimal.new("85.00"),
+          total_amount: Decimal.new("1085.00"),
+          balance_amount: Decimal.new("1085.00")
+        })
+
+      {:ok, loaded} =
+        Finance.get_invoice(taxed.id,
+          actor: nil,
+          load: [:invoice_lines, organization: [:billing_contact]]
+        )
+
+      email = InvoiceEmail.build(loaded, [])
+
+      assert email.html_body =~ "Subtotal"
+      assert email.html_body =~ "Tax (8.5%)"
+      assert email.html_body =~ "85.00"
+    end
+
+    test "html body omits tax rows when tax_rate is 0", %{invoice: invoice} do
+      email = InvoiceEmail.build(invoice, [])
+
+      refute email.html_body =~ "Subtotal"
+      refute email.html_body =~ "Tax ("
+    end
+  end
 end
