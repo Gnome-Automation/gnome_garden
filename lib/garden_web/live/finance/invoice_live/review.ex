@@ -118,6 +118,23 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
         </table>
       </.section>
 
+      <.section>
+        <dl class="space-y-2 max-w-xs ml-auto text-sm">
+          <div class="flex justify-between">
+            <dt class="text-zinc-500">Subtotal</dt>
+            <dd class="text-zinc-900 dark:text-white">{format_amount(@invoice.line_total_amount)}</dd>
+          </div>
+          <div :if={@invoice.tax_rate && Decimal.positive?(@invoice.tax_rate)} class="flex justify-between">
+            <dt class="text-zinc-500">Tax ({Decimal.to_string(@invoice.tax_rate)}%)</dt>
+            <dd class="text-zinc-900 dark:text-white">{format_amount(@invoice.tax_total)}</dd>
+          </div>
+          <div class="flex justify-between font-semibold border-t border-zinc-200 dark:border-white/10 pt-2">
+            <dt class="text-zinc-900 dark:text-white">Total</dt>
+            <dd class="text-zinc-900 dark:text-white">{format_amount(@invoice.total_amount)}</dd>
+          </div>
+        </dl>
+      </.section>
+
       <.section title="Issue Settings">
         <form phx-submit="issue_invoice" class="space-y-4">
           <div class="max-w-xs">
@@ -201,7 +218,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
   defp load_invoice!(id, actor) do
     case Finance.get_invoice(id,
            actor: actor,
-           load: [:status_variant, :invoice_lines, organization: []]
+           load: [:status_variant, :line_total_amount, :invoice_lines, organization: []]
          ) do
       {:ok, invoice} -> invoice
       {:error, error} -> raise "failed to load invoice #{id}: #{inspect(error)}"
