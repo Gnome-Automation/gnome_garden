@@ -255,7 +255,7 @@ defmodule GnomeGarden.Finance.Invoice do
     read :portal_index do
       description "Portal-scoped invoice list — returns only invoices for actor's organization."
       filter expr(organization_id == ^actor(:organization_id))
-      prepare build(load: [:invoice_lines, :agreement, :organization])
+      prepare build(load: [:invoice_lines, :agreement, :organization, :line_total_amount])
     end
 
     read :portal_show do
