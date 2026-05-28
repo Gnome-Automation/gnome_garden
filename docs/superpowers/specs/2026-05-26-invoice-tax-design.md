@@ -157,7 +157,7 @@ Already has the subtotal/tax/total breakdown. One change:
 - [x] Edit existing invoice and change `tax_rate` from `0` to `8.5` → `tax_total` and `total_amount` update on save
 - [x] Add line to existing invoice → `subtotal`, `tax_total`, `total_amount`, `balance_amount` all recalculate
 - [x] Remove line → same recalculation
-- [ ] Create invoice via agreement path → `tax_rate` defaults to `0`; edit and set a rate → amounts update
+- [x] Create invoice via agreement path → `tax_rate` defaults to `0`; edit and set a rate → amounts update
 - [x] Form live preview shows correct `tax_total` and `total_amount` as user types `tax_rate` or `subtotal`
 - [x] Form preview hidden when agreement is selected and override is off
 - [x] Default `tax_rate` pre-fills on new invoice form from app config
