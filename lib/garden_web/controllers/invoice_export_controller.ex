@@ -126,11 +126,12 @@ defmodule GnomeGardenWeb.InvoiceExportController do
   end
 
   defp build_csv(invoices) do
-    header = "invoice_number,issued_date,due_date,client,description,quantity,unit_price,line_total,invoice_total,status,currency\n"
+    header = "invoice_number,issued_date,due_date,client,description,quantity,unit_price,line_total,subtotal,tax_rate,tax_total,invoice_total,status,currency\n"
 
     rows =
       Enum.flat_map(invoices, fn invoice ->
         client = (invoice.organization && invoice.organization.name) || ""
+        subtotal = invoice.line_total_amount || invoice.subtotal
 
         lines =
           if invoice.invoice_lines == [] do
@@ -145,6 +146,9 @@ defmodule GnomeGardenWeb.InvoiceExportController do
                 "",
                 "",
                 "",
+                decimal_str(subtotal),
+                decimal_str(invoice.tax_rate),
+                decimal_str(invoice.tax_total),
                 decimal_str(invoice.total_amount),
                 to_string(invoice.status),
                 invoice.currency_code
@@ -162,6 +166,9 @@ defmodule GnomeGardenWeb.InvoiceExportController do
                 decimal_str(line.quantity),
                 decimal_str(line.unit_price),
                 decimal_str(line.line_total),
+                decimal_str(subtotal),
+                decimal_str(invoice.tax_rate),
+                decimal_str(invoice.tax_total),
                 decimal_str(invoice.total_amount),
                 to_string(invoice.status),
                 invoice.currency_code
