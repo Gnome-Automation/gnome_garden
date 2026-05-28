@@ -140,7 +140,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
             <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
               <.input field={@form[:subtotal]} label="Subtotal" type="number" step="0.01" />
             </div>
-            <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-2">
+            <div class="sm:col-span-2">
               <.input field={@form[:tax_rate]} label="Tax Rate (%)" type="number" step="0.01" min="0" placeholder="0" />
             </div>
             <div :if={not @agreement_selected or @override_amounts} class="sm:col-span-4">
