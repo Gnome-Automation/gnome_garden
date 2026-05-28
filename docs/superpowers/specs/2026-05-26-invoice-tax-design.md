@@ -1,7 +1,7 @@
 # Invoice Tax Rate — Design Spec
 
 **Date:** 2026-05-26
-**Status:** Approved
+**Status:** Implemented ✅ (2026-05-28)
 
 ---
 
@@ -152,16 +152,16 @@ Already has the subtotal/tax/total breakdown. One change:
 
 ## Testing Checklist
 
-- [ ] Create invoice (manual path) with `tax_rate = 8.5`, `subtotal = 100` → `tax_total = 8.50`, `total = 108.50`
-- [ ] Create invoice with `tax_rate = 0` → `tax_total = 0`, `total = subtotal`
-- [ ] Edit existing invoice and change `tax_rate` from `0` to `8.5` → `tax_total` and `total_amount` update on save
-- [ ] Add line to existing invoice → `subtotal`, `tax_total`, `total_amount`, `balance_amount` all recalculate
-- [ ] Remove line → same recalculation
+- [x] Create invoice (manual path) with `tax_rate = 8.5`, `subtotal = 100` → `tax_total = 8.50`, `total = 108.50`
+- [x] Create invoice with `tax_rate = 0` → `tax_total = 0`, `total = subtotal`
+- [x] Edit existing invoice and change `tax_rate` from `0` to `8.5` → `tax_total` and `total_amount` update on save
+- [x] Add line to existing invoice → `subtotal`, `tax_total`, `total_amount`, `balance_amount` all recalculate
+- [x] Remove line → same recalculation
 - [ ] Create invoice via agreement path → `tax_rate` defaults to `0`; edit and set a rate → amounts update
-- [ ] Form live preview shows correct `tax_total` and `total_amount` as user types `tax_rate` or `subtotal`
-- [ ] Form preview hidden when agreement is selected and override is off
-- [ ] Default `tax_rate` pre-fills on new invoice form from app config
-- [ ] PDF export shows subtotal/tax/total breakdown; tax row hidden when `tax_rate = 0`
-- [ ] Email shows subtotal/tax/total breakdown; tax row hidden when `tax_rate = 0`
-- [ ] Portal show page shows "Tax (8.5%)" label with correct dollar amount
-- [ ] Review page shows totals breakdown (subtotal/tax/total) before issuing
+- [x] Form live preview shows correct `tax_total` and `total_amount` as user types `tax_rate` or `subtotal`
+- [x] Form preview hidden when agreement is selected and override is off
+- [x] Default `tax_rate` pre-fills on new invoice form from app config
+- [x] PDF export shows subtotal/tax/total breakdown; tax row hidden when `tax_rate = 0`
+- [x] Email shows subtotal/tax/total breakdown; tax row hidden when `tax_rate = 0`
+- [x] Portal show page shows "Tax (8.5%)" label with correct dollar amount
+- [x] Review page shows totals breakdown (subtotal/tax/total) before issuing
