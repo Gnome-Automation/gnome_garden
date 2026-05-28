@@ -87,8 +87,8 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Show do
                 <tr :for={line <- (if is_list(@invoice.invoice_lines), do: @invoice.invoice_lines, else: [])} class="hover:bg-base-200/30 transition-colors">
                   <td class="px-4 py-3 text-sm text-base-content"><%= line.description %></td>
                   <td class="px-4 py-3 text-sm text-base-content/60 text-right"><%= Decimal.to_string(line.quantity) %></td>
-                  <td class="px-4 py-3 text-sm text-base-content/60 text-right">$<%= Decimal.to_string(line.unit_price) %></td>
-                  <td class="px-4 py-3 text-sm text-base-content text-right">$<%= Decimal.to_string(line.line_total) %></td>
+                  <td class="px-4 py-3 text-sm text-base-content/60 text-right">$<%= Decimal.to_string(Decimal.round(line.unit_price, 2), :normal) %></td>
+                  <td class="px-4 py-3 text-sm text-base-content text-right">$<%= Decimal.to_string(Decimal.round(line.line_total, 2), :normal) %></td>
                 </tr>
               </tbody>
             </table>
@@ -105,7 +105,7 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Show do
           <dl class="space-y-2 max-w-xs ml-auto">
             <div :if={@invoice.subtotal} class="flex justify-between text-sm">
               <dt class="text-base-content/60">Subtotal</dt>
-              <dd class="text-base-content">$<%= Decimal.to_string(@invoice.subtotal) %></dd>
+              <dd class="text-base-content">$<%= Decimal.to_string(Decimal.round(@invoice.subtotal, 2), :normal) %></dd>
             </div>
             <div :if={@invoice.tax_rate && Decimal.positive?(@invoice.tax_rate)} class="flex justify-between text-sm">
               <dt class="text-base-content/60">
@@ -115,17 +115,17 @@ defmodule GnomeGardenWeb.ClientPortal.InvoiceLive.Show do
                   Tax
                 <% end %>
               </dt>
-              <dd class="text-base-content">$<%= Decimal.to_string(@invoice.tax_total) %></dd>
+              <dd class="text-base-content">$<%= Decimal.to_string(Decimal.round(@invoice.tax_total, 2), :normal) %></dd>
             </div>
             <div class="flex justify-between text-sm font-semibold border-t border-base-content/10 pt-2">
               <dt class="text-base-content">Total</dt>
               <dd class="text-base-content">
-                $<%= if @invoice.total_amount, do: Decimal.to_string(@invoice.total_amount), else: "—" %>
+                $<%= if @invoice.total_amount, do: Decimal.to_string(Decimal.round(@invoice.total_amount, 2), :normal), else: "—" %>
               </dd>
             </div>
             <div :if={@invoice.balance_amount} class="flex justify-between text-sm font-bold">
               <dt class="text-base-content">Balance Due</dt>
-              <dd class="text-emerald-600">$<%= Decimal.to_string(@invoice.balance_amount) %></dd>
+              <dd class="text-emerald-600">$<%= Decimal.to_string(Decimal.round(@invoice.balance_amount, 2), :normal) %></dd>
             </div>
           </dl>
         </.section>

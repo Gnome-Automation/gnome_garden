@@ -222,17 +222,17 @@
         <div class="totals-block">
           <div class="totals-row">
             <span class="totals-label">Subtotal</span>
-            <span class="totals-amount">$<%= invoice.line_total_amount || invoice.subtotal || invoice.total_amount %></span>
+            <span class="totals-amount">$<%= Decimal.to_string(Decimal.round(invoice.line_total_amount || invoice.subtotal || invoice.total_amount, 2), :normal) %></span>
           </div>
           <%= if invoice.tax_rate && Decimal.positive?(invoice.tax_rate) do %>
             <div class="totals-row">
               <span class="totals-label">Tax (<%= Decimal.to_string(invoice.tax_rate, :normal) %>%)</span>
-              <span class="totals-amount">$<%= invoice.tax_total %></span>
+              <span class="totals-amount">$<%= Decimal.to_string(Decimal.round(invoice.tax_total, 2), :normal) %></span>
             </div>
           <% end %>
           <div class="totals-row totals-final">
             <span class="totals-label">Total</span>
-            <span class="totals-amount">$<%= invoice.total_amount %></span>
+            <span class="totals-amount">$<%= Decimal.to_string(Decimal.round(invoice.total_amount, 2), :normal) %></span>
           </div>
         </div>
 
