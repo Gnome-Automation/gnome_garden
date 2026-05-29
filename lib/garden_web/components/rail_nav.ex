@@ -388,6 +388,61 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/mercury/aliases"]
     },
     %{
+      id: "fin-chart-of-accounts",
+      section: "Finance",
+      icon: "hero-list-bullet",
+      label: "Chart of Accounts",
+      tooltip: "Master list of GL accounts — add and manage the accounts used for double-entry bookkeeping",
+      path: "/finance/chart-of-accounts",
+      badge: 0,
+      hot: false,
+      match: ["/finance/chart-of-accounts"]
+    },
+    %{
+      id: "fin-journal-entries",
+      section: "Finance",
+      icon: "hero-book-open",
+      label: "Journal Entries",
+      tooltip: "Double-entry journal entries — auto-posted from invoices, payments, expenses, and manual entries",
+      path: "/finance/journal-entries",
+      badge: 0,
+      hot: false,
+      match: ["/finance/journal-entries"]
+    },
+    %{
+      id: "fin-report-pl",
+      section: "Finance",
+      icon: "hero-chart-bar",
+      label: "Profit & Loss",
+      tooltip: "Revenue and expense summary for any date range",
+      path: "/finance/reports/profit-loss",
+      badge: 0,
+      hot: false,
+      match: ["/finance/reports/profit-loss"]
+    },
+    %{
+      id: "fin-report-bs",
+      section: "Finance",
+      icon: "hero-chart-bar",
+      label: "Balance Sheet",
+      tooltip: "Assets, liabilities, and equity as of any date",
+      path: "/finance/reports/balance-sheet",
+      badge: 0,
+      hot: false,
+      match: ["/finance/reports/balance-sheet"]
+    },
+    %{
+      id: "fin-report-gl",
+      section: "Finance",
+      icon: "hero-magnifying-glass",
+      label: "GL Detail",
+      tooltip: "Transaction detail for any account within a date range",
+      path: "/finance/reports/gl-detail",
+      badge: 0,
+      hot: false,
+      match: ["/finance/reports/gl-detail"]
+    },
+    %{
       id: "fin-billing-reminders",
       section: "Finance",
       icon: "hero-bell",

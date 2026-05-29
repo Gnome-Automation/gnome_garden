@@ -65,6 +65,11 @@ defmodule GnomeGardenWeb.Router do
     get "/finance/payments/batch-export", PaymentsExportController, :batch
     get "/finance/payments/:id/export", PaymentsExportController, :show
 
+    # Finance - GL Reports Export
+    get "/finance/reports/profit-loss/export", GlReportsExportController, :profit_loss
+    get "/finance/reports/balance-sheet/export", GlReportsExportController, :balance_sheet
+    get "/finance/reports/gl-detail/export", GlReportsExportController, :gl_detail
+
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_required}] do
@@ -239,6 +244,17 @@ defmodule GnomeGardenWeb.Router do
       # Finance - Credit Notes
       live "/finance/credit-notes", Finance.CreditNoteLive.Index, :index
       live "/finance/credit-notes/:id", Finance.CreditNoteLive.Show, :show
+
+      # Finance - GL / Chart of Accounts / Journal Entries
+      live "/finance/chart-of-accounts", Finance.ChartOfAccountsLive
+      live "/finance/journal-entries", Finance.JournalEntryLive.Index, :index
+      live "/finance/journal-entries/new", Finance.JournalEntryLive.New, :new
+      live "/finance/journal-entries/:id", Finance.JournalEntryLive.Show, :show
+
+      # Finance - Reports
+      live "/finance/reports/profit-loss", Finance.Reports.ProfitLossLive
+      live "/finance/reports/balance-sheet", Finance.Reports.BalanceSheetLive
+      live "/finance/reports/gl-detail", Finance.Reports.GlDetailLive
 
       # Finance - Mercury Bank
       live "/finance/mercury", Finance.MercuryLive
