@@ -46,7 +46,6 @@ defmodule GnomeGarden.MixProject do
       {:libgraph, "~> 0.16", override: true},
       {:jido_browser, "~> 2.0"},
       {:req_llm, "~> 1.7"},
-      {:llm_db, "~> 2026.3"},
 
       # Data
       {:yaml_elixir, "~> 2.12"},
