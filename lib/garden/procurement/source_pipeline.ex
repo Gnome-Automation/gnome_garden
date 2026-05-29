@@ -64,6 +64,14 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
     return inspection
   end
 
+  if inspection.candidate_links and inspection.candidate_links > 0 then
+    local configured = source.configure_from_inspection(source_context.id, inspection.run_id)
+    configured.inspection_mode = inspection.mode
+    configured.inspection_run_id = inspection.run_id
+
+    return configured
+  end
+
   local configured = source.configure(source_context.id)
   configured.inspection_mode = inspection.mode
   configured.inspection_run_id = inspection.run_id
@@ -166,6 +174,10 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
       |> Lua.set!([:source_context], source_context(source))
       |> Lua.set!([:source, :inspect], inspect_function(ref, caller, source, opts))
       |> Lua.set!([:source, :configure], configure_function(ref, caller, actor, async?))
+      |> Lua.set!(
+        [:source, :configure_from_inspection],
+        configure_from_inspection_function(ref, caller, actor)
+      )
       |> Lua.set!([:source, :scan], scan_function(ref, caller, source, scanner, scanner_context))
       |> then(
         &AshLua.new(otp_app: :gnome_garden, actor: actor, context: lua_context(opts), lua: &1)
@@ -216,6 +228,15 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
     end
   end
 
+  defp configure_from_inspection_function(ref, caller, actor) do
+    fn [source_id, crawl_run_id], lua ->
+      result = configure_candidate_link_source(source_id, crawl_run_id, actor)
+
+      send(caller, {ref, :configuration, result})
+      encode_lua_result(lua, serialize_configuration_result(result))
+    end
+  end
+
   defp scan_function(ref, caller, source, scanner, scanner_context) do
     fn [_source_id], lua ->
       result = scanner.scan(source, scanner_context)
@@ -223,6 +244,37 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
       send(caller, {ref, :scan, result})
       encode_lua_result(lua, serialize_scan_result(result))
     end
+  end
+
+  defp configure_candidate_link_source(source_id, crawl_run_id, actor) do
+    with {:ok, source} <- Procurement.get_procurement_source(source_id, actor: actor),
+         {:ok, candidates} <-
+           Procurement.list_extraction_candidates_for_run(crawl_run_id, actor: actor),
+         bid_count when bid_count > 0 <- candidate_bid_count(candidates),
+         {:ok, configured_source} <-
+           Procurement.configure_procurement_source(
+             source,
+             %{
+               scrape_config: %{
+                 strategy: "candidate_links",
+                 listing_url: source.url,
+                 inspection_run_id: crawl_run_id,
+                 candidate_count: bid_count,
+                 notes:
+                   "Configured from public procurement links found by bounded source inspection."
+               }
+             },
+             actor: actor
+           ) do
+      {:ok, %{source: configured_source, mode: :auto_configured}}
+    else
+      0 -> {:error, "Inspection did not find any bid candidate links."}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp candidate_bid_count(candidates) do
+    Enum.count(candidates, &(&1.candidate_type == :bid))
   end
 
   defp encode_lua_result(lua, value) do
@@ -268,6 +320,7 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
       "diagnosis" => inspection["diagnosis"],
       "requires_login" => truthy?(inspection["requires_login"]),
       "public_listing_links" => inspection["public_listing_links"] || 0,
+      "candidate_links" => inspection["candidate_links"] || 0,
       "password_inputs" => inspection["password_inputs"] || 0,
       "forms" => inspection["forms"] || 0
     }

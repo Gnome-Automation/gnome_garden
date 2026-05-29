@@ -668,6 +668,64 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     refute source.health_status == :needs_login
   end
 
+  test "stored credentials must verify before they unblock source launch" do
+    System.delete_env("PLANETBIDS_USERNAME")
+    System.delete_env("PLANETBIDS_PASSWORD")
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Verified Credential PlanetBids Source",
+        url: "https://vendors.planetbids.com/portal/67891/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "67891",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          listing_selector: ".bid-row",
+          title_selector: ".bid-title",
+          listing_url: procurement_source.url
+        }
+      })
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :planetbids,
+        credential_family: "planetbids",
+        username: "operator@example.com",
+        password: "secret-for-test"
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, pending_source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:runnable, :health_note, :health_status, :health_variant]
+      )
+
+    refute pending_source.runnable
+    assert pending_source.health_status == :credentials_pending
+    assert pending_source.health_variant == :warning
+    assert pending_source.health_note =~ "Waiting for credential verification"
+
+    {:ok, _credential} = Procurement.mark_source_credential_verified(credential, %{})
+
+    {:ok, verified_source} =
+      Acquisition.get_source(acquisition_source.id,
+        load: [:runnable, :health_status, :health_variant]
+      )
+
+    assert verified_source.runnable
+    assert verified_source.health_status == :ready
+    assert verified_source.health_variant == :success
+  end
+
   test "console sources detect noisy finding mixes" do
     {:ok, procurement_source} =
       Procurement.create_procurement_source(%{

@@ -5,7 +5,11 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.SourceLaunchBatch
+  alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.SourceCredential
+  alias GnomeGarden.Procurement.SourceCredentials
   alias GnomeGarden.Procurement.SourcePipeline
+  alias GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog
 
   @buckets [:needs_configuration, :ready, :credentials_needed, :attention, :all]
   @configuration_batch_limit 10
@@ -16,6 +20,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     if connected?(socket) do
       GnomeGardenWeb.Endpoint.subscribe("source:created")
       GnomeGardenWeb.Endpoint.subscribe("source:updated")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_credential:created")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_credential:updated")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_credential:destroyed")
     end
 
     {:ok,
@@ -26,11 +33,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
      |> assign(:source_counts, empty_counts())
      |> assign(:next_runnable_source, nil)
      |> assign(:sources, [])
+     |> assign(:source_credentials_index, %{by_family: %{}, by_source: %{}})
      |> assign(:configuration_batch_limit, @configuration_batch_limit)
      |> assign(:configuring_source_ids, MapSet.new())
      |> assign(:configuring_batch?, false)
      |> assign(:launching_source_ids, MapSet.new())
-     |> assign(:launching_ready_batch?, false)}
+     |> assign(:launching_ready_batch?, false)
+     |> assign(:credential_dialog, nil)
+     |> assign(:credential_form, nil)}
   end
 
   @impl true
@@ -92,6 +102,90 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
      |> assign(:launching_ready_batch?, true)
      |> put_flash(:info, "Launching ready source scans.")
      |> start_batch_launch(actor)}
+  end
+
+  @impl true
+  def handle_event("open_credential_form", %{"id" => id}, socket) do
+    case Acquisition.get_source(id,
+           actor: socket.assigns.current_user,
+           load: [:procurement_source]
+         ) do
+      {:ok, source} ->
+        {:noreply, assign_credential_form(socket, source)}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not load source: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("close_credential_form", _params, socket) do
+    {:noreply, clear_credential_form(socket)}
+  end
+
+  @impl true
+  def handle_event("validate_credential", %{"form" => params}, socket) do
+    form = AshPhoenix.Form.validate(socket.assigns.credential_form.source, params)
+    {:noreply, assign(socket, :credential_form, to_form(form))}
+  end
+
+  @impl true
+  def handle_event("save_credential", %{"form" => params}, socket) do
+    case AshPhoenix.Form.submit(socket.assigns.credential_form.source, params: params) do
+      {:ok, credential} ->
+        test_result =
+          Procurement.queue_source_credential_test(credential,
+            procurement_source_id: socket.assigns.credential_dialog.procurement_source_id
+          )
+
+        {:noreply,
+         socket
+         |> clear_credential_form()
+         |> refresh_sources()
+         |> put_flash(
+           flash_kind_for_credential_test(test_result),
+           credential_save_message(credential, test_result)
+         )}
+
+      {:error, form} ->
+        {:noreply, assign(socket, :credential_form, to_form(form))}
+    end
+  end
+
+  @impl true
+  def handle_event("test_credentials", %{"id" => id}, socket) do
+    case Acquisition.get_source(id,
+           actor: socket.assigns.current_user,
+           load: [:procurement_source]
+         ) do
+      {:ok, source} ->
+        credentials_index = source_credentials_index()
+
+        case credential_for_source(source, credentials_index) do
+          nil ->
+            {:noreply,
+             socket
+             |> refresh_sources()
+             |> put_flash(:error, "No stored credentials were found for #{source.name}.")}
+
+          credential ->
+            test_result =
+              Procurement.queue_source_credential_test(credential,
+                procurement_source_id: source.procurement_source && source.procurement_source.id
+              )
+
+            {:noreply,
+             socket
+             |> refresh_sources()
+             |> put_flash(
+               flash_kind_for_credential_test(test_result),
+               credential_test_message(credential, test_result)
+             )}
+        end
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not load source: #{inspect(error)}")}
+    end
   end
 
   defp launch_source(socket, id) do
@@ -223,6 +317,10 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     {:noreply, refresh_sources(socket)}
   end
 
+  def handle_info(%{topic: "procurement_source_credential:" <> _event}, socket) do
+    {:noreply, refresh_sources(socket)}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -328,6 +426,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
               <.source_card
                 :for={source <- @sources}
                 source={source}
+                source_credentials_index={@source_credentials_index}
                 configuring_source_ids={@configuring_source_ids}
                 launching_source_ids={@launching_source_ids}
               />
@@ -343,6 +442,12 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           </div>
         </div>
       </.section>
+
+      <CredentialDialog.credential_modal
+        :if={@credential_dialog}
+        dialog={@credential_dialog}
+        form={@credential_form}
+      />
     </.page>
     """
   end
@@ -379,10 +484,18 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   end
 
   attr :source, :map, required: true
+  attr :source_credentials_index, :map, required: true
   attr :configuring_source_ids, :any, required: true
   attr :launching_source_ids, :any, required: true
 
   defp source_card(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :source_credential,
+        credential_for_source(assigns.source, assigns.source_credentials_index)
+      )
+
     ~H"""
     <article class="grid gap-3 px-3 py-3 transition hover:bg-zinc-50/80 dark:hover:bg-white/[0.025] sm:px-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
       <div class="min-w-0 space-y-3">
@@ -460,6 +573,18 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
         <p class="text-sm leading-6 text-base-content/60">
           {@source.health_note}
         </p>
+        <div
+          :if={@source_credential}
+          class="flex flex-wrap items-center gap-2 text-xs leading-5 text-base-content/55"
+        >
+          <span class="font-medium text-base-content/70">Credentials</span>
+          <.status_badge status={credential_test_variant(@source_credential)}>
+            {credential_test_label(@source_credential)}
+          </.status_badge>
+          <span :if={@source_credential.last_failure_reason} class="text-error">
+            {@source_credential.last_failure_reason}
+          </span>
+        </div>
         <p :if={extraction_summary(@source)} class="text-xs leading-5 text-base-content/45">
           {extraction_summary(@source)}
         </p>
@@ -469,6 +594,28 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
       </div>
 
       <div class="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-white/10 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+        <.button
+          :if={credential_action_available?(@source)}
+          id={"add-credentials-#{@source.id}"}
+          phx-click="open_credential_form"
+          phx-value-id={@source.id}
+          class="px-3 py-2 text-sm"
+        >
+          Credentials
+        </.button>
+        <.button
+          :if={@source_credential}
+          id={"test-credentials-#{@source.id}"}
+          phx-click="test_credentials"
+          phx-value-id={@source.id}
+          disabled={credential_test_running?(@source_credential)}
+          class={[
+            "px-3 py-2 text-sm",
+            if(credential_test_running?(@source_credential), do: "opacity-60")
+          ]}
+        >
+          {credential_test_action_label(@source_credential)}
+        </.button>
         <.button
           :if={auto_configurable?(@source)}
           id={"configure-source-#{@source.id}"}
@@ -570,6 +717,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     socket
     |> assign(:source_counts, source_counts(sources))
     |> assign(:next_runnable_source, next_runnable_source(sources))
+    |> assign(:source_credentials_index, source_credentials_index())
     |> assign(:sources, bucket_sources(sources, socket.assigns.selected_bucket))
   end
 
@@ -577,6 +725,82 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     case Acquisition.list_console_sources(actor: actor) do
       {:ok, sources} -> sources
       {:error, _} -> []
+    end
+  end
+
+  defp source_credentials_index do
+    case Procurement.list_source_credentials(authorize?: false) do
+      {:ok, credentials} ->
+        credentials
+        |> Enum.reject(&(&1.status == :disabled))
+        |> Enum.sort_by(&(&1.inserted_at || DateTime.from_unix!(0)), {:desc, DateTime})
+        |> Enum.reduce(%{by_family: %{}, by_source: %{}}, fn credential, acc ->
+          family = credential_family_string(credential.credential_family)
+
+          if credential.scope == :source and is_binary(credential.procurement_source_id) do
+            put_in(
+              acc,
+              [:by_source, {credential.procurement_source_id, family}],
+              Map.get(acc.by_source, {credential.procurement_source_id, family}) || credential
+            )
+          else
+            put_in(acc, [:by_family, family], Map.get(acc.by_family, family) || credential)
+          end
+        end)
+
+      {:error, _error} ->
+        %{by_family: %{}, by_source: %{}}
+    end
+  end
+
+  defp assign_credential_form(socket, source) do
+    family = credential_family_for_source(source)
+    family_string = credential_family_string(family)
+    secret_kind = credential_secret_kind(family_string)
+    params = credential_defaults(source, family_string, secret_kind)
+
+    form =
+      AshPhoenix.Form.for_create(SourceCredential, :create,
+        actor: socket.assigns.current_user,
+        domain: Procurement,
+        params: params
+      )
+
+    socket
+    |> assign(:credential_dialog, %{
+      source_id: source.id,
+      procurement_source_id: source.procurement_source && source.procurement_source.id,
+      source_name: source.name,
+      family: family_string,
+      family_label: credential_family_label(family_string),
+      secret_kind: secret_kind
+    })
+    |> assign(:credential_form, to_form(form))
+  end
+
+  defp clear_credential_form(socket) do
+    socket
+    |> assign(:credential_dialog, nil)
+    |> assign(:credential_form, nil)
+  end
+
+  defp credential_defaults(source, family, secret_kind) do
+    %{
+      "provider" => credential_provider(family),
+      "credential_family" => family,
+      "scope" => "family",
+      "label" => "#{credential_family_label(family)} default",
+      "username" => existing_credential_username(family),
+      "notes" => "Saved from #{source.name}",
+      "api_key" => if(secret_kind == :api_key, do: "", else: nil),
+      "password" => if(secret_kind == :username_password, do: "", else: nil)
+    }
+  end
+
+  defp existing_credential_username(family) do
+    case Procurement.list_active_source_credentials_for_family(family, authorize?: false) do
+      {:ok, [%{username: username} | _]} when is_binary(username) -> username
+      _ -> nil
     end
   end
 
@@ -987,8 +1211,122 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   defp needs_configuration?(_source), do: false
 
-  defp credentials_needed?(%{health_status: :needs_login}), do: true
+  defp credentials_needed?(%{health_status: status})
+       when status in [:needs_login, :credentials_pending, :credentials_invalid],
+       do: true
+
   defp credentials_needed?(_source), do: false
+
+  defp credential_action_available?(source) do
+    credentials_needed?(source) or credentialed_procurement_source?(source)
+  end
+
+  defp credentialed_procurement_source?(%{procurement_source: %{source_type: :sam_gov}}), do: true
+
+  defp credentialed_procurement_source?(%{
+         procurement_source: %{requires_login: true, source_type: source_type}
+       })
+       when source_type in [:planetbids, :publicpurchase],
+       do: true
+
+  defp credentialed_procurement_source?(_source), do: false
+
+  defp credential_family_for_source(%{procurement_source: procurement_source})
+       when is_map(procurement_source) do
+    SourceCredentials.credential_family(procurement_source)
+  end
+
+  defp credential_family_for_source(source), do: SourceCredentials.credential_family(source)
+
+  defp credential_family_string(family) when is_atom(family), do: Atom.to_string(family)
+  defp credential_family_string(family) when is_binary(family), do: family
+  defp credential_family_string(_family), do: "custom"
+
+  defp credential_provider(family) when family in ["planetbids", "publicpurchase", "sam_gov"],
+    do: family
+
+  defp credential_provider(_family), do: "custom"
+
+  defp credential_secret_kind("sam_gov"), do: :api_key
+  defp credential_secret_kind(_family), do: :username_password
+
+  defp credential_for_source(source, credentials_by_family) do
+    family =
+      source
+      |> credential_family_for_source()
+      |> credential_family_string()
+
+    source_id = credential_procurement_source_id(source)
+
+    Map.get(credentials_by_family.by_source, {source_id, family}) ||
+      Map.get(credentials_by_family.by_family, family)
+  end
+
+  defp credential_procurement_source_id(%{procurement_source_id: source_id})
+       when is_binary(source_id),
+       do: source_id
+
+  defp credential_procurement_source_id(%{procurement_source: %{id: source_id}})
+       when is_binary(source_id),
+       do: source_id
+
+  defp credential_procurement_source_id(_source), do: nil
+
+  defp credential_test_label(%{test_status: :queued}), do: "Test queued"
+  defp credential_test_label(%{test_status: :testing}), do: "Testing"
+  defp credential_test_label(%{test_status: :verified}), do: "Verified"
+  defp credential_test_label(%{test_status: :invalid}), do: "Invalid"
+  defp credential_test_label(_credential), do: "Untested"
+
+  defp credential_test_variant(%{test_status: :queued}), do: :info
+  defp credential_test_variant(%{test_status: :testing}), do: :info
+  defp credential_test_variant(%{test_status: :verified}), do: :success
+  defp credential_test_variant(%{test_status: :invalid}), do: :error
+  defp credential_test_variant(_credential), do: :default
+
+  defp credential_test_action_label(%{test_status: :queued}), do: "Test Queued"
+  defp credential_test_action_label(%{test_status: :testing}), do: "Testing..."
+  defp credential_test_action_label(_credential), do: "Test Credentials"
+
+  defp credential_test_running?(%{test_status: status}) when status in [:queued, :testing],
+    do: true
+
+  defp credential_test_running?(_credential), do: false
+
+  defp flash_kind_for_credential_test({:ok, _queued}), do: :info
+  defp flash_kind_for_credential_test({:error, _error}), do: :error
+
+  defp credential_save_message(credential, {:ok, _queued}) do
+    "#{credential_family_label(credential.credential_family)} credentials saved. Test queued."
+  end
+
+  defp credential_save_message(credential, {:error, error}) do
+    "#{credential_family_label(credential.credential_family)} credentials saved, but the test could not be queued: #{inspect(error)}"
+  end
+
+  defp credential_test_message(credential, {:ok, _queued}) do
+    "#{credential_family_label(credential.credential_family)} credential test queued."
+  end
+
+  defp credential_test_message(credential, {:error, error}) do
+    "#{credential_family_label(credential.credential_family)} credential test could not be queued: #{inspect(error)}"
+  end
+
+  defp credential_family_label("planetbids"), do: "PlanetBids"
+  defp credential_family_label("publicpurchase"), do: "PublicPurchase"
+  defp credential_family_label("sam_gov"), do: "SAM.gov"
+
+  defp credential_family_label(family) when is_atom(family),
+    do: family |> Atom.to_string() |> credential_family_label()
+
+  defp credential_family_label(family) when is_binary(family) do
+    family
+    |> String.replace("_", " ")
+    |> String.split(" ", trim: true)
+    |> Enum.map_join(" ", &String.capitalize/1)
+  end
+
+  defp credential_family_label(_family), do: "Source"
 
   defp auto_configurable?(%{
          enabled: true,

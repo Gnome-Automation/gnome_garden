@@ -124,11 +124,14 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     end
   end
 
-  defp ensure_credentials_if_required(%{requires_login: true, source_type: source_type}) do
-    if GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type) do
+  defp ensure_credentials_if_required(%{requires_login: true} = source) do
+    if GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source) do
       :ok
     else
-      {:error, GnomeGarden.Procurement.SourceCredentials.missing_credentials_message(source_type)}
+      {:error,
+       source
+       |> GnomeGarden.Procurement.SourceCredentials.credential_family()
+       |> GnomeGarden.Procurement.SourceCredentials.missing_credentials_message()}
     end
   end
 
@@ -136,6 +139,15 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp do_browser_scan(source, context) do
     config = source.scrape_config
+
+    if candidate_link_strategy?(config) do
+      do_candidate_link_scan(source, context, config)
+    else
+      do_selector_browser_scan(source, context, config)
+    end
+  end
+
+  defp do_selector_browser_scan(source, context, config) do
     listing_url = config["listing_url"] || config[:listing_url]
     profile_context = profile_context_for_source(source)
 
@@ -160,6 +172,74 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         listing_url: listing_url
       )
     end
+  end
+
+  defp do_candidate_link_scan(source, context, config) do
+    listing_url = config["listing_url"] || config[:listing_url] || source.url
+    profile_context = profile_context_for_source(source)
+    inspection_run_id = config["inspection_run_id"] || config[:inspection_run_id]
+
+    Logger.info("Scanning #{source.name} from inspected candidate links")
+
+    with {:ok, bids, extraction} <- candidate_link_bids(source, inspection_run_id),
+         filtered = TargetingFilter.filter_bids(bids, profile_context),
+         {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
+         {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
+      complete_scan(source, bids, filtered.excluded, scored, saved, 0,
+        extraction: extraction,
+        listing_url: listing_url
+      )
+    end
+  end
+
+  defp candidate_link_strategy?(config) when is_map(config) do
+    (config["strategy"] || config[:strategy]) == "candidate_links"
+  end
+
+  defp candidate_link_strategy?(_config), do: false
+
+  defp candidate_link_bids(_source, nil),
+    do: {:error, "Candidate-link scan is missing inspection_run_id."}
+
+  defp candidate_link_bids(source, inspection_run_id) do
+    with {:ok, candidates} <- Procurement.list_extraction_candidates_for_run(inspection_run_id) do
+      bids =
+        candidates
+        |> Enum.filter(&(&1.candidate_type == :bid))
+        |> Enum.map(&bid_from_candidate(&1, source))
+        |> Enum.reject(&(blank?(bid_value(&1, :title)) or blank?(bid_value(&1, :url))))
+
+      extraction = %{
+        "strategy" => "candidate_links",
+        "inspection_run_id" => inspection_run_id,
+        "candidate_count" => length(candidates),
+        "bid_candidate_count" => length(bids),
+        "row_count" => length(candidates),
+        "title_count" => length(bids),
+        "link_count" => length(bids),
+        "row_text_samples" => Enum.take(Enum.map(bids, &bid_value(&1, :title)), 5)
+      }
+
+      {:ok, bids, extraction}
+    end
+  end
+
+  defp bid_from_candidate(candidate, source) do
+    payload = candidate.payload || %{}
+    evidence = candidate.evidence || %{}
+
+    %{
+      title: payload["title"],
+      url: payload["url"],
+      link: payload["url"],
+      agency: payload["agency"] || source.name,
+      location: payload["location"] || region_to_location(source.region),
+      description: payload["description"] || evidence["link_text"] || "",
+      source_url: source.url,
+      procurement_source_id: source.id,
+      extraction_candidate_id: candidate.id,
+      extraction_confidence: candidate.confidence
+    }
   end
 
   defp do_planetbids_scan(source, context) do
@@ -671,6 +751,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   defp resolve_bid_url("http" <> _ = absolute, _source_url), do: absolute
   defp resolve_bid_url(_other, source_url), do: source_url
 
+  defp blank?(value), do: value in [nil, ""]
+
   defp bid_value(bid, key) when is_atom(key) do
     Map.get(bid, key) || Map.get(bid, Atom.to_string(key))
   end
@@ -1061,8 +1143,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     """
   end
 
-  defp maybe_login(%{source_type: :planetbids, requires_login: true}, listing_url) do
-    with {:ok, credentials} <- GnomeGarden.Procurement.SourceCredentials.planetbids_credentials(),
+  defp maybe_login(%{source_type: :planetbids, requires_login: true} = source, listing_url) do
+    with {:ok, credentials} <- GnomeGarden.Procurement.SourceCredentials.credentials_for(source),
          {:ok, _} <- Browser.navigate(listing_url),
          {:ok, %{"submitted" => submitted?}} <-
            Browser.evaluate(planetbids_login_js(credentials)) do

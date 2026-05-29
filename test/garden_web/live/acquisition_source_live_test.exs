@@ -1,5 +1,6 @@
 defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
   use GnomeGardenWeb.ConnCase
+  use Oban.Testing, repo: GnomeGarden.Repo
 
   setup :register_and_log_in_user
 
@@ -7,6 +8,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.Workers.TestSourceCredential
 
   test "source registry renders synced procurement sources with finding counts", %{conn: conn} do
     {:ok, source} =
@@ -241,6 +243,133 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     {:ok, attention_view, _html} = live(conn, ~p"/acquisition/sources?bucket=attention")
 
     refute render(attention_view) =~ "Credential gated portal"
+  end
+
+  test "source registry saves source family credentials from the queue", %{conn: conn} do
+    original_username = System.get_env("PLANETBIDS_USERNAME")
+    original_password = System.get_env("PLANETBIDS_PASSWORD")
+
+    System.delete_env("PLANETBIDS_USERNAME")
+    System.delete_env("PLANETBIDS_PASSWORD")
+
+    on_exit(fn ->
+      restore_env("PLANETBIDS_USERNAME", original_username)
+      restore_env("PLANETBIDS_PASSWORD", original_password)
+    end)
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Credential form portal",
+        url: "https://vendors.planetbids.com/portal/10000/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "10000",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=credentials_needed")
+
+    assert has_element?(view, "#add-credentials-#{acquisition_source.id}", "Credentials")
+
+    view
+    |> element("#add-credentials-#{acquisition_source.id}")
+    |> render_click()
+
+    assert has_element?(view, "#source-credential-modal")
+
+    view
+    |> form("#source-credential-form",
+      form: %{
+        "username" => "operator@example.com",
+        "password" => "source-secret"
+      }
+    )
+    |> render_submit()
+
+    assert {:error, message} = GnomeGarden.Procurement.SourceCredentials.planetbids_credentials()
+    assert message =~ "verification is still pending"
+
+    assert {:ok, [credential]} = Procurement.list_source_credentials(authorize?: false)
+    assert credential.test_status == :queued
+    assert credential.last_test_procurement_source_id == procurement_source.id
+
+    assert_enqueued(
+      worker: TestSourceCredential,
+      args: %{
+        "source_credential_id" => credential.id,
+        "procurement_source_id" => procurement_source.id
+      }
+    )
+
+    html = render(view)
+    assert html =~ "credentials saved. Test queued."
+    assert html =~ "Credential form portal"
+    assert html =~ "Test queued"
+  end
+
+  test "source registry requeues tests for stored credentials", %{conn: conn} do
+    original_username = System.get_env("PLANETBIDS_USERNAME")
+    original_password = System.get_env("PLANETBIDS_PASSWORD")
+
+    System.delete_env("PLANETBIDS_USERNAME")
+    System.delete_env("PLANETBIDS_PASSWORD")
+
+    on_exit(fn ->
+      restore_env("PLANETBIDS_USERNAME", original_username)
+      restore_env("PLANETBIDS_PASSWORD", original_password)
+    end)
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Credential retest portal",
+        url: "https://vendors.planetbids.com/portal/10001/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "10001",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :planetbids,
+        credential_family: "planetbids",
+        username: "operator@example.com",
+        password: "source-secret"
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=all")
+
+    assert has_element?(view, "#test-credentials-#{acquisition_source.id}", "Test Credentials")
+
+    view
+    |> element("#test-credentials-#{acquisition_source.id}")
+    |> render_click()
+
+    assert {:ok, queued} = Procurement.get_source_credential(credential.id, authorize?: false)
+    assert queued.test_status == :queued
+    assert queued.last_test_procurement_source_id == procurement_source.id
+
+    assert_enqueued(
+      worker: TestSourceCredential,
+      args: %{
+        "source_credential_id" => credential.id,
+        "procurement_source_id" => procurement_source.id
+      }
+    )
+
+    html = render(view)
+    assert html =~ "credential test queued."
+    assert html =~ "Test queued"
   end
 
   test "source registry shows durable run status and run link", %{conn: conn} do

@@ -256,6 +256,13 @@ defmodule GnomeGarden.Procurement.SourceInspectorTest do
     assert {:ok, edges} = Procurement.list_crawl_edges_for_run(run.id)
     assert length(edges) == 2
     assert Enum.any?(edges, &(&1.edge_type == :document))
+
+    assert {:ok, candidates} = Procurement.list_extraction_candidates_for_run(run.id)
+    assert length(candidates) == 2
+    assert Enum.any?(candidates, &(&1.candidate_type == :bid))
+    assert Enum.any?(candidates, &(&1.candidate_type == :document))
+    assert Enum.all?(candidates, &(&1.status == :proposed))
+    assert Enum.any?(candidates, &(&1.payload["url"] == "https://example.com/source/bids/1"))
   end
 
   test "inspect source marks login-gated pages as requiring credentials" do

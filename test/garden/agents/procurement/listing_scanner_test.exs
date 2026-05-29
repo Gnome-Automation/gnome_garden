@@ -91,6 +91,78 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
     assert reason =~ "PlanetBids credentials are missing"
   end
 
+  test "candidate-link configured sources scan from inspected extraction candidates" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Candidate Link Source",
+        url: "https://example.com/bids",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved,
+        requires_login: false
+      })
+
+    {:ok, run} =
+      Procurement.start_crawl_run(%{
+        procurement_source_id: source.id,
+        seed_url: source.url,
+        run_kind: :inspect,
+        max_depth: 0,
+        max_pages: 1
+      })
+
+    {:ok, page} =
+      Procurement.record_crawl_page(%{
+        crawl_run_id: run.id,
+        url: source.url,
+        normalized_url: source.url,
+        title: source.name,
+        depth: 0,
+        content_hash: "candidate-link-test",
+        fetch_status: :fetched,
+        diagnostics: %{"diagnosis" => "page_inspected"},
+        metadata: %{}
+      })
+
+    {:ok, _candidate} =
+      Procurement.propose_extraction_candidate(%{
+        crawl_run_id: run.id,
+        crawl_page_id: page.id,
+        candidate_type: :bid,
+        status: :proposed,
+        payload: %{
+          "title" => "SCADA Controls Upgrade RFP",
+          "url" => "https://example.com/bids/controls-upgrade"
+        },
+        confidence: Decimal.new("0.70"),
+        evidence: %{"link_text" => "SCADA Controls Upgrade RFP"},
+        content_hash: "candidate-link-bid",
+        metadata: %{}
+      })
+
+    {:ok, source} =
+      Procurement.configure_procurement_source(source, %{
+        scrape_config: %{
+          strategy: "candidate_links",
+          listing_url: source.url,
+          inspection_run_id: run.id,
+          candidate_count: 1
+        }
+      })
+
+    assert {:ok, result} = ListingScanner.scan(source.id)
+
+    assert result.extracted == 1
+    assert result.diagnostics["extraction"]["strategy"] == "candidate_links"
+    assert result.diagnostics["extraction"]["bid_candidate_count"] == 1
+
+    assert {:ok, runs} = Procurement.list_crawl_runs_for_source(source.id)
+    scan_run = Enum.find(runs, &(&1.run_kind == :scan))
+    assert scan_run.run_kind == :scan
+    assert scan_run.status == :completed
+  end
+
   defp listing_html do
     """
     <table>

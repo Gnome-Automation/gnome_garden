@@ -29,6 +29,26 @@ defmodule GnomeGarden.Procurement.SourcePipelineTest do
     end
   end
 
+  defmodule FakePublicBidBrowser do
+    def inspect_page(_url, _opts) do
+      {:ok,
+       %{
+         final_url: "https://example.com/bids",
+         title: "Public bids",
+         text: "Open bids and solicitations",
+         headings: ["Open Bids"],
+         forms: [],
+         links: [
+           %{
+             "href" => "https://example.com/bids/controls-upgrade",
+             "text" => "SCADA Controls Upgrade RFP"
+           },
+           %{"href" => "https://example.com/contact", "text" => "Contact Us"}
+         ]
+       }}
+    end
+  end
+
   defmodule FakeScanner do
     def scan(source, context) do
       {:ok,
@@ -83,6 +103,38 @@ defmodule GnomeGarden.Procurement.SourcePipelineTest do
     assert inspected_source.requires_login
     assert pipeline["mode"] == "credentials_needed"
     assert pipeline["diagnosis"] == "login_required"
+  end
+
+  test "auto configuration uses inspected public bid links as bounded scan config" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Public Candidate Link Portal",
+        url: "https://example.com/bids",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, %{source: configured_source, mode: :auto_configured, pipeline: pipeline}} =
+             SourcePipeline.auto_configure_source(source,
+               browser: FakePublicBidBrowser,
+               async?: false
+             )
+
+    assert configured_source.config_status == :configured
+    assert configured_source.scrape_config["strategy"] == "candidate_links"
+    assert configured_source.scrape_config["candidate_count"] == 1
+    assert is_binary(configured_source.scrape_config["inspection_run_id"])
+    assert pipeline["mode"] == "auto_configured"
+    assert pipeline["inspection_run_id"] == configured_source.scrape_config["inspection_run_id"]
+
+    {:ok, candidates} =
+      Procurement.list_extraction_candidates_for_run(
+        configured_source.scrape_config["inspection_run_id"]
+      )
+
+    assert Enum.map(candidates, & &1.payload["title"]) == ["SCADA Controls Upgrade RFP"]
   end
 
   test "source scans run through the Lua source pipeline" do

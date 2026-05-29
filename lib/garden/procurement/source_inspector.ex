@@ -51,7 +51,9 @@ defmodule GnomeGarden.Procurement.SourceInspector do
          {:ok, page} <- record_page(run, source, snapshot, inspection, actor),
          {:ok, _artifact} <- record_snapshot_artifact(page, snapshot, actor),
          :ok <- record_edges(run, page, snapshot.links, actor),
-         {:ok, run} <- complete_run(run, snapshot, inspection, actor) do
+         {:ok, candidate_count} <-
+           record_inspection_candidates(run, page, snapshot.links, actor),
+         {:ok, run} <- complete_run(run, snapshot, inspection, candidate_count, actor) do
       {:ok, %{run: run, page: page, snapshot: snapshot, source: source, inspection: inspection}}
     end
   end
@@ -143,13 +145,48 @@ defmodule GnomeGarden.Procurement.SourceInspector do
 
   defp record_edges(_run, _page, _links, _actor), do: :ok
 
-  defp complete_run(run, snapshot, inspection, actor) do
+  defp record_inspection_candidates(run, page, links, actor) when is_list(links) do
+    candidates = inspection_candidates(links, page.url)
+
+    candidates
+    |> Enum.with_index()
+    |> Enum.each(fn {candidate, index} ->
+      payload = candidate_payload(candidate)
+
+      _ =
+        Procurement.propose_extraction_candidate(
+          %{
+            crawl_run_id: run.id,
+            crawl_page_id: page.id,
+            candidate_type: candidate.type,
+            status: :proposed,
+            payload: payload,
+            confidence: candidate.confidence,
+            evidence: candidate_evidence(candidate, page),
+            content_hash: hash(payload),
+            metadata: %{
+              "origin" => "source_inspector",
+              "ordinal" => index,
+              "edge_type" => Atom.to_string(edge_type(candidate.href))
+            }
+          },
+          actor: actor
+        )
+    end)
+
+    {:ok, length(candidates)}
+  end
+
+  defp record_inspection_candidates(_run, _page, _links, _actor), do: {:ok, 0}
+
+  defp complete_run(run, snapshot, inspection, candidate_count, actor) do
     Procurement.complete_crawl_run(
       run,
       %{
         summary: %{
           "pages" => 1,
           "links" => length(snapshot.links || []),
+          "candidates" => candidate_count,
           "forms" => length(snapshot.forms || []),
           "headings" => length(snapshot.headings || []),
           "recorded_at" =>
@@ -185,6 +222,10 @@ defmodule GnomeGarden.Procurement.SourceInspector do
     title = snapshot.title || ""
     password_inputs = password_input_count(snapshot.forms || [])
     public_listing_links = public_listing_link_count(snapshot.links || [])
+
+    candidate_links =
+      candidate_link_count(snapshot.links || [], snapshot.final_url || snapshot.url)
+
     page_unavailable? = page_unavailable?(text)
 
     evidence =
@@ -208,6 +249,7 @@ defmodule GnomeGarden.Procurement.SourceInspector do
       "login_evidence" => Enum.reverse(evidence),
       "password_inputs" => password_inputs,
       "public_listing_links" => public_listing_links,
+      "candidate_links" => candidate_links,
       "forms" => length(snapshot.forms || []),
       "procurement_evidence" => procurement_evidence?
     }
@@ -248,6 +290,115 @@ defmodule GnomeGarden.Procurement.SourceInspector do
 
       procurement_copy?(combined) and not login_link?(combined)
     end)
+  end
+
+  defp candidate_link_count(links, page_url) do
+    links
+    |> inspection_candidates(page_url)
+    |> length()
+  end
+
+  defp inspection_candidates(links, page_url) do
+    current_url = normalize_url(page_url)
+
+    links
+    |> Enum.filter(&candidate_link?(&1, current_url))
+    |> Enum.uniq_by(fn link -> normalize_url(value(link, "href") |> to_string()) end)
+    |> Enum.take(250)
+    |> Enum.map(&candidate_from_link/1)
+  end
+
+  defp candidate_link?(link, current_url) do
+    href = link |> value("href") |> to_string()
+    normalized_href = normalize_url(href)
+    link_text = link |> value("text") |> to_string()
+    combined = "#{link_text} #{href}"
+
+    href != "" and normalized_href != "" and normalized_href != current_url and
+      not login_link?(combined) and procurement_candidate_copy?(combined)
+  end
+
+  defp candidate_from_link(link) do
+    href = link |> value("href") |> to_string()
+    link_text = link |> value("text") |> to_string() |> String.trim()
+    combined = "#{link_text} #{href}"
+    type = candidate_type(href, combined)
+
+    %{
+      type: type,
+      href: href,
+      link_text: link_text,
+      selector: value(link, "selector"),
+      ordinal: value(link, "ordinal"),
+      confidence: candidate_confidence(type, combined),
+      matched_terms: candidate_terms(combined)
+    }
+  end
+
+  defp candidate_type(href, combined) do
+    cond do
+      document_link?(href) ->
+        :document
+
+      Regex.match?(
+        ~r{(bo-detail|bid[-_ ]?detail|/bids?/[^/?#]+|solicitation|opportunit|contract|rfp|proposal|addendum|open-bids|bidid|bid_id)}i,
+        combined
+      ) ->
+        :bid
+
+      true ->
+        :source
+    end
+  end
+
+  defp candidate_payload(candidate) do
+    %{
+      "title" => candidate.link_text,
+      "url" => candidate.href,
+      "normalized_url" => normalize_url(candidate.href),
+      "source_kind" => Atom.to_string(candidate.type)
+    }
+    |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+    |> Map.new()
+  end
+
+  defp candidate_evidence(candidate, page) do
+    %{
+      "source_page_id" => page.id,
+      "source_page_url" => page.url,
+      "link_text" => candidate.link_text,
+      "href" => candidate.href,
+      "selector" => candidate.selector,
+      "ordinal" => candidate.ordinal,
+      "matched_terms" => candidate.matched_terms
+    }
+    |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+    |> Map.new()
+  end
+
+  defp candidate_confidence(:document, combined) do
+    if Regex.match?(~r/(rfp|proposal|solicitation|bid|addendum|spec|packet)/i, combined),
+      do: Decimal.new("0.75"),
+      else: Decimal.new("0.55")
+  end
+
+  defp candidate_confidence(:bid, _combined), do: Decimal.new("0.70")
+  defp candidate_confidence(:source, _combined), do: Decimal.new("0.45")
+
+  defp candidate_terms(combined) do
+    [
+      {"bid", ~r/\bbids?\b/i},
+      {"rfp", ~r/\brfps?\b/i},
+      {"proposal", ~r/\bproposal/i},
+      {"solicitation", ~r/\bsolicitation/i},
+      {"opportunity", ~r/\bopportunit/i},
+      {"contract", ~r/\bcontract/i},
+      {"addendum", ~r/\baddend/i},
+      {"procurement", ~r/\bprocurement\b/i},
+      {"document", ~r/\.(pdf|docx?|xlsx?)(\?|#|$)/i}
+    ]
+    |> Enum.filter(fn {_term, pattern} -> Regex.match?(pattern, combined) end)
+    |> Enum.map(fn {term, _pattern} -> term end)
   end
 
   defp form_text(forms) do
@@ -335,6 +486,15 @@ defmodule GnomeGarden.Procurement.SourceInspector do
 
   defp procurement_copy?(_copy), do: false
 
+  defp procurement_candidate_copy?(copy) when is_binary(copy) do
+    Regex.match?(
+      ~r/(bid|rfp|rfq|ifb|proposal|solicitation|opportunit|contract|addendum|procurement|purchasing|vendor|bids\.aspx|bo-search|bo-detail|opengov|planetbids|bidnet|publicpurchase)/i,
+      copy
+    )
+  end
+
+  defp procurement_candidate_copy?(_copy), do: false
+
   defp page_unavailable?(copy) when is_binary(copy) do
     Regex.match?(
       ~r/(404|page not found|not found|this page does not exist|resource could not be found)/i,
@@ -367,8 +527,13 @@ defmodule GnomeGarden.Procurement.SourceInspector do
   defp credential_family(_source), do: "custom"
 
   defp edge_type(href) do
-    if Regex.match?(~r/\.(pdf|docx?|xlsx?)(\?|#|$)/i, href), do: :document, else: :link
+    if document_link?(href), do: :document, else: :link
   end
+
+  defp document_link?(href) when is_binary(href),
+    do: Regex.match?(~r/\.(pdf|docx?|xlsx?)(\?|#|$)/i, href)
+
+  defp document_link?(_href), do: false
 
   defp normalize_url(url) when is_binary(url) do
     url
@@ -376,11 +541,17 @@ defmodule GnomeGarden.Procurement.SourceInspector do
     |> String.trim_trailing("/")
   end
 
+  defp normalize_url(_url), do: ""
+
   defp hash(value) do
     value
+    |> stable_binary()
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
   end
+
+  defp stable_binary(value) when is_binary(value), do: value
+  defp stable_binary(value), do: Jason.encode!(value)
 
   defp value(map, key) when is_map(map), do: Map.get(map, key) || Map.get(map, key_atom(key))
   defp value(_map, _key), do: nil

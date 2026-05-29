@@ -54,13 +54,14 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
 
   defp health_status(source, opts) do
     run_state = last_run_state(source)
+    credential_status = credential_health_status(source) || scan_login_health_status(source)
 
     cond do
       source.status == :archived -> :archived
       source.status == :blocked -> :blocked
       source.status == :paused -> :paused
       source.enabled == false -> :disabled
-      needs_login?(source) -> :needs_login
+      not is_nil(credential_status) -> credential_status
       noisy?(source) -> :noisy
       procurement_config_status(source) == :pending -> :configuring
       procurement_config_status(source) == :found -> :needs_configuration
@@ -69,7 +70,6 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       run_state == :running -> :running
       run_state == :failed -> :failing
       run_state == :cancelled -> :cancelled
-      scan_issue(source) == :login_required -> :needs_login
       scan_issue(source) == :document_capture_failed -> :document_capture_failed
       scan_issue(source) == :selector_failed -> :selector_failed
       scan_issue(source) == :scanner_not_implemented -> :failing
@@ -89,6 +89,8 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp health_note(_source, :paused, _opts), do: "Paused and out of rotation."
   defp health_note(_source, :disabled, _opts), do: "Disabled and not launchable."
   defp health_note(source, :needs_login, _opts), do: missing_credentials_note(source)
+  defp health_note(source, :credentials_pending, _opts), do: pending_credentials_note(source)
+  defp health_note(source, :credentials_invalid, _opts), do: invalid_credentials_note(source)
   defp health_note(_source, :configuring, _opts), do: "Automatic source setup is running."
 
   defp health_note(source, :needs_configuration, _opts) do
@@ -113,7 +115,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp health_note(source, :zero_saved, _opts), do: scan_issue_note(source)
 
   defp health_note(source, :failing, _opts) do
-    if scan_issue(source) in [:scanner_not_implemented, :scan_failed] do
+    if scan_issue(source) in [:login_required, :scanner_not_implemented, :scan_failed] do
       scan_issue_note(source)
     else
       timestamp_note("Last run failed", source.last_run_at)
@@ -304,13 +306,20 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
 
   defp scanner_failure_note(_diagnosis, _summary), do: "Last run failed."
 
-  defp needs_login?(source) do
+  defp credential_health_status(source) do
     credential_family = credential_family(source)
     source_type = procurement_source_value(source, :source_type) || credential_family
     requires_login = procurement_source_value(source, :requires_login)
 
-    credentialed_source?(source.metadata, source_type, requires_login) and
-      not GnomeGarden.Procurement.SourceCredentials.credentials_configured?(credential_family)
+    if credentialed_source?(source.metadata, source_type, requires_login) do
+      credential_readiness_status(source)
+    end
+  end
+
+  defp scan_login_health_status(source) do
+    if scan_issue(source) == :login_required do
+      credential_readiness_status(source)
+    end
   end
 
   defp credentialed_source?(metadata, source_type, requires_login) do
@@ -323,6 +332,45 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
     source
     |> credential_family()
     |> GnomeGarden.Procurement.SourceCredentials.missing_credentials_message()
+  end
+
+  defp pending_credentials_note(source) do
+    "#{credential_family_label(source)} credentials are saved. Waiting for credential verification before launch."
+  end
+
+  defp invalid_credentials_note(source) do
+    "#{credential_family_label(source)} credentials failed verification. Update credentials and test again."
+  end
+
+  defp credential_family_label(source) do
+    source
+    |> credential_family()
+    |> case do
+      :planetbids -> "PlanetBids"
+      "planetbids" -> "PlanetBids"
+      :publicpurchase -> "PublicPurchase"
+      "publicpurchase" -> "PublicPurchase"
+      :sam_gov -> "SAM.gov"
+      "sam_gov" -> "SAM.gov"
+      _ -> "Source"
+    end
+  end
+
+  defp credential_subject(source) do
+    case procurement_source_value(source, :self) do
+      procurement_source when is_map(procurement_source) -> procurement_source
+      _ -> credential_family(source)
+    end
+  end
+
+  defp credential_readiness_status(source) do
+    case GnomeGarden.Procurement.SourceCredentials.credential_status(credential_subject(source)) do
+      :verified -> nil
+      :env_configured -> nil
+      :pending -> :credentials_pending
+      :invalid -> :credentials_invalid
+      :missing -> :needs_login
+    end
   end
 
   defp credential_family(source) do

@@ -243,6 +243,7 @@ defmodule GnomeGarden.Acquisition.Source do
                  running: :info,
                  configuring: :info,
                  needs_configuration: :info,
+                 credentials_pending: :warning,
                  needs_login: :warning,
                  no_results: :warning,
                  zero_saved: :warning,
@@ -255,6 +256,7 @@ defmodule GnomeGarden.Acquisition.Source do
                  idle: :default,
                  blocked: :error,
                  failing: :error,
+                 credentials_invalid: :error,
                  selector_failed: :error,
                  document_capture_failed: :error,
                  archived: :default

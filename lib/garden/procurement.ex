@@ -100,6 +100,38 @@ defmodule GnomeGarden.Procurement do
       define :delete_extraction_candidate, action: :destroy
     end
 
+    resource GnomeGarden.Procurement.SourceCredential do
+      define :list_source_credentials, action: :read
+
+      define :list_active_source_credentials_for_source,
+        action: :active_for_source,
+        args: [:procurement_source_id]
+
+      define :list_source_credentials_for_source,
+        action: :for_source,
+        args: [:procurement_source_id]
+
+      define :list_active_source_credentials_for_family,
+        action: :active_for_family,
+        args: [:credential_family]
+
+      define :list_source_credentials_for_family,
+        action: :for_family,
+        args: [:credential_family]
+
+      define :get_source_credential, action: :read, get_by: [:id]
+      define :create_source_credential, action: :create
+      define :update_source_credential, action: :update
+      define :rotate_source_credential, action: :rotate_secret
+      define :mark_source_credential_test_queued, action: :queue_test
+      define :mark_source_credential_test_running, action: :mark_test_running
+      define :mark_source_credential_used, action: :mark_used
+      define :mark_source_credential_verified, action: :mark_verified
+      define :mark_source_credential_failed, action: :mark_failed
+      define :disable_source_credential, action: :disable
+      define :delete_source_credential, action: :destroy
+    end
+
     resource GnomeGarden.Procurement.SourceSearchFilter do
       define :list_source_search_filters, action: :for_source, args: [:procurement_source_id]
       define :get_source_search_filter, action: :read, get_by: [:id]
@@ -188,6 +220,10 @@ defmodule GnomeGarden.Procurement do
 
   def inspect_procurement_source(source_or_id, opts \\ []) do
     SourcePipeline.inspect_source(source_or_id, opts)
+  end
+
+  def queue_source_credential_test(credential_or_id, opts \\ []) do
+    GnomeGarden.Procurement.SourceCredentialTesting.enqueue(credential_or_id, opts)
   end
 
   defp source_from_attrs(attrs, actor) do
