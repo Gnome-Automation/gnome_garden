@@ -9,7 +9,8 @@ defmodule GnomeGarden.Finance.CreditNote do
   use Ash.Resource,
     otp_app: :gnome_garden,
     domain: GnomeGarden.Finance,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    notifiers: [GnomeGarden.Finance.Notifiers.CreditNoteGLNotifier]
 
   postgres do
     table "credit_notes"

@@ -7,7 +7,8 @@ defmodule GnomeGarden.Finance.PaymentApplication do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Finance,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource],
+    notifiers: [GnomeGarden.Finance.Notifiers.PaymentApplicationGLNotifier]
 
   admin do
     table_columns [

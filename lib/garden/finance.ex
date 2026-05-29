@@ -124,6 +124,29 @@ defmodule GnomeGarden.Finance do
       define :get_billing_settings, action: :read
       define :upsert_billing_settings, action: :upsert
     end
+
+    resource GnomeGarden.Finance.ChartOfAccount do
+      define :list_accounts, action: :read
+      define :list_active_accounts, action: :read
+      define :get_account, action: :read, get_by: [:id]
+      define :get_account_by_number, action: :read, get_by: [:number]
+      define :create_account, action: :create
+      define :update_account, action: :update
+      define :deactivate_account, action: :deactivate
+      define :delete_account, action: :delete
+    end
+
+    resource GnomeGarden.Finance.JournalEntry do
+      define :list_journal_entries, action: :read
+      define :get_journal_entry, action: :read, get_by: [:id]
+      define :create_journal_entry, action: :create
+      define :post_journal_entry, action: :post
+    end
+
+    resource GnomeGarden.Finance.JournalEntryLine do
+      define :list_journal_entry_lines, action: :read
+      define :create_journal_entry_line, action: :create
+    end
   end
 
   def create_payment_schedule_item(attrs, _opts \\ []) do

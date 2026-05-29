@@ -7,7 +7,8 @@ defmodule GnomeGarden.Finance.Expense do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Finance,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource, AshStateMachine]
+    extensions: [AshAdmin.Resource, AshStateMachine],
+    notifiers: [GnomeGarden.Finance.Notifiers.ExpenseGLNotifier]
 
   admin do
     table_columns [

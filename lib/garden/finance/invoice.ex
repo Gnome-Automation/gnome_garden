@@ -11,7 +11,8 @@ defmodule GnomeGarden.Finance.Invoice do
     domain: GnomeGarden.Finance,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshAdmin.Resource, AshStateMachine]
+    extensions: [AshAdmin.Resource, AshStateMachine],
+    notifiers: [GnomeGarden.Finance.Notifiers.InvoiceGLNotifier]
 
   admin do
     table_columns [
