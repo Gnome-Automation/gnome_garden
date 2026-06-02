@@ -48,6 +48,7 @@ defmodule GnomeGardenWeb.Finance.DashboardLive do
         <.stat_card
           title="Overdue AR"
           value={if overdue_positive?(@overdue_ar), do: format_currency(@overdue_ar), else: "—"}
+          value_class={if overdue_positive?(@overdue_ar), do: "text-rose-500", else: "text-base-content/40"}
           description="Invoices past due date"
           icon="hero-exclamation-circle"
           accent="rose"
@@ -55,6 +56,7 @@ defmodule GnomeGardenWeb.Finance.DashboardLive do
         <.stat_card
           title="Net Income MTD"
           value={net_income_display(@net_income_mtd)}
+          value_class={net_income_value_class(@net_income_mtd)}
           description="Revenue minus expenses this month"
           icon="hero-chart-bar"
           accent={net_income_accent(@net_income_mtd)}
@@ -139,11 +141,11 @@ defmodule GnomeGardenWeb.Finance.DashboardLive do
                         {payment.payment_number || "Payment"}
                       </p>
                       <p class="text-xs text-base-content/50 mt-0.5">
-                        {(payment.organization && payment.organization.name) || "—"} &middot; Received {format_date(payment.received_on)}
+                        {(payment.organization && payment.organization.name) || "—"} &middot; Received {format_date(payment.received_on)} &middot; {format_atom(payment.payment_method)}
                       </p>
                     </div>
                     <div class="ml-4 shrink-0 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                      {format_amount(payment.amount)}
+                      {format_currency(payment.amount)}
                     </div>
                   </.link>
                 </li>
@@ -332,7 +334,7 @@ defmodule GnomeGardenWeb.Finance.DashboardLive do
   # ---------------------------------------------------------------------------
 
   defp format_currency(nil), do: "—"
-  defp format_currency(%Decimal{} = amount), do: "$#{Decimal.round(amount, 2) |> Decimal.to_string()}"
+  defp format_currency(%Decimal{} = amount), do: Number.Currency.number_to_currency(amount, unit: "$")
 
   defp overdue_positive?(nil), do: false
   defp overdue_positive?(d), do: Decimal.compare(d, Decimal.new(0)) == :gt
@@ -351,6 +353,15 @@ defmodule GnomeGardenWeb.Finance.DashboardLive do
       :gt -> "emerald"
       :lt -> "rose"
       :eq -> "emerald"
+    end
+  end
+
+  defp net_income_value_class(nil), do: "text-base-content/40"
+  defp net_income_value_class(d) do
+    case Decimal.compare(d, Decimal.new(0)) do
+      :gt -> "text-emerald-400"
+      :lt -> "text-rose-500"
+      :eq -> "text-base-content/40"
     end
   end
 

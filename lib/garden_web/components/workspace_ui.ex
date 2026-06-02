@@ -135,6 +135,7 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
   attr :icon, :string, required: true
   attr :value, :string, required: true
   attr :accent, :string, default: "emerald"
+  attr :value_class, :string, default: nil
 
   def stat_card(assigns) do
     # Map legacy accent names to daisyUI semantic colors so cards inherit the
@@ -160,7 +161,7 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-baseline gap-2">
-          <span class="text-lg font-semibold leading-none tabular-nums">{@value}</span>
+          <span class={["text-lg font-semibold leading-none tabular-nums", @value_class]}>{@value}</span>
           <span class="truncate text-[11px] font-semibold uppercase tracking-wider text-base-content/60">
             {@title}
           </span>
