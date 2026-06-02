@@ -115,8 +115,7 @@ defmodule GnomeGarden.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:stripity_stripe, "~> 3.0"},
-      {:number, "~> 1.0"}
+      {:stripity_stripe, "~> 3.0"}
     ]
   end
 
