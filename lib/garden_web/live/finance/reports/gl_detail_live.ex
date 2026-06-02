@@ -20,7 +20,7 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
      |> assign(:filter_account_id, "")
      |> assign(:filter_from, from)
      |> assign(:filter_to, to)
-     |> assign(:lines, [])}
+     |> assign(:lines, load_lines("", Date.beginning_of_month(today) |> Date.to_iso8601(), Date.to_iso8601(today)))}
   end
 
   @impl true
@@ -29,12 +29,7 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
     from = params["from"] || socket.assigns.filter_from
     to = params["to"] || socket.assigns.filter_to
 
-    lines =
-      if account_id == "" do
-        []
-      else
-        load_lines(account_id, from, to)
-      end
+    lines = load_lines(account_id, from, to)
 
     {:noreply,
      socket
@@ -52,12 +47,10 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
         GL Detail
         <:subtitle>Transaction detail for a specific account within a date range.</:subtitle>
         <:actions>
-          <%= if @filter_account_id != "" do %>
-            <a href={~p"/finance/reports/gl-detail/export?account_id=#{@filter_account_id}&from=#{@filter_from}&to=#{@filter_to}"}
+              <a href={~p"/finance/reports/gl-detail/export?account_id=#{@filter_account_id}&from=#{@filter_from}&to=#{@filter_to}"}
                class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/10 dark:hover:bg-white/20">
               Export CSV
             </a>
-          <% end %>
         </:actions>
       </.page_header>
 
@@ -79,12 +72,7 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
           class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10" />
       </form>
 
-      <%= if @filter_account_id == "" do %>
-        <div class="rounded-lg border border-gray-200 dark:border-white/10 px-4 py-8 text-center text-sm text-gray-400">
-          Select an account to view transaction detail.
-        </div>
-      <% else %>
-        <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
+      <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-white/10">
             <thead class="bg-gray-50 dark:bg-white/5">
               <tr>
@@ -131,7 +119,6 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
             </tfoot>
           </table>
         </div>
-      <% end %>
     </.page>
     """
   end
@@ -146,7 +133,9 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
   defp load_lines(account_id, from_str, to_str) do
     q =
       JournalEntryLine
-      |> Ash.Query.filter(account_id == ^account_id)
+      |> then(fn q ->
+        if account_id == "", do: q, else: Ash.Query.filter(q, account_id == ^account_id)
+      end)
       |> Ash.Query.filter(journal_entry.status == :posted)
       |> Ash.Query.load([:journal_entry])
       |> Ash.Query.sort(inserted_at: :asc)
