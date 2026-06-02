@@ -18,6 +18,26 @@ defmodule GnomeGardenWeb.Finance.Helpers do
 
   def format_amount(amount) when is_number(amount), do: "$#{amount}"
 
+  def format_currency(nil), do: "—"
+
+  def format_currency(%Decimal{} = amount) do
+    rounded = Decimal.round(amount, 2) |> Decimal.to_string()
+    [integer_part, decimal_part] = String.split(rounded, ".")
+    {sign, digits} =
+      if String.starts_with?(integer_part, "-"),
+        do: {"-", String.slice(integer_part, 1..-1//1)},
+        else: {"", integer_part}
+    formatted =
+      digits
+      |> String.graphemes()
+      |> Enum.reverse()
+      |> Enum.chunk_every(3)
+      |> Enum.map(&Enum.join/1)
+      |> Enum.join(",")
+      |> String.reverse()
+    "#{sign}$#{formatted}.#{decimal_part}"
+  end
+
   def format_date(nil), do: "-"
   def format_date(%Date{} = date), do: Calendar.strftime(date, "%b %d, %Y")
 

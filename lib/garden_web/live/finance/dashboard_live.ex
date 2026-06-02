@@ -333,15 +333,6 @@ defmodule GnomeGardenWeb.Finance.DashboardLive do
   # Formatting helpers
   # ---------------------------------------------------------------------------
 
-  defp format_currency(nil), do: "—"
-  defp format_currency(%Decimal{} = amount) do
-    rounded = Decimal.round(amount, 2) |> Decimal.to_string()
-    [integer_part, decimal_part] = String.split(rounded, ".")
-    {sign, digits} = if String.starts_with?(integer_part, "-"), do: {"-", String.slice(integer_part, 1..-1//1)}, else: {"", integer_part}
-    formatted = digits |> String.graphemes() |> Enum.reverse() |> Enum.chunk_every(3) |> Enum.map(&Enum.join/1) |> Enum.join(",") |> String.reverse()
-    "#{sign}$#{formatted}.#{decimal_part}"
-  end
-
   defp overdue_positive?(nil), do: false
   defp overdue_positive?(d), do: Decimal.compare(d, Decimal.new(0)) == :gt
 
