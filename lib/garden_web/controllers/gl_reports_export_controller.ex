@@ -4,7 +4,7 @@ defmodule GnomeGardenWeb.GlReportsExportController do
   require Ash.Query
 
   alias GnomeGarden.Finance
-  alias GnomeGarden.Finance.{ChartOfAccount, JournalEntry, JournalEntryLine}
+  alias GnomeGarden.Finance.{ChartOfAccount, JournalEntryLine}
 
   plug :require_authenticated_user
 

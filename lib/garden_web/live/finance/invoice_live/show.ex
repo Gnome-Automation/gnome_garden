@@ -94,6 +94,14 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             <.icon name="hero-paper-airplane" class="size-4" /> Review & Issue
           </.button>
           <.button
+            :if={@invoice.status == :issued}
+            navigate={~p"/finance/payments/new?organization_id=#{@invoice.organization_id}&amount=#{Decimal.to_string(@invoice.balance_amount || @invoice.total_amount || Decimal.new("0"))}&invoice_id=#{@invoice.id}&return_to=#{~p"/finance/invoices/#{@invoice}"}"}
+            variant="primary"
+            title="Record a payment received — creates a payment record and GL entry, then links it to this invoice"
+          >
+            <.icon name="hero-check-badge" class="size-4" /> Mark Paid
+          </.button>
+          <.button
             :for={action <- invoice_actions(@invoice)}
             phx-click="transition"
             phx-value-action={action.action}
@@ -548,7 +556,6 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp invoice_actions(%{status: :issued}) do
     [
-      %{action: "mark_paid", label: "Mark Paid", icon: "hero-check-badge", variant: "primary", title: "Manually mark this invoice as paid without recording a specific payment"},
       %{action: "void", label: "Void", icon: "hero-x-circle", variant: nil, title: "Cancel this invoice — a credit note will be generated automatically"}
     ]
   end
@@ -581,9 +588,6 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp transition_invoice(invoice, :issue, actor),
     do: Finance.issue_invoice(invoice, actor: actor)
-
-  defp transition_invoice(invoice, :mark_paid, actor),
-    do: Finance.pay_invoice(invoice, actor: actor)
 
   defp transition_invoice(invoice, :void, actor),
     do: Finance.void_invoice(invoice, actor: actor)

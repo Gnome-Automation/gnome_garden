@@ -15,6 +15,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Form do
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:return_to, params["return_to"])
+     |> assign(:invoice_id, params["invoice_id"])
      |> assign(:page_title, if(payment, do: "Edit Payment", else: "New Payment"))
      |> assign_form(params)}
   end
@@ -120,13 +121,21 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Form do
   def handle_event("save", %{"form" => params}, socket) do
     case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, payment} ->
+        next_path =
+          if invoice_id = socket.assigns.invoice_id do
+            return_to = socket.assigns.return_to || ~p"/finance/invoices/#{invoice_id}"
+            ~p"/finance/payment-applications/new?payment_id=#{payment.id}&invoice_id=#{invoice_id}&return_to=#{return_to}"
+          else
+            socket.assigns.return_to || ~p"/finance/payments/#{payment}"
+          end
+
         {:noreply,
          socket
          |> put_flash(
            :info,
-           "Payment #{if socket.assigns.payment, do: "updated", else: "created"}"
+           "Payment #{if socket.assigns.payment, do: "updated", else: "created"} — now apply it to the invoice below"
          )
-         |> push_navigate(to: socket.assigns.return_to || ~p"/finance/payments/#{payment}")}
+         |> push_navigate(to: next_path)}
 
       {:error, form} ->
         {:noreply,
@@ -178,6 +187,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Form do
     %{}
     |> maybe_put("organization_id", params["organization_id"])
     |> maybe_put("agreement_id", params["agreement_id"])
+    |> maybe_put("amount", params["amount"])
   end
 
   defp maybe_put(map, _key, nil), do: map

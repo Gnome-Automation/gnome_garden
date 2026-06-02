@@ -24,7 +24,11 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.New do
 
   @impl true
   def handle_event("change", params, socket) do
-    lines = params["lines"] || socket.assigns.lines
+    lines =
+      case params["lines"] do
+        nil -> socket.assigns.lines
+        map_or_list -> normalize_lines(map_or_list)
+      end
 
     {:noreply,
      socket
@@ -54,7 +58,7 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.New do
   end
 
   defp do_save(params, socket, mode) do
-    lines_raw = params["lines"] || []
+    lines_raw = normalize_lines(params["lines"])
     date_str = params["date"] || ""
     description = params["description"] || ""
 
@@ -187,6 +191,17 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.New do
     "$#{Decimal.round(d, 2)}"
   end
 
+  # Phoenix sends indexed form params as a map %{"0" => %{...}, "1" => %{...}}.
+  # Normalize back to a sorted list so template and parse logic always see a list.
+  defp normalize_lines(nil), do: []
+  defp normalize_lines(lines) when is_list(lines), do: lines
+
+  defp normalize_lines(lines) when is_map(lines) do
+    lines
+    |> Enum.sort_by(fn {k, _} -> String.to_integer(k) end)
+    |> Enum.map(fn {_, v} -> v end)
+  end
+
   defp format_error(%Ash.Error.Invalid{errors: [first | _]}), do: first.message
   defp format_error(e), do: inspect(e)
 
@@ -198,7 +213,7 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.New do
         New Manual Entry
         <:subtitle>Create a manual double-entry journal entry.</:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/journal-entries"} variant={:secondary}>Cancel</.button>
+          <.button navigate={~p"/finance/journal-entries"}>Cancel</.button>
         </:actions>
       </.page_header>
 
@@ -300,10 +315,9 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.New do
         </div>
 
         <div class="mb-6">
-          <button type="button" phx-click="add_line"
-            class="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400">
+          <.button type="button" phx-click="add_line">
             + Add line
-          </button>
+          </.button>
         </div>
 
         <div class="flex gap-3">

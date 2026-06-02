@@ -4,7 +4,6 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.Show do
   require Ash.Query
 
   alias GnomeGarden.Finance
-  alias GnomeGarden.Finance.JournalEntry
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -52,7 +51,7 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.Show do
               Post Entry
             </.button>
           <% end %>
-          <.button navigate={~p"/finance/journal-entries"} variant={:secondary}>
+          <.button navigate={~p"/finance/journal-entries"}>
             Back
           </.button>
         </:actions>
