@@ -85,7 +85,8 @@ defmodule GnomeGarden.Finance.Invoice do
         :total_amount,
         :balance_amount,
         :due_on,
-        :notes
+        :notes,
+        :recurring_invoice_id
       ]
 
       change GnomeGarden.Finance.Changes.GenerateInvoiceNumber
@@ -120,7 +121,8 @@ defmodule GnomeGarden.Finance.Invoice do
         :balance_amount,
         :due_on,
         :notes,
-        :stripe_payment_url
+        :stripe_payment_url,
+        :recurring_invoice_id
       ]
     end
 
@@ -338,6 +340,8 @@ defmodule GnomeGarden.Finance.Invoice do
       description "Stripe Payment Link URL. Generated on invoice issue. Nil if Stripe is unavailable."
       public? true
     end
+
+    attribute :recurring_invoice_id, :uuid, allow_nil?: true
 
     timestamps()
   end
