@@ -51,7 +51,7 @@ defmodule GnomeGarden.Finance.Invoice do
       transition :partial, from: [:issued, :partial], to: :partial
       transition :mark_paid, from: [:issued, :partial], to: :paid
       transition :void, from: [:draft, :issued], to: :void
-      transition :reopen, from: [:void, :paid, :partial], to: :draft
+      transition :reopen, from: [:void], to: :draft
       transition :write_off, from: [:issued, :partial], to: :write_off
     end
   end

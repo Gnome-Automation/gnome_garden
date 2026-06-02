@@ -344,6 +344,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/payments", "/finance/payment-applications"]
     },
     %{
+      id: "fin-expenses",
+      section: "Finance",
+      icon: "hero-receipt-percent",
+      label: "Expenses",
+      tooltip: "Non-labor costs — travel, materials, equipment, software and other expenses",
+      path: "/finance/expenses",
+      badge: 0,
+      hot: false,
+      match: ["/finance/expenses"]
+    },
+    %{
       id: "fin-ar-aging",
       section: "Finance",
       icon: "hero-clock",

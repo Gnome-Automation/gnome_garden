@@ -553,11 +553,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
     ]
   end
 
-  defp invoice_actions(%{status: :paid}) do
-    [
-      %{action: "reopen", label: "Reopen", icon: "hero-arrow-path", variant: "primary", title: "Move this invoice back to draft so it can be re-issued"}
-    ]
-  end
+  defp invoice_actions(%{status: :paid}), do: []
 
   defp invoice_actions(%{status: :void}) do
     [

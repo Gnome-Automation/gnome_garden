@@ -267,8 +267,11 @@ defmodule GnomeGarden.Finance.GLPoster do
           )
       end)
 
-      # Mark as posted immediately (auto-posted entries skip draft)
-      {:ok, _} = Finance.post_journal_entry(entry, authorize?: false)
+      # Reload with lines before posting (post action reads lines from loaded data)
+      {:ok, entry_with_lines} =
+        Finance.get_journal_entry(entry.id, authorize?: false, load: [:lines])
+
+      {:ok, _} = Finance.post_journal_entry(entry_with_lines, authorize?: false)
       :ok
     rescue
       e ->

@@ -60,6 +60,10 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
                 options={Enum.map(@organizations, &{&1.name, &1.id})}
                 required
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/operations/organizations/new?return_to=#{~p"/finance/expenses/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -70,6 +74,10 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
                 options={Enum.map(@team_members, &{team_member_label(&1), &1.id})}
                 required
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Auto-filled from your profile. Not in the list?
+                <.link navigate={~p"/operations/people/new?return_to=#{~p"/finance/expenses/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Add a team member first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-2">
               <.input field={@form[:incurred_on]} type="date" label="Incurred On" required />
@@ -97,6 +105,10 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
                 No agreements yet —
                 <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/expenses/new"}"} class="underline text-emerald-600 dark:text-emerald-400">create one first</.link>.
               </p>
+              <p :if={not Enum.empty?(@agreements)} class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/commercial/agreements/new?return_to=#{~p"/finance/expenses/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input
@@ -119,6 +131,10 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
                 prompt="Select work order..."
                 options={Enum.map(@work_orders, &{work_order_label(&1), &1.id})}
               />
+              <p class="mt-1.5 text-xs text-base-content/50">
+                Not in the list?
+                <.link navigate={~p"/execution/work-orders/new?return_to=#{~p"/finance/expenses/new"}"} class="underline text-emerald-600 dark:text-emerald-400">Create one first</.link>.
+              </p>
             </div>
             <div class="sm:col-span-3">
               <.input field={@form[:vendor]} label="Vendor" />
