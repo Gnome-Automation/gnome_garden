@@ -300,6 +300,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
     # Finance
     %{
+      id: "fin-dashboard",
+      section: "Finance",
+      icon: "hero-squares-2x2",
+      label: "Dashboard",
+      tooltip: "Finance dashboard — overview of revenue, outstanding invoices, payments, and cash position",
+      path: "/finance/dashboard",
+      badge: 0,
+      hot: false,
+      match: ["/finance/dashboard"]
+    },
+    %{
       id: "fin-time-entries",
       section: "Finance",
       icon: "hero-clock",
