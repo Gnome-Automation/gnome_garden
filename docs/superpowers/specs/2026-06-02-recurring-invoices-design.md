@@ -53,6 +53,7 @@ New Ash resource at `lib/garden/finance/recurring_invoice_line.ex`.
 | `quantity` | decimal | ✓ | Default `1` |
 | `unit_price` | decimal | ✓ | Price per unit |
 | `line_total` | decimal | ✓ | `quantity * unit_price` |
+| `line_kind` | atom | ✓ | Default `:service`. Same enum as `InvoiceLine`: `:labor \| :expense \| :material \| :service \| :adjustment \| :tax \| :other` |
 
 ### Link generated invoices back to template
 
@@ -77,7 +78,11 @@ Add `recurring_invoice_id` (nullable FK) to `Finance.Invoice`. When a recurring 
       - organization_id, agreement_id, tax_rate, notes from template
       - due_on = Date.utc_today() + net_terms_days
       - recurring_invoice_id = template.id
-   b. Create InvoiceLines from template's RecurringInvoiceLines
+      - subtotal = sum of (quantity * unit_price) across all template lines
+      - tax_total = subtotal * (tax_rate / 100)
+      - total_amount = subtotal + tax_total
+   b. Create InvoiceLines from template's RecurringInvoiceLines, copying:
+      - organization_id (from template), description, quantity, unit_price, line_total, line_kind, line_number
    c. If delivery_mode == :auto_issue: call Finance.issue_invoice/1 (triggers GL + email)
       If delivery_mode == :draft: leave as :draft
    d. Advance next_generation_date by interval:
@@ -100,7 +105,7 @@ Add `recurring_invoice_id` (nullable FK) to `Finance.Invoice`. When a recurring 
 Add inside `ash_authentication_live_session :authenticated_routes` in `router.ex`:
 
 ```elixir
-live "/finance/recurring-invoices", Finance.RecurringInvoicesLive, :index
+live "/finance/recurring-invoices", Finance.RecurringInvoiceLive.Index, :index
 live "/finance/recurring-invoices/new", Finance.RecurringInvoiceLive.Form, :new
 live "/finance/recurring-invoices/:id", Finance.RecurringInvoiceLive.Show, :show
 live "/finance/recurring-invoices/:id/edit", Finance.RecurringInvoiceLive.Form, :edit
@@ -189,6 +194,48 @@ Two sections:
 - Status badges: Active = green, Paused = amber, Stopped = gray
 - `+ Add line` must use `<.button type="button" phx-click="add_line">` — never plain text or anchor
 - Hints below Client and Agreement use the existing pattern: `class="mt-1.5 text-xs text-base-content/50"` with emerald underline link
+
+---
+
+## Domain Registration (`lib/garden/finance.ex`)
+
+Add `RecurringInvoice` and `RecurringInvoiceLine` to the `resources do` block in `lib/garden/finance.ex`. Add code interface `define` entries for common operations:
+
+```elixir
+# RecurringInvoice
+define :list_recurring_invoices, action: :read
+define :get_recurring_invoice, action: :read, get_by: [:id]
+define :create_recurring_invoice, action: :create
+define :update_recurring_invoice, action: :update
+define :pause_recurring_invoice, action: :pause
+define :resume_recurring_invoice, action: :resume
+define :stop_recurring_invoice, action: :stop
+
+# RecurringInvoiceLine
+define :create_recurring_invoice_line, action: :create
+define :update_recurring_invoice_line, action: :update
+define :destroy_recurring_invoice_line, action: :destroy
+```
+
+---
+
+## Migrations
+
+Three schema changes required (run `mix ash.codegen recurring_invoices`):
+
+1. New table `finance_recurring_invoices` — all attributes from `RecurringInvoice`
+2. New table `finance_recurring_invoice_lines` — all attributes from `RecurringInvoiceLine`
+3. Add nullable column `recurring_invoice_id` (uuid) to `finance_invoices` with FK to `finance_recurring_invoices`
+
+---
+
+## `format_currency/1` Helper
+
+The `format_currency/1` function in `DashboardLive` is `defp` (private). The recurring invoice LiveViews must either:
+- Import it from a shared module — preferred: extract to `GnomeGardenWeb.Finance.Helpers` alongside the existing `format_date/1`, `format_atom/1`, etc. helpers that live views already import, OR
+- Duplicate the function in each new LiveView module
+
+**Recommended:** add `format_currency/1` to `lib/garden_web/live/finance/helpers.ex` so all Finance LiveViews can use it.
 
 ---
 
