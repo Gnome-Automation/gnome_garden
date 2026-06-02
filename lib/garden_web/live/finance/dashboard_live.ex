@@ -102,7 +102,7 @@ defmodule GnomeGardenWeb.Finance.DashboardLive do
             <ul class="divide-y divide-base-content/10">
               <%= for invoice <- @recent_invoices do %>
                 <li>
-                  <.link navigate={~p"/finance/invoices/#{invoice.id}"} class="flex items-center justify-between px-4 py-3 hover:bg-base-content/5 transition-colors">
+                  <.link navigate={~p"/finance/invoices/#{invoice.id}?return_to=#{~p"/finance/dashboard"}"} class="flex items-center justify-between px-4 py-3 hover:bg-base-content/5 transition-colors">
                     <div class="min-w-0 flex-1">
                       <p class="text-sm font-medium text-base-content truncate">
                         {invoice.invoice_number || "Draft"}
@@ -135,7 +135,7 @@ defmodule GnomeGardenWeb.Finance.DashboardLive do
             <ul class="divide-y divide-base-content/10">
               <%= for payment <- @recent_payments do %>
                 <li>
-                  <.link navigate={~p"/finance/payments/#{payment.id}"} class="flex items-center justify-between px-4 py-3 hover:bg-base-content/5 transition-colors">
+                  <.link navigate={~p"/finance/payments/#{payment.id}?return_to=#{~p"/finance/dashboard"}"} class="flex items-center justify-between px-4 py-3 hover:bg-base-content/5 transition-colors">
                     <div class="min-w-0 flex-1">
                       <p class="text-sm font-medium text-base-content truncate">
                         {payment.payment_number || "Payment"}
