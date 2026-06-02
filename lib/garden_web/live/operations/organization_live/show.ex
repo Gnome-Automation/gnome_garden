@@ -354,6 +354,29 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
       </div>
 
       <.section
+        title="Finance"
+        description="Billing and invoicing for this organization."
+      >
+        <:actions>
+          <.button navigate={~p"/finance/recurring-invoices/new?#{[organization_id: @organization.id, return_to: ~p"/operations/organizations/#{@organization}"]}"}>
+            Set up recurring invoice
+          </.button>
+          <.button navigate={~p"/finance/invoices/new?#{[organization_id: @organization.id, return_to: ~p"/operations/organizations/#{@organization}"]}"} variant="primary">
+            New invoice
+          </.button>
+        </:actions>
+        <p class="text-sm text-base-content/50">
+          <.link navigate={~p"/finance/recurring-invoices?organization_id=#{@organization.id}"} class="text-emerald-600 hover:underline">
+            View recurring invoices →
+          </.link>
+          &nbsp;·&nbsp;
+          <.link navigate={~p"/finance/invoices?organization_id=#{@organization.id}"} class="text-emerald-600 hover:underline">
+            View all invoices →
+          </.link>
+        </p>
+      </.section>
+
+      <.section
         title="Procurement Sources"
         description="Tracked procurement or website sources currently tied to this organization."
       >
