@@ -121,6 +121,7 @@ config :gnome_garden, Oban,
        {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker},
        {"0 6 * * *", GnomeGarden.Mercury.InvoiceSchedulerWorker},
        {"*/5 * * * *", GnomeGarden.Acquisition.Workers.RetryFailedImports},
+       {"0 7 * * *", GnomeGarden.Finance.RecurringInvoiceWorker},
        {"0 8 * * *", GnomeGarden.Finance.PaymentReminderWorker}
      ],
      timezone: "Etc/UTC"}
