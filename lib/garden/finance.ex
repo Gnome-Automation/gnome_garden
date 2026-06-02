@@ -72,6 +72,24 @@ defmodule GnomeGarden.Finance do
       define :get_portal_invoice, action: :portal_show, get_by: [:id]
     end
 
+    resource GnomeGarden.Finance.RecurringInvoice do
+      define :list_recurring_invoices, action: :read
+      define :get_recurring_invoice, action: :read, get_by: [:id]
+      define :create_recurring_invoice, action: :create
+      define :update_recurring_invoice, action: :update
+      define :pause_recurring_invoice, action: :pause
+      define :resume_recurring_invoice, action: :resume
+      define :stop_recurring_invoice, action: :stop
+      define :advance_recurring_invoice_schedule, action: :advance_schedule
+    end
+
+    resource GnomeGarden.Finance.RecurringInvoiceLine do
+      define :list_recurring_invoice_lines, action: :read
+      define :create_recurring_invoice_line, action: :create
+      define :update_recurring_invoice_line, action: :update
+      define :destroy_recurring_invoice_line, action: :destroy
+    end
+
     resource GnomeGarden.Finance.InvoiceLine do
       define :list_invoice_lines, action: :read
       define :get_invoice_line, action: :read, get_by: [:id]
