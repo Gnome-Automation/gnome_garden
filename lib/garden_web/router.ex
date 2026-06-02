@@ -206,6 +206,12 @@ defmodule GnomeGardenWeb.Router do
       # Finance - Dashboard
       live "/finance/dashboard", Finance.DashboardLive, :index
 
+      # Finance - Recurring Invoices
+      live "/finance/recurring-invoices", Finance.RecurringInvoiceLive.Index, :index
+      live "/finance/recurring-invoices/new", Finance.RecurringInvoiceLive.Form, :new
+      live "/finance/recurring-invoices/:id", Finance.RecurringInvoiceLive.Show, :show
+      live "/finance/recurring-invoices/:id/edit", Finance.RecurringInvoiceLive.Form, :edit
+
       # Finance - Invoices
       live "/finance/invoices", Finance.InvoiceLive.Index, :index
       live "/finance/invoices/new", Finance.InvoiceLive.Form, :new
