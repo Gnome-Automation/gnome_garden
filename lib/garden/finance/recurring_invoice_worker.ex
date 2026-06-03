@@ -16,6 +16,8 @@ defmodule GnomeGarden.Finance.RecurringInvoiceWorker do
 
   alias GnomeGarden.Finance
   alias GnomeGarden.Finance.RecurringInvoice
+  alias GnomeGarden.Mailer
+  alias GnomeGarden.Mailer.InvoiceEmail
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
@@ -83,14 +85,38 @@ defmodule GnomeGarden.Finance.RecurringInvoiceWorker do
 
   defp maybe_issue(invoice, :auto_issue) do
     case Finance.issue_invoice(invoice, authorize?: false) do
-      {:ok, _} ->
+      {:ok, issued} ->
         Logger.info("RecurringInvoiceWorker: issued invoice #{invoice.id}")
+        send_invoice_email(issued)
+
       {:error, reason} ->
         Logger.error("RecurringInvoiceWorker: failed to issue invoice #{invoice.id}: #{inspect(reason)}")
     end
   end
 
   defp maybe_issue(_invoice, :draft), do: :ok
+
+  defp send_invoice_email(invoice) do
+    {:ok, loaded} =
+      Finance.get_invoice(invoice.id,
+        actor: nil,
+        authorize?: false,
+        load: [:invoice_lines, :organization]
+      )
+
+    mercury_info = Application.get_env(:gnome_garden, :mercury_payment_info, [])
+
+    loaded
+    |> InvoiceEmail.build(mercury_info)
+    |> Mailer.deliver()
+    |> case do
+      {:ok, _} ->
+        Logger.info("RecurringInvoiceWorker: sent invoice email for #{invoice.invoice_number}")
+
+      {:error, reason} ->
+        Logger.warning("RecurringInvoiceWorker: failed to send invoice email for #{invoice.id}: #{inspect(reason)}")
+    end
+  end
 
   defp advance_schedule(template, _today) do
     new_date = advance_date(template.next_generation_date, template.interval)
