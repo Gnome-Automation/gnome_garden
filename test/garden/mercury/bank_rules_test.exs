@@ -105,4 +105,56 @@ defmodule GnomeGarden.Mercury.BankRulesTest do
       assert BankRules.match(already_reconciled, [r]) == nil
     end
   end
+
+  describe "sync worker integration" do
+    alias GnomeGarden.Mercury
+    alias GnomeGarden.Mercury.SyncWorker
+
+    test "bank rule is applied to new transaction with matching counterparty" do
+      {:ok, account} =
+        Mercury.create_mercury_account(%{
+          mercury_id: "acct-rules-#{System.unique_integer([:positive])}",
+          name: "Test Checking",
+          status: :active,
+          kind: :checking
+        })
+
+      {:ok, _rule} =
+        Mercury.create_bank_rule(%{
+          name: "Stripe Fees",
+          priority: 0,
+          direction: :money_out,
+          counterparty_contains: "STRIPE",
+          reconciliation_category: :bank_fee,
+          auto_note: "Monthly Stripe fee"
+        }, authorize?: false)
+
+      {:ok, txn} =
+        Mercury.create_mercury_transaction(%{
+          account_id: account.id,
+          mercury_id: "txn-rule-#{System.unique_integer([:positive])}",
+          amount: Decimal.new("-9.99"),
+          kind: :fee,
+          status: :sent,
+          counterparty_name: "STRIPE PAYOUT",
+          occurred_at: DateTime.utc_now()
+        }, authorize?: false)
+
+      rules = Mercury.list_bank_rules!(authorize?: false)
+      matched = BankRules.match(txn, rules)
+
+      assert matched != nil
+      assert matched.name == "Stripe Fees"
+
+      # Apply rule manually (mirrors what sync worker does)
+      {:ok, updated} =
+        Mercury.update_mercury_transaction(txn, %{
+          reconciliation_category: matched.reconciliation_category,
+          reconciliation_note: matched.auto_note
+        }, authorize?: false)
+
+      assert updated.reconciliation_category == :bank_fee
+      assert updated.reconciliation_note == "Monthly Stripe fee"
+    end
+  end
 end

@@ -14,6 +14,7 @@ defmodule GnomeGarden.Mercury.SyncWorker do
   require Logger
 
   alias GnomeGarden.Mercury
+  alias GnomeGarden.Mercury.BankRules
   alias GnomeGarden.Mercury.PaymentMatcherWorker
   alias GnomeGarden.Providers
 
@@ -76,15 +77,17 @@ defmodule GnomeGarden.Mercury.SyncWorker do
 
   defp sync_transactions(accounts) do
     start_date = Date.add(Date.utc_today(), -90) |> Date.to_iso8601()
+    bank_rules = Mercury.list_bank_rules!(authorize?: false)
+
     new_count = Enum.reduce(accounts, 0, fn account, acc ->
-      acc + sync_account_transactions(account, start_date)
+      acc + sync_account_transactions(account, start_date, bank_rules)
     end)
 
     Logger.info("MercurySyncWorker: synced #{new_count} new transaction(s)")
     {:ok, new_count}
   end
 
-  defp sync_account_transactions(account, start_date) do
+  defp sync_account_transactions(account, start_date, bank_rules) do
     Logger.info("MercurySyncWorker: fetching transactions for #{account.name} (#{account.mercury_id})")
     case Providers.Mercury.list_transactions(account.mercury_id, start_date: start_date) do
       {:ok, body} ->
@@ -100,8 +103,19 @@ defmodule GnomeGarden.Mercury.SyncWorker do
               # New transaction — create and schedule matcher for inbound
               case Mercury.create_mercury_transaction(attrs, authorize?: false) do
                 {:ok, txn} ->
-                  if should_match?(txn) do
-                    Oban.insert(PaymentMatcherWorker.new(%{"transaction_id" => txn.id}))
+                  matched_rule = BankRules.match(txn, bank_rules)
+
+                  if matched_rule do
+                    Mercury.update_mercury_transaction(txn, %{
+                      reconciliation_category: matched_rule.reconciliation_category,
+                      reconciliation_note: matched_rule.auto_note
+                    }, authorize?: false)
+
+                    Logger.info("BankRules: applied rule '#{matched_rule.name}' to transaction #{txn.mercury_id}")
+                  else
+                    if should_match?(txn) do
+                      Oban.insert(PaymentMatcherWorker.new(%{"transaction_id" => txn.id}))
+                    end
                   end
 
                   new_count + 1

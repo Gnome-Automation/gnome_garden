@@ -68,7 +68,7 @@ defmodule GnomeGarden.Mercury do
     end
 
     resource GnomeGarden.Mercury.BankRule do
-      define :list_bank_rules, action: :read, default_options: [sort: [priority: :asc]]
+      define :list_bank_rules, action: :sorted
       define :get_bank_rule, action: :read, get_by: [:id]
       define :create_bank_rule, action: :create
       define :update_bank_rule, action: :update
@@ -82,7 +82,7 @@ defmodule GnomeGarden.Mercury do
   If there is no neighbor, the rule is unchanged.
   """
   def reorder_bank_rule(rule, direction) do
-    rules = list_bank_rules!(authorize?: false, sort: [priority: :asc])
+    rules = list_bank_rules!(authorize?: false)
 
     case Enum.find_index(rules, &(&1.id == rule.id)) do
       nil ->

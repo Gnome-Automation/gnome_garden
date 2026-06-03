@@ -24,7 +24,19 @@ defmodule GnomeGarden.Mercury.BankRule do
   end
 
   actions do
-    defaults [:read, :create, :update, :destroy]
+    defaults [:read, :destroy]
+
+    read :sorted do
+      prepare fn query, _ -> Ash.Query.sort(query, priority: :asc) end
+    end
+
+    create :create do
+      accept [:name, :priority, :direction, :counterparty_contains, :amount_operator, :amount_value, :reconciliation_category, :auto_note]
+    end
+
+    update :update do
+      accept [:name, :priority, :direction, :counterparty_contains, :amount_operator, :amount_value, :reconciliation_category, :auto_note]
+    end
   end
 
   attributes do
