@@ -66,5 +66,43 @@ defmodule GnomeGarden.Mercury do
         action: :destroy,
         default_options: [return_destroyed?: true]
     end
+
+    resource GnomeGarden.Mercury.BankRule do
+      define :list_bank_rules, action: :read, default_options: [sort: [priority: :asc]]
+      define :get_bank_rule, action: :read, get_by: [:id]
+      define :create_bank_rule, action: :create
+      define :update_bank_rule, action: :update
+      define :delete_bank_rule, action: :destroy, default_options: [return_destroyed?: true]
+    end
+  end
+
+  @doc """
+  Swaps the priority of a rule with its neighbor in the given direction.
+  Direction is :up (lower priority number) or :down (higher priority number).
+  If there is no neighbor, the rule is unchanged.
+  """
+  def reorder_bank_rule(rule, direction) do
+    rules = list_bank_rules!(authorize?: false, sort: [priority: :asc])
+
+    case Enum.find_index(rules, &(&1.id == rule.id)) do
+      nil ->
+        :ok
+
+      current_index ->
+        neighbor_index =
+          case direction do
+            :up -> current_index - 1
+            :down -> current_index + 1
+          end
+
+        if neighbor_index < 0 or neighbor_index >= length(rules) do
+          :ok
+        else
+          neighbor = Enum.at(rules, neighbor_index)
+          update_bank_rule(rule, %{priority: neighbor.priority}, authorize?: false)
+          update_bank_rule(neighbor, %{priority: rule.priority}, authorize?: false)
+          :ok
+        end
+    end
   end
 end
