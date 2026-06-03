@@ -58,7 +58,9 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
      |> assign(:agreements, agreements)
      |> assign(:return_to, return_to)
      |> assign(:errors, [])
-     |> assign(:preselected_org_id, params["organization_id"])}
+     |> assign(:preselected_org_id, params["organization_id"])
+     |> assign(:tax_rate, (template && template.tax_rate) || Decimal.new(0))
+     |> assign(:live_params, %{})}
   end
 
   @impl true
@@ -74,6 +76,14 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
   end
 
   @impl true
+  def handle_event("update_lines", form_params, socket) do
+    lines = normalize_lines(form_params["lines"])
+    tax_rate = parse_decimal_safe(get_in(form_params, ["template", "tax_rate"]))
+    live_params = form_params["template"] || %{}
+    {:noreply, socket |> assign(:lines, lines) |> assign(:tax_rate, tax_rate) |> assign(:live_params, live_params)}
+  end
+
+  @impl true
   def handle_event("save", %{"template" => params} = form_params, socket) do
     lines = normalize_lines(form_params["lines"])
 
@@ -85,7 +95,8 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
        |> push_navigate(to: socket.assigns.return_to)}
     else
       {:error, errors} ->
-        {:noreply, assign(socket, :errors, errors)}
+        live_params = form_params["template"] || %{}
+        {:noreply, socket |> assign(:errors, errors) |> assign(:live_params, live_params)}
     end
   end
 
@@ -200,24 +211,38 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
     " → #{format_date(next1)} → #{format_date(next2)} → …"
   end
 
-  defp selected_org?(nil, org_id, preselected), do: preselected != nil and preselected == to_string(org_id)
-  defp selected_org?(template, org_id, _pre), do: to_string(template.organization_id) == to_string(org_id)
+  defp selected_org?(nil, org_id, preselected, live_params) do
+    live = Map.get(live_params, "organization_id", "")
+    if live != "", do: live == to_string(org_id), else: preselected != nil and preselected == to_string(org_id)
+  end
+  defp selected_org?(template, org_id, _pre, _live_params), do: to_string(template.organization_id) == to_string(org_id)
 
-  defp selected_interval?(nil, :monthly), do: true
-  defp selected_interval?(nil, _), do: false
-  defp selected_interval?(t, interval), do: t.interval == interval
+  defp selected_interval?(nil, interval, live_params) do
+    live = Map.get(live_params, "interval", "monthly")
+    to_string(interval) == live
+  end
+  defp selected_interval?(t, interval, _live_params), do: t.interval == interval
 
-  defp selected_net_terms?(nil, 30), do: true
-  defp selected_net_terms?(nil, _), do: false
-  defp selected_net_terms?(t, days), do: t.net_terms_days == days
+  defp selected_net_terms?(nil, days, live_params) do
+    live = Map.get(live_params, "net_terms_days", "30")
+    to_string(days) == live
+  end
+  defp selected_net_terms?(t, days, _live_params), do: t.net_terms_days == days
 
-  defp selected_delivery?(nil, :auto_issue), do: true
-  defp selected_delivery?(nil, _), do: false
-  defp selected_delivery?(t, mode), do: t.delivery_mode == mode
+  defp selected_delivery?(nil, mode, live_params) do
+    live = Map.get(live_params, "delivery_mode", "auto_issue")
+    to_string(mode) == live
+  end
+  defp selected_delivery?(t, mode, _live_params), do: t.delivery_mode == mode
 
-  defp selected_status?(nil, :active), do: true
-  defp selected_status?(nil, _), do: false
-  defp selected_status?(t, status), do: t.status == status
+  defp selected_status?(nil, status, live_params) do
+    live = Map.get(live_params, "status", "active")
+    to_string(status) == live
+  end
+  defp selected_status?(t, status, _live_params), do: t.status == status
+
+  defp live_date_value(nil, live_params, key), do: Map.get(live_params, key, "")
+  defp live_date_value(%Date{} = d, _live_params, _key), do: Date.to_iso8601(d)
 
   defp date_value(nil), do: ""
   defp date_value(%Date{} = d), do: Date.to_iso8601(d)
@@ -233,7 +258,14 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
         </:actions>
       </.page_header>
 
-      <form phx-submit="save" class="space-y-8">
+      <div :if={@errors != []} class="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+        <p class="text-sm font-medium text-red-800 dark:text-red-300">Please fix the following errors:</p>
+        <ul class="mt-1 list-disc list-inside text-sm text-red-700 dark:text-red-400">
+          <li :for={err <- @errors}>{err}</li>
+        </ul>
+      </div>
+
+      <form phx-submit="save" phx-change="update_lines" class="space-y-8">
         <%!-- Section 1: Schedule --%>
         <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
           <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Schedule</h2>
@@ -246,10 +278,10 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
                 Client <span class="text-red-500">*</span>
               </label>
               <div class="mt-2">
-                <select name="template[organization_id]" class="block w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500">
+                <select name="template[organization_id]" required class="block w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500">
                   <option value="">Select client…</option>
                   <%= for org <- @organizations do %>
-                    <option value={org.id} selected={selected_org?(@template, org.id, @preselected_org_id)}>{org.name}</option>
+                    <option value={org.id} selected={selected_org?(@template, org.id, @preselected_org_id, @live_params)}>{org.name}</option>
                   <% end %>
                 </select>
               </div>
@@ -285,12 +317,12 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
               </label>
               <div class="mt-2">
                 <select name="template[interval]" class="block w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500">
-                  <option value="daily" selected={selected_interval?(@template, :daily)}>Daily</option>
-                  <option value="weekly" selected={selected_interval?(@template, :weekly)}>Weekly</option>
-                  <option value="monthly" selected={selected_interval?(@template, :monthly)}>Monthly</option>
-                  <option value="quarterly" selected={selected_interval?(@template, :quarterly)}>Quarterly</option>
-                  <option value="semi_annually" selected={selected_interval?(@template, :semi_annually)}>Semi-annually</option>
-                  <option value="annually" selected={selected_interval?(@template, :annually)}>Annually</option>
+                  <option value="daily" selected={selected_interval?(@template, :daily, @live_params)}>Daily</option>
+                  <option value="weekly" selected={selected_interval?(@template, :weekly, @live_params)}>Weekly</option>
+                  <option value="monthly" selected={selected_interval?(@template, :monthly, @live_params)}>Monthly</option>
+                  <option value="quarterly" selected={selected_interval?(@template, :quarterly, @live_params)}>Quarterly</option>
+                  <option value="semi_annually" selected={selected_interval?(@template, :semi_annually, @live_params)}>Semi-annually</option>
+                  <option value="annually" selected={selected_interval?(@template, :annually, @live_params)}>Annually</option>
                 </select>
               </div>
             </div>
@@ -300,11 +332,11 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
               <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Net Terms</label>
               <div class="mt-2">
                 <select name="template[net_terms_days]" class="block w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500">
-                  <option value="15" selected={selected_net_terms?(@template, 15)}>Net 15</option>
-                  <option value="30" selected={selected_net_terms?(@template, 30)}>Net 30</option>
-                  <option value="45" selected={selected_net_terms?(@template, 45)}>Net 45</option>
-                  <option value="60" selected={selected_net_terms?(@template, 60)}>Net 60</option>
-                  <option value="90" selected={selected_net_terms?(@template, 90)}>Net 90</option>
+                  <option value="15" selected={selected_net_terms?(@template, 15, @live_params)}>Net 15</option>
+                  <option value="30" selected={selected_net_terms?(@template, 30, @live_params)}>Net 30</option>
+                  <option value="45" selected={selected_net_terms?(@template, 45, @live_params)}>Net 45</option>
+                  <option value="60" selected={selected_net_terms?(@template, 60, @live_params)}>Net 60</option>
+                  <option value="90" selected={selected_net_terms?(@template, 90, @live_params)}>Net 90</option>
                 </select>
               </div>
             </div>
@@ -314,8 +346,8 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
               <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">When generated</label>
               <div class="mt-2">
                 <select name="template[delivery_mode]" class="block w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500">
-                  <option value="auto_issue" selected={selected_delivery?(@template, :auto_issue)}>Auto-issue & send</option>
-                  <option value="draft" selected={selected_delivery?(@template, :draft)}>Save as draft</option>
+                  <option value="auto_issue" selected={selected_delivery?(@template, :auto_issue, @live_params)}>Auto-issue & send</option>
+                  <option value="draft" selected={selected_delivery?(@template, :draft, @live_params)}>Save as draft</option>
                 </select>
               </div>
             </div>
@@ -329,7 +361,8 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
                 <input
                   type="date"
                   name="template[start_date]"
-                  value={date_value(@template && @template.start_date)}
+                  required
+                  value={live_date_value(@template && @template.start_date, @live_params, "start_date")}
                   class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500"
                 />
               </div>
@@ -344,7 +377,7 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
                 <input
                   type="date"
                   name="template[end_date]"
-                  value={date_value(@template && @template.end_date)}
+                  value={live_date_value(@template && @template.end_date, @live_params, "end_date")}
                   class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500"
                 />
               </div>
@@ -355,8 +388,8 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
               <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Status</label>
               <div class="mt-2">
                 <select name="template[status]" class="block w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500">
-                  <option value="active" selected={selected_status?(@template, :active)}>Active</option>
-                  <option value="paused" selected={selected_status?(@template, :paused)}>Paused</option>
+                  <option value="active" selected={selected_status?(@template, :active, @live_params)}>Active</option>
+                  <option value="paused" selected={selected_status?(@template, :paused, @live_params)}>Paused</option>
                 </select>
               </div>
             </div>
@@ -404,7 +437,7 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
             </table>
             <div class="px-4 py-3 border-t border-gray-100 dark:border-white/5">
               <button type="button" phx-click="add_line" class="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
-                + Add line
+                + Add another line
               </button>
             </div>
           </div>
@@ -427,10 +460,17 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Form do
                 />
               </div>
             </div>
-            <div class="text-right">
-              <div class="text-sm text-gray-500 dark:text-gray-400">Total per invoice</div>
+            <div class="text-right space-y-1">
+              <% subtotal = compute_subtotal(@lines) %>
+              <% tax_amount = Decimal.mult(subtotal, Decimal.div(@tax_rate, Decimal.new(100))) %>
+              <% grand_total = Decimal.add(subtotal, tax_amount) %>
+              <div class="text-sm text-gray-500 dark:text-gray-400">Subtotal: {format_currency(subtotal)}</div>
+              <div :if={Decimal.compare(@tax_rate, Decimal.new(0)) != :eq} class="text-sm text-gray-500 dark:text-gray-400">
+                Tax ({@tax_rate}%): {format_currency(tax_amount)}
+              </div>
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Total per invoice</div>
               <div class="text-2xl font-bold text-gray-900 dark:text-white">
-                {format_currency(compute_subtotal(@lines))}
+                {format_currency(grand_total)}
               </div>
             </div>
           </div>
