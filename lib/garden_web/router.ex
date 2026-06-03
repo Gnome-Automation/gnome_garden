@@ -269,6 +269,11 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/mercury", Finance.MercuryLive
       live "/finance/mercury/aliases", Finance.MercuryAliasLive
 
+      # Finance - Bank Rules
+      live "/finance/bank-rules", Finance.BankRuleLive.Index, :index
+      live "/finance/bank-rules/new", Finance.BankRuleLive.Form, :new
+      live "/finance/bank-rules/:id/edit", Finance.BankRuleLive.Form, :edit
+
       # Agents - Procurement targeting
       live "/procurement/targeting", Agents.ProcurementTargetingLive, :index
     end

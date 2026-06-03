@@ -421,6 +421,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/mercury/aliases"]
     },
     %{
+      id: "fin-bank-rules",
+      section: "Finance",
+      icon: "hero-funnel",
+      label: "Bank Rules",
+      tooltip: "Bank rules — auto-categorize Mercury transactions based on counterparty name, direction, and amount",
+      path: "/finance/bank-rules",
+      badge: 0,
+      hot: false,
+      match: ["/finance/bank-rules"]
+    },
+    %{
       id: "fin-chart-of-accounts",
       section: "Finance",
       icon: "hero-list-bullet",
