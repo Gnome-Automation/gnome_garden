@@ -54,9 +54,15 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Show do
     {:noreply, assign(socket, :template, updated)}
   end
 
+  # recurring invoice statuses
   defp status_variant(:active), do: :success
   defp status_variant(:paused), do: :warning
   defp status_variant(:stopped), do: :default
+  # generated invoice statuses
+  defp status_variant(:paid), do: :success
+  defp status_variant(:partial), do: :warning
+  defp status_variant(:issued), do: :info
+  defp status_variant(_), do: :default
 
   defp interval_label(:daily), do: "Daily"
   defp interval_label(:weekly), do: "Weekly"
