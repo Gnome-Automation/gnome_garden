@@ -12,9 +12,11 @@ defmodule GnomeGardenWeb.Finance.RecurringInvoiceLive.Show do
   @impl true
   def mount(%{"id" => id} = params, _session, socket) do
     template =
-      RecurringInvoice
-      |> Ash.Query.load([:organization, :agreement, :recurring_invoice_lines])
-      |> Ash.get!(id, domain: Finance, authorize?: false)
+      Ash.get!(RecurringInvoice, id,
+        domain: Finance,
+        authorize?: false,
+        load: [:organization, :agreement, :recurring_invoice_lines]
+      )
 
     generated_invoices = load_generated_invoices(id)
     return_to = params["return_to"] || ~p"/finance/recurring-invoices"
