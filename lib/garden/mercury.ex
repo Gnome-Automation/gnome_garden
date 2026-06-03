@@ -72,6 +72,8 @@ defmodule GnomeGarden.Mercury do
       define :get_bank_rule, action: :read, get_by: [:id]
       define :create_bank_rule, action: :create
       define :update_bank_rule, action: :update
+      define :form_to_create_bank_rule, action: :create
+      define :form_to_update_bank_rule, action: :update
       define :delete_bank_rule, action: :destroy, default_options: [return_destroyed?: true]
     end
   end
