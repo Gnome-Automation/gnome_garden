@@ -16,13 +16,13 @@ defmodule GnomeGardenWeb.Finance.BankRuleLive.Form do
   end
 
   @impl true
-  def handle_event("validate", %{"bank_rule" => params}, socket) do
+  def handle_event("validate", %{"form" => params}, socket) do
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, form: to_form(form))}
   end
 
   @impl true
-  def handle_event("save", %{"bank_rule" => params}, socket) do
+  def handle_event("save", %{"form" => params}, socket) do
     case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, _rule} ->
         {:noreply,
