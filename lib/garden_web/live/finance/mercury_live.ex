@@ -548,7 +548,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
       <%= if @show_export_form do %>
         <div class="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
           <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Batch Export</h3>
-          <form method="get" action={~p"/finance/mercury/batch-export"} class="grid grid-cols-1 gap-4 sm:grid-cols-5 items-end">
+          <form method="get" action={~p"/finance/mercury/batch-export"} target="_blank" class="grid grid-cols-1 gap-4 sm:grid-cols-5 items-end">
             <div>
               <label for="mercury_export_from" class="block text-sm/6 font-medium text-gray-900 dark:text-white">From</label>
               <input
@@ -828,6 +828,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                     <%!-- Per-row export links --%>
                     <a
                       href={~p"/finance/mercury/transactions/#{txn.id}/export?format=csv"}
+                      target="_blank"
                       class="rounded px-2 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/10"
                       title="Download this transaction as CSV"
                     >
@@ -835,6 +836,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                     </a>
                     <a
                       href={~p"/finance/mercury/transactions/#{txn.id}/export?format=pdf"}
+                      target="_blank"
                       class="rounded px-2 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/10"
                       title="Download this transaction as PDF"
                     >
