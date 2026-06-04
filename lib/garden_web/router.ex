@@ -278,6 +278,9 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/bank-rules/new", Finance.BankRuleLive.Form, :new
       live "/finance/bank-rules/:id/edit", Finance.BankRuleLive.Form, :edit
 
+      # Finance - Company Documents
+      live "/finance/documents", Documents.DocumentsLive, :index
+
       # Agents - Procurement targeting
       live "/procurement/targeting", Agents.ProcurementTargetingLive, :index
     end
