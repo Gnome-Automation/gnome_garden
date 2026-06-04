@@ -122,7 +122,8 @@ defmodule GnomeGarden.Finance.Invoice do
         :due_on,
         :notes,
         :stripe_payment_url,
-        :recurring_invoice_id
+        :recurring_invoice_id,
+        :late_fee_applied_on
       ]
     end
 
