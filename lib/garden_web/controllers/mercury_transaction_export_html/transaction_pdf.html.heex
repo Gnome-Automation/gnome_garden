@@ -108,7 +108,7 @@
               <td><%= counterparty %></td>
               <td><%= txn.kind %></td>
               <td class={direction}><%= direction %></td>
-              <td class="num"><%= Decimal.round(txn.amount, 2) %></td>
+              <td class="num">$<%= Decimal.to_string(Decimal.round(txn.amount, 2), :normal) %></td>
               <td><%= txn.status %></td>
               <td><%= txn.reconciliation_category || "—" %></td>
               <td><%= txn.reconciliation_note || "" %></td>
@@ -124,7 +124,7 @@
       %>
       <div class="footer">
         <span><span class="label">Transactions:</span> <%= length(@transactions) %></span>
-        <span><span class="label">Net Amount:</span> <%= Decimal.round(net_amount, 2) %></span>
+        <span><span class="label">Net Amount:</span> $<%= Decimal.to_string(Decimal.round(net_amount, 2), :normal) %></span>
       </div>
     <% end %>
   </div>
