@@ -148,7 +148,7 @@ defmodule GnomeGardenWeb.MercuryTransactionExportController do
   end
 
   defp decimal_str(nil), do: ""
-  defp decimal_str(d), do: Decimal.to_string(Decimal.round(d, 2))
+  defp decimal_str(d), do: Decimal.to_string(Decimal.round(d, 2), :normal)
 
   defp csv_escape(nil), do: ""
 
