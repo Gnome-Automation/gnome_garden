@@ -38,6 +38,16 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
   end
 
   @impl true
+  def handle_info(:clear_save_ok, socket) do
+    {:noreply, assign(socket, save_ok: false)}
+  end
+
+  @impl true
+  def handle_info(:clear_late_fee_save_ok, socket) do
+    {:noreply, assign(socket, late_fee_save_ok: false)}
+  end
+
+  @impl true
   def handle_event("save", %{"billing_settings" => params}, socket) do
     with {interval, ""} <- Integer.parse(Map.get(params, "interval", "")),
          true <- interval >= 1 and interval <= 365,
@@ -47,6 +57,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
 
       case Finance.upsert_billing_settings(%{reminder_days: days}) do
         {:ok, _} ->
+          Process.send_after(self(), :clear_save_ok, 3_000)
           {:noreply,
            socket
            |> assign(:interval, interval)
@@ -81,6 +92,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
              late_fee_value: value
            }) do
         {:ok, _} ->
+          Process.send_after(self(), :clear_late_fee_save_ok, 3_000)
           {:noreply,
            socket
            |> assign(:late_fee_enabled, enabled)
@@ -160,7 +172,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
               <div class="flex items-center gap-3">
                 <button
                   type="submit"
-                  class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+                  class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500 hover:scale-105 active:scale-95 dark:bg-emerald-500"
                 >
                   Save Settings
                 </button>
@@ -261,7 +273,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
               <div class="mt-4">
                 <button
                   type="submit"
-                  class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+                  class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500 hover:scale-105 active:scale-95 dark:bg-emerald-500"
                 >
                   Save Late Fee Settings
                 </button>
