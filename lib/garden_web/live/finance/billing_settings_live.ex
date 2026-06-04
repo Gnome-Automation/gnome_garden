@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
 
   alias GnomeGarden.Finance
   alias GnomeGarden.Finance.PaymentReminderWorker
+  alias GnomeGarden.Finance.LateFeeWorker
 
   @impl true
   def mount(_params, _session, socket) do
@@ -22,7 +23,8 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
      |> assign(:late_fee_type, settings.late_fee_type)
      |> assign(:late_fee_value, Decimal.to_string(settings.late_fee_value, :normal))
      |> assign(:late_fee_save_ok, false)
-     |> assign(:late_fee_save_error, nil)}
+     |> assign(:late_fee_save_error, nil)
+     |> assign(:late_fee_running, false)}
   end
 
   @impl true
@@ -45,6 +47,18 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
   @impl true
   def handle_info(:clear_late_fee_save_ok, socket) do
     {:noreply, assign(socket, late_fee_save_ok: false)}
+  end
+
+  @impl true
+  def handle_event("run_late_fees", _params, socket) do
+    Oban.insert(LateFeeWorker.new(%{}))
+    Process.send_after(self(), :reset_late_fee_running, 4_000)
+    {:noreply, assign(socket, late_fee_running: true)}
+  end
+
+  @impl true
+  def handle_info(:reset_late_fee_running, socket) do
+    {:noreply, assign(socket, late_fee_running: false)}
   end
 
   @impl true
@@ -270,12 +284,20 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
                 {@late_fee_save_error}
               </div>
 
-              <div class="mt-4">
+              <div class="mt-4 flex items-center gap-3">
                 <button
                   type="submit"
                   class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500 hover:scale-105 active:scale-95 dark:bg-emerald-500"
                 >
                   Save Late Fee Settings
+                </button>
+                <button
+                  type="button"
+                  phx-click="run_late_fees"
+                  disabled={@late_fee_running}
+                  class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20 disabled:opacity-50"
+                >
+                  {if @late_fee_running, do: "Running...", else: "Run late fees now"}
                 </button>
               </div>
             </form>
