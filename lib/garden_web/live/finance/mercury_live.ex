@@ -34,7 +34,8 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
      |> assign(:reconciling_txn, nil)
      |> assign(:reconciliation_note, "")
      |> assign(:reconciliation_category, nil)
-     |> assign(:reconciliation_error, nil)}
+     |> assign(:reconciliation_error, nil)
+     |> assign(:show_export_form, false)}
   end
 
   @impl true
@@ -107,6 +108,11 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
 
     transactions = load_transactions(socket.assigns.current_user, filters)
     {:noreply, socket |> assign(:filters, filters) |> assign(:transactions, transactions)}
+  end
+
+  @impl true
+  def handle_event("toggle_export_form", _params, socket) do
+    {:noreply, update(socket, :show_export_form, &(!&1))}
   end
 
   @impl true
@@ -525,6 +531,9 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
           Bank account balances and transaction history from Mercury.
         </:subtitle>
         <:actions>
+          <.button phx-click="toggle_export_form" title="Export transactions as CSV or PDF">
+            <.icon name="hero-arrow-down-tray" class="size-4" /> Export
+          </.button>
           <.button phx-click="auto_match" disabled={@auto_matching} title="Run the auto-matcher on all unmatched inbound transactions">
             <.icon name="hero-sparkles" class={"size-4 #{if @auto_matching, do: "animate-pulse"}"} />
             {if @auto_matching, do: "Matching…", else: "Auto-Match"}
@@ -535,6 +544,80 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
           </.button>
         </:actions>
       </.page_header>
+
+      <%= if @show_export_form do %>
+        <div class="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Batch Export</h3>
+          <form method="get" action="/finance/mercury/batch-export" class="grid grid-cols-1 gap-4 sm:grid-cols-5 items-end">
+            <div>
+              <label for="mercury_export_from" class="block text-sm/6 font-medium text-gray-900 dark:text-white">From</label>
+              <input
+                id="mercury_export_from"
+                type="date"
+                name="from"
+                required
+                value={Date.to_iso8601(@filters.from_date)}
+                class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+              />
+            </div>
+            <div>
+              <label for="mercury_export_to" class="block text-sm/6 font-medium text-gray-900 dark:text-white">To</label>
+              <input
+                id="mercury_export_to"
+                type="date"
+                name="to"
+                required
+                value={Date.to_iso8601(Date.add(@filters.to_date, -1))}
+                class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+              />
+            </div>
+            <div>
+              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Status</label>
+              <div class="mt-1 grid grid-cols-1">
+                <select
+                  name="status_filter"
+                  class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white py-1.5 pr-8 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+                >
+                  <option value="all">All</option>
+                  <option value="matched">Matched</option>
+                  <option value="unmatched">Unmatched</option>
+                  <option value="pending">Pending</option>
+                </select>
+                <svg class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-500 sm:size-4" viewBox="0 0 16 16" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Direction</label>
+              <div class="mt-1 grid grid-cols-1">
+                <select
+                  name="kind"
+                  class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white py-1.5 pr-8 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+                >
+                  <option value="all">All</option>
+                  <option value="inbound">Inbound</option>
+                  <option value="outbound">Outbound</option>
+                </select>
+                <svg class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-500 sm:size-4" viewBox="0 0 16 16" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <div class="flex gap-2 items-center">
+              <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                <input type="radio" name="format" value="csv" checked={true} /> CSV
+              </label>
+              <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                <input type="radio" name="format" value="pdf" /> PDF
+              </label>
+              <button type="submit" class="ml-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500">
+                Download
+              </button>
+            </div>
+          </form>
+        </div>
+      <% end %>
 
       <%!-- Balance section --%>
       <div class="mb-8">
@@ -741,6 +824,21 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                       title="View in Mercury"
                     >
                       <.icon name="hero-arrow-top-right-on-square" class="size-3.5" />
+                    </a>
+                    <%!-- Per-row export links --%>
+                    <a
+                      href={~p"/finance/mercury/transactions/#{txn.id}/export?format=csv"}
+                      class="rounded px-2 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/10"
+                      title="Download this transaction as CSV"
+                    >
+                      CSV
+                    </a>
+                    <a
+                      href={~p"/finance/mercury/transactions/#{txn.id}/export?format=pdf"}
+                      class="rounded px-2 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/10"
+                      title="Download this transaction as PDF"
+                    >
+                      PDF
                     </a>
                   </div>
                 </td>
