@@ -194,7 +194,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
                   type="button"
                   phx-click="run_reminders"
                   disabled={@reminder_running}
-                  class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20 disabled:opacity-50"
+                  class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-white/10"
                 >
                   {if @reminder_running, do: "Running...", else: "Run reminders now"}
                 </button>
@@ -295,7 +295,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
                   type="button"
                   phx-click="run_late_fees"
                   disabled={@late_fee_running}
-                  class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20 disabled:opacity-50"
+                  class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-white/10"
                 >
                   {if @late_fee_running, do: "Running...", else: "Run late fees now"}
                 </button>
