@@ -16,7 +16,13 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
      |> assign(:max_reminders, max_reminders)
      |> assign(:save_ok, false)
      |> assign(:save_error, nil)
-     |> assign(:reminder_running, false)}
+     |> assign(:reminder_running, false)
+     |> assign(:late_fee_enabled, settings.late_fee_enabled)
+     |> assign(:late_fee_days, settings.late_fee_days)
+     |> assign(:late_fee_type, settings.late_fee_type)
+     |> assign(:late_fee_value, Decimal.to_string(settings.late_fee_value, :normal))
+     |> assign(:late_fee_save_ok, false)
+     |> assign(:late_fee_save_error, nil)}
   end
 
   @impl true
@@ -54,6 +60,50 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
     else
       _ ->
         {:noreply, assign(socket, save_ok: false, save_error: "Enter valid numbers. Interval: 1–365 days. Max reminders: 1–10.")}
+    end
+  end
+
+  @impl true
+  def handle_event("save_late_fees", %{"late_fee" => params}, socket) do
+    enabled = Map.get(params, "late_fee_enabled") == "true"
+
+    with {days, ""} <- Integer.parse(Map.get(params, "late_fee_days", "")),
+         true <- days >= 1 and days <= 365,
+         type when type in ["flat", "percent"] <- Map.get(params, "late_fee_type"),
+         {value, ""} <- Decimal.parse(Map.get(params, "late_fee_value", "")),
+         true <- Decimal.compare(value, Decimal.new("0")) == :gt do
+      type_atom = String.to_existing_atom(type)
+
+      case Finance.upsert_billing_settings(%{
+             late_fee_enabled: enabled,
+             late_fee_days: days,
+             late_fee_type: type_atom,
+             late_fee_value: value
+           }) do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(:late_fee_enabled, enabled)
+           |> assign(:late_fee_days, days)
+           |> assign(:late_fee_type, type_atom)
+           |> assign(:late_fee_value, Decimal.to_string(value, :normal))
+           |> assign(:late_fee_save_ok, true)
+           |> assign(:late_fee_save_error, nil)}
+
+        {:error, error} ->
+          {:noreply,
+           assign(socket,
+             late_fee_save_ok: false,
+             late_fee_save_error: "Could not save: #{inspect(error)}"
+           )}
+      end
+    else
+      _ ->
+        {:noreply,
+         assign(socket,
+           late_fee_save_ok: false,
+           late_fee_save_error: "Invalid values. Days: 1–365. Value must be a positive number."
+         )}
     end
   end
 
@@ -126,6 +176,97 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
             </form>
           </div>
         </.section>
+
+        <.section title="Late Fees"
+          description="Automatically charge a fee on invoices that remain unpaid past their due date.">
+          <div class="px-5 pb-5">
+            <form id="late-fee-form" phx-submit="save_late_fees">
+              <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="late_fee_enabled"
+                    name="late_fee[late_fee_enabled]"
+                    value="true"
+                    checked={@late_fee_enabled}
+                    class="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600"
+                  />
+                  <label for="late_fee_enabled" class="text-sm text-gray-900 dark:text-white">
+                    Automatically charge a late fee on overdue invoices
+                  </label>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 text-sm text-gray-900 dark:text-white">
+                  <span>Apply after</span>
+                  <input
+                    type="number"
+                    name="late_fee[late_fee_days]"
+                    value={@late_fee_days}
+                    min="1"
+                    max="365"
+                    class="w-16 rounded-md bg-white px-2 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 text-center"
+                  />
+                  <span>days overdue.</span>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-4 text-sm text-gray-900 dark:text-white">
+                  <label class="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="late_fee[late_fee_type]"
+                      value="percent"
+                      checked={@late_fee_type == :percent}
+                      class="text-emerald-600 focus:ring-emerald-600"
+                    />
+                    Percentage of balance
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="late_fee[late_fee_type]"
+                      value="flat"
+                      checked={@late_fee_type == :flat}
+                      class="text-emerald-600 focus:ring-emerald-600"
+                    />
+                    Flat amount ($)
+                  </label>
+                </div>
+
+                <div class="flex items-center gap-3 text-sm text-gray-900 dark:text-white">
+                  <span>Fee value:</span>
+                  <input
+                    type="number"
+                    name="late_fee[late_fee_value]"
+                    value={@late_fee_value}
+                    min="0.01"
+                    step="0.01"
+                    class="w-24 rounded-md bg-white px-2 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 text-center"
+                  />
+                  <span class="text-gray-500 dark:text-gray-400">
+                    (e.g. 1.5 for 1.5%, or 25.00 for $25 flat)
+                  </span>
+                </div>
+              </div>
+
+              <div :if={@late_fee_save_ok} class="mt-4 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+                Settings saved
+              </div>
+
+              <div :if={@late_fee_save_error} class="mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                {@late_fee_save_error}
+              </div>
+
+              <div class="mt-4">
+                <button
+                  type="submit"
+                  class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+                >
+                  Save Late Fee Settings
+                </button>
+              </div>
+            </form>
+          </div>
+        </.section>
       </div>
     </.page>
     """
@@ -134,7 +275,14 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
   defp load_settings do
     case Finance.get_billing_settings() do
       {:ok, [settings | _]} -> settings
-      _ -> %{reminder_days: [7, 14, 21]}
+      _ ->
+        %{
+          reminder_days: [7, 14, 21],
+          late_fee_enabled: false,
+          late_fee_days: 30,
+          late_fee_type: :percent,
+          late_fee_value: Decimal.new("1.5")
+        }
     end
   end
 
