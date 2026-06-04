@@ -65,6 +65,10 @@ defmodule GnomeGardenWeb.Router do
     get "/finance/payments/batch-export", PaymentsExportController, :batch
     get "/finance/payments/:id/export", PaymentsExportController, :show
 
+    # Finance - Mercury Transaction Export
+    get "/finance/mercury/batch-export", MercuryTransactionExportController, :batch
+    get "/finance/mercury/transactions/:id/export", MercuryTransactionExportController, :show
+
     # Finance - GL Reports Export
     get "/finance/reports/profit-loss/export", GlReportsExportController, :profit_loss
     get "/finance/reports/balance-sheet/export", GlReportsExportController, :balance_sheet

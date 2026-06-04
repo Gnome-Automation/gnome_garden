@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= @title %></title>
+  <style>
+    @page { margin: 0.5in; size: letter landscape; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      color: #111;
+      background: white;
+    }
+    .wrapper { padding: 40px; max-width: 1100px; margin: 0 auto; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #059669;
+    }
+    .company-name { font-size: 20px; font-weight: 700; color: #059669; }
+    .report-meta { text-align: right; }
+    .report-meta h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .report-meta p { color: #555; margin: 2px 0; font-size: 11px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #888;
+      padding: 6px 8px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    thead th.num { text-align: right; }
+    tbody td {
+      padding: 8px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 12px;
+      vertical-align: top;
+    }
+    tbody td.num { text-align: right; }
+    .inbound { color: #059669; font-weight: 600; }
+    .outbound { color: #dc2626; font-weight: 600; }
+    .footer {
+      margin-top: 24px;
+      padding-top: 12px;
+      border-top: 2px solid #111;
+      display: flex;
+      justify-content: flex-end;
+      gap: 32px;
+      font-size: 13px;
+    }
+    .footer .label { font-weight: 600; }
+    .no-data { text-align: center; padding: 60px; color: #888; }
+    @media print {
+      body { font-size: 11px; }
+      tbody tr { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="https://gnomeautomation.com/images/gnome-icon-clean-192.png" width="32" height="32" alt="" style="border-radius:5px;" />
+        <div class="company-name"><%= @company_name %></div>
+      </div>
+      <div class="report-meta">
+        <h2>Mercury Transactions</h2>
+        <p><%= @title %></p>
+        <p>Generated: <%= Date.utc_today() %></p>
+      </div>
+    </div>
+
+    <%= if @transactions == [] do %>
+      <div class="no-data">No transactions found.</div>
+    <% else %>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Counterparty</th>
+            <th>Kind</th>
+            <th>Direction</th>
+            <th class="num">Amount</th>
+            <th>Status</th>
+            <th>Category</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <%= for txn <- @transactions do %>
+            <%
+              direction =
+                if Decimal.compare(txn.amount, Decimal.new("0")) == :gt,
+                  do: "inbound",
+                  else: "outbound"
+              occurred = if txn.occurred_at, do: DateTime.to_date(txn.occurred_at), else: "—"
+              counterparty = txn.counterparty_name || txn.bank_description || "—"
+            %>
+            <tr>
+              <td><%= occurred %></td>
+              <td><%= counterparty %></td>
+              <td><%= txn.kind %></td>
+              <td class={direction}><%= direction %></td>
+              <td class="num"><%= Decimal.round(txn.amount, 2) %></td>
+              <td><%= txn.status %></td>
+              <td><%= txn.reconciliation_category || "—" %></td>
+              <td><%= txn.reconciliation_note || "" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <%
+        net_amount = Enum.reduce(@transactions, Decimal.new("0"), fn txn, acc ->
+          Decimal.add(acc, txn.amount)
+        end)
+      %>
+      <div class="footer">
+        <span><span class="label">Transactions:</span> <%= length(@transactions) %></span>
+        <span><span class="label">Net Amount:</span> <%= Decimal.round(net_amount, 2) %></span>
+      </div>
+    <% end %>
+  </div>
+</body>
+</html>
