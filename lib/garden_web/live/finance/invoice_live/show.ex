@@ -110,14 +110,6 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
-          <.button
-            :if={@invoice.late_fee_applied_on != nil and @invoice.status not in [:paid, :void]}
-            phx-click="remove_late_fee"
-            data-confirm="Remove the late fee line and reset the invoice so it can be charged again?"
-            title="Delete the Late Fee adjustment line and clear the applied date"
-          >
-            <.icon name="hero-minus-circle" class="size-4" /> Remove Late Fee
-          </.button>
         </div>
       </.section>
 
@@ -410,10 +402,13 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
     case Finance.get_invoice_line(line_id, actor: actor) do
       {:ok, line} ->
+        is_late_fee = line.line_kind == :adjustment and String.starts_with?(line.description || "", "Late Fee")
+
         case Finance.destroy_invoice_line(line, actor: actor) do
           :ok ->
             updated_invoice = load_invoice!(invoice.id, actor)
             totals = compute_invoice_totals(updated_invoice)
+            totals = if is_late_fee, do: Map.put(totals, :late_fee_applied_on, nil), else: totals
 
             Finance.update_invoice(updated_invoice, totals, actor: actor)
 
@@ -428,34 +423,6 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Line not found")}
-    end
-  end
-
-  @impl true
-  def handle_event("remove_late_fee", _params, socket) do
-    invoice = socket.assigns.invoice
-    actor = socket.assigns.current_user
-
-    late_fee_line = Enum.find(invoice.invoice_lines || [], fn line ->
-      line.line_kind == :adjustment and String.starts_with?(line.description || "", "Late Fee")
-    end)
-
-    with {:ok, line} <- (if late_fee_line, do: {:ok, late_fee_line}, else: {:error, :not_found}),
-         :ok <- Finance.destroy_invoice_line(line, actor: actor) do
-      updated_invoice = load_invoice!(invoice.id, actor)
-      totals = compute_invoice_totals(updated_invoice)
-
-      Finance.update_invoice(updated_invoice, Map.put(totals, :late_fee_applied_on, nil), actor: actor)
-
-      {:noreply,
-       socket
-       |> assign(:invoice, load_invoice!(invoice.id, actor))
-       |> put_flash(:info, "Late fee removed")}
-    else
-      {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, "No late fee line found")}
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Could not remove late fee: #{inspect(reason)}")}
     end
   end
 
