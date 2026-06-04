@@ -51,7 +51,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
 
   @impl true
   def handle_event("run_late_fees", _params, socket) do
-    Oban.insert(LateFeeWorker.new(%{}))
+    Oban.insert(LateFeeWorker.new(%{}, unique: nil))
     Process.send_after(self(), :reset_late_fee_running, 4_000)
     {:noreply, assign(socket, late_fee_running: true)}
   end
