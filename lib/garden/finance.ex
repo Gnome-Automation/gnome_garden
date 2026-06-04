@@ -248,4 +248,28 @@ defmodule GnomeGarden.Finance do
       _ -> [7, 14, 30]
     end
   end
+
+  @doc """
+  Returns the late fee configuration from BillingSettings.
+  Falls back to disabled defaults if no settings row exists yet.
+  """
+  def get_late_fee_settings do
+    case get_billing_settings() do
+      {:ok, [settings | _]} ->
+        %{
+          late_fee_enabled: settings.late_fee_enabled,
+          late_fee_days: settings.late_fee_days,
+          late_fee_type: settings.late_fee_type,
+          late_fee_value: settings.late_fee_value
+        }
+
+      _ ->
+        %{
+          late_fee_enabled: false,
+          late_fee_days: 30,
+          late_fee_type: :percent,
+          late_fee_value: Decimal.new("1.5")
+        }
+    end
+  end
 end

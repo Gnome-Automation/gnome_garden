@@ -170,6 +170,23 @@ defmodule GnomeGarden.Finance.Invoice do
       change set_attribute(:balance_amount, Decimal.new("0"))
     end
 
+    update :apply_late_fee do
+      require_atomic? false
+
+      argument :fee_amount, :decimal, allow_nil?: false
+
+      change fn changeset, _ ->
+        fee = Ash.Changeset.get_argument(changeset, :fee_amount)
+        total = Decimal.add(changeset.data.total_amount, fee)
+        balance = Decimal.add(changeset.data.balance_amount, fee)
+
+        changeset
+        |> Ash.Changeset.change_attribute(:total_amount, total)
+        |> Ash.Changeset.change_attribute(:balance_amount, balance)
+        |> Ash.Changeset.change_attribute(:late_fee_applied_on, Date.utc_today())
+      end
+    end
+
     update :void do
       require_atomic? false
       accept []
@@ -325,6 +342,12 @@ defmodule GnomeGarden.Finance.Invoice do
 
     attribute :due_on, :date do
       public? true
+    end
+
+    attribute :late_fee_applied_on, :date do
+      allow_nil? true
+      public? true
+      description "Date the late fee was applied. Nil means not yet applied."
     end
 
     attribute :paid_on, :date do

@@ -24,10 +24,10 @@ defmodule GnomeGarden.Finance.BillingSettings do
     end
 
     create :upsert do
-      accept [:reminder_days]
+      accept [:reminder_days, :late_fee_enabled, :late_fee_days, :late_fee_type, :late_fee_value]
       upsert? true
       upsert_identity :singleton_scope
-      upsert_fields [:reminder_days]
+      upsert_fields [:reminder_days, :late_fee_enabled, :late_fee_days, :late_fee_type, :late_fee_value]
     end
   end
 
@@ -46,6 +46,29 @@ defmodule GnomeGarden.Finance.BillingSettings do
       description "Days overdue at which payment reminder emails are sent."
       constraints min_length: 1,
                   items: [min: 1, max: 365]
+    end
+
+    attribute :late_fee_enabled, :boolean do
+      default false
+      allow_nil? false
+    end
+
+    attribute :late_fee_days, :integer do
+      default 30
+      allow_nil? false
+      constraints min: 1, max: 365
+    end
+
+    attribute :late_fee_type, :atom do
+      default :percent
+      allow_nil? false
+      constraints one_of: [:flat, :percent]
+    end
+
+    attribute :late_fee_value, :decimal do
+      default Decimal.new("1.5")
+      allow_nil? false
+      constraints min: Decimal.new("0.01")
     end
 
     timestamps()
