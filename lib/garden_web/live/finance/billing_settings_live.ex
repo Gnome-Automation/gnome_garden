@@ -177,6 +177,8 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
           </div>
         </.section>
 
+        <div class="mt-6"></div>
+
         <.section title="Late Fees"
           description="Automatically charge a fee on invoices that remain unpaid past their due date.">
           <div class="px-5 pb-5">
