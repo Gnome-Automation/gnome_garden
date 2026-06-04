@@ -3,6 +3,10 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
 
   import GnomeGardenWeb.Operations.Helpers
 
+  alias GnomeGarden.Documents
+  alias GnomeGarden.Mailer
+  alias GnomeGarden.Mailer.DocumentEmail
+  alias GnomeGarden.Mailer.InvoiceEmail
   alias GnomeGarden.Operations
   alias GnomeGarden.Operations.IdentityMergeReview
 
@@ -18,7 +22,14 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
      |> assign(:merge_review, merge_review)
      |> assign(:invite_ok, false)
      |> assign(:invite_error, nil)
-     |> assign(:return_to, params["return_to"] || ~p"/operations/organizations")}
+     |> assign(:return_to, params["return_to"] || ~p"/operations/organizations")
+     |> assign(:org_send_modal_open, false)
+     |> assign(:org_send_docs, [])
+     |> assign(:org_send_doc_id, nil)
+     |> assign(:org_send_to, "")
+     |> assign(:org_send_subject, "Gnome Automation — Document")
+     |> assign(:org_send_message, "")
+     |> assign(:org_send_error, nil)}
   end
 
   @impl true
@@ -95,6 +106,82 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
   end
 
   @impl true
+  def handle_event("open_send_doc_modal", _params, socket) do
+    {:ok, docs} = Documents.list_active_documents()
+    org = socket.assigns.organization
+    loaded_org = Ash.load!(org, [:billing_contact], authorize?: false)
+    billing_email = InvoiceEmail.find_billing_email(loaded_org) || ""
+
+    first_doc = List.first(docs)
+    subject = if first_doc, do: "Gnome Automation — #{first_doc.name}", else: "Gnome Automation — Document"
+
+    {:noreply,
+     socket
+     |> assign(:org_send_modal_open, true)
+     |> assign(:org_send_docs, docs)
+     |> assign(:org_send_doc_id, first_doc && first_doc.id)
+     |> assign(:org_send_to, billing_email)
+     |> assign(:org_send_subject, subject)
+     |> assign(:org_send_message, "")
+     |> assign(:org_send_error, nil)}
+  end
+
+  @impl true
+  def handle_event("close_send_doc_modal", _params, socket) do
+    {:noreply, assign(socket, :org_send_modal_open, false)}
+  end
+
+  @impl true
+  def handle_event("org_send_doc_changed", %{"doc_id" => doc_id}, socket) do
+    doc = Enum.find(socket.assigns.org_send_docs, &(to_string(&1.id) == doc_id))
+    subject = if doc, do: "Gnome Automation — #{doc.name}", else: socket.assigns.org_send_subject
+    {:noreply, socket |> assign(:org_send_doc_id, doc_id) |> assign(:org_send_subject, subject)}
+  end
+
+  @impl true
+  def handle_event("send_document_from_org", %{"org_send" => params}, socket) do
+    doc_id = Map.get(params, "doc_id") || socket.assigns.org_send_doc_id
+    to = Map.get(params, "to", "") |> String.trim()
+    message = Map.get(params, "message", "") |> String.trim()
+    user = socket.assigns.current_user
+    org = socket.assigns.organization
+
+    doc = Enum.find(socket.assigns.org_send_docs, &(to_string(&1.id) == doc_id))
+
+    cond do
+      is_nil(doc) ->
+        {:noreply, assign(socket, :org_send_error, "Select a document")}
+      to == "" ->
+        {:noreply, assign(socket, :org_send_error, "Email address is required")}
+      true ->
+        email =
+          DocumentEmail.build(doc, to,
+            org_name: org.name,
+            message: if(message == "", do: nil, else: message)
+          )
+
+        case Mailer.deliver(email) do
+          {:ok, _} ->
+            {:ok, _} = Documents.log_send(%{
+              company_document_id: doc.id,
+              organization_id: org.id,
+              sent_to_email: to,
+              sent_by_user_id: user.id,
+              message: if(message == "", do: nil, else: message)
+            })
+
+            {:noreply,
+             socket
+             |> assign(:org_send_modal_open, false)
+             |> put_flash(:info, "#{doc.name} sent to #{to}")}
+
+          {:error, reason} ->
+            {:noreply, assign(socket, :org_send_error, "Failed to send: #{inspect(reason)}")}
+        end
+    end
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <.page class="pb-8">
@@ -122,6 +209,9 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
             data-confirm="Archive this organization?"
           >
             Archive
+          </.button>
+          <.button phx-click="open_send_doc_modal">
+            Send Document
           </.button>
         </:actions>
       </.page_header>
@@ -421,6 +511,73 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
         <div :if={@invite_ok} class="mt-2 text-sm text-emerald-600">Contact invited — they'll receive a sign-in link by email.</div>
         <div :if={@invite_error} class="mt-2 text-sm text-red-600"><%= @invite_error %></div>
       </.section>
+      <%!-- Send Document Modal --%>
+      <div
+        :if={@org_send_modal_open}
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      >
+        <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
+          <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Send Document</h2>
+            <button type="button" phx-click="close_send_doc_modal" class="text-gray-400 hover:text-gray-600">
+              <.icon name="hero-x-mark" class="size-5" />
+            </button>
+          </div>
+
+          <form id="org-send-doc-form" phx-submit="send_document_from_org">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Document</label>
+                <select
+                  name="org_send[doc_id]"
+                  phx-change="org_send_doc_changed"
+                  class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 appearance-none"
+                >
+                  <option :for={doc <- @org_send_docs} value={doc.id} selected={to_string(doc.id) == to_string(@org_send_doc_id)}>
+                    {doc.name} (v{doc.version})
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">To</label>
+                <input
+                  type="email"
+                  name="org_send[to]"
+                  value={@org_send_to}
+                  required
+                  class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Message (optional)</label>
+                <textarea
+                  name="org_send[message]"
+                  rows="3"
+                  class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10"
+                ></textarea>
+              </div>
+            </div>
+
+            <div :if={@org_send_error} class="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+              {@org_send_error}
+            </div>
+
+            <div class="mt-5 flex justify-end gap-3">
+              <button type="button" phx-click="close_send_doc_modal" class="text-sm/6 font-semibold text-gray-900 dark:text-white">
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+              >
+                Send
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </.page>
     """
   end
