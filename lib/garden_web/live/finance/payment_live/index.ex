@@ -69,7 +69,7 @@ defmodule GnomeGardenWeb.Finance.PaymentLive.Index do
       <%= if @show_export_form do %>
         <div class="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
           <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Batch Export</h3>
-          <form method="get" action="/finance/payments/batch-export" class="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
+          <form method="get" action={~p"/finance/payments/batch-export"} target="_blank" class="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
             <div>
               <label for="pay_export_from" class="block text-sm/6 font-medium text-gray-900 dark:text-white">From</label>
               <input
