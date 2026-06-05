@@ -829,7 +829,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                     <a
                       href={~p"/finance/mercury/transactions/#{txn.id}/export?format=csv"}
                       target="_blank"
-                      class="rounded px-2 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/10"
+                      class="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/20 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
                       title="Download this transaction as CSV"
                     >
                       CSV
@@ -837,7 +837,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                     <a
                       href={~p"/finance/mercury/transactions/#{txn.id}/export?format=pdf"}
                       target="_blank"
-                      class="rounded px-2 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-white/10"
+                      class="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/20 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
                       title="Download this transaction as PDF"
                     >
                       PDF

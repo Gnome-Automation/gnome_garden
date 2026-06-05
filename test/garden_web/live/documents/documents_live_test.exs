@@ -21,7 +21,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLiveTest do
 
   test "renders documents page", %{conn: conn} do
     create_w9()
-    {:ok, _view, html} = live(conn, ~p"/finance/documents")
+    {:ok, _view, html} = live(conn, ~p"/operations/documents")
     assert html =~ "Company Documents"
     assert html =~ "W9 Form"
   end
@@ -38,7 +38,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLiveTest do
         status: :active
       })
 
-    {:ok, view, _html} = live(conn, ~p"/finance/documents")
+    {:ok, view, _html} = live(conn, ~p"/operations/documents")
 
     html = render_keyup(view, "search", %{"value" => "W9"})
     assert html =~ "W9 Form"
@@ -47,7 +47,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLiveTest do
 
   test "send modal opens when send button clicked", %{conn: conn} do
     create_w9()
-    {:ok, view, _html} = live(conn, ~p"/finance/documents")
+    {:ok, view, _html} = live(conn, ~p"/operations/documents")
 
     html = view |> element("[phx-click='open_send_modal']") |> render_click()
     assert html =~ "Send Document"
@@ -56,7 +56,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLiveTest do
 
   test "send document creates send log", %{conn: conn, current_user: user} do
     doc = create_w9()
-    {:ok, view, _html} = live(conn, ~p"/finance/documents")
+    {:ok, view, _html} = live(conn, ~p"/operations/documents")
 
     view |> element("[phx-click='open_send_modal'][phx-value-doc-id='#{doc.id}']") |> render_click()
 
@@ -84,7 +84,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLiveTest do
         sent_by_user_id: user.id
       })
 
-    {:ok, view, _html} = live(conn, ~p"/finance/documents")
+    {:ok, view, _html} = live(conn, ~p"/operations/documents")
     html = view |> element("[phx-click='toggle_send_log']") |> render_click()
     assert html =~ "previous@example.com"
   end

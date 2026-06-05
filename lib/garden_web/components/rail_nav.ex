@@ -297,6 +297,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/execution/work-orders"]
     },
+    %{
+      id: "ops-documents",
+      section: "Operations",
+      icon: "hero-document-text",
+      label: "Documents",
+      tooltip: "Company documents — W9, legal, compliance files. Send to clients with full send log.",
+      path: "/operations/documents",
+      badge: 0,
+      hot: false,
+      match: ["/operations/documents"]
+    },
 
     # Finance
     %{
@@ -497,18 +508,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/finance/settings"]
     },
-    %{
-      id: "fin-documents",
-      section: "Finance",
-      icon: "hero-document-text",
-      label: "Documents",
-      tooltip: "Company documents — W9, legal, compliance files. Send to clients with full send log.",
-      path: "/finance/documents",
-      badge: 0,
-      hot: false,
-      match: ["/finance/documents"]
-    },
-
     # Settings
     %{
       id: "set-agents",

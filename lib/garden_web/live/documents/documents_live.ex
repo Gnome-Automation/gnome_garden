@@ -273,7 +273,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
             phx-click="open_bulk_modal"
             variant="primary"
           >
-            Send Selected ({length(@selected_doc_ids)})
+            Batch Send ({length(@selected_doc_ids)})
           </.button>
         </:actions>
       </.page_header>
@@ -290,18 +290,19 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
           class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10"
         />
 
-        <select
-          phx-change="filter_category"
-          name="category"
-          class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 appearance-none"
-        >
-          <option value="all">All Categories</option>
-          <option value="tax" selected={@category_filter == "tax"}>Tax</option>
-          <option value="legal" selected={@category_filter == "legal"}>Legal</option>
-          <option value="compliance" selected={@category_filter == "compliance"}>Compliance</option>
-          <option value="hr" selected={@category_filter == "hr"}>HR</option>
-          <option value="other" selected={@category_filter == "other"}>Other</option>
-        </select>
+        <form phx-change="filter_category">
+          <select
+            name="category"
+            class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 appearance-none"
+          >
+            <option value="all">All Categories</option>
+            <option value="tax" selected={@category_filter == "tax"}>Tax</option>
+            <option value="legal" selected={@category_filter == "legal"}>Legal</option>
+            <option value="compliance" selected={@category_filter == "compliance"}>Compliance</option>
+            <option value="hr" selected={@category_filter == "hr"}>HR</option>
+            <option value="other" selected={@category_filter == "other"}>Other</option>
+          </select>
+        </form>
 
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
           <input
@@ -360,7 +361,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
                     href={"/" <> doc.file_path}
                     download
                     target="_blank"
-                    class="rounded px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/10"
+                    class="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/20 dark:text-gray-300 dark:hover:bg-white/10 cursor-pointer transition-colors"
                   >
                     Download
                   </a>
@@ -368,7 +369,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
                     type="button"
                     phx-click="open_send_modal"
                     phx-value-doc-id={doc.id}
-                    class="rounded px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                    class="rounded-md border border-emerald-600 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-900/30 cursor-pointer transition-colors"
                   >
                     Send
                   </button>
@@ -376,7 +377,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
                     type="button"
                     phx-click="open_history_modal"
                     phx-value-doc-id={doc.id}
-                    class="rounded px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/10"
+                    class="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/20 dark:text-gray-300 dark:hover:bg-white/10 cursor-pointer transition-colors"
                   >
                     History
                   </button>
@@ -397,8 +398,12 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
         <button
           type="button"
           phx-click="toggle_send_log"
-          class="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400"
+          class="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/20"
         >
+          <.icon
+            name={if @show_send_log, do: "hero-chevron-up-mini", else: "hero-chevron-down-mini"}
+            class="-ml-0.5 size-4 text-gray-400 dark:text-gray-300"
+          />
           {if @show_send_log, do: "Hide Send Log", else: "Show Send Log"}
         </button>
 
@@ -557,7 +562,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
         <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
           <div class="mb-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-gray-900 dark:text-white">
-              Bulk Send ({length(@selected_doc_ids)} document(s))
+              Batch Send ({length(@selected_doc_ids)} document(s))
             </h2>
             <button type="button" phx-click="close_bulk_modal" class="text-gray-400 hover:text-gray-600">
               <.icon name="hero-x-mark" class="size-5" />
