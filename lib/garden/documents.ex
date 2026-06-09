@@ -19,5 +19,8 @@ defmodule GnomeGarden.Documents do
         action: :by_document,
         args: [:document_id]
     end
+
+    resource GnomeGarden.Documents.CompanyDocumentBlob
+    resource GnomeGarden.Documents.CompanyDocumentAttachment
   end
 end
