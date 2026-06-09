@@ -39,7 +39,14 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
      |> assign(:bulk_error, nil)
      |> assign(:show_send_log, false)
      |> assign(:send_logs, [])
-     |> assign(:send_log_org_names, %{})}
+     |> assign(:send_log_org_names, %{})
+     |> assign(:upload_modal_open, false)
+     |> assign(:upload_error, nil)
+     |> allow_upload(:file,
+       accept: ~w(.pdf),
+       max_entries: 1,
+       max_file_size: 25_000_000
+     )}
   end
 
   @impl true
@@ -258,6 +265,78 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
      |> assign(:send_log_org_names, org_names)}
   end
 
+  @impl true
+  def handle_event("open_upload_modal", _params, socket) do
+    {:noreply, assign(socket, upload_modal_open: true, upload_error: nil)}
+  end
+
+  @impl true
+  def handle_event("close_upload_modal", _params, socket) do
+    {:noreply, assign(socket, :upload_modal_open, false)}
+  end
+
+  @impl true
+  def handle_event("validate_upload", _params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("save_document", %{"doc" => params}, socket) do
+    entries = socket.assigns.uploads.file.entries
+
+    if Enum.empty?(entries) do
+      {:noreply, assign(socket, :upload_error, "Please select a PDF file to upload")}
+    else
+      result =
+        consume_uploaded_entries(socket, :file, fn %{path: path}, entry ->
+          preserved_path =
+            Path.join(
+              System.tmp_dir!(),
+              "#{Ecto.UUID.generate()}-#{entry.client_name |> String.replace(~r/[^a-zA-Z0-9._-]/u, "-") |> String.trim("-")}"
+            )
+
+          File.cp!(path, preserved_path)
+
+          file = %Plug.Upload{
+            path: preserved_path,
+            filename: entry.client_name,
+            content_type: entry.client_type
+          }
+
+          result =
+            Documents.create_document(%{
+              name: params["name"],
+              category: String.to_existing_atom(params["category"]),
+              version: params["version"],
+              description: if(params["description"] != "", do: params["description"]),
+              status: :active,
+              file: file
+            })
+
+          File.rm(preserved_path)
+          result
+        end)
+
+      case List.first(result) do
+        {:ok, _doc} ->
+          {:ok, docs} = Documents.list_active_documents()
+
+          {:noreply,
+           socket
+           |> assign(:upload_modal_open, false)
+           |> assign(:all_docs, docs)
+           |> apply_filters()
+           |> put_flash(:info, "Document uploaded successfully")}
+
+        {:error, reason} ->
+          {:noreply, assign(socket, :upload_error, "Upload failed: #{inspect(reason)}")}
+
+        nil ->
+          {:noreply, assign(socket, :upload_error, "No file was processed")}
+      end
+    end
+  end
+
   # --- Render ---
 
   @impl true
@@ -268,6 +347,13 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
         Company Documents
         <:subtitle>Internal documents sent to clients — W9, legal forms, compliance files.</:subtitle>
         <:actions>
+          <button
+            type="button"
+            phx-click="open_upload_modal"
+            class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+          >
+            <.icon name="hero-arrow-up-tray" class="size-4 mr-1 inline" /> Upload Document
+          </button>
           <.button
             :if={length(@selected_doc_ids) > 0}
             phx-click="open_bulk_modal"
@@ -609,6 +695,101 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
                 class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
               >
                 Send to {length(@bulk_selected_org_ids)} org(s)
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <%!-- Upload Document Modal --%>
+      <div
+        :if={@upload_modal_open}
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      >
+        <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
+          <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Upload Document</h2>
+            <button type="button" phx-click="close_upload_modal" class="text-gray-400 hover:text-gray-600">
+              <.icon name="hero-x-mark" class="size-5" />
+            </button>
+          </div>
+
+          <form
+            id="upload-document-form"
+            phx-submit="save_document"
+            phx-change="validate_upload"
+          >
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+              <div class="sm:col-span-4">
+                <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Name</label>
+                <input
+                  type="text"
+                  name="doc[name]"
+                  required
+                  placeholder="e.g. W9 Form"
+                  class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+                />
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Version</label>
+                <input
+                  type="text"
+                  name="doc[version]"
+                  required
+                  placeholder="e.g. 2024"
+                  class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+                />
+              </div>
+
+              <div class="sm:col-span-3">
+                <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Category</label>
+                <select
+                  name="doc[category]"
+                  class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 appearance-none"
+                >
+                  <option value="tax">Tax</option>
+                  <option value="legal">Legal</option>
+                  <option value="compliance">Compliance</option>
+                  <option value="hr">HR</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div class="sm:col-span-6">
+                <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Description (optional)</label>
+                <input
+                  type="text"
+                  name="doc[description]"
+                  placeholder="Short description"
+                  class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10"
+                />
+              </div>
+
+              <div class="sm:col-span-6">
+                <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">PDF File</label>
+                <.live_file_input upload={@uploads.file} class="mt-1 block w-full text-sm text-gray-600 dark:text-gray-300" />
+                <p :for={entry <- @uploads.file.entries} class="mt-1 text-xs text-gray-500">
+                  {entry.client_name} ({Float.round(entry.client_size / 1_000_000, 1)} MB)
+                </p>
+                <p :for={err <- upload_errors(@uploads.file)} class="mt-1 text-xs text-red-600">
+                  {err}
+                </p>
+              </div>
+            </div>
+
+            <div :if={@upload_error} class="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+              {@upload_error}
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+              <button type="button" phx-click="close_upload_modal" class="text-sm/6 font-semibold text-gray-900 dark:text-white">
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+              >
+                Upload
               </button>
             </div>
           </form>
