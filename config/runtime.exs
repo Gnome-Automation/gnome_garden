@@ -102,9 +102,7 @@ if garage_access_key = System.get_env("GARAGE_ACCESS_KEY") do
            region: System.get_env("GARAGE_REGION", "garage"),
            endpoint_url: System.get_env("GARAGE_ENDPOINT_URL", "http://127.0.0.1:3900"),
            access_key_id: garage_access_key,
-           secret_access_key:
-             System.get_env("GARAGE_SECRET_KEY") ||
-               raise("Missing GARAGE_SECRET_KEY"),
+           secret_access_key: garage_secret_key,
            prefix: System.get_env("DOCS_GARAGE_PREFIX", "documents/")
          ]}
     ]
