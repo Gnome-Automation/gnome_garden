@@ -3,11 +3,20 @@ defmodule GnomeGarden.Documents.CompanyDocument do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Documents,
     data_layer: AshPostgres.DataLayer,
+    extensions: [AshStorage],
     authorizers: [Ash.Policy.Authorizer]
 
   postgres do
     table "company_documents"
     repo GnomeGarden.Repo
+  end
+
+  storage do
+    service({AshStorage.Service.Disk, root: "priv/storage", base_url: "/storage"})
+    blob_resource(GnomeGarden.Documents.CompanyDocumentBlob)
+    attachment_resource(GnomeGarden.Documents.CompanyDocumentAttachment)
+
+    has_one_attached(:file)
   end
 
   policies do
@@ -22,11 +31,18 @@ defmodule GnomeGarden.Documents.CompanyDocument do
     create :create do
       primary? true
       accept [:name, :description, :category, :version, :file_path, :status, :expiry_date, :supersedes_id]
+
+      argument :file, Ash.Type.File, allow_nil?: true
+      change {AshStorage.Changes.HandleFileArgument, argument: :file, attachment: :file}
     end
 
     update :update do
       primary? true
+      require_atomic? false
       accept [:name, :description, :category, :version, :file_path, :status, :expiry_date, :supersedes_id]
+
+      argument :file, Ash.Type.File, allow_nil?: true
+      change {AshStorage.Changes.HandleFileArgument, argument: :file, attachment: :file}
     end
 
     read :active do
@@ -66,7 +82,7 @@ defmodule GnomeGarden.Documents.CompanyDocument do
     end
 
     attribute :file_path, :string do
-      allow_nil? false
+      allow_nil? true
       public? true
     end
 

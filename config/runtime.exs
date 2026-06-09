@@ -92,6 +92,22 @@ if garage_access_key = System.get_env("GARAGE_ACCESS_KEY") do
            prefix: System.get_env("GARAGE_PREFIX", "acquisition/")
          ]}
     ]
+
+  config :gnome_garden, GnomeGarden.Documents.CompanyDocument,
+    storage: [
+      service:
+        {AshStorage.Service.S3,
+         [
+           bucket: System.get_env("DOCS_GARAGE_BUCKET", "gnome-garden-documents"),
+           region: System.get_env("GARAGE_REGION", "garage"),
+           endpoint_url: System.get_env("GARAGE_ENDPOINT_URL", "http://127.0.0.1:3900"),
+           access_key_id: garage_access_key,
+           secret_access_key:
+             System.get_env("GARAGE_SECRET_KEY") ||
+               raise("Missing GARAGE_SECRET_KEY"),
+           prefix: System.get_env("DOCS_GARAGE_PREFIX", "documents/")
+         ]}
+    ]
 end
 
 if config_env() == :prod do
