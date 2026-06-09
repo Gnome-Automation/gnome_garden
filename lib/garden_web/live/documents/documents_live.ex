@@ -303,18 +303,24 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
             content_type: entry.client_type
           }
 
-          result =
-            Documents.create_document(%{
-              name: params["name"],
-              category: String.to_existing_atom(params["category"]),
-              version: params["version"],
-              description: if(params["description"] != "", do: params["description"]),
-              status: :active,
-              file: file
-            })
+          try do
+            result =
+              Documents.create_document(%{
+                name: params["name"],
+                category: case params["category"] do
+                  cat when cat in ~w(tax legal compliance hr other) -> String.to_existing_atom(cat)
+                  _ -> :tax
+                end,
+                version: params["version"],
+                description: if(params["description"] != "", do: params["description"]),
+                status: :active,
+                file: file
+              })
 
-          File.rm(preserved_path)
-          result
+            result
+          after
+            File.rm(preserved_path)
+          end
         end)
 
       case List.first(result) do
