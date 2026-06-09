@@ -280,6 +280,7 @@ defmodule GnomeGardenWeb.Router do
 
       # Operations - Company Documents
       live "/operations/documents", Documents.DocumentsLive, :index
+      get "/operations/documents/:id/download", CompanyDocumentDownloadController, :show
 
       # Agents - Procurement targeting
       live "/procurement/targeting", Agents.ProcurementTargetingLive, :index

@@ -124,7 +124,8 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
     if to == "" do
       {:noreply, assign(socket, :send_error, "Email address is required")}
     else
-      email = DocumentEmail.build(doc, to, message: if(message == "", do: nil, else: message))
+      doc_with_file = Ash.load!(doc, [file: [blob: []]], authorize?: false)
+      email = DocumentEmail.build(doc_with_file, to, message: if(message == "", do: nil, else: message))
 
       case Mailer.deliver(email) do
         {:ok, _} ->
@@ -450,8 +451,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-2">
                   <a
-                    href={"/" <> doc.file_path}
-                    download
+                    href={~p"/operations/documents/#{doc.id}/download"}
                     target="_blank"
                     class="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/20 dark:text-gray-300 dark:hover:bg-white/10 cursor-pointer transition-colors"
                   >

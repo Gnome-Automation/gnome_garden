@@ -29,7 +29,7 @@ defmodule GnomeGarden.Documents.DocumentSendWorker do
     sent_by_user_id = args["sent_by_user_id"]
     message = args["message"]
 
-    with {:ok, document} <- Documents.get_document(document_id),
+    with {:ok, document} <- Documents.get_document(document_id, load: [file: [blob: []]]),
          {:ok, org} <- Operations.get_organization(org_id) do
       loaded_org = Ash.load!(org, [:billing_contact], authorize?: false)
       to_email = InvoiceEmail.find_billing_email(loaded_org) || "billing@gnomeautomation.io"
