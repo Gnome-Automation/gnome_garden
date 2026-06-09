@@ -74,6 +74,9 @@ defmodule GnomeGardenWeb.Router do
     get "/finance/reports/balance-sheet/export", GlReportsExportController, :balance_sheet
     get "/finance/reports/gl-detail/export", GlReportsExportController, :gl_detail
 
+    # Operations - Company Document Download
+    get "/operations/documents/:id/download", CompanyDocumentDownloadController, :show
+
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_required}] do
@@ -280,7 +283,6 @@ defmodule GnomeGardenWeb.Router do
 
       # Operations - Company Documents
       live "/operations/documents", Documents.DocumentsLive, :index
-      get "/operations/documents/:id/download", CompanyDocumentDownloadController, :show
 
       # Agents - Procurement targeting
       live "/procurement/targeting", Agents.ProcurementTargetingLive, :index
