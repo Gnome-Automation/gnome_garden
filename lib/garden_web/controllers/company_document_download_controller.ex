@@ -3,6 +3,8 @@ defmodule GnomeGardenWeb.CompanyDocumentDownloadController do
 
   alias GnomeGarden.Documents
 
+  plug :require_authenticated_user
+
   def show(conn, %{"id" => id}) do
     case Documents.get_document(id, load: [file: [blob: []]]) do
       {:ok, doc} ->
@@ -30,6 +32,10 @@ defmodule GnomeGardenWeb.CompanyDocumentDownloadController do
         |> put_status(:internal_server_error)
         |> text("Failed to load document")
     end
+  end
+
+  defp stream_from_storage(conn, _doc, %{service_name: nil}) do
+    conn |> put_status(:internal_server_error) |> text("Storage service unavailable")
   end
 
   defp stream_from_storage(conn, doc, blob) do
@@ -100,4 +106,14 @@ defmodule GnomeGardenWeb.CompanyDocumentDownloadController do
   defp known_service_opt("root"), do: :root
   defp known_service_opt("secret_access_key"), do: :secret_access_key
   defp known_service_opt(_key), do: nil
+
+  defp require_authenticated_user(conn, _opts) do
+    if conn.assigns[:current_user] do
+      conn
+    else
+      conn
+      |> redirect(to: ~p"/sign-in")
+      |> halt()
+    end
+  end
 end
