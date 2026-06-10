@@ -71,7 +71,8 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
       Operations.create_organization_affiliation(%{
         organization_id: organization.id,
         person_id: person.id,
-        role: :technical_contact
+        title: "Technical Contact",
+        contact_roles: ["technical_contact"]
       })
 
     {:ok, signal} =
@@ -104,6 +105,81 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
     assert html =~ "Workspace Plant"
     assert html =~ "PLC"
     assert html =~ "validation"
+  end
+
+  test "pursuit show creates quick next-step tasks", %{conn: conn} do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Pursuit Quick Task Account",
+        organization_kind: :business,
+        status: :prospect
+      })
+
+    {:ok, pursuit} =
+      Commercial.create_pursuit(%{
+        organization_id: organization.id,
+        name: "Pursuit quick actions",
+        pursuit_type: :new_logo
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/commercial/pursuits/#{pursuit}")
+
+    view
+    |> element("#quick-task-email")
+    |> render_click()
+
+    assert render(view) =~ "Draft follow-up email: Pursuit quick actions"
+
+    {:ok, tasks} = Operations.list_tasks_by_pursuit(pursuit.id, load: [:status_variant])
+    assert Enum.any?(tasks, &(&1.task_type == :email))
+  end
+
+  test "pursuit show advances related task state", %{conn: conn} do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Pursuit Task Action Account",
+        organization_kind: :business,
+        status: :prospect
+      })
+
+    {:ok, pursuit} =
+      Commercial.create_pursuit(%{
+        organization_id: organization.id,
+        name: "Pursuit task actions",
+        pursuit_type: :new_logo
+      })
+
+    {:ok, task} =
+      Operations.create_task_from_pursuit(%{
+        title: "Call plant manager",
+        task_type: :call,
+        pursuit_id: pursuit.id,
+        organization_id: organization.id,
+        origin_id: pursuit.id,
+        origin_label: pursuit.name
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/commercial/pursuits/#{pursuit}")
+
+    assert has_element?(view, "#start-task-#{task.id}")
+
+    view
+    |> element("#start-task-#{task.id}")
+    |> render_click()
+
+    assert has_element?(view, "#complete-task-#{task.id}")
+
+    {:ok, started_task} = Operations.get_task(task.id)
+    assert started_task.status == :in_progress
+
+    view
+    |> element("#complete-task-#{task.id}")
+    |> render_click()
+
+    assert render(view) =~ "No active pursuit tasks"
+
+    {:ok, completed_task} = Operations.get_task(task.id)
+    assert completed_task.status == :completed
   end
 
   test "pursuit show renders contextual task panel and task prefill", %{conn: conn} do

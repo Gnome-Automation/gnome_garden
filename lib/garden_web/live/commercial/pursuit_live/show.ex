@@ -4,7 +4,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Commercial.Helpers
 
-  alias GnomeGarden.Commercial
+  alias GnomeGarden.{Commercial, Operations}
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
@@ -32,6 +32,38 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not update pursuit: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("task_transition", %{"id" => task_id, "action" => action}, socket) do
+    pursuit = socket.assigns.pursuit
+
+    with {:ok, task} <- pursuit_task(pursuit, task_id),
+         {:ok, _task} <- transition_task(task, action, socket.assigns.current_user) do
+      {:noreply,
+       socket
+       |> assign(:pursuit, load_pursuit!(pursuit.id, socket.assigns.current_user))
+       |> put_flash(:info, "Task updated")}
+    else
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not update task: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("create_quick_task", %{"kind" => kind}, socket) do
+    pursuit = socket.assigns.pursuit
+
+    case create_quick_task(pursuit, kind, socket.assigns.current_user) do
+      {:ok, _task} ->
+        {:noreply,
+         socket
+         |> assign(:pursuit, load_pursuit!(pursuit.id, socket.assigns.current_user))
+         |> put_flash(:info, "Next-step task created")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not create task: #{inspect(error)}")}
     end
   end
 
@@ -85,6 +117,8 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
         empty_description="Estimating, proposal, outreach, and close-plan tasks will appear here."
         new_task_path={new_pursuit_task_path(@pursuit)}
       />
+
+      <.pursuit_next_steps pursuit={@pursuit} />
 
       <.section
         title="Stage Actions"
@@ -285,11 +319,210 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
     """
   end
 
+  attr :pursuit, :map, required: true
+
+  defp pursuit_next_steps(assigns) do
+    ~H"""
+    <.section
+      title="Pursuit Next Steps"
+      description="Create and advance the human follow-up needed to keep this opportunity moving."
+    >
+      <div class="grid gap-6 lg:grid-cols-[20rem,minmax(0,1fr)]">
+        <div class="rounded-2xl border border-base-300/70 bg-base-100/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
+            Quick Tasks
+          </p>
+          <div class="mt-4 grid gap-2">
+            <.button
+              id="quick-task-research"
+              phx-click="create_quick_task"
+              phx-value-kind="research"
+              class="justify-start"
+            >
+              <.icon name="hero-magnifying-glass" class="size-4" /> Research context
+            </.button>
+            <.button
+              id="quick-task-email"
+              phx-click="create_quick_task"
+              phx-value-kind="email"
+              class="justify-start"
+            >
+              <.icon name="hero-envelope" class="size-4" /> Draft follow-up email
+            </.button>
+            <.button
+              id="quick-task-call"
+              phx-click="create_quick_task"
+              phx-value-kind="call"
+              class="justify-start"
+            >
+              <.icon name="hero-phone" class="size-4" /> Confirm scope and timing
+            </.button>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div
+            :for={task <- actionable_tasks(@pursuit)}
+            id={"pursuit-task-action-#{task.id}"}
+            class="rounded-2xl border border-base-300/70 bg-base-100/70 p-4 dark:border-white/10 dark:bg-white/[0.03]"
+          >
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div class="min-w-0 space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <.status_badge status={task.status_variant}>
+                    {format_atom(task.status)}
+                  </.status_badge>
+                  <.status_badge status={task.priority_variant}>
+                    {format_atom(task.priority)}
+                  </.status_badge>
+                  <span class="text-xs text-base-content/45">{format_atom(task.task_type)}</span>
+                </div>
+                <div>
+                  <p class="font-medium text-base-content">{task.title}</p>
+                  <p :if={task.description} class="mt-1 text-sm leading-5 text-base-content/60">
+                    {task.description}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex shrink-0 flex-wrap gap-2">
+                <.button
+                  :if={task.status in [:pending, :blocked]}
+                  id={"start-task-#{task.id}"}
+                  phx-click="task_transition"
+                  phx-value-id={task.id}
+                  phx-value-action="start"
+                  variant="primary"
+                >
+                  Start
+                </.button>
+                <.button
+                  :if={task.status == :in_progress}
+                  id={"complete-task-#{task.id}"}
+                  phx-click="task_transition"
+                  phx-value-id={task.id}
+                  phx-value-action="complete"
+                  variant="primary"
+                >
+                  Complete
+                </.button>
+                <.button
+                  :if={task.status in [:pending, :in_progress]}
+                  id={"block-task-#{task.id}"}
+                  phx-click="task_transition"
+                  phx-value-id={task.id}
+                  phx-value-action="block"
+                >
+                  Block
+                </.button>
+                <.button
+                  :if={task.status in [:completed, :cancelled]}
+                  id={"reopen-task-#{task.id}"}
+                  phx-click="task_transition"
+                  phx-value-id={task.id}
+                  phx-value-action="reopen"
+                >
+                  Reopen
+                </.button>
+              </div>
+            </div>
+          </div>
+
+          <.empty_state
+            :if={actionable_tasks(@pursuit) == []}
+            icon="hero-check-circle"
+            title="No active pursuit tasks"
+            description="Use a quick task or New Task when this pursuit needs another operator move."
+          />
+        </div>
+      </div>
+    </.section>
+    """
+  end
+
   defp load_pursuit!(id, actor) do
     case Commercial.get_pursuit_workspace(id, actor: actor) do
       {:ok, pursuit} -> pursuit
       {:error, error} -> raise "failed to load pursuit #{id}: #{inspect(error)}"
     end
+  end
+
+  defp actionable_tasks(%{tasks: tasks}) when is_list(tasks) do
+    Enum.reject(tasks, &(&1.status in [:completed, :cancelled]))
+  end
+
+  defp actionable_tasks(_pursuit), do: []
+
+  defp pursuit_task(%{tasks: tasks}, task_id) when is_list(tasks) do
+    case Enum.find(tasks, &(&1.id == task_id)) do
+      nil -> {:error, :task_not_found}
+      task -> {:ok, task}
+    end
+  end
+
+  defp pursuit_task(_pursuit, _task_id), do: {:error, :task_not_found}
+
+  defp transition_task(task, "start", actor), do: Operations.start_task(task, actor: actor)
+  defp transition_task(task, "complete", actor), do: Operations.complete_task(task, actor: actor)
+  defp transition_task(task, "reopen", actor), do: Operations.reopen_task(task, actor: actor)
+
+  defp transition_task(task, "block", actor) do
+    Operations.block_task(task, %{blocked_reason: "Blocked from pursuit workspace"}, actor: actor)
+  end
+
+  defp transition_task(_task, _action, _actor), do: {:error, :unknown_task_action}
+
+  defp create_quick_task(pursuit, kind, actor) do
+    attrs =
+      pursuit
+      |> quick_task_attrs(kind)
+      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+      |> Map.new()
+
+    Operations.create_task_from_pursuit(attrs, actor: actor)
+  end
+
+  defp quick_task_attrs(pursuit, "research") do
+    base_quick_task_attrs(pursuit, %{
+      title: "Research context: #{pursuit.name}",
+      description:
+        "Collect likely controls, validation, facilities, and plant-floor context before the next outreach.",
+      task_type: :research,
+      priority: :normal
+    })
+  end
+
+  defp quick_task_attrs(pursuit, "email") do
+    base_quick_task_attrs(pursuit, %{
+      title: "Draft follow-up email: #{pursuit.name}",
+      description:
+        "Draft a concise follow-up that confirms fit, suspected needs, and the next practical conversation.",
+      task_type: :email,
+      priority: :high
+    })
+  end
+
+  defp quick_task_attrs(pursuit, "call") do
+    base_quick_task_attrs(pursuit, %{
+      title: "Confirm scope and timing: #{pursuit.name}",
+      description:
+        "Confirm active scope, timeline, decision process, and who should join the technical conversation.",
+      task_type: :call,
+      priority: :high
+    })
+  end
+
+  defp quick_task_attrs(_pursuit, _kind), do: %{}
+
+  defp base_quick_task_attrs(pursuit, attrs) do
+    Map.merge(attrs, %{
+      pursuit_id: pursuit.id,
+      signal_id: pursuit.signal_id,
+      organization_id: pursuit.organization_id,
+      origin_id: pursuit.id,
+      origin_label: pursuit.name,
+      origin_url: ~p"/commercial/pursuits/#{pursuit}"
+    })
   end
 
   defp new_pursuit_task_path(pursuit) do
