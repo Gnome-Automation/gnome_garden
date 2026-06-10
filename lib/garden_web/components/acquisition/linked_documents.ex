@@ -128,8 +128,6 @@ defmodule GnomeGardenWeb.Components.Acquisition.LinkedDocuments do
     end
   end
 
-  defp document_analysis_excerpt(_document), do: nil
-
   attr :analysis, :map, default: nil
 
   defp document_analysis_card(assigns) do

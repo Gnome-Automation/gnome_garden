@@ -18,7 +18,7 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
 
   def page(assigns) do
     ~H"""
-    <div class={["mx-auto space-y-3", @max_width, @class]}>
+    <div class={["mx-auto space-y-3 sm:space-y-4", @max_width, @class]}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -34,7 +34,7 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
 
   def page_header(assigns) do
     ~H"""
-    <header class={["flex flex-wrap items-center justify-between gap-3", @class]}>
+    <header class={["flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between", @class]}>
       <div class="min-w-0 flex-1">
         <h1 class="text-lg font-semibold tracking-tight text-base-content sm:text-xl">
           {render_slot(@inner_block)}
@@ -44,7 +44,10 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
         </p>
       </div>
 
-      <div :if={@actions != []} class="flex shrink-0 flex-wrap items-center gap-1.5">
+      <div
+        :if={@actions != []}
+        class="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:shrink-0"
+      >
         {render_slot(@actions)}
       </div>
     </header>
@@ -62,7 +65,7 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
   def section(assigns) do
     ~H"""
     <div class={[
-      "overflow-hidden rounded-[1.25rem] bg-white/95 ring-1 ring-inset ring-zinc-900/10 shadow-sm dark:bg-zinc-900/80 dark:ring-white/10",
+      "overflow-hidden rounded-xl bg-white/95 ring-1 ring-inset ring-zinc-900/10 shadow-sm dark:bg-zinc-900/80 dark:ring-white/10 sm:rounded-[1.25rem]",
       @class
     ]}>
       <div
@@ -154,18 +157,21 @@ defmodule GnomeGardenWeb.Components.WorkspaceUI do
       )
 
     ~H"""
-    <div class="flex items-center gap-3 rounded-lg border border-base-content/10 bg-base-200 px-3 py-2">
+    <div class="flex min-h-20 items-start gap-3 rounded-lg border border-base-content/10 bg-base-200 px-3 py-3 sm:min-h-14 sm:items-center sm:py-2">
       <div class={["flex size-8 shrink-0 items-center justify-center rounded-md", @accent_class]}>
         <.icon name={@icon} class="size-4" />
       </div>
       <div class="min-w-0 flex-1">
-        <div class="flex items-baseline gap-2">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <span class="text-lg font-semibold leading-none tabular-nums">{@value}</span>
-          <span class="truncate text-[11px] font-semibold uppercase tracking-wider text-base-content/60">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-base-content/60">
             {@title}
           </span>
         </div>
-        <p :if={@description} class="mt-0.5 truncate text-[11px] text-base-content/50">
+        <p
+          :if={@description}
+          class="mt-1 text-[11px] leading-4 text-base-content/50 sm:mt-0.5 sm:truncate"
+        >
           {@description}
         </p>
       </div>

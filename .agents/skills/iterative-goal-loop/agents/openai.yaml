@@ -1,0 +1,8 @@
+interface:
+  display_name: "Iterative Goal Loop"
+  short_description: "Turn roadmaps into verified Codex goals"
+  default_prompt: "Use $iterative-goal-loop to turn this roadmap into a sequence of evidence-checked Codex goals."
+
+policy:
+  allow_implicit_invocation: true
+

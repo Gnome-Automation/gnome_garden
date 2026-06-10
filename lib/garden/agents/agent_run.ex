@@ -126,7 +126,7 @@ defmodule GnomeGarden.Agents.AgentRun do
     end
 
     read :recent do
-      argument :limit, :integer, default: 20
+      argument :limit, :integer, default: 20, public?: true
 
       prepare build(
                 sort: [inserted_at: :desc],
@@ -141,6 +141,17 @@ defmodule GnomeGarden.Agents.AgentRun do
                   :bid_output_count,
                   :discovery_finding_output_count
                 ]
+              )
+    end
+
+    read :failed_recent do
+      argument :limit, :integer, default: 20, public?: true
+      filter expr(state == :failed)
+
+      prepare build(
+                sort: [completed_at: :desc, inserted_at: :desc],
+                limit: arg(:limit),
+                load: [:agent, :deployment, :failure_label, :failure_retryable]
               )
     end
 

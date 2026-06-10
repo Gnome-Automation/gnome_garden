@@ -44,6 +44,68 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
     assert has_element?(form_view, "#proposal-form")
   end
 
+  test "pursuit show renders referral lead workspace", %{conn: conn} do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Workspace Referral Account",
+        organization_kind: :business,
+        status: :prospect
+      })
+
+    {:ok, site} =
+      Operations.create_site(%{
+        organization_id: organization.id,
+        name: "Workspace Plant",
+        city: "San Diego",
+        state: "CA"
+      })
+
+    {:ok, person} =
+      Operations.create_person(%{
+        first_name: "Morgan",
+        last_name: "Controls",
+        email: "morgan@example.com"
+      })
+
+    {:ok, _affiliation} =
+      Operations.create_organization_affiliation(%{
+        organization_id: organization.id,
+        person_id: person.id,
+        role: :technical_contact
+      })
+
+    {:ok, signal} =
+      Commercial.create_signal(%{
+        organization_id: organization.id,
+        site_id: site.id,
+        title: "Referral with controls need",
+        signal_type: :referral,
+        source_channel: :referral,
+        metadata: %{
+          "intake_kind" => "manual_referral",
+          "suspected_needs" => ["PLC", "validation"]
+        }
+      })
+
+    {:ok, pursuit} =
+      Commercial.create_pursuit(%{
+        signal_id: signal.id,
+        organization_id: organization.id,
+        site_id: site.id,
+        name: "Referral pursuit workspace",
+        pursuit_type: :new_logo
+      })
+
+    {:ok, _view, html} = live(conn, ~p"/commercial/pursuits/#{pursuit}")
+
+    assert html =~ "Lead Workspace"
+    assert html =~ "Morgan Controls"
+    assert html =~ "morgan@example.com"
+    assert html =~ "Workspace Plant"
+    assert html =~ "PLC"
+    assert html =~ "validation"
+  end
+
   test "pursuit show renders contextual task panel and task prefill", %{conn: conn} do
     {:ok, organization} =
       Operations.create_organization(%{

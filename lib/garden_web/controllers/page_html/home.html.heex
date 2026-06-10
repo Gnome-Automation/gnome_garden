@@ -6,7 +6,7 @@
     </:subtitle>
   </.page_header>
 
-  <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
     <.stat_card
       title="Acquisition Queue"
       value={Integer.to_string(@review_finding_count)}
@@ -93,14 +93,15 @@
     />
   </div>
 
-  <div class="grid gap-6 xl:grid-cols-2">
+  <div class="grid gap-4 2xl:grid-cols-2">
     <.section
       title="Acquisition Flow"
       description="The intake spine: source coverage, active programs, unified findings, and the commercial handoff."
+      class="2xl:col-span-2"
     >
-      <div class="grid gap-4 xl:grid-cols-5">
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Sources</p>
               <p class="text-xs text-base-content/50">
@@ -125,7 +126,7 @@
             navigate={
               ~p"/acquisition/findings?family=#{source.source_family}&source_id=#{source.id}"
             }
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{source.name}</p>
@@ -139,7 +140,7 @@
                 Last run {format_datetime(source.last_run_at)}
               </p>
             </div>
-            <div class="space-y-2 text-right">
+            <div class="flex flex-wrap gap-2 sm:block sm:space-y-2 sm:text-right">
               <.status_badge status={source.status_variant}>
                 {format_atom(source.status)}
               </.status_badge>
@@ -150,8 +151,8 @@
           </.link>
         </div>
 
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Programs</p>
               <p class="text-xs text-base-content/50">
@@ -176,7 +177,7 @@
             navigate={
               ~p"/acquisition/findings?family=#{program.program_family}&program_id=#{program.id}"
             }
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{program.name}</p>
@@ -190,7 +191,7 @@
                 Last run {format_datetime(program.last_run_at)}
               </p>
             </div>
-            <div class="space-y-2 text-right">
+            <div class="flex flex-wrap gap-2 sm:block sm:space-y-2 sm:text-right">
               <.status_badge status={program.status_variant}>
                 {format_atom(program.status)}
               </.status_badge>
@@ -201,8 +202,8 @@
           </.link>
         </div>
 
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Intake</p>
               <p class="text-xs text-base-content/50">
@@ -225,7 +226,7 @@
           <.link
             :for={finding <- @review_findings}
             navigate={~p"/acquisition/findings/#{finding}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{finding.title}</p>
@@ -244,8 +245,8 @@
           </.link>
         </div>
 
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Signals</p>
               <p class="text-xs text-base-content/50">
@@ -268,7 +269,7 @@
           <.link
             :for={signal <- @open_signals}
             navigate={~p"/commercial/signals/#{signal}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{signal.title}</p>
@@ -285,8 +286,8 @@
           </.link>
         </div>
 
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Pursuits</p>
               <p class="text-xs text-base-content/50">
@@ -309,7 +310,7 @@
           <.link
             :for={pursuit <- @active_pursuits}
             navigate={~p"/commercial/pursuits/#{pursuit}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{pursuit.name}</p>
@@ -320,7 +321,7 @@
                 Expected close {format_date(pursuit.expected_close_on)}
               </p>
             </div>
-            <div class="space-y-2 text-right">
+            <div class="flex flex-wrap gap-2 sm:block sm:space-y-2 sm:text-right">
               <.status_badge status={pursuit.stage_variant}>
                 {format_atom(pursuit.stage)}
               </.status_badge>
@@ -337,9 +338,9 @@
       title="Execution Queue"
       description="What field and delivery work needs attention right now."
     >
-      <div class="grid gap-4 lg:grid-cols-3">
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+      <div class="grid gap-3 lg:grid-cols-3">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Maintenance</p>
               <p class="text-xs text-base-content/50">Preventive plans due soon.</p>
@@ -360,7 +361,7 @@
           <.link
             :for={maintenance_plan <- @due_soon_maintenance_plans}
             navigate={~p"/execution/maintenance-plans/#{maintenance_plan}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{maintenance_plan.name}</p>
@@ -377,8 +378,8 @@
           </.link>
         </div>
 
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Service Tickets</p>
               <p class="text-xs text-base-content/50">
@@ -401,7 +402,7 @@
           <.link
             :for={service_ticket <- @open_service_tickets}
             navigate={~p"/execution/service-tickets/#{service_ticket}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{service_ticket.title}</p>
@@ -410,7 +411,7 @@
                   "No organization linked"}
               </p>
             </div>
-            <div class="space-y-2 text-right">
+            <div class="flex flex-wrap gap-2 sm:block sm:space-y-2 sm:text-right">
               <.status_badge status={service_ticket.status_variant}>
                 {format_atom(service_ticket.status)}
               </.status_badge>
@@ -421,8 +422,8 @@
           </.link>
         </div>
 
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Work Orders</p>
               <p class="text-xs text-base-content/50">
@@ -445,7 +446,7 @@
           <.link
             :for={work_order <- @open_work_orders}
             navigate={~p"/execution/work-orders/#{work_order}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{work_order.title}</p>
@@ -470,9 +471,9 @@
       title="Finance Queue"
       description="What is approved, overdue, or received but still unfinished in operations finance."
     >
-      <div class="grid gap-4 lg:grid-cols-2">
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+      <div class="grid gap-3 lg:grid-cols-2">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Overdue Invoices</p>
               <p class="text-xs text-base-content/50">
@@ -495,7 +496,7 @@
           <.link
             :for={invoice <- @overdue_invoices}
             navigate={~p"/finance/invoices/#{invoice}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">
@@ -508,7 +509,7 @@
                 Due {format_date(invoice.due_on)}
               </p>
             </div>
-            <div class="space-y-2 text-right">
+            <div class="flex flex-wrap gap-2 sm:block sm:space-y-2 sm:text-right">
               <.status_badge status={invoice.status_variant}>
                 {format_atom(invoice.status)}
               </.status_badge>
@@ -519,8 +520,8 @@
           </.link>
         </div>
 
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">
                 Unapplied Payments
@@ -545,7 +546,7 @@
           <.link
             :for={payment <- @unapplied_payments}
             navigate={~p"/finance/payments/#{payment}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">
@@ -558,7 +559,7 @@
                 Received {format_date(payment.received_on)}
               </p>
             </div>
-            <div class="space-y-2 text-right">
+            <div class="flex flex-wrap gap-2 sm:block sm:space-y-2 sm:text-right">
               <.status_badge status={payment.status_variant}>
                 {format_atom(payment.status)}
               </.status_badge>
@@ -569,8 +570,8 @@
           </.link>
         </div>
 
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Approved Time</p>
               <p class="text-xs text-base-content/50">Labor ready for billing.</p>
@@ -591,7 +592,7 @@
           <.link
             :for={time_entry <- @unbilled_time_entries}
             navigate={~p"/finance/time-entries/#{time_entry}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{time_entry.description}</p>
@@ -610,8 +611,8 @@
           </.link>
         </div>
 
-        <div class="space-y-3 rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div class="flex items-center justify-between">
+        <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-base-content">Approved Expenses</p>
               <p class="text-xs text-base-content/50">Costs ready for billing.</p>
@@ -632,7 +633,7 @@
           <.link
             :for={expense <- @unbilled_expenses}
             navigate={~p"/finance/expenses/#{expense}"}
-            class="flex items-start justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40"
+            class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 transition hover:border-emerald-300 dark:border-white/10 dark:bg-zinc-950/30 dark:hover:border-emerald-400/40 sm:flex-row sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-4"
           >
             <div class="space-y-1">
               <p class="font-medium text-base-content">{expense.description}</p>
@@ -656,8 +657,9 @@
     <.section
       title="Launch Points"
       description="Jump straight into the main operating surfaces instead of the old intake-management shells."
+      class="2xl:col-span-2"
     >
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         <.action_card
           navigate={~p"/commercial/discovery-programs"}
           title="Discovery Programs"

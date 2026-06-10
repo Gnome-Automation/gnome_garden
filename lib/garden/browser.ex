@@ -71,7 +71,7 @@ defmodule GnomeGarden.Browser do
     Application.get_env(:gnome_garden, :browser_path, default_path())
   end
 
-  @doc "Default browser launch args."
+  @doc "Default browser launch args. Headless unless headed mode is explicitly configured."
   def default_args do
     browser_mode_args() ++
       ["--args", "--no-sandbox,--disable-blink-features=AutomationControlled"]
@@ -123,7 +123,7 @@ defmodule GnomeGarden.Browser do
     case Application.get_env(:gnome_garden, :browser_mode, :auto) do
       :headed -> ["--headed"]
       :headless -> []
-      :auto -> if System.get_env("DISPLAY"), do: ["--headed"], else: []
+      :auto -> []
     end
   end
 

@@ -247,7 +247,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
                  async?: false
                ) do
             {:ok, %{source: source}} -> {:ok, source}
-            {:error, _error} -> {:ok, record}
+            {:error, error} -> mark_auto_configure_failed(record, error, ctx.actor)
           end
         end)
       end
@@ -255,7 +255,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
 
     update :config_fail do
       require_atomic? false
-      accept []
+      accept [:metadata]
       change transition_state(:config_failed)
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
@@ -362,6 +362,11 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
 
     read :failed do
       filter expr(config_status in [:config_failed, :scan_failed])
+    end
+
+    read :credential_blocked do
+      filter expr(enabled == true and status == :approved and requires_login == true)
+      prepare build(sort: [updated_at: :desc])
     end
 
     read :console do
@@ -556,4 +561,32 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :directory
     end
   end
+
+  defp mark_auto_configure_failed(record, error, actor) do
+    metadata =
+      record
+      |> Map.get(:metadata, %{})
+      |> Kernel.||(%{})
+      |> Map.merge(%{
+        "last_config_error" => error_message(error),
+        "last_config_error_at" =>
+          DateTime.utc_now()
+          |> DateTime.truncate(:second)
+          |> DateTime.to_iso8601()
+      })
+
+    GnomeGarden.Procurement.config_fail_procurement_source(record, %{metadata: metadata},
+      actor: actor
+    )
+  end
+
+  defp error_message(error) when is_binary(error), do: error
+
+  defp error_message(%{__struct__: _} = error) do
+    Exception.message(error)
+  rescue
+    Protocol.UndefinedError -> inspect(error)
+  end
+
+  defp error_message(error), do: inspect(error)
 end

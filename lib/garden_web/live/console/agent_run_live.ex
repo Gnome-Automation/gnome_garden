@@ -579,8 +579,6 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
     |> case do
       value when is_binary(value) -> value
       value when is_atom(value) -> format_atom(value)
-      value when is_boolean(value) -> to_string(value)
-      nil -> nil
       value -> inspect(value)
     end
   end
@@ -782,7 +780,6 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
   defp output_action_label(%{output_type: :bid}), do: "Open Finding"
   defp output_action_label(%{output_type: :finding}), do: "Open Finding"
   defp output_action_label(%{output_type: :procurement_source}), do: "Open Source"
-  defp output_action_label(_output), do: "Open"
 
   defp error_message(error) when is_exception(error), do: Exception.message(error)
   defp error_message(error) when is_binary(error), do: error

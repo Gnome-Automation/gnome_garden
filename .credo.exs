@@ -15,12 +15,8 @@
       },
       strict: false,
       color: true,
-      checks: %{
-        enabled: [
-          {ExSlop, []}
-        ],
-        disabled: []
-      }
+      checks: %{enabled: [{ExSlop, []}], disabled: []},
+      plugins: [{ExSlop, []}]
     }
   ]
 }

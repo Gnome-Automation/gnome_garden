@@ -838,15 +838,11 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
   defp dialog_submit_label(%{type: :reject}), do: "Confirm Reject"
   defp dialog_submit_label(%{type: :suppress}), do: "Confirm Suppress"
 
-  defp dialog_reason_prompt(%{type: :accept}), do: nil
   defp dialog_reason_prompt(%{type: :reject}), do: "Select a disposition..."
   defp dialog_reason_prompt(%{type: :suppress}), do: "Select a suppression reason..."
 
-  defp dialog_feedback_prompt(%{type: :accept}), do: nil
   defp dialog_feedback_prompt(%{type: :reject}), do: "Just reject this finding"
   defp dialog_feedback_prompt(%{type: :suppress}), do: "Just suppress this finding"
-
-  defp dialog_default_reason_code(%{type: :accept}), do: nil
 
   defp dialog_default_reason_code(%{type: :suppress, family: family})
        when family in [:procurement, :discovery],
@@ -856,8 +852,6 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
 
   defp dialog_default_feedback_scope(%{type: :suppress}), do: "source"
   defp dialog_default_feedback_scope(_dialog), do: nil
-
-  defp dialog_reason_options(%{type: :accept}), do: []
 
   defp dialog_reason_options(%{type: :reject, family: :discovery}),
     do: GnomeGarden.Commercial.DiscoveryFeedback.reject_reason_options()
@@ -872,8 +866,6 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
     do: GnomeGarden.Commercial.DiscoveryFeedback.reject_reason_options()
 
   defp dialog_reason_options(_dialog), do: []
-
-  defp dialog_feedback_scope_options(%{type: :accept}), do: []
 
   defp dialog_feedback_scope_options(%{family: family})
        when family in [:procurement, :discovery] do

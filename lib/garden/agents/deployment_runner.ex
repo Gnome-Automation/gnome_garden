@@ -645,16 +645,25 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   defp extract_usage(_result), do: usage_struct(%{})
 
   defp usage_struct(usage) do
-    input_tokens = Map.get(usage, :input_tokens, Map.get(usage, "input_tokens", 0))
-    output_tokens = Map.get(usage, :output_tokens, Map.get(usage, "output_tokens", 0))
+    input_tokens = usage_token_count(usage, :input_tokens, "input_tokens")
+    output_tokens = usage_token_count(usage, :output_tokens, "output_tokens")
 
     total_tokens =
-      Map.get(usage, :total_tokens, Map.get(usage, "total_tokens", input_tokens + output_tokens))
+      usage_token_count(usage, :total_tokens, "total_tokens", input_tokens + output_tokens)
 
     %{
-      input_tokens: max(input_tokens || 0, 0),
-      output_tokens: max(output_tokens || 0, 0),
-      total_tokens: max(total_tokens || 0, 0)
+      input_tokens: input_tokens,
+      output_tokens: output_tokens,
+      total_tokens: total_tokens
     }
+  end
+
+  defp usage_token_count(usage, atom_key, string_key, default \\ 0) do
+    usage
+    |> Map.get(atom_key, Map.get(usage, string_key, default))
+    |> case do
+      value when is_number(value) -> max(value, 0)
+      _other -> default
+    end
   end
 end

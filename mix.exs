@@ -28,7 +28,7 @@ defmodule GnomeGarden.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, ci: :test]
     ]
   end
 
@@ -41,6 +41,11 @@ defmodule GnomeGarden.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:reach, "~> 2.0", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:vibe_kit, "== 0.1.2", only: [:dev, :test], runtime: false},
+      {:pi_bridge, "== 0.6.2", only: :dev},
       # Browser automation engine. jido_browser still pulls the minimal Jido
       # libraries it needs transitively; the app no longer owns a Jido runtime.
       {:libgraph, "~> 0.16", override: true},
@@ -56,27 +61,27 @@ defmodule GnomeGarden.MixProject do
       {:ex_cldr, "~> 2.0"},
       {:picosat_elixir, "~> 0.2"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
-      {:oban, "~> 2.20.3"},
+      {:oban, "~> 2.23"},
       {:ash_money, "~> 0.2"},
       {:usage_rules, "~> 1.0", only: [:dev]},
       {:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:ex_slop, "~> 0.1", only: [:dev, :test], runtime: false},
-      {:ash_ai, "~> 0.6.1"},
-      {:ash_lua, "~> 0.1.1"},
+      {:ex_slop, "~> 0.4", only: [:dev, :test], runtime: false},
+      {:ash_ai, "~> 0.7.1"},
+      {:ash_lua, "~> 0.1.4"},
       {:tidewave, "~> 0.5", only: [:dev]},
-      {:live_debugger, "~> 0.7", only: [:dev]},
+      {:live_debugger, "~> 1.0", only: [:dev]},
       {:ash_storage, github: "ash-project/ash_storage", branch: "main"},
       {:req_s3, "~> 0.2"},
       {:ash_state_machine, "~> 0.2"},
       {:oban_web, "~> 2.0"},
-      {:ash_oban, "~> 0.7.2"},
-      {:ash_admin, "~> 0.14"},
-      {:cinder, "~> 0.12.1"},
+      {:ash_oban, "~> 0.8"},
+      {:ash_admin, "~> 1.1"},
+      {:cinder, "~> 0.15"},
       {:ash_authentication_phoenix, "~> 2.0"},
       {:ash_authentication, "~> 4.0"},
       {:ash_postgres, "~> 2.0"},
       {:ash_phoenix, "~> 2.0"},
-      {:ash, "~> 3.0"},
+      {:ash, "~> 3.27"},
       {:igniter, "~> 0.6", only: [:dev, :test]},
       {:phoenix, "~> 1.8.5"},
       {:phoenix_ecto, "~> 4.5"},
@@ -127,7 +132,16 @@ defmodule GnomeGarden.MixProject do
         "esbuild gnome_garden --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"],
+      ci: [
+        "compile --warnings-as-errors",
+        "format --check-formatted",
+        "test",
+        "credo --strict",
+        "dialyzer",
+        "ex_dna --max-clones 0",
+        "reach.check --arch --smells"
+      ]
     ]
   end
 end

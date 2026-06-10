@@ -115,6 +115,23 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
     end
   end
 
+  @spec inspect_source_with_workflow(
+          ProcurementSource.t() | Ecto.UUID.t(),
+          GnomeGarden.Agents.AgentWorkflowDefinition.t(),
+          keyword()
+        ) :: pipeline_result
+  def inspect_source_with_workflow(source_or_id, workflow_definition, opts \\ []) do
+    with {:ok, source} <- fetch_source(source_or_id, Keyword.get(opts, :actor)),
+         {:ok, script_result, messages} <- run_lua(source, workflow_definition.lua_source, opts),
+         {:ok, inspection_result} <- source_message(messages, :inspection) do
+      if truthy?(script_result["ok"]) do
+        {:ok, Map.put(inspection_result, :pipeline, script_result)}
+      else
+        {:error, script_result["error"] || "Source inspection workflow failed."}
+      end
+    end
+  end
+
   @spec auto_configure_source(ProcurementSource.t() | Ecto.UUID.t(), keyword()) :: pipeline_result
   def auto_configure_source(source_or_id, opts \\ []) do
     with {:ok, source} <- fetch_source(source_or_id, Keyword.get(opts, :actor)),
@@ -319,6 +336,7 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
       "page_id" => result.page.id,
       "diagnosis" => inspection["diagnosis"],
       "requires_login" => truthy?(inspection["requires_login"]),
+      "procurement_evidence" => truthy?(inspection["procurement_evidence"]),
       "public_listing_links" => inspection["public_listing_links"] || 0,
       "candidate_links" => inspection["candidate_links"] || 0,
       "password_inputs" => inspection["password_inputs"] || 0,
@@ -410,8 +428,6 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
   defp value(map, key) when is_map(map) do
     Map.get(map, key) || Map.get(map, Atom.to_string(key))
   end
-
-  defp value(_map, _key), do: nil
 
   defp put_pipeline(result, pipeline) when is_map(result),
     do: Map.put(result, :pipeline, pipeline)

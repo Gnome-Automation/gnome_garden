@@ -8,10 +8,32 @@ defmodule GnomeGarden.Operations do
 
   use Ash.Domain,
     otp_app: :gnome_garden,
-    extensions: [AshAdmin.Domain]
+    extensions: [AshAdmin.Domain, AshAi]
 
   admin do
     show? true
+  end
+
+  tools do
+    tool :operations_active_memory_blocks,
+         GnomeGarden.Operations.MemoryBlock,
+         :active_for_scope do
+      action_parameters [:input]
+      description "List active memory blocks for a governed operating scope."
+    end
+
+    tool :operations_recall_memory_entries,
+         GnomeGarden.Operations.MemoryEntry,
+         :recall_for_scope do
+      action_parameters [:input]
+      description "Recall active archival memory entries for a governed operating scope."
+    end
+
+    tool :operations_create_agent_followup_task,
+         GnomeGarden.Operations.Task,
+         :create_from_agent_run do
+      description "Create an operator follow-up task for an agent run."
+    end
   end
 
   resources do
@@ -159,6 +181,67 @@ defmodule GnomeGarden.Operations do
       define :list_overdue_tasks, action: :overdue
       define :list_due_today_tasks, action: :due_today
       define :list_blocked_tasks, action: :blocked
+    end
+
+    resource GnomeGarden.Operations.MemoryBlock do
+      define :list_memory_blocks, action: :read
+      define :get_memory_block, action: :read, get_by: [:id]
+      define :list_pending_memory_blocks, action: :pending_review
+      define :list_active_memory_blocks, action: :active
+
+      define :list_active_memory_blocks_for_scope,
+        action: :active_for_scope,
+        args: [:scope, :scope_key]
+
+      define :get_memory_block_by_key, action: :by_key, args: [:key, :scope, :scope_key]
+      define :create_memory_block, action: :create
+      define :propose_memory_block, action: :propose
+      define :update_memory_block_content, action: :update_content
+      define :activate_memory_block, action: :activate
+      define :reject_memory_block, action: :reject
+      define :archive_memory_block, action: :archive
+      define :delete_memory_block, action: :destroy
+    end
+
+    resource GnomeGarden.Operations.MemoryEntry do
+      define :list_memory_entries, action: :read
+      define :get_memory_entry, action: :read, get_by: [:id]
+      define :list_pending_memory_entries, action: :pending_review
+      define :propose_memory_entry, action: :propose
+      define :approve_memory_entry, action: :approve
+      define :reject_memory_entry, action: :reject
+      define :expire_memory_entry, action: :expire
+      define :archive_memory_entry, action: :archive
+      define :mark_memory_entry_used, action: :mark_used
+
+      define :recall_memory_entries_for_scope,
+        action: :recall_for_scope,
+        args: [:scope, :scope_key]
+
+      define :search_memory_entries_by_tag, action: :search_by_tag, args: [:tag]
+      define :list_memory_entries_by_namespace, action: :by_namespace, args: [:namespace]
+      define :delete_memory_entry, action: :destroy
+    end
+
+    resource GnomeGarden.Operations.LearningRecommendation do
+      define :list_learning_recommendations, action: :read
+      define :get_learning_recommendation, action: :read, get_by: [:id]
+      define :list_pending_learning_recommendations, action: :pending_review
+
+      define :list_learning_recommendations_by_target,
+        action: :by_target,
+        args: [:target_domain, :target_resource, :target_id]
+
+      define :list_learning_recommendations_by_source_agent_run,
+        action: :by_source_agent_run,
+        args: [:source_agent_run_id]
+
+      define :propose_learning_recommendation, action: :propose
+      define :approve_learning_recommendation, action: :approve
+      define :reject_learning_recommendation, action: :reject
+      define :apply_learning_recommendation, action: :apply
+      define :expire_learning_recommendation, action: :expire
+      define :delete_learning_recommendation, action: :destroy
     end
   end
 

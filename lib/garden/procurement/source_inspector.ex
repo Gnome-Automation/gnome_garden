@@ -493,8 +493,6 @@ defmodule GnomeGarden.Procurement.SourceInspector do
     )
   end
 
-  defp procurement_candidate_copy?(_copy), do: false
-
   defp page_unavailable?(copy) when is_binary(copy) do
     Regex.match?(
       ~r/(404|page not found|not found|this page does not exist|resource could not be found)/i,
@@ -514,8 +512,6 @@ defmodule GnomeGarden.Procurement.SourceInspector do
       copy
     )
   end
-
-  defp login_link?(_copy), do: false
 
   defp maybe_add(evidence, true, value), do: [value | evidence]
   defp maybe_add(evidence, false, _value), do: evidence

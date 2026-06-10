@@ -5,10 +5,14 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
   import Cinder.Refresh
 
   alias GnomeGarden.Agents
+  alias GnomeGarden.Agents.AgentEvalRunner
+  alias GnomeGarden.Agents.AgentEvalSweepHealth
   alias GnomeGarden.Agents.AgentTracker
   alias GnomeGarden.Agents.DeploymentRunner
   alias GnomeGarden.Agents.TemplateCatalog
   alias GnomeGarden.Agents.Templates
+  alias GnomeGarden.Operations
+  alias GnomeGarden.Procurement
   alias Phoenix.LiveView.JS
 
   @recent_run_limit 12
@@ -32,6 +36,7 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
      |> assign(:scheduled_deployment_count, 0)
      |> assign(:manual_deployment_count, 0)
      |> assign(:attention_deployment_count, 0)
+     |> assign(:agent_health, empty_agent_health())
      |> assign(:runtime_count, 0)
      |> assign(:last_refreshed_at, nil)
      |> stream(:recent_runs, [], reset: true)
@@ -188,6 +193,81 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
           accent="rose"
         />
       </div>
+
+      <.section
+        title="Agent Operating Health"
+        description="Governance and execution signals across workflows, memory, learning, credentials, and recent failures."
+      >
+        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+          <.stat_card
+            title="Failed Runs"
+            value={to_string(@agent_health.failed_runs)}
+            description="Recent failed AgentRun records."
+            icon="hero-exclamation-triangle"
+            accent="rose"
+          />
+          <.stat_card
+            title="Memory Review"
+            value={to_string(@agent_health.pending_memory)}
+            description="Pending memory blocks and entries."
+            icon="hero-archive-box"
+            accent="amber"
+          />
+          <.stat_card
+            title="Learning Review"
+            value={to_string(@agent_health.pending_learning)}
+            description="Pending learning recommendations."
+            icon="hero-light-bulb"
+            accent="amber"
+          />
+          <.stat_card
+            title="Eval Coverage"
+            value={eval_coverage_value(@agent_health)}
+            description={eval_coverage_description(@agent_health)}
+            icon="hero-clipboard-document-check"
+            accent={eval_health_accent(@agent_health)}
+          />
+          <.stat_card
+            title="Eval Sweeps"
+            value={sweep_health_value(@agent_health.sweep_health)}
+            description={sweep_health_description(@agent_health.sweep_health)}
+            icon="hero-arrow-path"
+            accent={sweep_health_accent(@agent_health.sweep_health)}
+          />
+          <.stat_card
+            title="Workflows"
+            value={to_string(@agent_health.published_workflows)}
+            description="Published workflow definitions."
+            icon="hero-command-line"
+            accent="sky"
+          />
+          <.stat_card
+            title="Credentials"
+            value={to_string(@agent_health.credential_blockers)}
+            description="Approved sources blocked by login."
+            icon="hero-key"
+            accent="rose"
+          />
+        </div>
+
+        <div class="mt-3 flex flex-wrap gap-2">
+          <.link navigate={~p"/console/agents/attention"} class="btn btn-sm btn-primary">
+            Agent Attention
+          </.link>
+          <.link navigate={~p"/operations/review"} class="btn btn-sm">
+            Review Queue
+          </.link>
+          <.link navigate={~p"/console/agents/evals"} class="btn btn-sm">
+            Evaluations
+          </.link>
+          <.link navigate={~p"/console/agents/workflows"} class="btn btn-sm">
+            Workflows
+          </.link>
+          <.link navigate={~p"/acquisition/sources?bucket=credentials_needed"} class="btn btn-sm">
+            Credential Blockers
+          </.link>
+        </div>
+      </.section>
 
       <section class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div class="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
@@ -360,7 +440,7 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
               phx-update="stream"
               class="divide-y divide-zinc-200 dark:divide-zinc-800"
             >
-              <tr class="hidden only:table-row">
+              <tr id="agent-runs-empty" class="hidden only:table-row">
                 <td
                   colspan="7"
                   class="px-5 py-8 text-center text-sm text-base-content/50"
@@ -460,7 +540,10 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
               phx-update="stream"
               class="divide-y divide-zinc-200 dark:divide-zinc-800"
             >
-              <div class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50">
+              <div
+                id="runtime-instances-empty"
+                class="hidden only:block px-5 py-8 text-center text-sm text-base-content/50"
+              >
                 No active runtime instances on this node.
               </div>
 
@@ -599,6 +682,7 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
     active_runs = Agents.list_active_agent_runs!()
     recent_runs = Agents.list_recent_agent_runs!(@recent_run_limit)
     runtime_instances = runtime_instances()
+    agent_health = load_agent_health()
 
     socket
     |> assign(:deployment_count, deployment_count)
@@ -606,6 +690,7 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
     |> assign(:scheduled_deployment_count, scheduled_deployment_count)
     |> assign(:manual_deployment_count, manual_deployment_count)
     |> assign(:attention_deployment_count, attention_deployment_count)
+    |> assign(:agent_health, agent_health)
     |> assign(:runtime_count, length(runtime_instances))
     |> assign(:last_refreshed_at, DateTime.utc_now())
     |> stream(:recent_runs, recent_runs, reset: true)
@@ -628,6 +713,135 @@ defmodule GnomeGardenWeb.Console.AgentsLive do
     end)
     |> Enum.filter(&(&1.status == :running))
   end
+
+  defp load_agent_health do
+    pending_memory =
+      count_or_zero(&Operations.list_pending_memory_blocks/1) +
+        count_or_zero(&Operations.list_pending_memory_entries/1)
+
+    %{
+      failed_runs: count_or_zero(fn opts -> Agents.list_recent_failed_agent_runs(10, opts) end),
+      pending_memory: pending_memory,
+      pending_learning: count_or_zero(&Operations.list_pending_learning_recommendations/1),
+      eval_cases: eval_case_counts(),
+      eval_runs: eval_run_counts(),
+      sweep_health: sweep_health(),
+      published_workflows: published_workflow_count(),
+      credential_blockers:
+        count_or_zero(&Procurement.list_credential_blocked_procurement_sources/1)
+    }
+  end
+
+  defp empty_agent_health do
+    %{
+      failed_runs: 0,
+      pending_memory: 0,
+      pending_learning: 0,
+      eval_cases: %{active: 0, runnable: 0},
+      eval_runs: %{recent: 0, passed: 0, failed: 0, error: 0},
+      sweep_health: empty_sweep_health(),
+      published_workflows: 0,
+      credential_blockers: 0
+    }
+  end
+
+  defp sweep_health do
+    case AgentEvalSweepHealth.summary() do
+      {:ok, health} -> health
+      {:error, _error} -> empty_sweep_health()
+    end
+  end
+
+  defp empty_sweep_health do
+    %{
+      queued: 0,
+      running: 0,
+      latest: nil,
+      next_scheduled_at: nil,
+      status: :idle,
+      stale?: false
+    }
+  end
+
+  defp eval_run_counts do
+    case Agents.list_recent_agent_eval_runs(20, query: [select: [:id, :status]]) do
+      {:ok, runs} ->
+        %{
+          recent: length(runs),
+          passed: Enum.count(runs, &(&1.status == :passed)),
+          failed: Enum.count(runs, &(&1.status == :failed)),
+          error: Enum.count(runs, &(&1.status == :error))
+        }
+
+      {:error, _error} ->
+        %{recent: 0, passed: 0, failed: 0, error: 0}
+    end
+  end
+
+  defp eval_case_counts do
+    case Agents.list_active_agent_eval_cases(query: [select: [:id, :workflow_key, :input]]) do
+      {:ok, cases} ->
+        %{
+          active: length(cases),
+          runnable: Enum.count(cases, &AgentEvalRunner.runnable?/1)
+        }
+
+      {:error, _error} ->
+        %{active: 0, runnable: 0}
+    end
+  end
+
+  defp published_workflow_count do
+    case Agents.list_agent_workflow_definitions(query: [select: [:id, :status]]) do
+      {:ok, definitions} -> Enum.count(definitions, &(&1.status == :published))
+      {:error, _error} -> 0
+    end
+  end
+
+  defp count_or_zero(fun) do
+    case fun.(query: [select: [:id]]) do
+      {:ok, records} -> length(records)
+      {:error, _error} -> 0
+    end
+  end
+
+  defp eval_coverage_value(%{eval_cases: eval_cases}) do
+    "#{Map.get(eval_cases, :runnable, 0)}/#{Map.get(eval_cases, :active, 0)}"
+  end
+
+  defp eval_coverage_description(%{eval_runs: eval_runs}) do
+    failures = Map.get(eval_runs, :failed, 0) + Map.get(eval_runs, :error, 0)
+    "Runnable active eval cases. Recent failures: #{failures}/#{Map.get(eval_runs, :recent, 0)}."
+  end
+
+  defp eval_health_accent(%{eval_cases: eval_cases, eval_runs: eval_runs}) do
+    failures = Map.get(eval_runs, :failed, 0) + Map.get(eval_runs, :error, 0)
+    active = Map.get(eval_cases, :active, 0)
+    runnable = Map.get(eval_cases, :runnable, 0)
+
+    cond do
+      failures > 0 -> "rose"
+      active > 0 and runnable == active -> "emerald"
+      active > 0 -> "amber"
+      true -> "sky"
+    end
+  end
+
+  defp sweep_health_value(%{status: status}), do: format_atom(status)
+  defp sweep_health_value(_health), do: "-"
+
+  defp sweep_health_description(%{queued: queued, running: running, next_scheduled_at: next_at}) do
+    "Queue #{queued}/#{running}. Next #{format_datetime(next_at)}."
+  end
+
+  defp sweep_health_description(_health), do: "Background eval sweep health."
+
+  defp sweep_health_accent(%{status: :failed}), do: "rose"
+  defp sweep_health_accent(%{status: :stale}), do: "amber"
+  defp sweep_health_accent(%{status: :running}), do: "amber"
+  defp sweep_health_accent(%{status: :queued}), do: "amber"
+  defp sweep_health_accent(%{status: :healthy}), do: "emerald"
+  defp sweep_health_accent(_health), do: "zinc"
 
   defp runtime_detail_href(runtime_id) do
     case Ecto.UUID.cast(runtime_id) do

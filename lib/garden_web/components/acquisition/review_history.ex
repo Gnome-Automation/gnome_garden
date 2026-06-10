@@ -132,8 +132,6 @@ defmodule GnomeGardenWeb.Components.Acquisition.ReviewHistory do
   defp readiness_label(label, true), do: "#{label}: Yes"
   defp readiness_label(label, false), do: "#{label}: No"
 
-  defp format_value(nil), do: "-"
-
   defp format_value(value) do
     value
     |> to_string()

@@ -174,8 +174,10 @@ defmodule GnomeGarden.Procurement.SourcePipelineTest do
     script = """
     local _, err = utils.transaction.transact({ "procurement.procurement_source" }, function()
       assert(procurement.procurement_source.update({
-        id = "#{source.id}",
-        requires_login = true
+        input = {
+          id = "#{source.id}",
+          requires_login = true
+        }
       }))
 
       utils.transaction.rollback("rollback test")

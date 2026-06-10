@@ -40,8 +40,11 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Index do
           <.button navigate={~p"/commercial/pursuits"}>
             Pursuits
           </.button>
-          <.button navigate={~p"/commercial/signals/new"} variant="primary">
+          <.button navigate={~p"/commercial/signals/new"}>
             New Signal
+          </.button>
+          <.button navigate={~p"/commercial/leads/new"} variant="primary">
+            New Lead
           </.button>
         </:actions>
       </.page_header>

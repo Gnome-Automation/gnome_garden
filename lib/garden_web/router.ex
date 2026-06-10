@@ -47,6 +47,9 @@ defmodule GnomeGardenWeb.Router do
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
       on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_required}] do
+      live "/console/agents/evals", Console.AgentEvalsLive
+      live "/console/agents/workflows", Console.AgentWorkflowsLive
+      live "/console/agents/attention", Console.AgentAttentionLive
       live "/console/agents", Console.AgentsLive
       live "/console/agents/deployments/new", Console.AgentDeploymentFormLive
       live "/console/agents/deployments/:id/edit", Console.AgentDeploymentFormLive
@@ -70,6 +73,7 @@ defmodule GnomeGardenWeb.Router do
       live "/acquisition/programs", Acquisition.ProgramLive.Index, :index
 
       # Operations - Tasks
+      live "/operations/review", Operations.ReviewLive, :index
       live "/operations/tasks", Operations.TaskLive.Index, :index
       live "/operations/tasks/new", Operations.TaskLive.Form, :new
       live "/operations/tasks/:id", Operations.TaskLive.Show, :show
@@ -113,6 +117,7 @@ defmodule GnomeGardenWeb.Router do
 
       # Commercial - Signals
       live "/commercial/signals", Commercial.SignalLive.Index, :index
+      live "/commercial/leads/new", Commercial.LeadLive.New, :new
       live "/commercial/signals/new", Commercial.SignalLive.Form, :new
       live "/commercial/signals/:id", Commercial.SignalLive.Show, :show
       live "/commercial/signals/:id/edit", Commercial.SignalLive.Form, :edit
@@ -234,6 +239,8 @@ defmodule GnomeGardenWeb.Router do
     pipe_through :browser
 
     get "/access-denied", PageController, :access_denied
+    get "/eval-fixtures/procurement/public-bids", PageController, :eval_procurement_public_bids
+    get "/eval-fixtures/procurement/irrelevant", PageController, :eval_procurement_irrelevant
 
     auth_routes AuthController, GnomeGarden.Accounts.User, path: "/auth"
     sign_out_route AuthController

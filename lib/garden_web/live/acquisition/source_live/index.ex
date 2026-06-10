@@ -1158,10 +1158,6 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
        when not is_nil(last_run_at),
        do: :info
 
-  defp run_state_variant(%{latest_run_id: nil, last_run_at: last_run_at})
-       when not is_nil(last_run_at),
-       do: :info
-
   defp run_state_variant(%{latest_run_id: nil}), do: :default
   defp run_state_variant(%{last_run_state_variant: variant}) when is_atom(variant), do: variant
   defp run_state_variant(_source), do: :default

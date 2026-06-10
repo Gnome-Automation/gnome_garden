@@ -421,12 +421,6 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
              |> assign(:link_params, link_params)
              |> put_flash(:error, "Could not save document reference: #{format_error(error)}")}
         end
-
-      {:error, message} ->
-        {:noreply,
-         socket
-         |> assign(:link_params, link_params)
-         |> put_flash(:error, message)}
     end
   end
 

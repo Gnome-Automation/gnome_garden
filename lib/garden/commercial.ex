@@ -132,6 +132,7 @@ defmodule GnomeGarden.Commercial do
     resource GnomeGarden.Commercial.Pursuit do
       define :list_pursuits, action: :read
       define :get_pursuit, action: :read, get_by: [:id]
+      define :get_pursuit_workspace, action: :workspace, args: [:id]
       define :create_pursuit, action: :create
       define :create_pursuit_from_signal, action: :create_from_signal, args: [:source_signal_id]
       define :update_pursuit, action: :update
@@ -250,6 +251,10 @@ defmodule GnomeGarden.Commercial do
       define :list_usage_for_expense, action: :for_expense, args: [:expense_id]
       define :list_usage_for_work_order, action: :for_work_order, args: [:work_order_id]
     end
+  end
+
+  def create_referral_lead(attrs, opts \\ []) do
+    GnomeGarden.Commercial.LeadIntake.create_referral_lead(attrs, opts)
   end
 
   def launch_discovery_program(program_or_id, opts \\ []) do

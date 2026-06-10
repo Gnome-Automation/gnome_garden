@@ -5,6 +5,8 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
 
   @operator_live_routes [
     "/console/agents",
+    "/console/agents/evals",
+    "/console/agents/workflows",
     "/console/agents/deployments/new",
     "/console/agents/runs/00000000-0000-0000-0000-000000000000",
     "/settings/users",

@@ -1,5 +1,5 @@
 defmodule GnomeGarden.Procurement.ProcurementSourceTest do
-  use GnomeGarden.DataCase, async: true
+  use GnomeGarden.DataCase, async: false
 
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
@@ -59,5 +59,62 @@ defmodule GnomeGarden.Procurement.ProcurementSourceTest do
     assert {:ok, ready_sources} = Procurement.list_procurement_sources_ready_for_scan(24)
 
     assert Enum.any?(ready_sources, &(&1.id == source.id))
+  end
+
+  test "auto configure failure marks source config failed and records diagnostics" do
+    original_browser_path = Application.get_env(:gnome_garden, :browser_path)
+    browser_path = fake_browser_path("Navigation failed: net::ERR_NAME_NOT_RESOLVED")
+
+    Application.put_env(:gnome_garden, :browser_path, browser_path)
+
+    on_exit(fn ->
+      if original_browser_path do
+        Application.put_env(:gnome_garden, :browser_path, original_browser_path)
+      else
+        Application.delete_env(:gnome_garden, :browser_path)
+      end
+
+      File.rm(browser_path)
+    end)
+
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Dead Auto Configure Source",
+        url: "https://dead-auto-configure.example",
+        source_type: :custom,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    assert {:ok, failed_source} = Procurement.auto_configure_procurement_source(source)
+
+    assert failed_source.config_status == :config_failed
+    assert failed_source.metadata["last_config_error"] =~ "ERR_NAME_NOT_RESOLVED"
+    assert failed_source.metadata["last_config_error_at"]
+
+    assert {:ok, sources_needing_configuration} =
+             Procurement.list_procurement_sources_needing_configuration()
+
+    refute Enum.any?(sources_needing_configuration, &(&1.id == source.id))
+  end
+
+  defp fake_browser_path(output) do
+    path =
+      Path.join(
+        System.tmp_dir!(),
+        "gnome-garden-fake-browser-#{System.unique_integer([:positive])}"
+      )
+
+    File.write!(path, """
+    #!/bin/sh
+    cat <<'EOF'
+    #{output}
+    EOF
+    exit 1
+    """)
+
+    File.chmod!(path, 0o755)
+    path
   end
 end

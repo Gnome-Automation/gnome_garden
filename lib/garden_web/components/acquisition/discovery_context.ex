@@ -262,15 +262,11 @@ defmodule GnomeGardenWeb.Components.Acquisition.DiscoveryContext do
 
   defp format_feedback_reason(feedback), do: to_string(feedback)
 
-  defp metadata_value(nil, _key), do: nil
-
   defp metadata_value(map, key) when is_map(map) do
     Map.get(map, key) || Map.get(map, String.to_existing_atom(key))
   rescue
     ArgumentError -> Map.get(map, key)
   end
-
-  defp metadata_value(_value, _key), do: nil
 
   defp format_value(nil), do: "-"
 

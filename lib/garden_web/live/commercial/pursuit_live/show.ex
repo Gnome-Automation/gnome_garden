@@ -5,7 +5,6 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   import GnomeGardenWeb.Commercial.Helpers
 
   alias GnomeGarden.Commercial
-  alias GnomeGarden.Operations
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
@@ -17,8 +16,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
     {:ok,
      socket
      |> assign(:page_title, pursuit.name)
-     |> assign(:pursuit, pursuit)
-     |> assign(:related_tasks, load_related_tasks(pursuit, socket.assigns.current_user))}
+     |> assign(:pursuit, pursuit)}
   end
 
   @impl true
@@ -42,8 +40,8 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
     {:noreply,
      assign(
        socket,
-       :related_tasks,
-       load_related_tasks(socket.assigns.pursuit, socket.assigns.current_user)
+       :pursuit,
+       load_pursuit!(socket.assigns.pursuit.id, socket.assigns.current_user)
      )}
   end
 
@@ -82,7 +80,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
       </.page_header>
 
       <.related_tasks_panel
-        tasks={@related_tasks}
+        tasks={@pursuit.tasks || []}
         description="Operator follow-up linked to this pursuit."
         empty_description="Estimating, proposal, outreach, and close-plan tasks will appear here."
         new_task_path={new_pursuit_task_path(@pursuit)}
@@ -101,6 +99,80 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
           >
             <.icon name={action.icon} class="size-4" /> {action.label}
           </.button>
+        </div>
+      </.section>
+
+      <.section
+        :if={referral_pursuit?(@pursuit)}
+        title="Lead Workspace"
+        description="Referral contacts, facilities, and suspected needs that should guide the next operator move."
+      >
+        <div class="grid gap-6 lg:grid-cols-2">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
+              Contacts
+            </p>
+            <div class="mt-3 space-y-3">
+              <div
+                :for={contact <- pursuit_contacts(@pursuit)}
+                class="rounded-2xl border border-base-300/70 bg-base-100/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]"
+              >
+                <p class="font-medium text-base-content">{contact_name(contact)}</p>
+                <p class="text-sm text-base-content/60">{to_string(contact.email || "No email")}</p>
+                <p class="text-xs text-base-content/45">
+                  {[contact.phone, contact.mobile] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")}
+                </p>
+              </div>
+              <.empty_state
+                :if={pursuit_contacts(@pursuit) == []}
+                icon="hero-user-group"
+                title="No contacts linked"
+                description="Add known stakeholders before deeper pursuit work."
+              />
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
+              Sites
+            </p>
+            <div class="mt-3 space-y-3">
+              <div
+                :for={site <- pursuit_sites(@pursuit)}
+                class="rounded-2xl border border-base-300/70 bg-base-100/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]"
+              >
+                <p class="font-medium text-base-content">{site.name}</p>
+                <p class="text-sm text-base-content/60">
+                  {[site.city, site.state, site.postal_code]
+                  |> Enum.reject(&is_nil/1)
+                  |> Enum.join(", ")}
+                </p>
+              </div>
+              <.empty_state
+                :if={pursuit_sites(@pursuit) == []}
+                icon="hero-building-office-2"
+                title="No sites linked"
+                description="Known facilities will appear here as they are added."
+              />
+            </div>
+          </div>
+        </div>
+
+        <div
+          :if={referral_suspected_needs(@pursuit) != []}
+          class="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-4 dark:border-emerald-400/20 dark:bg-emerald-400/10"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-200">
+            Suspected Needs
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span
+              :for={need <- referral_suspected_needs(@pursuit)}
+              class="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-emerald-800 shadow-sm dark:bg-white/10 dark:text-emerald-100"
+            >
+              {need}
+            </span>
+          </div>
         </div>
       </.section>
 
@@ -214,30 +286,9 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   end
 
   defp load_pursuit!(id, actor) do
-    case Commercial.get_pursuit(
-           id,
-           actor: actor,
-           load: [
-             :organization,
-             :weighted_value,
-             :proposal_count,
-             :stage_variant,
-             proposals: [:status_variant],
-             signal: [:status_variant]
-           ]
-         ) do
+    case Commercial.get_pursuit_workspace(id, actor: actor) do
       {:ok, pursuit} -> pursuit
       {:error, error} -> raise "failed to load pursuit #{id}: #{inspect(error)}"
-    end
-  end
-
-  defp load_related_tasks(%{id: pursuit_id}, actor) do
-    case Operations.list_tasks_by_pursuit(pursuit_id,
-           actor: actor,
-           load: [:status_variant, :priority_variant]
-         ) do
-      {:ok, tasks} -> tasks
-      {:error, error} -> raise "failed to load pursuit tasks: #{inspect(error)}"
     end
   end
 
@@ -264,6 +315,41 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
 
   defp can_create_proposal?(pursuit),
     do: pursuit.stage in [:qualified, :estimating, :proposed, :negotiating, :won, :reopened]
+
+  defp referral_pursuit?(%{signal: signal}) when not is_nil(signal) do
+    signal.source_channel == :referral or
+      metadata_value(signal.metadata, :intake_kind) == "manual_referral"
+  end
+
+  defp referral_pursuit?(_pursuit), do: false
+
+  defp pursuit_contacts(%{organization: %{people: people}}) when is_list(people), do: people
+  defp pursuit_contacts(_pursuit), do: []
+
+  defp pursuit_sites(%{organization: %{sites: sites}}) when is_list(sites), do: sites
+  defp pursuit_sites(_pursuit), do: []
+
+  defp referral_suspected_needs(%{signal: signal}) when not is_nil(signal) do
+    signal.metadata
+    |> metadata_value(:suspected_needs)
+    |> List.wrap()
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp referral_suspected_needs(_pursuit), do: []
+
+  defp contact_name(contact) do
+    case Map.get(contact, :full_name) do
+      name when is_binary(name) and name != "" -> name
+      _ -> to_string(contact.email || "Unknown contact")
+    end
+  end
+
+  defp metadata_value(map, key) when is_map(map) do
+    Map.get(map, key) || Map.get(map, to_string(key))
+  end
+
+  defp metadata_value(_map, _key), do: nil
 
   defp pursuit_actions(%{stage: :new}) do
     [

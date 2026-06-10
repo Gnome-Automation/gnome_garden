@@ -10,7 +10,6 @@ import Config
 config :cinder, default_theme: GnomeGardenWeb.CinderTheme
 config :ex_cldr, default_backend: GnomeGarden.Cldr
 config :ash_oban, pro?: false
-config :tzdata, :autoupdate, :disabled
 
 config :gnome_garden, serve_local_storage?: false, max_agent_run_timeout_ms: 600_000
 
@@ -94,9 +93,11 @@ config :gnome_garden, Oban,
   queues: [default: 10, procurement_configuring: 1, procurement_scanning: 2, mercury: 10],
   repo: GnomeGarden.Repo,
   plugins: [
+    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(60)},
     {Oban.Plugins.Cron,
      crontab: [
        {"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker},
+       {"17 * * * *", GnomeGarden.Agents.AgentEvalSweepWorker},
        {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker},
        {"0 6 * * *", GnomeGarden.Mercury.InvoiceSchedulerWorker}
      ],

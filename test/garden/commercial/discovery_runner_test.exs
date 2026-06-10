@@ -4,7 +4,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
   alias GnomeGarden.Agents
   alias GnomeGarden.Commercial
 
-  test "launch_discovery_program returns a clear AshLua porting error" do
+  test "launch_discovery_program processes seed candidates through AshLua discovery pipeline" do
     {:ok, discovery_program} =
       Commercial.create_discovery_program(%{
         name: "OC Packaging Sweep",
@@ -12,18 +12,35 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         target_regions: ["oc"],
         target_industries: ["packaging"],
         search_terms: ["packaging line automation orange county"],
-        watch_channels: ["job_board", "news_site"]
+        watch_channels: ["job_board", "news_site"],
+        metadata: %{
+          "seed_candidates" => [
+            %{
+              "company_name" => "Acme Packaging Automation",
+              "website" => "https://acme-packaging.example",
+              "location" => "Anaheim, CA",
+              "industry" => "packaging",
+              "signal" => "Hiring controls engineers for packaging line modernization.",
+              "company_description" =>
+                "Packaging manufacturer with PLC and SCADA modernization signals.",
+              "source_url" => "https://acme-packaging.example/careers"
+            }
+          ]
+        }
       })
 
-    assert {:error, message} =
-             Commercial.launch_discovery_program(
-               discovery_program,
-               launch_fun: fn _deployment_id, _opts ->
-                 flunk("launch_fun should not be called before the AshLua commercial port")
-               end
-             )
+    assert {:ok, result} = Commercial.launch_discovery_program(discovery_program)
+    assert result.mode == "processed_seed_candidates"
+    assert result.candidate_count == 1
+    assert result.saved == 1
 
-    assert message =~ "Commercial target discovery has not been ported to AshLua yet"
+    assert [%{ok: true, discovery_record_id: discovery_record_id, finding_id: finding_id}] =
+             result.results
+
+    assert {:ok, discovery_record} = Commercial.get_discovery_record(discovery_record_id)
+    assert discovery_record.name == "Acme Packaging Automation"
+    assert {:ok, finding} = GnomeGarden.Acquisition.get_finding(finding_id)
+    assert finding.source_discovery_record_id == discovery_record.id
   end
 
   test "launch_discovery_program refuses archived programs" do

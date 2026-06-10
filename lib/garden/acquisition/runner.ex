@@ -14,9 +14,6 @@ defmodule GnomeGarden.Acquisition.Runner do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Procurement
 
-  @source_defaults %{}
-  @program_defaults %{}
-
   def launch_source(source_or_id, opts \\ []) do
     actor = Keyword.get(opts, :actor)
 
@@ -110,12 +107,12 @@ defmodule GnomeGarden.Acquisition.Runner do
 
   defp source_deployment(source, actor) do
     deployment_from_metadata(source.metadata, actor) ||
-      deployment_by_name(default_source_deployment_name(source), actor)
+      {:error, "No agent deployment route configured."}
   end
 
   defp program_deployment(program, actor) do
     deployment_from_metadata(program.metadata, actor) ||
-      deployment_by_name(default_program_deployment_name(program), actor)
+      {:error, "No agent deployment route configured."}
   end
 
   defp deployment_from_metadata(metadata, actor) when is_map(metadata) do
@@ -147,21 +144,6 @@ defmodule GnomeGarden.Acquisition.Runner do
       {:error, error} ->
         {:error, error}
     end
-  end
-
-  defp deployment_by_name(nil, _actor), do: {:error, "No agent deployment route configured."}
-
-  defp deployment_by_name(name, actor) do
-    Agents.get_agent_deployment_by_name(name, actor: actor, load: [:agent])
-  end
-
-  defp default_source_deployment_name(source) do
-    Map.get(@source_defaults, source.source_kind) ||
-      Map.get(@source_defaults, source.source_family)
-  end
-
-  defp default_program_deployment_name(program) do
-    Map.get(@program_defaults, program.program_family)
   end
 
   defp source_task(source, deployment) do

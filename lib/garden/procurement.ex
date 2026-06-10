@@ -46,6 +46,8 @@ defmodule GnomeGarden.Procurement do
         action: :ready_for_scan,
         args: [:since_hours]
 
+      define :list_credential_blocked_procurement_sources, action: :credential_blocked
+
       define :list_procurement_sources_by_type,
         action: :by_type,
         args: [:source_type]

@@ -167,6 +167,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
     # Operations
     %{
+      id: "ops-review",
+      section: "Operations",
+      icon: "hero-clipboard-document-check",
+      label: "Review",
+      path: "/operations/review",
+      badge: 0,
+      hot: false,
+      match: ["/operations/review"]
+    },
+    %{
       id: "ops-tasks",
       section: "Operations",
       icon: "hero-inbox-stack",
@@ -293,6 +303,26 @@ defmodule GnomeGardenWeb.Components.RailNav do
     },
 
     # Settings
+    %{
+      id: "set-agent-evals",
+      section: "Settings",
+      icon: "hero-clipboard-document-check",
+      label: "Evals",
+      path: "/console/agents/evals",
+      badge: 0,
+      hot: false,
+      match: ["/console/agents/evals"]
+    },
+    %{
+      id: "set-agent-workflows",
+      section: "Settings",
+      icon: "hero-command-line",
+      label: "Workflows",
+      path: "/console/agents/workflows",
+      badge: 0,
+      hot: false,
+      match: ["/console/agents/workflows"]
+    },
     %{
       id: "set-agents",
       section: "Settings",

@@ -21,6 +21,11 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
      |> assign(:page_title, signal.title)
      |> assign(:finding_id, finding_id)
      |> assign(:signal, signal)
+     |> assign(
+       :organization_contacts,
+       load_organization_contacts(signal, socket.assigns.current_user)
+     )
+     |> assign(:organization_sites, load_organization_sites(signal, socket.assigns.current_user))
      |> assign(:related_tasks, load_related_tasks(signal, socket.assigns.current_user))}
   end
 
@@ -30,9 +35,19 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
 
     case transition_signal(signal, String.to_existing_atom(action), socket.assigns.current_user) do
       {:ok, updated_signal} ->
+        refreshed_signal = load_signal!(updated_signal.id, socket.assigns.current_user)
+
         {:noreply,
          socket
-         |> assign(:signal, load_signal!(updated_signal.id, socket.assigns.current_user))
+         |> assign(:signal, refreshed_signal)
+         |> assign(
+           :organization_contacts,
+           load_organization_contacts(refreshed_signal, socket.assigns.current_user)
+         )
+         |> assign(
+           :organization_sites,
+           load_organization_sites(refreshed_signal, socket.assigns.current_user)
+         )
          |> put_flash(:info, "Signal updated")}
 
       {:error, error} ->
@@ -144,6 +159,80 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
           </div>
         </.section>
       </div>
+
+      <.section
+        :if={manual_referral_signal?(@signal)}
+        title="Referral Context"
+        description="Contacts, sites, and suspected needs captured during manual lead intake."
+      >
+        <div class="grid gap-6 lg:grid-cols-2">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
+              Contacts
+            </p>
+            <div class="mt-3 space-y-3">
+              <div
+                :for={contact <- @organization_contacts}
+                class="rounded-2xl border border-base-300/70 bg-base-100/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]"
+              >
+                <p class="font-medium text-base-content">{contact_name(contact)}</p>
+                <p class="text-sm text-base-content/60">{contact.email || "No email"}</p>
+                <p class="text-xs text-base-content/45">
+                  {[contact.phone, contact.mobile] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")}
+                </p>
+              </div>
+              <.empty_state
+                :if={@organization_contacts == []}
+                icon="hero-user-group"
+                title="No contacts linked"
+                description="Add contacts from the organization page or future lead intake updates."
+              />
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
+              Sites
+            </p>
+            <div class="mt-3 space-y-3">
+              <div
+                :for={site <- @organization_sites}
+                class="rounded-2xl border border-base-300/70 bg-base-100/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]"
+              >
+                <p class="font-medium text-base-content">{site.name}</p>
+                <p class="text-sm text-base-content/60">
+                  {[site.city, site.state, site.postal_code]
+                  |> Enum.reject(&is_nil/1)
+                  |> Enum.join(", ")}
+                </p>
+              </div>
+              <.empty_state
+                :if={@organization_sites == []}
+                icon="hero-building-office-2"
+                title="No sites linked"
+                description="Known facilities will appear here as they are added."
+              />
+            </div>
+          </div>
+        </div>
+
+        <div
+          :if={referral_suspected_needs(@signal) != []}
+          class="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-4 dark:border-emerald-400/20 dark:bg-emerald-400/10"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-200">
+            Suspected Needs
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span
+              :for={need <- referral_suspected_needs(@signal)}
+              class="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-emerald-800 shadow-sm dark:bg-white/10 dark:text-emerald-100"
+            >
+              {need}
+            </span>
+          </div>
+        </div>
+      </.section>
 
       <.section
         :if={@signal.procurement_bid}
@@ -354,6 +443,26 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
     end
   end
 
+  defp load_organization_contacts(%{organization_id: organization_id}, actor)
+       when is_binary(organization_id) do
+    case Operations.list_people_for_organization(organization_id, actor: actor) do
+      {:ok, contacts} -> contacts
+      {:error, error} -> raise "failed to load signal organization contacts: #{inspect(error)}"
+    end
+  end
+
+  defp load_organization_contacts(_signal, _actor), do: []
+
+  defp load_organization_sites(%{organization_id: organization_id}, actor)
+       when is_binary(organization_id) do
+    case Operations.list_sites_for_organization(organization_id, actor: actor) do
+      {:ok, sites} -> sites
+      {:error, error} -> raise "failed to load signal organization sites: #{inspect(error)}"
+    end
+  end
+
+  defp load_organization_sites(_signal, _actor), do: []
+
   defp load_related_tasks(%{id: signal_id}, actor) do
     case Operations.list_tasks_by_signal(signal_id,
            actor: actor,
@@ -438,6 +547,30 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
     ]
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.join(" ")
+  end
+
+  defp manual_referral_signal?(signal) do
+    signal.source_channel == :referral or
+      metadata_value(signal.metadata, :intake_kind) == "manual_referral"
+  end
+
+  defp referral_suspected_needs(signal) do
+    signal.metadata
+    |> metadata_value(:suspected_needs)
+    |> List.wrap()
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(&to_string/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp contact_name(contact) do
+    [contact.first_name, contact.last_name]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
+    |> case do
+      "" -> "Unnamed contact"
+      name -> name
+    end
   end
 
   defp metadata_value(metadata, key) when is_map(metadata),

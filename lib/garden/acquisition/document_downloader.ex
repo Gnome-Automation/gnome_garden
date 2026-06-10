@@ -144,7 +144,7 @@ defmodule GnomeGarden.Acquisition.DocumentDownloader do
     end
   end
 
-  defp content_type_for_path(path), do: MIME.from_path(path) || "application/octet-stream"
+  defp content_type_for_path(path), do: MIME.from_path(path)
 
   defp login_page?(%Req.Response{body: body} = response) when is_binary(body) do
     content_type = content_type_for(response)

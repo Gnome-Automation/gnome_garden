@@ -184,6 +184,25 @@ defmodule GnomeGarden.Commercial.Pursuit do
                 load: [:organization, :site, :proposals]
               )
     end
+
+    read :workspace do
+      argument :id, :uuid, allow_nil?: false
+      get? true
+      filter expr(id == ^arg(:id))
+
+      prepare build(
+                load: [
+                  :site,
+                  :weighted_value,
+                  :proposal_count,
+                  :stage_variant,
+                  organization: [people: [:full_name], sites: []],
+                  proposals: [:status_variant],
+                  signal: [:status_variant],
+                  tasks: [:status_variant, :priority_variant]
+                ]
+              )
+    end
   end
 
   attributes do
@@ -318,6 +337,10 @@ defmodule GnomeGarden.Commercial.Pursuit do
     end
 
     has_many :proposals, GnomeGarden.Commercial.Proposal do
+      public? true
+    end
+
+    has_many :tasks, GnomeGarden.Operations.Task do
       public? true
     end
   end

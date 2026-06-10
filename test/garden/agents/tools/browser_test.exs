@@ -31,6 +31,13 @@ defmodule GnomeGarden.BrowserTest do
     refute "--headed" in Browser.default_args()
   end
 
+  test "auto mode remains headless when a display is available" do
+    Application.put_env(:gnome_garden, :browser_mode, :auto)
+    System.put_env("DISPLAY", ":0")
+
+    refute "--headed" in Browser.default_args()
+  end
+
   test "can be forced into headed mode" do
     Application.put_env(:gnome_garden, :browser_mode, :headed)
     System.delete_env("DISPLAY")

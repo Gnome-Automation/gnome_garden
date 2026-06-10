@@ -27,7 +27,7 @@ defmodule GnomeGarden.Execution.Changes.GenerateMaintenanceWorkOrder do
   end
 
   defp should_generate?(nil, _last_generated_due_on), do: false
-  defp should_generate?(next_due_on, nil), do: not is_nil(next_due_on)
+  defp should_generate?(_next_due_on, nil), do: true
 
   defp should_generate?(next_due_on, last_generated_due_on),
     do: Date.compare(next_due_on, last_generated_due_on) == :gt

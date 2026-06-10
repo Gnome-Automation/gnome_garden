@@ -65,6 +65,17 @@ arguments instead of adding `def some_table_query/0` helpers to a domain.
 Keep unavoidable UI query glue at the LiveView/component edge until it can be
 expressed as a real Ash action.
 
+For LiveView show/detail pages and operator workspaces, do not issue multiple
+meaningful domain reads from the LiveView just to assemble display context. If a
+screen needs a stable shape such as a pursuit workspace, signal review context,
+lead workspace, related tasks, contacts, sites, calculations, and status badge
+variants, model that shape as an intent-named Ash read action/preparation (for
+example `read :workspace`) and expose it through the domain (for example
+`define :get_pursuit_workspace`). The LiveView should call that one interface
+and render loaded relationships/calculations. Relationship access helpers in the
+web layer are acceptable only for presentation of already-loaded data, not for
+deciding what to query or load.
+
 Do not expose low-level state-machine transition actions as domain code
 interfaces when a higher-level workflow module owns the business process. For
 example, acquisition finding review transitions stay behind
@@ -966,8 +977,12 @@ action row should be intentionally designed for:
 1. **I run the server** - Don't start/stop Phoenix
 2. **Generate migrations**: `mix ash.codegen`
 3. **Apply migrations**: `mix ash.migrate`
-4. **During development**: run focused checks such as `mix test path:line` or
-   the smallest relevant test file.
+4. **During development**: batch related edits before running format/tests.
+   Prefer connected BEAM tools (`elixir_eval`, Tidewave) for quick runtime
+   inspection and shape checks. Then run `mix format` once for the touched files
+   and a focused check such as `mix test path:line` or the smallest relevant
+   test file. Avoid `mix format && mix test` after every tiny edit because it
+   repeatedly recompiles large parts of the Phoenix/Ash app.
 5. **Before opening a PR only**: run `mix precommit` as the final broad check.
 
 ## Code Shape

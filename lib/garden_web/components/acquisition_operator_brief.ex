@@ -385,25 +385,21 @@ defmodule GnomeGardenWeb.Components.AcquisitionOperatorBrief do
   defp disposition_reason(%{status: :parked}), do: "Parked for later review."
   defp disposition_reason(%{status: :suppressed}), do: "Suppressed as source or profile noise."
   defp disposition_reason(%{status: :rejected}), do: "Rejected by operator review."
-  defp disposition_reason(_finding), do: "Disposition recorded."
 
   defp disposition_tone(:promoted), do: :success
   defp disposition_tone(:parked), do: :info
   defp disposition_tone(:suppressed), do: :warning
   defp disposition_tone(:rejected), do: :error
-  defp disposition_tone(_status), do: :default
 
   defp disposition_reason_label(:rejected), do: "Rejection reason"
   defp disposition_reason_label(:suppressed), do: "Suppression reason"
   defp disposition_reason_label(:parked), do: "Parking reason"
   defp disposition_reason_label(:promoted), do: "Promotion note"
-  defp disposition_reason_label(_status), do: "Reason"
 
   defp terminal_readiness_label(:promoted), do: "Commercial review"
   defp terminal_readiness_label(:parked), do: "Parked"
   defp terminal_readiness_label(:suppressed), do: "Suppressed"
   defp terminal_readiness_label(:rejected), do: "Closed"
-  defp terminal_readiness_label(_status), do: "Disposition recorded"
 
   defp terminal_readiness_note(:promoted), do: "Already handed into commercial review."
   defp terminal_readiness_note(:parked), do: "Reopen when timing or evidence changes."
@@ -412,7 +408,6 @@ defmodule GnomeGardenWeb.Components.AcquisitionOperatorBrief do
     do: "Stays out of active review and can teach source or profile noise."
 
   defp terminal_readiness_note(:rejected), do: "No further action unless you reopen it."
-  defp terminal_readiness_note(_status), do: "No active review action pending."
 
   defp document_analysis(%{file: %{blob: %{metadata: metadata}}}) when is_map(metadata) do
     case metadata_value(metadata, "document_analysis") do

@@ -374,7 +374,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       "excluded_examples" =>
         excluded
         |> Enum.take(3)
-        |> Enum.map(&(bid_value(&1, :title) || bid_value(&1, "title")))
+        |> Enum.map(&bid_value(&1, :title))
         |> Enum.reject(&is_nil/1),
       "recorded_at" => DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
     }

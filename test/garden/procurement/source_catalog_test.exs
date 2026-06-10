@@ -13,7 +13,7 @@ defmodule GnomeGarden.Procurement.SourceCatalogTest do
     assert first_result.skipped_configuration == []
     assert length(first_result.ready) == 5
 
-    assert {:ok, sources} = Procurement.list_procurement_sources()
+    sources = first_result.ready
     assert length(sources) == 5
 
     assert Enum.all?(sources, fn source ->

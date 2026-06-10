@@ -1,14 +1,15 @@
 defmodule GnomeGarden.Commercial.DiscoveryRunner do
   @moduledoc """
-  Bridges commercial discovery programs onto durable automation runs.
+  Bridges commercial discovery programs onto the bounded AshLua discovery pipeline.
 
   The previous open-ended Jido target discovery worker has been removed. This
-  runner now returns a clear error until the commercial discovery flow is ported
-  to AshLua/AshAI.
+  runner now executes deterministic program candidates through AshLua and writes
+  results through Ash-backed commercial/acquisition actions.
   """
 
   alias GnomeGarden.Agents
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Commercial.DiscoveryPipeline
 
   @type launch_result :: %{
           program: GnomeGarden.Commercial.DiscoveryProgram.t(),
@@ -23,9 +24,9 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
 
     with {:ok, program} <- load_program(program_or_id, actor),
          :ok <- ensure_runnable(program),
-         :ok <- ensure_no_active_program_run(program) do
-      {:error,
-       "Commercial target discovery has not been ported to AshLua yet. Procurement source scanning remains available."}
+         :ok <- ensure_no_active_program_run(program),
+         {:ok, result} <- DiscoveryPipeline.run_program(program, opts) do
+      {:ok, result}
     end
   end
 
@@ -35,7 +36,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
     _ = actor
 
     {:error,
-     "Commercial target discovery has not been ported to AshLua yet. No Jido target discovery deployment will be created."}
+     "Commercial target discovery now runs through the bounded AshLua discovery pipeline and does not create Jido deployments."}
   end
 
   defp load_program(%{id: id}, actor), do: load_program(id, actor)

@@ -7,7 +7,6 @@ defmodule GnomeGarden.Agents.AgentTracker do
   """
 
   use GenServer
-  require Logger
 
   defmodule AgentEntry do
     @moduledoc false

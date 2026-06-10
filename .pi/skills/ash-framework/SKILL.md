@@ -70,6 +70,29 @@ Authorization policies won't work without an actor. Always pass `actor:` in:
 - Tests (or use `actor: nil` explicitly when testing unauthorized access)
 - Background jobs (resolve the actor and pass it through)
 
+### 5. LiveViews Render Ash Shapes; They Do Not Assemble Them
+
+For Phoenix LiveViews and components backed by Ash data, avoid scattering
+business-shaped reads and load decisions through the web layer.
+
+**Wrong pattern:** a show page loads a record, then separately calls domain
+functions for related tasks, contacts, sites, badge variants, counts, and source
+context because the template needs a richer workspace.
+
+**Correct pattern:** add an intent-named Ash read action/preparation such as
+`:workspace`, `:review_context`, `:operator_detail`, or `:dashboard`, load the
+relationships/calculations/aggregates there with `prepare build(load: ...)`, and
+expose it through the domain (`define :get_pursuit_workspace, action:
+:workspace, args: [:id]`). The LiveView should call one code interface and
+render already-loaded data.
+
+Cinder tables should pass `resource={...}` and `action={...}` directly when the
+shape is tabular. If special filtering/loading/sorting is durable business
+meaning, make it a read action instead of a helper function.
+
+Presentation helpers may format already-loaded values, but they must not decide
+what to query or load.
+
 ## Resource Template
 
 Every new resource should follow this skeleton:

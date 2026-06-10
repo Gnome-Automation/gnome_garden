@@ -307,7 +307,7 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
                "fullParentPathName" => "Department of Energy",
                "uiLink" => "https://sam.gov/opp/SAM-PLC-1/view",
                "postedDate" => "2026-05-01",
-               "responseDeadLine" => "2026-06-01T17:00:00-05:00",
+               "responseDeadLine" => "2026-12-01T17:00:00-05:00",
                "naicsCode" => opts[:params][:ncode],
                "placeOfPerformance" => %{
                  "city" => %{"name" => "Oak Ridge"},
@@ -420,7 +420,7 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
                "fullParentPathName" => "Department of Energy",
                "uiLink" => "https://sam.gov/opp/SAM-FILTER-1/view",
                "postedDate" => "2026-05-01",
-               "responseDeadLine" => "2026-06-01T17:00:00-05:00",
+               "responseDeadLine" => "2026-12-01T17:00:00-05:00",
                "naicsCode" => opts[:params][:ncode]
              }
            ]
