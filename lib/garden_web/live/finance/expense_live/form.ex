@@ -18,7 +18,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
      |> assign(:projects, load_projects(socket.assigns.current_user))
      |> assign(:work_orders, load_work_orders(socket.assigns.current_user))
      |> assign(:team_members, load_team_members(socket.assigns.current_user))
-     |> assign(:return_to, params["return_to"])
+     |> assign(:return_to, params["return_to"] || ~p"/finance/expenses")
      |> assign(:page_title, if(expense, do: "Edit Expense", else: "New Expense"))
      |> assign_form(params)}
   end
@@ -33,7 +33,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
           Capture non-labor cost against the right organization and execution context before approvals happen.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/expenses"}>
+          <.button navigate={@return_to}>
             Back to expenses
           </.button>
         </:actions>
@@ -181,7 +181,7 @@ defmodule GnomeGardenWeb.Finance.ExpenseLive.Form do
            :info,
            "Expense #{if socket.assigns.expense, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/finance/expenses/#{expense}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

@@ -87,7 +87,7 @@ defmodule GnomeGardenWeb.Finance.VendorLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, if(socket.assigns.vendor, do: "Vendor updated.", else: "Vendor created."))
-         |> push_navigate(to: ~p"/finance/vendors/#{vendor.id}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

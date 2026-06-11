@@ -242,7 +242,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Invoice #{success_label(socket.assigns.invoice, socket.assigns.agreement)}")
-         |> push_navigate(to: ~p"/finance/invoices/#{invoice}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

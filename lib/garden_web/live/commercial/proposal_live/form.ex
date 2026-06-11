@@ -155,7 +155,7 @@ defmodule GnomeGardenWeb.Commercial.ProposalLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Proposal #{if socket.assigns.proposal, do: "updated", else: "created"}")
-         |> push_navigate(to: ~p"/commercial/proposals/#{proposal}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

@@ -163,7 +163,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Form do
            :info,
            "Discovery program #{if socket.assigns.discovery_program, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/commercial/discovery-programs/#{discovery_program}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

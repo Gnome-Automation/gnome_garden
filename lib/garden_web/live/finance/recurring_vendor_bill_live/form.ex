@@ -59,7 +59,7 @@ defmodule GnomeGardenWeb.Finance.RecurringVendorBillLive.Form do
 
     case result do
       {:ok, saved} ->
-        {:noreply, push_navigate(socket, to: ~p"/finance/recurring-vendor-bills/#{saved.id}")}
+        {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Could not save: #{inspect(reason)}")}

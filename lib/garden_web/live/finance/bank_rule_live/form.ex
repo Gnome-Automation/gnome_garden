@@ -30,7 +30,7 @@ defmodule GnomeGardenWeb.Finance.BankRuleLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Bank rule #{if socket.assigns.rule, do: "updated", else: "created"}")
-         |> push_navigate(to: ~p"/finance/bank-rules")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

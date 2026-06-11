@@ -29,7 +29,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
   @max_file_size 25_000_000
 
   @impl true
-  def mount(%{"finding_id" => finding_id}, _session, socket) do
+  def mount(%{"finding_id" => finding_id} = params, _session, socket) do
     finding = load_finding!(finding_id, socket.assigns.current_user)
     link_params = default_link_params(finding)
     existing_documents = load_existing_documents(finding.id, socket.assigns.current_user)
@@ -37,6 +37,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
     {:ok,
      socket
      |> assign(:finding, finding)
+     |> assign(:return_to, params["return_to"] || ~p"/acquisition/findings")
      |> assign(:page_title, page_title(finding))
      |> assign(:document_noun, document_noun(finding))
      |> assign(:document_noun_plural, document_noun_plural(finding))
@@ -353,7 +354,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
           {:noreply,
            socket
            |> put_flash(:info, "Existing document linked to the finding")
-           |> push_navigate(to: ~p"/acquisition/findings/#{socket.assigns.finding.id}")}
+           |> push_navigate(to: socket.assigns.return_to)}
 
         {:error, error} ->
           {:noreply,
@@ -393,7 +394,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingDocumentLive.Form do
             {:noreply,
              socket
              |> put_flash(:info, "Document uploaded and linked to the finding")
-             |> push_navigate(to: ~p"/acquisition/findings/#{socket.assigns.finding.id}")}
+             |> push_navigate(to: socket.assigns.return_to)}
 
           {:error, form} ->
             {:noreply,

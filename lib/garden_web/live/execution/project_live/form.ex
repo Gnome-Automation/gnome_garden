@@ -175,7 +175,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Form do
            :info,
            "Project #{if socket.assigns.project, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/execution/projects/#{project}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

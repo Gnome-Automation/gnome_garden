@@ -204,7 +204,7 @@ defmodule GnomeGardenWeb.Finance.TimeEntryLive.Form do
            :info,
            "Time entry #{if socket.assigns.time_entry, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/finance/time-entries/#{time_entry}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

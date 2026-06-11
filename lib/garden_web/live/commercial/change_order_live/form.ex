@@ -30,6 +30,7 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Form do
      |> assign(:organizations, load_organizations(socket.assigns.current_user))
      |> assign(:agreements, load_agreements(socket.assigns.current_user))
      |> assign(:projects, load_projects(socket.assigns.current_user))
+     |> assign(:return_to, params["return_to"] || ~p"/commercial/change-orders")
      |> assign(:page_title, page_title(change_order, agreement, project))
      |> assign(
        :return_to,
@@ -208,7 +209,7 @@ defmodule GnomeGardenWeb.Commercial.ChangeOrderLive.Form do
            :info,
            "Change order #{if socket.assigns.change_order, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/commercial/change-orders/#{change_order}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

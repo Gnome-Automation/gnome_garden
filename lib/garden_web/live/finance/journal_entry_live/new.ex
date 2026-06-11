@@ -15,6 +15,7 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.New do
 
     {:ok,
      socket
+     |> assign(:return_to, params["return_to"] || ~p"/finance/journal-entries")
      |> assign(:page_title, "New Manual Journal Entry")
      |> assign(:accounts, accounts)
      |> assign(:date, Date.utc_today() |> Date.to_iso8601())
@@ -75,7 +76,7 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.New do
       {:noreply,
        socket
        |> put_flash(:info, if(mode == :post, do: "Entry posted.", else: "Entry saved as draft."))
-       |> push_navigate(to: ~p"/finance/journal-entries/#{final_entry.id}")}
+       |> push_navigate(to: socket.assigns.return_to)}
     else
       {:error, msg} when is_binary(msg) ->
         {:noreply, assign(socket, :error, msg)}

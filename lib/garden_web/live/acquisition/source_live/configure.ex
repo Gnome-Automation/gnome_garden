@@ -8,11 +8,12 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   alias GnomeGarden.Procurement
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     case load_source(id, socket.assigns.current_user) do
       {:ok, source} ->
         {:ok,
          socket
+     |> assign(:return_to, params["return_to"] || ~p"/acquisition/sources")
          |> assign(:page_title, "Configure Source")
          |> assign(:source, source)
          |> assign_form(config_params(source))}
@@ -21,7 +22,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
         {:ok,
          socket
          |> put_flash(:error, "Could not load source: #{inspect(error)}")
-         |> push_navigate(to: ~p"/acquisition/sources")}
+         |> push_navigate(to: socket.assigns.return_to)}
     end
   end
 
@@ -42,7 +43,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
         {:noreply,
          socket
          |> put_flash(:info, "Source configuration saved.")
-         |> push_navigate(to: ~p"/acquisition/sources")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, error} ->
         {:noreply,
@@ -61,13 +62,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
         {:noreply,
          socket
          |> put_flash(:info, "Discovery started for #{source.name}.")
-         |> push_navigate(to: ~p"/acquisition/sources")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:ok, %{mode: :already_pending}} ->
         {:noreply,
          socket
          |> put_flash(:info, "#{source.name} is already queued for discovery.")
-         |> push_navigate(to: ~p"/acquisition/sources")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not start discovery: #{inspect(error)}")}

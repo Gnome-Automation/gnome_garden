@@ -15,6 +15,7 @@ defmodule GnomeGardenWeb.Finance.VendorBillLive.Form do
      socket
      |> assign(:bill, bill)
      |> assign(:vendors, vendors)
+     |> assign(:return_to, params["return_to"] || ~p"/finance/vendor-bills")
      |> assign(:page_title, if(bill, do: "Edit Bill", else: "New Bill"))
      |> assign_form(params)}
   end
@@ -26,7 +27,7 @@ defmodule GnomeGardenWeb.Finance.VendorBillLive.Form do
       <.page_header eyebrow="Finance / Vendor Bills">
         {@page_title}
         <:actions>
-          <.button navigate={~p"/finance/vendor-bills"}>
+          <.button navigate={@return_to}>
             Back to bills
           </.button>
         </:actions>
@@ -103,7 +104,7 @@ defmodule GnomeGardenWeb.Finance.VendorBillLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, if(socket.assigns.bill, do: "Bill updated.", else: "Bill created."))
-         |> push_navigate(to: ~p"/finance/vendor-bills/#{bill.id}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

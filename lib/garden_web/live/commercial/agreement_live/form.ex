@@ -191,7 +191,7 @@ defmodule GnomeGardenWeb.Commercial.AgreementLive.Form do
            :info,
            "Agreement #{if socket.assigns.agreement, do: "updated", else: "created"}"
          )
-         |> push_navigate(to: ~p"/commercial/agreements/#{agreement}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

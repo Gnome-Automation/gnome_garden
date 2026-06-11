@@ -133,7 +133,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Signal #{if socket.assigns.signal, do: "updated", else: "created"}")
-         |> push_navigate(to: ~p"/commercial/signals/#{signal}")}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, form} ->
         {:noreply,

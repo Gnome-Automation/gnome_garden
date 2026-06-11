@@ -10,12 +10,13 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
   alias GnomeGarden.Mailer.InvoiceEmail
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     invoice = load_invoice!(id, socket.assigns.current_user)
     default_due = Date.add(Date.utc_today(), 30)
 
     {:ok,
      socket
+     |> assign(:return_to, params["return_to"] || ~p"/finance/invoices")
      |> assign(:page_title, "Review Invoice")
      |> assign(:invoice, invoice)
      |> assign(:due_on, invoice.due_on || default_due)}
@@ -184,7 +185,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Review do
       {:noreply,
        socket
        |> put_flash(:info, "Invoice issued and sent to client")
-       |> push_navigate(to: ~p"/finance/invoices/#{issued}")}
+       |> push_navigate(to: socket.assigns.return_to)}
     else
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Could not issue invoice: #{inspect(reason)}")}
