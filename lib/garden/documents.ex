@@ -9,6 +9,7 @@ defmodule GnomeGarden.Documents do
       define :get_document, action: :read, get_by: [:id]
       define :create_document, action: :create
       define :update_document, action: :update
+      define :archive_document, action: :archive
       define :destroy_document, action: :destroy
     end
 

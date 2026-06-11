@@ -40,7 +40,7 @@ defmodule GnomeGardenWeb.Finance.Reports.ProfitLossLive do
         Profit & Loss
         <:subtitle>Revenue and expense summary for the selected period.</:subtitle>
         <:actions>
-          <a href={~p"/finance/reports/profit-loss/export?from=#{@filter_from}&to=#{@filter_to}"}
+          <a href={~p"/finance/reports/profit-loss/export?from=#{@filter_from}&to=#{@filter_to}"} target="_blank" rel="noopener noreferrer"
              class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/10 dark:hover:bg-white/20">
             Export CSV
           </a>
@@ -49,9 +49,9 @@ defmodule GnomeGardenWeb.Finance.Reports.ProfitLossLive do
 
       <form phx-change="filter" class="mb-6 flex flex-wrap gap-3">
         <input type="date" name="from" value={@filter_from}
-          class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10" />
+          class="rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors cursor-pointer" />
         <input type="date" name="to" value={@filter_to}
-          class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10" />
+          class="rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors cursor-pointer" />
       </form>
 
       <div class="space-y-6">

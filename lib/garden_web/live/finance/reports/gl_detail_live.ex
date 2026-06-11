@@ -47,7 +47,7 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
         GL Detail
         <:subtitle>Transaction detail for a specific account within a date range.</:subtitle>
         <:actions>
-              <a href={~p"/finance/reports/gl-detail/export?account_id=#{@filter_account_id}&from=#{@filter_from}&to=#{@filter_to}"}
+              <a href={~p"/finance/reports/gl-detail/export?account_id=#{@filter_account_id}&from=#{@filter_from}&to=#{@filter_to}"} target="_blank" rel="noopener noreferrer"
                class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/10 dark:hover:bg-white/20">
               Export CSV
             </a>
@@ -57,7 +57,7 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
       <form phx-change="filter" class="mb-6 flex flex-wrap gap-3">
         <div class="relative">
           <select name="account_id"
-            class="block appearance-none rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 pr-8">
+            class="block appearance-none rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors cursor-pointer pr-8">
             <option value="">All Accounts</option>
             <%= for account <- @accounts do %>
               <option value={account.id} selected={@filter_account_id == to_string(account.id)}>
@@ -67,9 +67,9 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
           </select>
         </div>
         <input type="date" name="from" value={@filter_from}
-          class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10" />
+          class="rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors cursor-pointer" />
         <input type="date" name="to" value={@filter_to}
-          class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10" />
+          class="rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors cursor-pointer" />
       </form>
 
       <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">

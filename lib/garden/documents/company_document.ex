@@ -45,6 +45,11 @@ defmodule GnomeGarden.Documents.CompanyDocument do
       change {AshStorage.Changes.HandleFileArgument, argument: :file, attachment: :file}
     end
 
+    update :archive do
+      require_atomic? false
+      change set_attribute(:status, :archived)
+    end
+
     read :active do
       filter expr(status == :active)
       prepare build(sort: [name: :asc])
@@ -90,7 +95,7 @@ defmodule GnomeGarden.Documents.CompanyDocument do
       allow_nil? false
       default :active
       public? true
-      constraints one_of: [:active, :superseded, :expired]
+      constraints one_of: [:active, :superseded, :expired, :archived]
     end
 
     attribute :expiry_date, :date do

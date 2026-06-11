@@ -9,16 +9,16 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, docs} = Documents.list_active_documents()
+    {:ok, docs} = Documents.list_all_documents()
 
     {:ok,
      socket
      |> assign(:page_title, "Company Documents")
-     |> assign(:docs, docs)
      |> assign(:all_docs, docs)
-     |> assign(:show_all_versions, false)
      |> assign(:search, "")
      |> assign(:category_filter, "all")
+     |> assign(:status_filter, "all")
+     |> apply_filters()
      |> assign(:send_modal_open, false)
      |> assign(:send_doc, nil)
      |> assign(:send_to, "")
@@ -43,7 +43,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
      |> assign(:upload_modal_open, false)
      |> assign(:upload_error, nil)
      |> allow_upload(:file,
-       accept: ~w(.pdf),
+       accept: ~w(.pdf .doc .docx .xls .xlsx .ppt .pptx .jpg .jpeg .png),
        max_entries: 1,
        max_file_size: 25_000_000
      )}
@@ -60,24 +60,9 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
   end
 
   @impl true
-  def handle_event("toggle_all_versions", _params, socket) do
-    show_all = !socket.assigns.show_all_versions
-
-    docs =
-      if show_all do
-        {:ok, all} = Documents.list_all_documents()
-        all
-      else
-        {:ok, active} = Documents.list_active_documents()
-        active
-      end
-
-    {:noreply,
-     socket
-     |> assign(:show_all_versions, show_all)
-     |> assign(:all_docs, docs)
-     |> assign(:docs, docs)
-     |> apply_filters()}
+  def handle_event("filter_status", %{"status" => status}, socket) do
+    {:ok, all} = Documents.list_all_documents()
+    {:noreply, socket |> assign(:status_filter, status) |> assign(:all_docs, all) |> apply_filters()}
   end
 
   @impl true
@@ -267,6 +252,37 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
   end
 
   @impl true
+  def handle_event("archive_document", %{"doc-id" => doc_id}, socket) do
+    doc = Enum.find(socket.assigns.all_docs, &(to_string(&1.id) == doc_id))
+
+    case Documents.archive_document(doc, authorize?: false) do
+      {:ok, _} ->
+        docs = reload_docs(socket)
+        {:noreply, socket |> assign(:all_docs, docs) |> apply_filters() |> put_flash(:info, "Document archived")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to archive: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete_document", %{"doc-id" => doc_id}, socket) do
+    doc = Enum.find(socket.assigns.all_docs, &(to_string(&1.id) == doc_id))
+
+    doc_loaded = Ash.load!(doc, [file: []], authorize?: false)
+    if doc_loaded.file, do: Ash.destroy!(doc_loaded.file, authorize?: false)
+
+    case Documents.destroy_document(doc, authorize?: false) do
+      :ok ->
+        docs = reload_docs(socket)
+        {:noreply, socket |> assign(:all_docs, docs) |> apply_filters() |> put_flash(:info, "Document deleted")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to delete: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
   def handle_event("open_upload_modal", _params, socket) do
     {:noreply, assign(socket, upload_modal_open: true, upload_error: nil)}
   end
@@ -305,7 +321,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
           }
 
           try do
-            result =
+            outcome =
               Documents.create_document(%{
                 name: params["name"],
                 category: case params["category"] do
@@ -318,7 +334,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
                 file: file
               })
 
-            result
+            {:ok, outcome}
           after
             File.rm(preserved_path)
           end
@@ -338,7 +354,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
         {:error, reason} ->
           {:noreply, assign(socket, :upload_error, "Upload failed: #{inspect(reason)}")}
 
-        nil ->
+        _ ->
           {:noreply, assign(socket, :upload_error, "No file was processed")}
       end
     end
@@ -357,17 +373,18 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
           <button
             type="button"
             phx-click="open_upload_modal"
-            class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+            class="inline-flex items-center gap-x-1.5 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-colors cursor-pointer dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:active:bg-emerald-600"
           >
-            <.icon name="hero-arrow-up-tray" class="size-4 mr-1 inline" /> Upload Document
+            <.icon name="hero-arrow-up-tray" class="size-4" /> Upload Document
           </button>
-          <.button
+          <button
             :if={length(@selected_doc_ids) > 0}
+            type="button"
             phx-click="open_bulk_modal"
-            variant="primary"
+            class="inline-flex items-center gap-x-1.5 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-colors cursor-pointer dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:active:bg-emerald-600"
           >
-            Batch Send ({length(@selected_doc_ids)})
-          </.button>
+            <.icon name="hero-paper-airplane" class="size-4" /> Batch Send ({length(@selected_doc_ids)})
+          </button>
         </:actions>
       </.page_header>
 
@@ -380,13 +397,13 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
           phx-debounce="200"
           name="search"
           value={@search}
-          class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10"
+          class="rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content placeholder:text-base-content/40 outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors"
         />
 
         <form phx-change="filter_category">
           <select
             name="category"
-            class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 appearance-none"
+            class="appearance-none rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors cursor-pointer"
           >
             <option value="all">All Categories</option>
             <option value="tax" selected={@category_filter == "tax"}>Tax</option>
@@ -397,15 +414,18 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
           </select>
         </form>
 
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-          <input
-            type="checkbox"
-            phx-click="toggle_all_versions"
-            checked={@show_all_versions}
-            class="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600"
-          />
-          Show all versions
-        </label>
+        <form phx-change="filter_status">
+          <select
+            name="status"
+            class="appearance-none rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors cursor-pointer"
+          >
+            <option value="all" selected={@status_filter == "all"}>All Statuses</option>
+            <option value="active" selected={@status_filter == "active"}>Active</option>
+            <option value="archived" selected={@status_filter == "archived"}>Archived</option>
+            <option value="superseded" selected={@status_filter == "superseded"}>Superseded</option>
+            <option value="expired" selected={@status_filter == "expired"}>Expired</option>
+          </select>
+        </form>
       </div>
 
       <%!-- Documents Table --%>
@@ -472,6 +492,26 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
                     class="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/20 dark:text-gray-300 dark:hover:bg-white/10 cursor-pointer transition-colors"
                   >
                     History
+                  </button>
+                  <button
+                    :if={doc.status == :active}
+                    type="button"
+                    phx-click="archive_document"
+                    phx-value-doc-id={doc.id}
+                    phx-confirm="Archive this document? It will be hidden from the active list."
+                    class="rounded-md border border-amber-400 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-500/50 dark:text-amber-400 dark:hover:bg-amber-900/20 cursor-pointer transition-colors"
+                  >
+                    Archive
+                  </button>
+                  <button
+                    :if={doc.status == :archived}
+                    type="button"
+                    phx-click="delete_document"
+                    phx-value-doc-id={doc.id}
+                    phx-confirm="Permanently delete this document? This cannot be undone."
+                    class="rounded-md border border-red-400 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-500/50 dark:text-red-400 dark:hover:bg-red-900/20 cursor-pointer transition-colors"
+                  >
+                    Delete
                   </button>
                 </div>
               </td>
@@ -614,7 +654,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
             <h2 class="text-base font-semibold text-gray-900 dark:text-white">
               Version History — {@history_doc && @history_doc.name}
             </h2>
-            <button type="button" phx-click="close_history_modal" class="text-gray-400 hover:text-gray-600">
+            <button type="button" phx-click="close_history_modal" class="rounded-md p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-white/10 transition-colors cursor-pointer">
               <.icon name="hero-x-mark" class="size-5" />
             </button>
           </div>
@@ -656,7 +696,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
             <h2 class="text-base font-semibold text-gray-900 dark:text-white">
               Batch Send ({length(@selected_doc_ids)} document(s))
             </h2>
-            <button type="button" phx-click="close_bulk_modal" class="text-gray-400 hover:text-gray-600">
+            <button type="button" phx-click="close_bulk_modal" class="rounded-md p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-white/10 transition-colors cursor-pointer">
               <.icon name="hero-x-mark" class="size-5" />
             </button>
           </div>
@@ -693,14 +733,14 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
             </div>
 
             <div class="mt-5 flex justify-end gap-3">
-              <button type="button" phx-click="close_bulk_modal" class="text-sm/6 font-semibold text-gray-900 dark:text-white">
+              <button type="button" phx-click="close_bulk_modal" class="rounded-md px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer dark:text-gray-300 dark:ring-white/20 dark:hover:bg-white/10 dark:active:bg-white/20">
                 Cancel
               </button>
               <button
                 type="submit"
-                class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+                class="inline-flex items-center gap-x-1.5 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-colors cursor-pointer dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:active:bg-emerald-600"
               >
-                Send to {length(@bulk_selected_org_ids)} org(s)
+                <.icon name="hero-paper-airplane" class="size-4" /> Send to {length(@bulk_selected_org_ids)} org(s)
               </button>
             </div>
           </form>
@@ -714,7 +754,7 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
         <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
           <div class="mb-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-gray-900 dark:text-white">Upload Document</h2>
-            <button type="button" phx-click="close_upload_modal" class="text-gray-400 hover:text-gray-600">
+            <button type="button" phx-click="close_upload_modal" class="rounded-md p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-white/10 transition-colors cursor-pointer">
               <.icon name="hero-x-mark" class="size-5" />
             </button>
           </div>
@@ -773,8 +813,16 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
 
               <div class="sm:col-span-6">
                 <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">PDF File</label>
-                <.live_file_input upload={@uploads.file} class="mt-1 block w-full text-sm text-gray-600 dark:text-gray-300" />
-                <p :for={entry <- @uploads.file.entries} class="mt-1 text-xs text-gray-500">
+                <label class="mt-1 flex flex-col items-center justify-center w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-white/20 bg-gray-50 dark:bg-white/5 px-6 py-8 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/10 transition-colors">
+                  <.icon name="hero-document-arrow-up" class="mx-auto size-8 text-gray-400 dark:text-gray-500 mb-2" />
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Click to browse for a PDF
+                  </span>
+                  <span class="mt-1 text-xs text-gray-500 dark:text-gray-400">PDF, Word, Excel, PowerPoint, JPG, PNG · max 25 MB</span>
+                  <.live_file_input upload={@uploads.file} class="sr-only" />
+                </label>
+                <p :for={entry <- @uploads.file.entries} class="mt-2 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400 font-medium">
+                  <.icon name="hero-document-check" class="size-4 shrink-0" />
                   {entry.client_name} ({Float.round(entry.client_size / 1_000_000, 1)} MB)
                 </p>
                 <p :for={err <- upload_errors(@uploads.file)} class="mt-1 text-xs text-red-600">
@@ -788,14 +836,14 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
             </div>
 
             <div class="mt-6 flex justify-end gap-3">
-              <button type="button" phx-click="close_upload_modal" class="text-sm/6 font-semibold text-gray-900 dark:text-white">
+              <button type="button" phx-click="close_upload_modal" class="rounded-md px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer dark:text-gray-300 dark:ring-white/20 dark:hover:bg-white/10 dark:active:bg-white/20">
                 Cancel
               </button>
               <button
                 type="submit"
-                class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+                class="inline-flex items-center gap-x-1.5 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-colors cursor-pointer dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:active:bg-emerald-600"
               >
-                Upload
+                <.icon name="hero-arrow-up-tray" class="size-4" /> Upload
               </button>
             </div>
           </form>
@@ -810,13 +858,15 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
   defp apply_filters(socket) do
     search = String.downcase(socket.assigns.search)
     cat = socket.assigns.category_filter
+    status = socket.assigns.status_filter
 
     filtered =
       socket.assigns.all_docs
       |> Enum.filter(fn doc ->
         name_match = search == "" or String.contains?(String.downcase(doc.name), search)
         cat_match = cat == "all" or to_string(doc.category) == cat
-        name_match and cat_match
+        status_match = status == "all" or to_string(doc.status) == status
+        name_match and cat_match and status_match
       end)
 
     assign(socket, :docs, filtered)
@@ -836,5 +886,11 @@ defmodule GnomeGardenWeb.Documents.DocumentsLive do
   defp status_badge_class(:active), do: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
   defp status_badge_class(:superseded), do: "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400"
   defp status_badge_class(:expired), do: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+  defp status_badge_class(:archived), do: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
   defp status_badge_class(_), do: "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400"
+
+  defp reload_docs(_socket) do
+    {:ok, docs} = Documents.list_all_documents()
+    docs
+  end
 end

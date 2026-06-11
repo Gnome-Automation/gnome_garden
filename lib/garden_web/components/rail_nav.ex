@@ -466,7 +466,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
     },
     %{
       id: "fin-report-pl",
-      section: "Finance",
+      section: "Reports",
       icon: "hero-chart-bar",
       label: "Profit & Loss",
       tooltip: "Revenue and expense summary for any date range",
@@ -477,7 +477,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
     },
     %{
       id: "fin-report-bs",
-      section: "Finance",
+      section: "Reports",
       icon: "hero-chart-bar",
       label: "Balance Sheet",
       tooltip: "Assets, liabilities, and equity as of any date",
@@ -488,7 +488,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
     },
     %{
       id: "fin-report-gl",
-      section: "Finance",
+      section: "Reports",
       icon: "hero-magnifying-glass",
       label: "GL Detail",
       tooltip: "Transaction detail for any account within a date range",
@@ -496,6 +496,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
       badge: 0,
       hot: false,
       match: ["/finance/reports/gl-detail"]
+    },
+    %{
+      id: "fin-report-profitability",
+      section: "Reports",
+      icon: "hero-arrow-trending-up",
+      label: "Profitability",
+      tooltip: "Revenue, labor cost, and margin by client or project",
+      path: "/finance/reports/project-profitability",
+      badge: 0,
+      hot: false,
+      match: ["/finance/reports/project-profitability"]
     },
     %{
       id: "fin-billing-reminders",
@@ -555,6 +566,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
       String.starts_with?(path, "/commercial") -> "Commercial"
       String.starts_with?(path, "/operations") -> "Operations"
       String.starts_with?(path, "/execution") -> "Operations"
+      String.starts_with?(path, "/finance/reports") -> "Reports"
       String.starts_with?(path, "/finance") -> "Finance"
       String.starts_with?(path, "/console") -> "Settings"
       String.starts_with?(path, "/settings") -> "Settings"

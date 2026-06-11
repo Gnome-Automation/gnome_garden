@@ -35,7 +35,7 @@ defmodule GnomeGardenWeb.Finance.Reports.BalanceSheetLive do
         Balance Sheet
         <:subtitle>Assets, liabilities, and equity as of the selected date.</:subtitle>
         <:actions>
-          <a href={~p"/finance/reports/balance-sheet/export?as_of=#{@as_of}"}
+          <a href={~p"/finance/reports/balance-sheet/export?as_of=#{@as_of}"} target="_blank" rel="noopener noreferrer"
              class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:ring-white/10 dark:hover:bg-white/20">
             Export CSV
           </a>
@@ -45,7 +45,7 @@ defmodule GnomeGardenWeb.Finance.Reports.BalanceSheetLive do
       <form phx-change="filter" class="mb-6 flex gap-3 items-center">
         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">As of</label>
         <input type="date" name="as_of" value={@as_of}
-          class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10" />
+          class="rounded-md bg-base-100 px-3 py-1.5 text-sm text-base-content outline-1 -outline-offset-1 outline-base-content/20 hover:bg-base-200 focus:outline-2 focus:-outline-offset-2 focus:outline-primary transition-colors cursor-pointer" />
       </form>
 
       <div class="space-y-6">
