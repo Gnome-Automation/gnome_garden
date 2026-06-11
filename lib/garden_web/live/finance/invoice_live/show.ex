@@ -19,6 +19,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
      |> assign(:invoice, invoice)
      |> assign(:show_line_form, false)
      |> assign(:line_form, empty_line_form())
+     |> assign(:editing_line_id, nil)
      |> assign(:return_to, params["return_to"] || ~p"/finance/invoices")}
   end
 
@@ -190,12 +191,12 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
                 name="line[line_kind]"
                 class="w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500"
               >
-                <option value="service">Service</option>
-                <option value="labor">Labor</option>
-                <option value="expense">Expense</option>
-                <option value="material">Material</option>
-                <option value="adjustment">Adjustment</option>
-                <option value="other">Other</option>
+                <option value="service" selected={@line_form.line_kind == "service"}>Service</option>
+                <option value="labor" selected={@line_form.line_kind == "labor"}>Labor</option>
+                <option value="expense" selected={@line_form.line_kind == "expense"}>Expense</option>
+                <option value="material" selected={@line_form.line_kind == "material"}>Material</option>
+                <option value="adjustment" selected={@line_form.line_kind == "adjustment"}>Adjustment</option>
+                <option value="other" selected={@line_form.line_kind == "other"}>Other</option>
               </select>
             </div>
             <div class="sm:col-span-1">
@@ -237,7 +238,9 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             </div>
             <div class="sm:col-span-6 flex justify-end gap-3">
               <.button type="button" phx-click="toggle_line_form">Cancel</.button>
-              <.button type="submit" variant="primary">Add Line</.button>
+              <.button type="submit" variant="primary">
+                {if @editing_line_id, do: "Save Line", else: "Add Line"}
+              </.button>
             </div>
           </form>
         </div>
@@ -277,16 +280,25 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
                   {format_amount(line.unit_price)} each
                 </p>
               </div>
-              <button
-                :if={@invoice.status not in [:paid, :void]}
-                phx-click="delete_line"
-                phx-value-line_id={line.id}
-                data-confirm="Remove this line?"
-                class="text-base-content/30 hover:text-red-500 transition-colors"
-                title="Remove line"
-              >
-                <.icon name="hero-x-mark" class="size-4" />
-              </button>
+              <div :if={@invoice.status not in [:paid, :void]} class="flex items-center gap-2">
+                <button
+                  phx-click="edit_line"
+                  phx-value-line_id={line.id}
+                  class="text-base-content/30 hover:text-emerald-500 transition-colors"
+                  title="Edit line"
+                >
+                  <.icon name="hero-pencil-square" class="size-4" />
+                </button>
+                <button
+                  phx-click="delete_line"
+                  phx-value-line_id={line.id}
+                  data-confirm="Remove this line?"
+                  class="text-base-content/30 hover:text-red-500 transition-colors"
+                  title="Remove line"
+                >
+                  <.icon name="hero-x-mark" class="size-4" />
+                </button>
+              </div>
             </div>
           </div>
           <div :if={@invoice.status not in [:paid, :void] and not @show_line_form} class="flex justify-center pt-2">
@@ -364,13 +376,33 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   @impl true
   def handle_event("toggle_line_form", _params, socket) do
-    {:noreply, assign(socket, show_line_form: !socket.assigns.show_line_form, line_form: empty_line_form())}
+    {:noreply, assign(socket, show_line_form: !socket.assigns.show_line_form, line_form: empty_line_form(), editing_line_id: nil)}
+  end
+
+  @impl true
+  def handle_event("edit_line", %{"line_id" => line_id}, socket) do
+    line = Enum.find(socket.assigns.invoice.invoice_lines, &(&1.id == line_id))
+
+    if line do
+      form = %{
+        description: line.description || "",
+        line_kind: to_string(line.line_kind || "service"),
+        quantity: Decimal.to_string(line.quantity),
+        unit_price: Decimal.to_string(line.unit_price),
+        discount_percent: if(line.discount_percent, do: Decimal.to_string(line.discount_percent), else: "")
+      }
+
+      {:noreply, assign(socket, show_line_form: true, line_form: form, editing_line_id: line_id)}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
   def handle_event("save_line", %{"line" => params}, socket) do
     invoice = socket.assigns.invoice
     actor = socket.assigns.current_user
+    editing_line_id = socket.assigns.editing_line_id
 
     quantity = Decimal.new(params["quantity"] || "1")
     unit_price = Decimal.new(params["unit_price"] || "0")
@@ -380,21 +412,39 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
       v -> Decimal.new(v)
     end
     line_total = apply_discount(Decimal.mult(quantity, unit_price), discount_percent)
-    next_number = length(invoice.invoice_lines || []) + 1
 
-    attrs = %{
-      invoice_id: invoice.id,
-      organization_id: invoice.organization_id,
-      description: params["description"],
-      line_kind: String.to_existing_atom(params["line_kind"] || "other"),
-      quantity: quantity,
-      unit_price: unit_price,
-      discount_percent: discount_percent,
-      line_total: line_total,
-      line_number: next_number
-    }
+    result =
+      if editing_line_id do
+        case Finance.get_invoice_line(editing_line_id, actor: actor) do
+          {:ok, line} ->
+            Finance.update_invoice_line(line, %{
+              description: params["description"],
+              line_kind: String.to_existing_atom(params["line_kind"] || "other"),
+              quantity: quantity,
+              unit_price: unit_price,
+              discount_percent: discount_percent,
+              line_total: line_total
+            }, actor: actor)
+          {:error, reason} -> {:error, reason}
+        end
+      else
+        next_number = length(invoice.invoice_lines || []) + 1
+        Finance.create_invoice_line(%{
+          invoice_id: invoice.id,
+          organization_id: invoice.organization_id,
+          description: params["description"],
+          line_kind: String.to_existing_atom(params["line_kind"] || "other"),
+          quantity: quantity,
+          unit_price: unit_price,
+          discount_percent: discount_percent,
+          line_total: line_total,
+          line_number: next_number
+        }, actor: actor)
+      end
 
-    case Finance.create_invoice_line(attrs, actor: actor) do
+    flash_msg = if editing_line_id, do: "Line updated", else: "Line added"
+
+    case result do
       {:ok, _line} ->
         updated_invoice = load_invoice!(invoice.id, actor)
         totals = compute_invoice_totals(updated_invoice)
@@ -406,14 +456,15 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
              |> assign(:invoice, load_invoice!(invoice.id, actor))
              |> assign(:show_line_form, false)
              |> assign(:line_form, empty_line_form())
-             |> put_flash(:info, "Line added")}
+             |> assign(:editing_line_id, nil)
+             |> put_flash(:info, flash_msg)}
 
           {:error, reason} ->
-            {:noreply, put_flash(socket, :error, "Line created but could not update invoice totals: #{inspect(reason)}")}
+            {:noreply, put_flash(socket, :error, "Line saved but could not update invoice totals: #{inspect(reason)}")}
         end
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Could not add line: #{inspect(reason)}")}
+        {:noreply, put_flash(socket, :error, "Could not save line: #{inspect(reason)}")}
     end
   end
 
@@ -602,7 +653,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp invoice_actions(_invoice), do: []
 
-  defp empty_line_form, do: %{description: "", quantity: "1", unit_price: "", discount_percent: ""}
+  defp empty_line_form, do: %{description: "", line_kind: "service", quantity: "1", unit_price: "", discount_percent: ""}
 
   defp apply_discount(subtotal, nil), do: subtotal
   defp apply_discount(subtotal, discount) do
