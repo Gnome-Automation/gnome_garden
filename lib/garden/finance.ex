@@ -165,6 +165,27 @@ defmodule GnomeGarden.Finance do
       define :list_journal_entry_lines, action: :read
       define :create_journal_entry_line, action: :create
     end
+
+    resource GnomeGarden.Finance.Vendor do
+      define :list_vendors, action: :read
+      define :get_vendor, action: :read, get_by: [:id]
+      define :create_vendor, action: :create
+      define :update_vendor, action: :update
+      define :deactivate_vendor, action: :deactivate
+      define :destroy_vendor, action: :destroy
+    end
+
+    resource GnomeGarden.Finance.VendorBill do
+      define :list_vendor_bills, action: :read
+      define :get_vendor_bill, action: :read, get_by: [:id]
+      define :create_vendor_bill, action: :create
+      define :update_vendor_bill, action: :update
+      define :approve_vendor_bill, action: :approve
+      define :pay_vendor_bill, action: :mark_paid
+      define :void_vendor_bill, action: :void
+      define :reopen_vendor_bill, action: :reopen
+      define :destroy_vendor_bill, action: :destroy
+    end
   end
 
   def create_payment_schedule_item(attrs, _opts \\ []) do

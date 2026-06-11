@@ -443,6 +443,39 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/bank-rules"]
     },
     %{
+      id: "fin-ap-aging",
+      section: "Finance",
+      icon: "hero-clock",
+      label: "AP Aging",
+      tooltip: "AP Aging — outstanding vendor bills grouped by how overdue they are",
+      path: "/finance/ap-aging",
+      badge: 0,
+      hot: false,
+      match: ["/finance/ap-aging"]
+    },
+    %{
+      id: "fin-vendors",
+      section: "Finance",
+      icon: "hero-building-storefront",
+      label: "Vendors",
+      tooltip: "Vendors — manage suppliers and service providers that send you bills",
+      path: "/finance/vendors",
+      badge: 0,
+      hot: false,
+      match: ["/finance/vendors"]
+    },
+    %{
+      id: "fin-vendor-bills",
+      section: "Finance",
+      icon: "hero-inbox-arrow-down",
+      label: "Vendor Bills",
+      tooltip: "Vendor bills — track bills received from vendors, approve and mark paid",
+      path: "/finance/vendor-bills",
+      badge: 0,
+      hot: false,
+      match: ["/finance/vendor-bills"]
+    },
+    %{
       id: "fin-chart-of-accounts",
       section: "Finance",
       icon: "hero-list-bullet",

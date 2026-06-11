@@ -91,7 +91,7 @@ defmodule GnomeGardenWeb.Finance.Reports.GlDetailLive do
               <% end %>
               <%= for line <- @lines do %>
                 <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5"
-                  phx-click={JS.navigate(~p"/finance/journal-entries/#{line.journal_entry_id}")}>
+                  phx-click={JS.navigate(~p"/finance/journal-entries/#{line.journal_entry_id}?return_to=/finance/reports/gl-detail?account_id=#{@filter_account_id}&from=#{@filter_from}&to=#{@filter_to}")}>
                   <td class="px-4 py-2 text-sm font-mono text-gray-900 dark:text-white">
                     <%= line.journal_entry.entry_number %>
                   </td>

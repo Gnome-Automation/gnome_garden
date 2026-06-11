@@ -6,13 +6,16 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.Show do
   alias GnomeGarden.Finance
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
+    return_to = Map.get(params, "return_to", ~p"/finance/journal-entries")
+
     case Finance.get_journal_entry(id, authorize?: false, load: [lines: [:account]]) do
       {:ok, entry} ->
         {:ok,
          socket
          |> assign(:page_title, entry.entry_number)
-         |> assign(:entry, entry)}
+         |> assign(:entry, entry)
+         |> assign(:return_to, return_to)}
 
       {:error, _} ->
         {:ok,
@@ -51,7 +54,7 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.Show do
               Post Entry
             </.button>
           <% end %>
-          <.button navigate={~p"/finance/journal-entries"}>
+          <.button navigate={@return_to}>
             Back
           </.button>
         </:actions>
