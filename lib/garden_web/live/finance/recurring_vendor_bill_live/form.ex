@@ -91,6 +91,10 @@ defmodule GnomeGardenWeb.Finance.RecurringVendorBillLive.Form do
                     <option :for={v <- @vendors} value={v.id} selected={@form["vendor_id"] == v.id}>{v.name}</option>
                   </select>
                 </div>
+                <p class="mt-1.5 text-xs text-base-content/50">
+                  Vendor not listed?
+                  <.link navigate={~p"/finance/vendors/new?return_to=#{@return_to}"} class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 underline">Create a new vendor</.link>
+                </p>
               </div>
 
               <div class="sm:col-span-6">

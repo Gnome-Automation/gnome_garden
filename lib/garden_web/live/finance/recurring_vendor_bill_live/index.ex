@@ -35,22 +35,15 @@ defmodule GnomeGardenWeb.Finance.RecurringVendorBillLive.Index do
         </:actions>
       </.page_header>
 
-      <div class="mb-4 flex gap-2 flex-wrap">
-        <button
-          :for={opt <- [{"all", "All"}, {"active", "Active"}, {"paused", "Paused"}, {"stopped", "Stopped"}]}
-          phx-click="filter"
-          phx-value-status={elem(opt, 0)}
-          class={[
-            "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-            if(@filter_status == elem(opt, 0),
-              do: "bg-emerald-600 text-white",
-              else: "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
-            )
-          ]}
-        >
-          {elem(opt, 1)}
-        </button>
-      </div>
+      <form phx-change="filter" class="mb-4">
+        <select name="status"
+          class="appearance-none rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500">
+          <option value="all" selected={@filter_status == "all"}>All</option>
+          <option value="active" selected={@filter_status == "active"}>Active</option>
+          <option value="paused" selected={@filter_status == "paused"}>Paused</option>
+          <option value="stopped" selected={@filter_status == "stopped"}>Stopped</option>
+        </select>
+      </form>
 
       <div :if={Enum.empty?(@templates)} class="rounded-2xl border border-zinc-200 dark:border-white/10 px-6 py-12 text-center">
         <.icon name="hero-arrow-path" class="mx-auto size-8 text-base-content/30 mb-3" />
