@@ -6,10 +6,12 @@ defmodule GnomeGardenWeb.Finance.VendorLive.Form do
   @impl true
   def mount(params, _session, socket) do
     vendor = if id = params["id"], do: load_vendor!(id)
+    return_to = params["return_to"] || ~p"/finance/vendors"
 
     {:ok,
      socket
      |> assign(:vendor, vendor)
+     |> assign(:return_to, return_to)
      |> assign(:page_title, if(vendor, do: "Edit Vendor", else: "New Vendor"))
      |> assign_form()}
   end
@@ -21,8 +23,8 @@ defmodule GnomeGardenWeb.Finance.VendorLive.Form do
       <.page_header eyebrow="Finance / Vendors">
         {@page_title}
         <:actions>
-          <.button navigate={~p"/finance/vendors"}>
-            Back to vendors
+          <.button navigate={@return_to}>
+            Cancel
           </.button>
         </:actions>
       </.page_header>
