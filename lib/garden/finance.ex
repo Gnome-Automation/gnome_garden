@@ -196,6 +196,7 @@ defmodule GnomeGarden.Finance do
       define :resume_recurring_vendor_bill, action: :resume
       define :stop_recurring_vendor_bill, action: :stop
       define :advance_recurring_vendor_bill_schedule, action: :advance_schedule
+      define :destroy_recurring_vendor_bill, action: :destroy
     end
   end
 
