@@ -78,7 +78,7 @@ defmodule GnomeGardenWeb.Finance.RecurringVendorBillLive.Show do
           <.button :if={@template.status == :active} phx-click="pause">
             <.icon name="hero-pause" class="size-4" /> Pause
           </.button>
-          <.button :if={@template.status == :paused} phx-click="resume" variant="primary">
+          <.button :if={@template.status in [:paused, :stopped]} phx-click="resume" variant="primary">
             <.icon name="hero-play" class="size-4" /> Resume
           </.button>
           <.button :if={@template.status in [:active, :paused]} phx-click="stop" data-confirm="Stop this recurring bill? It will no longer generate new bills.">
