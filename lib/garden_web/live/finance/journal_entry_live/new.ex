@@ -9,7 +9,8 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.New do
   @empty_line %{"account_id" => "", "description" => "", "debit" => "", "credit" => ""}
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
+    return_to = params["return_to"] || ~p"/finance/journal-entries"
     accounts = load_active_accounts()
 
     {:ok,
@@ -213,7 +214,7 @@ defmodule GnomeGardenWeb.Finance.JournalEntryLive.New do
         New Manual Entry
         <:subtitle>Create a manual double-entry journal entry.</:subtitle>
         <:actions>
-          <.button navigate={~p"/finance/journal-entries"}>Cancel</.button>
+          <.button navigate={@return_to}>Cancel</.button>
         </:actions>
       </.page_header>
 

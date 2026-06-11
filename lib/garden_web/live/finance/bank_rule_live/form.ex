@@ -7,11 +7,13 @@ defmodule GnomeGardenWeb.Finance.BankRuleLive.Form do
   @impl true
   def mount(params, _session, socket) do
     rule = if id = params["id"], do: load_rule!(id)
+    return_to = params["return_to"] || ~p"/finance/bank-rules"
 
     {:ok,
      socket
      |> assign(:page_title, if(rule, do: "Edit Bank Rule", else: "New Bank Rule"))
      |> assign(:rule, rule)
+     |> assign(:return_to, return_to)
      |> assign_form()}
   end
 
@@ -63,7 +65,7 @@ defmodule GnomeGardenWeb.Finance.BankRuleLive.Form do
       <.page_header eyebrow="Finance">
         {@page_title}
         <:actions>
-          <.button navigate={~p"/finance/bank-rules"}>Cancel</.button>
+          <.button navigate={@return_to}>Cancel</.button>
         </:actions>
       </.page_header>
 
@@ -175,7 +177,7 @@ defmodule GnomeGardenWeb.Finance.BankRuleLive.Form do
             <.button type="submit" phx-disable-with="Saving...">
               {if @rule, do: "Update Rule", else: "Create Rule"}
             </.button>
-            <.button navigate={~p"/finance/bank-rules"}>Cancel</.button>
+            <.button navigate={@return_to}>Cancel</.button>
           </div>
         </.form>
       </.section>
