@@ -8,7 +8,8 @@ defmodule GnomeGardenWeb.Endpoint do
     store: :cookie,
     key: "_gnome_garden_key",
     signing_salt: "ZkLCsP8X",
-    same_site: "Lax"
+    same_site: "Lax",
+    max_age: 14 * 24 * 60 * 60
   ]
 
   socket "/live", Phoenix.LiveView.Socket,

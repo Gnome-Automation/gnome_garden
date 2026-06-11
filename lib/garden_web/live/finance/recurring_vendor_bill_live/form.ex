@@ -93,7 +93,7 @@ defmodule GnomeGardenWeb.Finance.RecurringVendorBillLive.Form do
                 </div>
                 <p class="mt-1.5 text-xs text-base-content/50">
                   Vendor not listed?
-                  <.link navigate={~p"/finance/vendors/new?return_to=#{~p"/finance/recurring-vendor-bills/new"}"} class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 underline">Create a new vendor</.link>
+                  <.link navigate={"/finance/vendors/new?return_to=/finance/recurring-vendor-bills/new"} class="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 underline">Create a new vendor</.link>
                 </p>
               </div>
 

@@ -65,7 +65,7 @@ defmodule GnomeGardenWeb.Finance.VendorLive.Form do
 
         <.section body_class="px-6 py-5 sm:px-7">
           <.form_actions
-            cancel_path={~p"/finance/vendors"}
+            cancel_path={@return_to}
             submit_label={if @vendor, do: "Update Vendor", else: "Create Vendor"}
           />
         </.section>
