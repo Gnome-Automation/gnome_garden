@@ -84,7 +84,7 @@ defmodule GnomeGardenWeb.Finance.RecurringVendorBillLive.Show do
           <.button :if={@template.status in [:active, :paused]} phx-click="stop" data-confirm="Stop this recurring bill? It will no longer generate new bills.">
             <.icon name="hero-stop" class="size-4" /> Stop
           </.button>
-          <.button :if={@template.status == :stopped} phx-click="delete" data-confirm="Permanently delete this template?">
+          <.button phx-click="delete" data-confirm="Permanently delete this template?">
             <.icon name="hero-trash" class="size-4" /> Delete
           </.button>
         </div>
