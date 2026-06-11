@@ -132,10 +132,10 @@ defmodule GnomeGardenWeb.Finance.RecurringVendorBillLive.Show do
     Finance.get_recurring_vendor_bill!(id, authorize?: false, load: [:vendor])
   end
 
-  defp status_variant(:active), do: "success"
-  defp status_variant(:paused), do: "warning"
-  defp status_variant(:stopped), do: "neutral"
-  defp status_variant(_), do: "neutral"
+  defp status_variant(:active), do: :success
+  defp status_variant(:paused), do: :warning
+  defp status_variant(:stopped), do: :default
+  defp status_variant(_), do: :default
 
 
 end
