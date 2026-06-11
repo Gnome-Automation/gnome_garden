@@ -207,7 +207,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
                 step="0.01"
                 min="0.01"
                 required
-                class="w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500"
+                class="w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 hover:bg-gray-50 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 dark:hover:bg-white/10 transition-colors"
               />
             </div>
             <div class="sm:col-span-1">
@@ -219,7 +219,20 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
                 step="0.01"
                 min="0"
                 required
-                class="w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500"
+                class="w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 hover:bg-gray-50 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 dark:hover:bg-white/10 transition-colors"
+              />
+            </div>
+            <div class="sm:col-span-1">
+              <label class="block text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40 mb-1">Discount %</label>
+              <input
+                type="number"
+                name="line[discount_percent]"
+                value={@line_form.discount_percent}
+                step="0.01"
+                min="0"
+                max="100"
+                placeholder="0"
+                class="w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 hover:bg-gray-50 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 dark:hover:bg-white/10 transition-colors"
               />
             </div>
             <div class="sm:col-span-6 flex justify-end gap-3">
@@ -252,6 +265,9 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
               </p>
               <p class="text-sm text-base-content/50">
                 {format_atom(line.line_kind)} · Qty {Decimal.to_string(line.quantity)}
+                <%= if line.discount_percent && Decimal.positive?(line.discount_percent) do %>
+                  · <span class="text-emerald-600 dark:text-emerald-400">{Decimal.to_string(line.discount_percent)}% off</span>
+                <% end %>
               </p>
             </div>
             <div class="flex items-start gap-4">
@@ -358,7 +374,12 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
     quantity = Decimal.new(params["quantity"] || "1")
     unit_price = Decimal.new(params["unit_price"] || "0")
-    line_total = Decimal.mult(quantity, unit_price)
+    discount_percent = case params["discount_percent"] do
+      nil -> nil
+      "" -> nil
+      v -> Decimal.new(v)
+    end
+    line_total = apply_discount(Decimal.mult(quantity, unit_price), discount_percent)
     next_number = length(invoice.invoice_lines || []) + 1
 
     attrs = %{
@@ -368,6 +389,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
       line_kind: String.to_existing_atom(params["line_kind"] || "other"),
       quantity: quantity,
       unit_price: unit_price,
+      discount_percent: discount_percent,
       line_total: line_total,
       line_number: next_number
     }
@@ -559,7 +581,14 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp invoice_actions(%{status: :issued}) do
     [
+      %{action: "write_off", label: "Write Off", icon: "hero-archive-box-x-mark", variant: nil, title: "Write off this invoice as uncollectable — posts Bad Debt Expense to the GL"},
       %{action: "void", label: "Void", icon: "hero-x-circle", variant: nil, title: "Cancel this invoice — a credit note will be generated automatically"}
+    ]
+  end
+
+  defp invoice_actions(%{status: :partial}) do
+    [
+      %{action: "write_off", label: "Write Off", icon: "hero-archive-box-x-mark", variant: nil, title: "Write off the remaining balance as uncollectable — posts Bad Debt Expense to the GL"}
     ]
   end
 
@@ -573,7 +602,13 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp invoice_actions(_invoice), do: []
 
-  defp empty_line_form, do: %{description: "", quantity: "1", unit_price: ""}
+  defp empty_line_form, do: %{description: "", quantity: "1", unit_price: "", discount_percent: ""}
+
+  defp apply_discount(subtotal, nil), do: subtotal
+  defp apply_discount(subtotal, discount) do
+    multiplier = Decimal.sub(Decimal.new("1"), Decimal.div(discount, Decimal.new("100")))
+    Decimal.mult(subtotal, multiplier) |> Decimal.round(2)
+  end
 
   defp invoice_status_description(%{status: :draft}),
     do: "Draft — review the line items, then issue it to send to the customer."
@@ -597,6 +632,9 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   defp transition_invoice(invoice, :reopen, actor),
     do: Finance.reopen_invoice(invoice, actor: actor)
+
+  defp transition_invoice(invoice, :write_off, actor),
+    do: Finance.write_off_invoice(invoice, actor: actor)
 
   defp compute_invoice_totals(invoice) do
     # line_total_amount is the Ash aggregate (sum of all line totals).

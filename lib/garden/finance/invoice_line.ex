@@ -58,6 +58,7 @@ defmodule GnomeGarden.Finance.InvoiceLine do
         :description,
         :quantity,
         :unit_price,
+        :discount_percent,
         :line_total,
         :notes
       ]
@@ -77,6 +78,7 @@ defmodule GnomeGarden.Finance.InvoiceLine do
         :description,
         :quantity,
         :unit_price,
+        :discount_percent,
         :line_total,
         :notes
       ]
@@ -132,6 +134,11 @@ defmodule GnomeGarden.Finance.InvoiceLine do
     attribute :line_total, :decimal do
       allow_nil? false
       public? true
+    end
+
+    attribute :discount_percent, :decimal do
+      public? true
+      constraints min: 0, max: 100
     end
 
     attribute :notes, :string do
