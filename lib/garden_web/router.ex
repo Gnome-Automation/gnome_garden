@@ -283,6 +283,7 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/reports/balance-sheet", Finance.Reports.BalanceSheetLive
       live "/finance/reports/gl-detail", Finance.Reports.GlDetailLive
       live "/finance/reports/project-profitability", Finance.Reports.ProjectProfitabilityLive
+      live "/finance/reports/reconciliation", Finance.Reports.ReconciliationLive
 
       # Finance - Mercury Bank
       live "/finance/mercury", Finance.MercuryLive

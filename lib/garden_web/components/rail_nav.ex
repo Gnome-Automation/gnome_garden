@@ -542,6 +542,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/reports/project-profitability"]
     },
     %{
+      id: "fin-report-reconciliation",
+      section: "Reports",
+      icon: "hero-scale",
+      label: "Reconciliation",
+      tooltip: "Bank transaction reconciliation summary — matched, reconciled, and unmatched for the period",
+      path: "/finance/reports/reconciliation",
+      badge: 0,
+      hot: false,
+      match: ["/finance/reports/reconciliation"]
+    },
+    %{
       id: "fin-billing-reminders",
       section: "Finance",
       icon: "hero-bell",
