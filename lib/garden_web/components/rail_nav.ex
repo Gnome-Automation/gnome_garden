@@ -325,7 +325,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
       id: "fin-recurring",
       section: "Finance",
       icon: "hero-arrow-path",
-      label: "Recurring",
+      label: "Recurring Invoices",
       tooltip: "Recurring invoice templates — auto-generate invoices on a schedule",
       path: "/finance/recurring-invoices",
       badge: 0,
