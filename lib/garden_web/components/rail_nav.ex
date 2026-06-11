@@ -476,6 +476,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/vendor-bills"]
     },
     %{
+      id: "fin-recurring-vendor-bills",
+      section: "Finance",
+      icon: "hero-arrow-path",
+      label: "Recurring Bills",
+      tooltip: "Recurring vendor bill templates — auto-generate draft bills on a schedule",
+      path: "/finance/recurring-vendor-bills",
+      badge: 0,
+      hot: false,
+      match: ["/finance/recurring-vendor-bills"]
+    },
+    %{
       id: "fin-chart-of-accounts",
       section: "Finance",
       icon: "hero-list-bullet",

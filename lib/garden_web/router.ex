@@ -277,6 +277,10 @@ defmodule GnomeGardenWeb.Router do
       live "/finance/vendor-bills/new", Finance.VendorBillLive.Form, :new
       live "/finance/vendor-bills/:id", Finance.VendorBillLive.Show, :show
       live "/finance/vendor-bills/:id/edit", Finance.VendorBillLive.Form, :edit
+      live "/finance/recurring-vendor-bills", Finance.RecurringVendorBillLive.Index, :index
+      live "/finance/recurring-vendor-bills/new", Finance.RecurringVendorBillLive.Form, :new
+      live "/finance/recurring-vendor-bills/:id", Finance.RecurringVendorBillLive.Show, :show
+      live "/finance/recurring-vendor-bills/:id/edit", Finance.RecurringVendorBillLive.Form, :edit
 
       # Finance - Reports
       live "/finance/reports/profit-loss", Finance.Reports.ProfitLossLive

@@ -186,6 +186,17 @@ defmodule GnomeGarden.Finance do
       define :reopen_vendor_bill, action: :reopen
       define :destroy_vendor_bill, action: :destroy
     end
+
+    resource GnomeGarden.Finance.RecurringVendorBill do
+      define :list_recurring_vendor_bills, action: :read
+      define :get_recurring_vendor_bill, action: :read, get_by: [:id]
+      define :create_recurring_vendor_bill, action: :create
+      define :update_recurring_vendor_bill, action: :update
+      define :pause_recurring_vendor_bill, action: :pause
+      define :resume_recurring_vendor_bill, action: :resume
+      define :stop_recurring_vendor_bill, action: :stop
+      define :advance_recurring_vendor_bill_schedule, action: :advance_schedule
+    end
   end
 
   def create_payment_schedule_item(attrs, _opts \\ []) do
