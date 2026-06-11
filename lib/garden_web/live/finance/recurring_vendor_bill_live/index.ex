@@ -55,7 +55,7 @@ defmodule GnomeGardenWeb.Finance.RecurringVendorBillLive.Index do
         <.link
           :for={t <- @templates}
           navigate={~p"/finance/recurring-vendor-bills/#{t.id}"}
-          class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-emerald-400/40"
+          class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4 transition hover:border-emerald-300 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] dark:hover:border-emerald-400/40"
         >
           <div class="space-y-1">
             <p class="font-medium text-base-content">{t.description}</p>
