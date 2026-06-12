@@ -94,6 +94,8 @@ Supplier catalog fit:
 
 Tenancy fit:
 
+- Global user login should remain common through `Accounts.User`.
+- Tenant/customer-account memberships should control which customer contexts a user can enter.
 - Global organization identity can remain shared CRM/vendor knowledge.
 - Customer-private operating data should belong to a tenant/customer-account boundary rather than relying on organization records alone.
 - Default tenancy boundary should likely be customer account/company with many sites/plants, not one tenant per site, unless plant-level isolation is required.

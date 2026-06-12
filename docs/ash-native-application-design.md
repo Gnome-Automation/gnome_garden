@@ -252,6 +252,9 @@ Ash provides two tenancy approaches:
 
 Recommended direction for GnomeGarden:
 
+- Use one common login portal with global `Accounts.User` records.
+- Use tenant/customer-account memberships to decide which tenants a user can enter.
+- Show a tenant selector after login when a user has more than one accessible customer/account/plant.
 - Use a first-class customer account/tenant boundary instead of treating every `Organization` as a tenant.
 - Default tenant boundary should likely be customer/company account with many sites/plants.
 - Carry `scope:` through all new UI, worker, import, and agent code so actor/tenant/context are consistent.

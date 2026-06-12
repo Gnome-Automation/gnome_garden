@@ -157,6 +157,61 @@ Some records connect global knowledge to tenant-private work:
 
 Rule: tenant-private records may point to global records, but global records should not require a tenant-private parent unless they are explicitly customer-specific.
 
+## Login and tenant selection model
+
+Use one common login portal by default.
+
+Recommended login flow:
+
+```text
+User logs in at app.gnome.garden/login
+→ AshAuthentication authenticates the global user
+→ app loads tenant/customer memberships
+→ if the user has one tenant, enter that tenant automatically
+→ if the user has multiple tenants, show a tenant/customer/plant selector
+→ selected tenant becomes the current Ash scope
+→ all tenant-scoped actions run with that tenant
+```
+
+This avoids separate customer-specific login systems while still keeping customer data isolated at the Ash action/resource layer.
+
+Recommended identity model:
+
+```text
+Accounts.User
+  global login identity
+
+CustomerAccount / Tenant
+  customer data boundary
+
+TenantMembership
+  links user/person/team member to tenant
+  role: gnome_admin, gnome_operator, account_manager, customer_admin, customer_viewer, subcontractor
+```
+
+Prefer **global users + tenant memberships** for GnomeGarden.
+
+Pros:
+
+- one login for Gnome staff across all customers
+- one Gnome user can support many customer accounts/plants
+- one customer user can access multiple plants if permitted
+- easier admin, password reset, audit, and future SSO
+- easier cross-tenant Gnome reporting through explicit internal actions
+
+Avoid tenant-scoped user tables at first. Tenant-scoped users allow the same email to exist independently per customer, but they make Gnome staff access, shared login, support, and SSO more complicated.
+
+Customer-specific portals can still be added later as aliases or preselected entry points:
+
+```text
+app.gnome.garden/login
+customer.gnome.garden/login
+robinson.gnome.garden
+ocwd.gnome.garden
+```
+
+Those should preselect branding or tenant context, not create a separate auth model unless a future enterprise requirement demands it.
+
 ## How Gnome staff access should work
 
 Gnome staff need to see the tenant data they are allowed to operate on, and some Gnome roles need cross-tenant visibility.
@@ -179,6 +234,8 @@ Execution.list_work_orders(scope: scope)
 ```
 
 Ash extracts actor/tenant/context from the scope and tenant-scoped resources automatically filter to the current tenant.
+
+For a user with multiple memberships, changing selected customer/plant should create a new scope and clear tenant-specific LiveView assigns/cache. Tenant switching should be explicit in the UI so users always know which customer account they are operating in.
 
 For Gnome admin/reporting work, prefer explicit internal actions instead of globally disabling tenancy:
 
@@ -251,13 +308,13 @@ Recommended default: tenant = customer account/company, site = plant/facility in
 
 ## Membership and authorization
 
-Add a membership concept if customer users ever access the app:
+Add a membership concept before customer users access the app:
 
 ```text
 TenantMembership
   tenant_id
   user_id or person_id
-  role: gnome_admin, gnome_operator, customer_admin, customer_viewer, subcontractor
+  role: gnome_admin, gnome_operator, account_manager, customer_admin, customer_viewer, subcontractor
   status
 ```
 
@@ -305,8 +362,9 @@ For a technician visiting another plant:
 2. Add `tenant_id` / `customer_account_id` intentionally to new plant-private resources when they are created.
 3. Avoid direct Repo/Ash calls that would make future tenancy unsafe.
 4. Use `scope:` consistently in new code even before full multitenancy is implemented.
-5. Design organization/customer account membership before exposing customer login.
-6. Revisit whether to use attribute or schema tenancy before adding external customer users.
+5. Design global user + tenant membership before exposing customer login.
+6. Add a tenant selector for users with multiple memberships.
+7. Revisit whether to use attribute or schema tenancy before adding external customer users.
 
 ## Open decisions
 
@@ -321,6 +379,9 @@ For a technician visiting another plant:
 
 Design new plant/customer-private features as if attribute multitenancy will be used. That means:
 
+- use one common login portal
+- keep `Accounts.User` global
+- add tenant/customer-account memberships for access
 - carry `scope:` everywhere
 - add clear tenant ownership relationships
 - use Ash policies
