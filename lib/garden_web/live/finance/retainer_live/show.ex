@@ -126,7 +126,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Show do
             </.button>
           <% end %>
           <%= if @retainer.status == :issued do %>
-            <.button phx-click="mark_paid" data-confirm="Mark this retainer as paid?">
+            <.button phx-click="mark_paid" data-confirm="Mark this retainer as paid?" variant="primary">
               Mark Paid
             </.button>
           <% end %>
