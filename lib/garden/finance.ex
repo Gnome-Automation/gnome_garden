@@ -198,6 +198,22 @@ defmodule GnomeGarden.Finance do
       define :advance_recurring_vendor_bill_schedule, action: :advance_schedule
       define :destroy_recurring_vendor_bill, action: :destroy
     end
+
+    resource GnomeGarden.Finance.Retainer do
+      define :list_retainers, action: :read
+      define :get_retainer, action: :read, get_by: [:id]
+      define :create_retainer, action: :create
+      define :update_retainer, action: :update
+      define :issue_retainer, action: :issue
+      define :mark_retainer_paid, action: :mark_paid
+      define :exhaust_retainer, action: :exhaust
+      define :reopen_retainer, action: :reopen
+      define :void_retainer, action: :void
+      define :list_retainers_for_organization, action: :for_organization, args: [:organization_id]
+      define :list_available_retainers_for_organization, action: :available_for_organization, args: [:organization_id]
+    end
+
+    resource GnomeGarden.Finance.RetainerApplication
   end
 
   def create_payment_schedule_item(attrs, _opts \\ []) do
