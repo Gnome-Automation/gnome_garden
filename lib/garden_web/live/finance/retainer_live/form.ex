@@ -71,7 +71,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Form do
               <.input field={@form[:received_on]} type="date" label="Received On" />
             </div>
             <div class="sm:col-span-3 flex items-end pb-1">
-              <label class="flex items-center gap-2 cursor-pointer">
+              <label class="flex items-center gap-2 cursor-pointer select-none rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                 <input
                   type="checkbox"
                   name={@form[:auto_apply].name}
