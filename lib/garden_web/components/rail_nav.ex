@@ -574,17 +574,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/finance/reports/reconciliation"]
     },
-    %{
-      id: "fin-billing-reminders",
-      section: "Finance",
-      icon: "hero-bell",
-      label: "Billing Reminders",
-      tooltip: "Configure automatic payment reminder emails — set how many days after due date to remind clients",
-      path: "/finance/settings",
-      badge: 0,
-      hot: false,
-      match: ["/finance/settings"]
-    },
     # Settings
     %{
       id: "set-billing",
@@ -644,6 +633,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
       String.starts_with?(path, "/operations") -> "Operations"
       String.starts_with?(path, "/execution") -> "Operations"
       String.starts_with?(path, "/finance/reports") -> "Reports"
+      String.starts_with?(path, "/finance/settings") -> "Settings"
       String.starts_with?(path, "/finance") -> "Finance"
       String.starts_with?(path, "/console") -> "Settings"
       String.starts_with?(path, "/settings") -> "Settings"
