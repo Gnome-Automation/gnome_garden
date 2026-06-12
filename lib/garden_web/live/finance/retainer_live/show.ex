@@ -121,7 +121,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Show do
             Back
           </.button>
           <%= if @retainer.status == :draft do %>
-            <.button phx-click="issue" data-confirm="Issue this retainer and send email to client?">
+            <.button phx-click="issue" data-confirm="Issue this retainer and send email to client?" variant="primary">
               Issue
             </.button>
           <% end %>
