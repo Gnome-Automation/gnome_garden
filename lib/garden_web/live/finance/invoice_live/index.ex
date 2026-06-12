@@ -5,6 +5,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
   import GnomeGardenWeb.Finance.Helpers
 
   alias GnomeGarden.Finance
+  require Ash.Query
 
   @impl true
   def mount(_params, _session, socket) do
@@ -169,9 +170,9 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
         url_state={@url_state}
         theme={GnomeGardenWeb.CinderTheme}
         page_size={25}
+        query={GnomeGarden.Finance.Invoice |> Ash.Query.sort(due_on: :desc)}
         query_opts={[
-          load: [:status_variant, organization: [], agreement: [], project: [], work_order: []],
-          sort: [due_on: :desc]
+          load: [:status_variant, organization: [], agreement: [], project: [], work_order: []]
         ]}
         click={fn row -> JS.navigate(~p"/finance/invoices/#{row}") end}
       >
