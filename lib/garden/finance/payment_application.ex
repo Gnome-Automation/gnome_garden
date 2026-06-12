@@ -45,8 +45,11 @@ defmodule GnomeGarden.Finance.PaymentApplication do
       ]
 
       change after_action(fn _changeset, payment_application, context ->
-        reconcile_invoice(payment_application.invoice_id, context.actor)
-        {:ok, payment_application}
+        case reconcile_invoice(payment_application.invoice_id, context.actor) do
+          :ok -> {:ok, payment_application}
+          {:ok, _} -> {:ok, payment_application}
+          {:error, reason} -> {:error, reason}
+        end
       end)
     end
 
@@ -62,8 +65,11 @@ defmodule GnomeGarden.Finance.PaymentApplication do
       ]
 
       change after_action(fn _changeset, payment_application, context ->
-        reconcile_invoice(payment_application.invoice_id, context.actor)
-        {:ok, payment_application}
+        case reconcile_invoice(payment_application.invoice_id, context.actor) do
+          :ok -> {:ok, payment_application}
+          {:ok, _} -> {:ok, payment_application}
+          {:error, reason} -> {:error, reason}
+        end
       end)
     end
 
@@ -119,18 +125,23 @@ defmodule GnomeGarden.Finance.PaymentApplication do
     case GnomeGarden.Finance.get_invoice(invoice_id,
            actor: actor,
            authorize?: false,
-           load: [:applied_amount]
+           load: [:applied_amount, :retainer_applied_amount]
          ) do
       {:ok, invoice} when invoice.status in [:issued, :partial] ->
-        applied = invoice.applied_amount || Decimal.new("0")
+        total_applied =
+          Decimal.add(
+            invoice.applied_amount || Decimal.new("0"),
+            invoice.retainer_applied_amount || Decimal.new("0")
+          )
+
         total = invoice.total_amount || Decimal.new("0")
 
         cond do
-          Decimal.compare(applied, total) != :lt ->
+          Decimal.compare(total_applied, total) != :lt ->
             Ash.update(invoice, %{}, action: :mark_paid, actor: actor, authorize?: false)
 
-          Decimal.compare(applied, Decimal.new("0")) == :gt ->
-            balance = Decimal.sub(total, applied)
+          Decimal.compare(total_applied, Decimal.new("0")) == :gt ->
+            balance = Decimal.sub(total, total_applied)
             Ash.update(invoice, %{balance_amount: balance}, action: :partial, actor: actor, authorize?: false)
 
           true ->

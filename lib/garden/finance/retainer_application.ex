@@ -29,9 +29,12 @@ defmodule GnomeGarden.Finance.RetainerApplication do
       accept [:retainer_id, :invoice_id, :amount, :applied_on]
 
       change after_action(fn _changeset, application, context ->
-        reconcile_invoice(application.invoice_id, context.actor)
-        reconcile_retainer(application.retainer_id, context.actor)
-        {:ok, application}
+        with {:ok_or_noop} <- wrap_reconcile(reconcile_invoice(application.invoice_id, context.actor)),
+             {:ok_or_noop} <- wrap_reconcile(reconcile_retainer(application.retainer_id, context.actor)) do
+          {:ok, application}
+        else
+          {:error, reason} -> {:error, reason}
+        end
       end)
     end
 
@@ -43,9 +46,12 @@ defmodule GnomeGarden.Finance.RetainerApplication do
         app = changeset.data
 
         Ash.Changeset.after_action(changeset, fn _cs, result ->
-          reverse_invoice(app.invoice_id, app.amount, context.actor)
-          reopen_retainer(app.retainer_id, context.actor)
-          {:ok, result}
+          with {:ok_or_noop} <- wrap_reconcile(reverse_invoice(app.invoice_id, app.amount, context.actor)),
+               {:ok_or_noop} <- wrap_reconcile(reopen_retainer(app.retainer_id, context.actor)) do
+            {:ok, result}
+          else
+            {:error, reason} -> {:error, reason}
+          end
         end)
       end)
     end
@@ -142,9 +148,19 @@ defmodule GnomeGarden.Finance.RetainerApplication do
 
   defp reverse_invoice(invoice_id, amount, actor) do
     case Ash.get(GnomeGarden.Finance.Invoice, invoice_id, actor: actor, authorize?: false) do
-      {:ok, invoice} when invoice.status == :paid ->
+      {:ok, invoice} when invoice.status in [:paid, :partial] ->
         new_balance = Decimal.add(invoice.balance_amount || Decimal.new("0"), amount)
-        Ash.update(invoice, %{balance_amount: new_balance}, action: :unmark_paid, actor: actor, authorize?: false)
+        total = invoice.total_amount || Decimal.new("0")
+
+        cond do
+          Decimal.compare(new_balance, total) == :eq ->
+            # Fully restored — transition back to issued
+            Ash.update(invoice, %{balance_amount: new_balance}, action: :unmark_paid, actor: actor, authorize?: false)
+
+          true ->
+            # Still partially covered — stay partial with updated balance
+            Ash.update(invoice, %{balance_amount: new_balance}, action: :partial, actor: actor, authorize?: false)
+        end
 
       _ ->
         :ok
@@ -160,4 +176,10 @@ defmodule GnomeGarden.Finance.RetainerApplication do
         :ok
     end
   end
+
+  # Normalises reconciliation helper return values so errors propagate while
+  # {:ok, _record} (successful Ash.update) and :ok (no-op) both continue.
+  defp wrap_reconcile(:ok), do: {:ok_or_noop}
+  defp wrap_reconcile({:ok, _}), do: {:ok_or_noop}
+  defp wrap_reconcile({:error, reason}), do: {:error, reason}
 end
