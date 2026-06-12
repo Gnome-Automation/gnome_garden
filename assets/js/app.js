@@ -24,6 +24,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/gnome_garden"
 import topbar from "../vendor/topbar"
+import InactivityLogout from "./hooks/inactivity_logout"
 
 // ShowModal hook — calls showModal() to render in browser's top layer
 // This is required because <dialog open> only shows inline, not as a modal
@@ -52,7 +53,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ShowModal, TabStripScroll},
+  hooks: {...colocatedHooks, ShowModal, TabStripScroll, InactivityLogout},
 })
 
 // Show progress bar on live navigation and form submits
