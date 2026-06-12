@@ -3,6 +3,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
 
   import GnomeGardenWeb.Finance.Helpers
 
+  require Ash.Query
   require Logger
 
   alias GnomeGarden.Finance
@@ -12,6 +13,8 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
   @impl true
   def mount(%{"id" => id} = params, _session, socket) do
     invoice = load_invoice!(id, socket.assigns.current_user)
+    retainer_balance = load_retainer_balance(invoice, socket.assigns.current_user)
+    available_retainers = load_available_retainers(invoice, socket.assigns.current_user)
 
     {:ok,
      socket
@@ -20,7 +23,12 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
      |> assign(:show_line_form, false)
      |> assign(:line_form, empty_line_form())
      |> assign(:editing_line_id, nil)
-     |> assign(:return_to, params["return_to"] || ~p"/finance/invoices")}
+     |> assign(:return_to, params["return_to"] || ~p"/finance/invoices")
+     |> assign(:retainer_balance, retainer_balance)
+     |> assign(:available_retainers, available_retainers)
+     |> assign(:show_apply_retainer_modal, false)
+     |> assign(:apply_retainer_amount, nil)
+     |> assign(:apply_retainer_id, nil)}
   end
 
   @impl true
@@ -80,6 +88,61 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
           </.button>
         </:actions>
       </.page_header>
+
+      <%!-- Credits Available banner --%>
+      <div
+        :if={@invoice.status in [:issued, :partial] and Decimal.compare(@retainer_balance, Decimal.new("0")) == :gt}
+        class="mb-4 flex items-center justify-between rounded-lg bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 px-4 py-3"
+      >
+        <div class="flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
+          <.icon name="hero-banknotes" class="size-5" />
+          <span class="font-medium">Credits Available: {format_amount(@retainer_balance)}</span>
+          <span class="text-emerald-600 dark:text-emerald-400 text-sm">— this client has retainer funds on account</span>
+        </div>
+        <.button phx-click="show_apply_retainer_modal">Apply Retainer</.button>
+      </div>
+
+      <%!-- Apply Retainer modal --%>
+      <.modal
+        :if={@show_apply_retainer_modal}
+        id="apply-retainer-modal"
+        on_cancel={JS.push("hide_apply_retainer_modal")}
+      >
+        <:title>Apply Retainer to Invoice</:title>
+        <form phx-submit="apply_retainer" class="space-y-4">
+          <input type="hidden" name="retainer_id" value={@apply_retainer_id} />
+          <div>
+            <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Retainer</label>
+            <select
+              name="retainer_id"
+              phx-change="set_apply_retainer"
+              class="mt-1 w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500"
+            >
+              <option value="">Select retainer...</option>
+              <%= for r <- @available_retainers do %>
+                <option value={r.id} selected={@apply_retainer_id == r.id}>
+                  {r.retainer_number} — {format_amount(r.balance_amount)} available
+                </option>
+              <% end %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Amount to Apply</label>
+            <input
+              type="number"
+              name="amount"
+              step="0.01"
+              value={@apply_retainer_amount}
+              class="mt-1 w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500"
+              required
+            />
+          </div>
+          <div class="flex justify-end gap-3">
+            <.button type="button" phx-click="hide_apply_retainer_modal">Cancel</.button>
+            <.button type="submit" variant="primary">Apply</.button>
+          </div>
+        </form>
+      </.modal>
 
       <.section
         title="Invoice Status"
@@ -566,6 +629,58 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
     end
   end
 
+  def handle_event("show_apply_retainer_modal", _params, socket) do
+    {:noreply, assign(socket, :show_apply_retainer_modal, true)}
+  end
+
+  def handle_event("hide_apply_retainer_modal", _params, socket) do
+    {:noreply, assign(socket, :show_apply_retainer_modal, false)}
+  end
+
+  def handle_event("set_apply_retainer", %{"retainer_id" => id}, socket) do
+    retainer = Enum.find(socket.assigns.available_retainers, &(&1.id == id))
+    invoice = socket.assigns.invoice
+
+    default_amount =
+      if retainer do
+        Decimal.min(retainer.balance_amount, invoice.balance_amount || invoice.total_amount)
+      end
+
+    {:noreply,
+     socket
+     |> assign(:apply_retainer_id, id)
+     |> assign(:apply_retainer_amount, default_amount && Decimal.to_string(default_amount))}
+  end
+
+  def handle_event("apply_retainer", %{"amount" => amount, "retainer_id" => retainer_id}, socket) do
+    invoice = socket.assigns.invoice
+
+    case GnomeGarden.Finance.RetainerApplication
+         |> Ash.Changeset.for_create(:create, %{
+           retainer_id: retainer_id,
+           invoice_id: invoice.id,
+           amount: Decimal.new(amount),
+           applied_on: Date.utc_today()
+         }, authorize?: false)
+         |> Ash.create(domain: GnomeGarden.Finance) do
+      {:ok, _} ->
+        updated_invoice = load_invoice!(invoice.id, socket.assigns.current_user)
+        retainer_balance = load_retainer_balance(updated_invoice, socket.assigns.current_user)
+        available_retainers = load_available_retainers(updated_invoice, socket.assigns.current_user)
+
+        {:noreply,
+         socket
+         |> assign(:invoice, updated_invoice)
+         |> assign(:retainer_balance, retainer_balance)
+         |> assign(:available_retainers, available_retainers)
+         |> assign(:show_apply_retainer_modal, false)
+         |> put_flash(:info, "Retainer applied.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not apply retainer.")}
+    end
+  end
+
   defp create_credit_note_lines(credit_note, invoice_lines, actor) do
     invoice_lines
     |> Enum.with_index(1)
@@ -704,5 +819,31 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
       total_amount: total_amount,
       balance_amount: balance_amount
     }
+  end
+
+  defp load_retainer_balance(%{organization_id: nil}, _user), do: Decimal.new("0")
+
+  defp load_retainer_balance(invoice, _user) do
+    org_id = invoice.organization_id
+
+    GnomeGarden.Finance.Retainer
+    |> Ash.Query.load([:balance_amount])
+    |> Ash.Query.filter(organization_id == ^org_id and status == :paid)
+    |> Ash.read!(authorize?: false)
+    |> Enum.reduce(Decimal.new("0"), fn r, acc ->
+      Decimal.add(acc, r.balance_amount || Decimal.new("0"))
+    end)
+  end
+
+  defp load_available_retainers(%{organization_id: nil}, _user), do: []
+
+  defp load_available_retainers(invoice, _user) do
+    org_id = invoice.organization_id
+
+    GnomeGarden.Finance.Retainer
+    |> Ash.Query.load([:balance_amount])
+    |> Ash.Query.filter(organization_id == ^org_id and status == :paid)
+    |> Ash.read!(authorize?: false)
+    |> Enum.filter(fn r -> Decimal.compare(r.balance_amount, Decimal.new("0")) == :gt end)
   end
 end
