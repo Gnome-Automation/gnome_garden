@@ -574,18 +574,18 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/finance/reports/reconciliation"]
     },
-    # Settings
     %{
-      id: "set-billing",
-      section: "Settings",
-      icon: "hero-cog-6-tooth",
-      label: "Billing Settings",
-      tooltip: "Billing settings — invoice reminders, late fees, and auto-logout timeout",
+      id: "fin-billing-reminders",
+      section: "Finance",
+      icon: "hero-bell",
+      label: "Billing Reminders",
+      tooltip: "Configure automatic payment reminder emails — set how many days after due date to remind clients",
       path: "/finance/settings",
       badge: 0,
       hot: false,
       match: ["/finance/settings"]
     },
+    # Settings
     %{
       id: "set-agents",
       section: "Settings",
@@ -633,7 +633,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       String.starts_with?(path, "/operations") -> "Operations"
       String.starts_with?(path, "/execution") -> "Operations"
       String.starts_with?(path, "/finance/reports") -> "Reports"
-      String.starts_with?(path, "/finance/settings") -> "Settings"
       String.starts_with?(path, "/finance") -> "Finance"
       String.starts_with?(path, "/console") -> "Settings"
       String.starts_with?(path, "/settings") -> "Settings"
