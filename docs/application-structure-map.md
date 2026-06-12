@@ -21,6 +21,12 @@ mix llm.generate_resource_map
 
 ## Boundary principles
 
+Related design docs:
+
+- `docs/ash-native-application-design.md`
+- `docs/customer-plant-data-isolation-design.md`
+- `docs/parts-catalog-vendor-sourcing-design.md`
+
 - Model persisted business behavior as Ash resources and intent-named actions.
 - Use domain code interfaces from web and workflow code.
 - Keep long-lived master data separate from transactional evidence.
@@ -28,6 +34,8 @@ mix llm.generate_resource_map
 - Keep government bid/source monitoring separate from supplier catalog and purchasing operations.
 - Prefer `Operations.Organization` as the shared organization identity for customers, agencies, manufacturers, distributors, subcontractors, vendors, and partners.
 - Add relationship roles and domain-specific projections before creating unrelated duplicate company records.
+- Treat customer/plant data isolation as a first-class architecture concern. New plant-private resources should be designed so Ash tenancy can be applied cleanly.
+- Use AshStorage as the primary file attachment/storage abstraction; avoid domain-specific one-off file tables unless the document itself needs a business lifecycle resource.
 
 ## Domain map
 
@@ -71,6 +79,7 @@ Implemented resources include:
 Use for:
 
 - customers, prospects, agencies, manufacturers, distributors, vendors, subcontractors, and partners as organizations
+- future customer account or tenant boundary records if GnomeGarden becomes multi-plant/customer-facing
 - contacts and organization affiliations
 - sites and managed systems
 - installed equipment/assets
@@ -82,6 +91,12 @@ Supplier catalog fit:
 - Manufacturer and distributor/vendor identities should reuse `Operations.Organization`.
 - Canonical part/product master data likely fits here initially because it ties to assets, inventory, work orders, and organizations.
 - `InventoryItem` remains Gnome's internal stocked/billable item; it should not become the vendor catalog or manufacturer product master.
+
+Tenancy fit:
+
+- Global organization identity can remain shared CRM/vendor knowledge.
+- Customer-private operating data should belong to a tenant/customer-account boundary rather than relying on organization records alone.
+- Default tenancy boundary should likely be customer account/company with many sites/plants, not one tenant per site, unless plant-level isolation is required.
 
 Avoid:
 
