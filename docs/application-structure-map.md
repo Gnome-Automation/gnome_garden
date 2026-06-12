@@ -258,7 +258,7 @@ Supplier catalog fit:
 
 ### Agents
 
-Agent runtime, workflows, evaluations, memory, and outputs.
+Agent runtime, workflows, evaluations, memory, and outputs. AshLua and AshAI are the preferred app-native runtime for external exploration workflows such as lead discovery, vendor research, procurement source inspection, catalog enrichment, and review packet generation.
 
 Implemented resources include:
 
@@ -275,8 +275,9 @@ Use for:
 
 Supplier catalog fit:
 
-- Future vendor catalog refresh or datasheet extraction can create agent runs and outputs.
+- Future vendor catalog refresh or datasheet extraction should run through bounded AshLua workflows and narrow AshAI tool surfaces.
 - Persist extracted business facts in domain resources, not only in agent output blobs.
+- Agents should propose or execute through intent-named Ash actions with provenance, confidence, review status, and stale-after context.
 
 ### Mercury
 

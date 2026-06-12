@@ -210,6 +210,44 @@ Avoid:
 - Phoenix-only broadcasts for persisted resource changes
 - LiveView helper functions that decide backend query logic
 
+## AshLua and AshAI as the exploration runtime
+
+Use AshLua and AshAI as the core application-native way to explore, inspect, and interact with vendors, leads, procurement sources, catalog sources, and other external business surfaces.
+
+Current repo direction already supports this:
+
+- `ash_ai` and `ash_lua` are first-class dependencies.
+- `GnomeGarden.Agents` exposes selected Ash actions as AshAI tools.
+- `GnomeGarden.Procurement` uses `AshLua.Domain`, and procurement resources expose bounded AshLua surfaces.
+- Procurement source inspection and commercial discovery already run through bounded AshLua pipelines that write back through Ash actions.
+- The MCP endpoint is available in development through `AshAi.Mcp.Dev`.
+
+Design rule:
+
+```text
+LLM / agent reasoning
+  -> AshAI tool surface over selected actions
+  -> AshLua bounded workflow orchestration
+  -> Ash domain code interfaces and resource actions
+  -> durable resources, policies, state machines, provenance, review queues
+```
+
+AshLua should coordinate deterministic workflow steps, branching, retries, and tool calls. AshAI should expose a narrow, reviewed tool surface. Neither should become a parallel database, unrestricted browser, or generic automation layer.
+
+Use this pattern for:
+
+- lead/source discovery
+- vendor and distributor research
+- supplier catalog enrichment
+- procurement source inspection
+- bid/RFP review and scoring
+- quote/document extraction
+- stale data refresh
+- proposed memory updates
+- operator review packet generation
+
+Do not let agents directly mutate core records except through intent-named Ash actions. Any agent-discovered business fact should carry source/provenance, confidence, review status, and stale-after context.
+
 ## Background jobs, automation, and agents
 
 Use Ash actions as the unit of durable work.
