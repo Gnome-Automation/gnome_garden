@@ -24,4 +24,20 @@ defmodule GnomeGarden.Finance.BillingSettingsTest do
   test "reminder_days must have at least one item" do
     assert {:error, _} = Finance.upsert_billing_settings(%{reminder_days: []})
   end
+
+  test "upsert_billing_settings accepts session_timeout_minutes" do
+    assert {:ok, settings} =
+      Finance.upsert_billing_settings(%{session_timeout_minutes: 20})
+    assert settings.session_timeout_minutes == 20
+  end
+
+  test "session_timeout_minutes defaults to 30" do
+    {:ok, settings} = Finance.upsert_billing_settings(%{reminder_days: [7]})
+    assert settings.session_timeout_minutes == 30
+  end
+
+  test "session_timeout_minutes of 0 disables timeout" do
+    assert {:ok, settings} = Finance.upsert_billing_settings(%{session_timeout_minutes: 0})
+    assert settings.session_timeout_minutes == 0
+  end
 end

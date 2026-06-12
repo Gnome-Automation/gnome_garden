@@ -24,10 +24,10 @@ defmodule GnomeGarden.Finance.BillingSettings do
     end
 
     create :upsert do
-      accept [:reminder_days, :late_fee_enabled, :late_fee_days, :late_fee_type, :late_fee_value]
+      accept [:reminder_days, :late_fee_enabled, :late_fee_days, :late_fee_type, :late_fee_value, :session_timeout_minutes]
       upsert? true
       upsert_identity :singleton_scope
-      upsert_fields [:reminder_days, :late_fee_enabled, :late_fee_days, :late_fee_type, :late_fee_value]
+      upsert_fields [:reminder_days, :late_fee_enabled, :late_fee_days, :late_fee_type, :late_fee_value, :session_timeout_minutes]
     end
   end
 
@@ -69,6 +69,13 @@ defmodule GnomeGarden.Finance.BillingSettings do
       default Decimal.new("1.5")
       allow_nil? false
       constraints min: Decimal.new("0.01")
+    end
+
+    attribute :session_timeout_minutes, :integer do
+      default 30
+      allow_nil? false
+      description "Minutes of inactivity before auto-logout. 0 = disabled."
+      constraints min: 0, max: 480
     end
 
     timestamps()
