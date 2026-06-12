@@ -21,6 +21,22 @@ const InactivityLogout = {
     this.startTimers();
   },
 
+  updated() {
+    const newTimeout = parseInt(this.el.dataset.timeout || "30", 10);
+    if (newTimeout === this.timeoutMinutes) return;
+    this.timeoutMinutes = newTimeout;
+    if (newTimeout === 0) {
+      this.clearTimers();
+      ["mousemove", "keydown", "touchstart", "click"].forEach((ev) =>
+        document.removeEventListener(ev, this._boundReset)
+      );
+      return;
+    }
+    this.timeoutMs = newTimeout * 60 * 1000;
+    this.warningMs = this.timeoutMs - 60_000;
+    this.startTimers();
+  },
+
   destroyed() {
     this.clearTimers();
     ["mousemove", "keydown", "touchstart", "click"].forEach((ev) =>
