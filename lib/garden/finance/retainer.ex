@@ -35,19 +35,7 @@ defmodule GnomeGarden.Finance.Retainer do
   end
 
   policies do
-    bypass action_type(:read) do
-      authorize_if always()
-    end
-
-    bypass action_type(:create) do
-      authorize_if always()
-    end
-
-    bypass action_type(:update) do
-      authorize_if always()
-    end
-
-    bypass action_type(:destroy) do
+    bypass always() do
       authorize_if always()
     end
   end

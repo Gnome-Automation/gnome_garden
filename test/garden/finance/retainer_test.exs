@@ -61,6 +61,16 @@ defmodule GnomeGarden.Finance.RetainerTest do
     end
   end
 
+  test "reopen transitions from exhausted back to paid" do
+    org = org_fixture()
+    {:ok, retainer} = create_retainer_in_status(org, :paid)
+    {:ok, retainer} = Ash.update(retainer, %{}, action: :exhaust, authorize?: false)
+    assert retainer.status == :exhausted
+
+    {:ok, retainer} = Ash.update(retainer, %{}, action: :reopen, authorize?: false)
+    assert retainer.status == :paid
+  end
+
   defp org_fixture do
     {:ok, org} =
       GnomeGarden.Operations.Organization
