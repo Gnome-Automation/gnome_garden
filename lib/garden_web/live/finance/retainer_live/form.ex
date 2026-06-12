@@ -71,16 +71,16 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Form do
               <.input field={@form[:received_on]} type="date" label="Received On" />
             </div>
             <div class="sm:col-span-3 flex items-end pb-1">
-              <label class="flex items-center gap-2 cursor-pointer select-none rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+              <label class="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   name={@form[:auto_apply].name}
                   id={@form[:auto_apply].id}
                   checked={@form[:auto_apply].value in [true, "true"]}
                   value="true"
-                  class="checkbox checkbox-sm checkbox-primary"
+                  class="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600"
                 />
-                <span class="block text-sm/6 font-medium text-gray-900 dark:text-white">Auto-apply to new invoices</span>
+                <span class="text-sm text-gray-900 dark:text-white">Auto-apply to new invoices</span>
               </label>
             </div>
             <div class="col-span-full">
