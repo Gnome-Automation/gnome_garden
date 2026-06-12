@@ -377,6 +377,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/payments", "/finance/payment-applications"]
     },
     %{
+      id: "fin-retainers",
+      section: "Finance",
+      icon: "hero-banknotes",
+      label: "Retainers",
+      tooltip: "Client retainers — pre-payments held on account and applied against future invoices",
+      path: "/finance/retainers",
+      badge: 0,
+      hot: false,
+      match: ["/finance/retainers"]
+    },
+    %{
       id: "fin-expenses",
       section: "Finance",
       icon: "hero-receipt-percent",
