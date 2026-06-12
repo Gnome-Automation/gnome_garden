@@ -30,6 +30,8 @@ defmodule GnomeGardenWeb.Layouts do
   attr :current_user, :map, default: nil, doc: "the current user"
   attr :page_title, :string, default: nil, doc: "the page title"
   attr :current_path, :string, default: "/", doc: "the current request path"
+  attr :show_inactivity_warning, :boolean, default: false
+  attr :inactivity_seconds_left, :integer, default: 60
 
   def app(assigns) do
     # Layout function — called from controllers and LiveView mounts. The
@@ -41,6 +43,8 @@ defmodule GnomeGardenWeb.Layouts do
       current_path={@current_path}
       current_user={@current_user}
       flash={@flash}
+      show_inactivity_warning={@show_inactivity_warning}
+      inactivity_seconds_left={@inactivity_seconds_left}
     >
       {@inner_content}
     </.app_chrome>
@@ -50,6 +54,8 @@ defmodule GnomeGardenWeb.Layouts do
   attr :current_path, :string, required: true
   attr :current_user, :any, default: nil
   attr :flash, :map, required: true
+  attr :show_inactivity_warning, :boolean, default: false
+  attr :inactivity_seconds_left, :integer, default: 60
   slot :inner_block, required: true
 
   defp app_chrome(assigns) do
@@ -64,7 +70,12 @@ defmodule GnomeGardenWeb.Layouts do
       |> assign(:open_count, open_count)
 
     ~H"""
-    <div class="flex h-screen w-full overflow-hidden bg-base-100 text-base-content">
+    <div
+      class="flex h-screen w-full overflow-hidden bg-base-100 text-base-content"
+      id="app-chrome"
+      phx-hook="InactivityLogout"
+      data-timeout={session_timeout_minutes()}
+    >
       <%!-- Rail (desktop only) --%>
       <div class="hidden lg:block">
         <RailNav.rail area={@area} />
@@ -100,6 +111,28 @@ defmodule GnomeGardenWeb.Layouts do
       </div>
 
       <.flash_group flash={@flash} />
+
+      <%!-- Inactivity warning modal --%>
+      <div
+        :if={@show_inactivity_warning}
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div class="bg-base-100 rounded-xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center">
+          <div class="text-4xl mb-3">⏱</div>
+          <h2 class="text-lg font-semibold mb-2">Still there?</h2>
+          <p class="text-base-content/70 mb-6">
+            You'll be logged out in <span class="font-bold text-error">{@inactivity_seconds_left}</span> seconds due to inactivity.
+          </p>
+          <button
+            phx-click="reset_inactivity"
+            class="btn btn-primary w-full"
+          >
+            Stay logged in
+          </button>
+        </div>
+      </div>
     </div>
     """
   end
@@ -293,6 +326,13 @@ defmodule GnomeGardenWeb.Layouts do
       </button>
     </div>
     """
+  end
+
+  defp session_timeout_minutes do
+    case GnomeGarden.Finance.get_billing_settings() do
+      {:ok, [settings | _]} -> settings.session_timeout_minutes
+      _ -> 30
+    end
   end
 
   # Embed template files in layouts/* (must be after all attr-decorated functions)

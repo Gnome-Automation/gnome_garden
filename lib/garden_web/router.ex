@@ -79,7 +79,10 @@ defmodule GnomeGardenWeb.Router do
 
     ash_authentication_live_session :authenticated_routes,
       layout: {GnomeGardenWeb.Layouts, :app},
-      on_mount: [{GnomeGardenWeb.LiveUserAuth, :live_user_required}] do
+      on_mount: [
+        {GnomeGardenWeb.LiveUserAuth, :live_user_required},
+        {GnomeGardenWeb.InactivityHooks, :default}
+      ] do
       live "/agent", AgentLive
       live "/console/agents", Console.AgentsLive
       live "/console/agents/deployments/new", Console.AgentDeploymentFormLive
