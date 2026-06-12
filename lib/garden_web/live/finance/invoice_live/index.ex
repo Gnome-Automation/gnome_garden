@@ -165,12 +165,11 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
 
       <Cinder.collection
         id="invoices-table"
-        resource={GnomeGarden.Finance.Invoice}
+        query={Ash.Query.sort(GnomeGarden.Finance.Invoice, due_on: :desc)}
         actor={@current_user}
         url_state={@url_state}
         theme={GnomeGardenWeb.CinderTheme}
         page_size={25}
-        sort_by={[{"due_on", :desc}]}
         query_opts={[
           load: [:status_variant, organization: [], agreement: [], project: [], work_order: []]
         ]}
