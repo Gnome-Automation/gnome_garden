@@ -240,9 +240,11 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
   end
 
   defp load_orgs_with_credits(actor) do
-    case Finance.list_retainers(actor: actor, authorize?: false,
-           load: [:balance_amount],
-           filter: [status: :paid]) do
+    require Ash.Query
+    query = GnomeGarden.Finance.Retainer
+      |> Ash.Query.filter(status == :paid)
+      |> Ash.Query.load(:balance_amount)
+    case Finance.list_retainers(actor: actor, authorize?: false, query: query) do
       {:ok, retainers} ->
         retainers
         |> Enum.filter(&Decimal.gt?(&1.balance_amount, Decimal.new("0")))
