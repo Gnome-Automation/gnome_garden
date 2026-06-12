@@ -56,6 +56,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             :if={@invoice.status in [:issued, :partial, :paid]}
             phx-click="resend"
             title="Re-send the invoice email to the billing contact"
+            variant="primary"
           >
             <.icon name="hero-paper-airplane" class="size-4" /> Resend
           </.button>
@@ -80,7 +81,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
               <.icon name="hero-arrow-down-tray" class="size-4" /> Export PDF
             </a>
           </span>
-          <.button navigate={~p"/finance/payment-applications/new?invoice_id=#{@invoice.id}&return_to=#{~p"/finance/invoices/#{@invoice}"}"} title="Record a payment received against this invoice">
+          <.button navigate={~p"/finance/payment-applications/new?invoice_id=#{@invoice.id}&return_to=#{~p"/finance/invoices/#{@invoice}"}"} title="Record a payment received against this invoice" variant="primary">
             Record Payment
           </.button>
           <.button navigate={~p"/finance/invoices/#{@invoice}/edit?return_to=#{~p"/finance/invoices/#{@invoice}"}"}>
@@ -381,7 +382,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             description="Record a payment when you receive money against this invoice."
           >
             <:action>
-              <.button navigate={~p"/finance/payment-applications/new?invoice_id=#{@invoice.id}&return_to=#{~p"/finance/invoices/#{@invoice}"}"}>
+              <.button navigate={~p"/finance/payment-applications/new?invoice_id=#{@invoice.id}&return_to=#{~p"/finance/invoices/#{@invoice}"}"} variant="primary">
                 Record Payment
               </.button>
             </:action>
