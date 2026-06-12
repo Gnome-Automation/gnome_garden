@@ -54,8 +54,16 @@ defmodule GnomeGarden.Finance.Retainer do
     end
 
     update :issue do
+      require_atomic? false
       accept []
       change transition_state(:issued)
+
+      change after_action(fn _changeset, retainer, _context ->
+        retainer = Ash.load!(retainer, [:organization], authorize?: false)
+        email = GnomeGarden.Mailer.RetainerEmail.build(retainer)
+        Task.start(fn -> GnomeGarden.Mailer.deliver(email) end)
+        {:ok, retainer}
+      end)
     end
 
     update :mark_paid do
