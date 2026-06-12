@@ -18,6 +18,11 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Form do
   end
 
   @impl true
+  def handle_params(_params, uri, socket) do
+    {:noreply, assign(socket, :current_path, URI.parse(uri).path)}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <.page max_width="max-w-3xl" class="pb-8">
@@ -50,7 +55,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Form do
               />
               <p class="mt-1.5 text-xs text-base-content/50">
                 Not in the list?
-                <.link navigate={~p"/operations/organizations/new?return_to=#{@return_to}"} class="underline text-emerald-600 dark:text-emerald-400">Add a client first</.link>.
+                <.link navigate={~p"/operations/organizations/new?return_to=#{@current_path}"} class="underline text-emerald-600 dark:text-emerald-400">Add a client first</.link>.
               </p>
             </div>
             <div class="sm:col-span-2">
