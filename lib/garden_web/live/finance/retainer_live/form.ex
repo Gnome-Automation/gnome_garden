@@ -50,7 +50,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Form do
               />
               <p class="mt-1.5 text-xs text-base-content/50">
                 Not in the list?
-                <.link navigate={~p"/operations/organizations/new"} class="underline text-emerald-600 dark:text-emerald-400">Add a client first</.link>.
+                <.link navigate={~p"/operations/organizations/new?return_to=#{@return_to}"} class="underline text-emerald-600 dark:text-emerald-400">Add a client first</.link>.
               </p>
             </div>
             <div class="sm:col-span-2">
