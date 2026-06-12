@@ -1,0 +1,8 @@
+import_batch,query_rank,query,source_type,region,priority,notes
+lead_sources_2026_06_12,1,"""new manufacturing facility"" ""Southern California""",google_alert,socal,high,From gnome-company lead-sources.md Google Alert Queries
+lead_sources_2026_06_12,2,"""brewery opening"" ""Los Angeles"" OR ""San Diego"" OR ""Orange County""",google_alert,socal,medium,From gnome-company lead-sources.md Google Alert Queries
+lead_sources_2026_06_12,3,"""biotech expansion"" California",google_alert,socal,medium,From gnome-company lead-sources.md Google Alert Queries
+lead_sources_2026_06_12,4,"""warehouse automation"" ""Inland Empire""",google_alert,socal,medium,From gnome-company lead-sources.md Google Alert Queries
+lead_sources_2026_06_12,5,"""SCADA upgrade"" California",google_alert,socal,high,From gnome-company lead-sources.md Google Alert Queries
+lead_sources_2026_06_12,6,"""PLC modernization"" California",google_alert,socal,high,From gnome-company lead-sources.md Google Alert Queries
+lead_sources_2026_06_12,7,"""controls upgrade"" California water",google_alert,socal,high,From gnome-company lead-sources.md Google Alert Queries
