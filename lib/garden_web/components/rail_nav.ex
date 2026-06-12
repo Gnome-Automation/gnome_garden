@@ -587,6 +587,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
     },
     # Settings
     %{
+      id: "set-general",
+      section: "Settings",
+      icon: "hero-cog-6-tooth",
+      label: "General",
+      tooltip: "General settings — session timeout, auto-logout",
+      path: "/settings/general",
+      badge: 0,
+      hot: false,
+      match: ["/settings/general"]
+    },
+    %{
       id: "set-agents",
       section: "Settings",
       icon: "hero-cpu-chip",

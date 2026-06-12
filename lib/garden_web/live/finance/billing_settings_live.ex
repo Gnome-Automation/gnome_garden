@@ -182,25 +182,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
                 overdue.
               </p>
 
-              <div class="my-6 border-t border-gray-900/10 pt-6 dark:border-white/10">
-                <div class="flex items-center gap-3 text-sm text-gray-900 dark:text-white">
-                  <label for="session_timeout_minutes">Auto-logout after inactivity (minutes):</label>
-                  <input
-                    type="number"
-                    id="session_timeout_minutes"
-                    name="billing_settings[session_timeout_minutes]"
-                    value={@session_timeout_minutes}
-                    min="0"
-                    max="480"
-                    class="w-20 rounded-md bg-white px-2 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 text-center"
-                  />
-                </div>
-                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  Set to 0 to disable auto-logout. Applies to both the staff app and client portal.
-                </p>
-              </div>
-
-              <div :if={@save_ok} class="mb-4 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+<div :if={@save_ok} class="mb-4 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
                 Settings saved
               </div>
 
