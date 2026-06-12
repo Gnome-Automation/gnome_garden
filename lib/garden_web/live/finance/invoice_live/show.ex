@@ -116,7 +116,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
             <select
               name="retainer_id"
               phx-change="set_apply_retainer"
-              class="mt-1 w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500"
+              class="mt-1 w-full appearance-none rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 hover:outline-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:hover:outline-white/30 dark:focus:outline-emerald-500 cursor-pointer transition-all"
             >
               <option value="">Select retainer...</option>
               <%= for r <- @available_retainers do %>
@@ -133,7 +133,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Show do
               name="amount"
               step="0.01"
               value={@apply_retainer_amount}
-              class="mt-1 w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500"
+              class="mt-1 w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 hover:outline-gray-400 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:hover:outline-white/30 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500 cursor-text transition-all"
               required
             />
           </div>
