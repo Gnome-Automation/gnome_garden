@@ -170,7 +170,7 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
         url_state={@url_state}
         theme={GnomeGardenWeb.CinderTheme}
         page_size={25}
-        query={GnomeGarden.Finance.Invoice |> Ash.Query.sort(due_on: :desc)}
+        sort_by={[{"due_on", :desc}]}
         query_opts={[
           load: [:status_variant, organization: [], agreement: [], project: [], work_order: []]
         ]}

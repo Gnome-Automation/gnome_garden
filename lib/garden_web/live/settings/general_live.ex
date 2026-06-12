@@ -47,10 +47,9 @@ defmodule GnomeGardenWeb.Settings.GeneralLive do
     end
   end
 
-  @input_class "w-24 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 hover:outline-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:hover:outline-white/30 dark:focus:outline-emerald-500 text-center cursor-text transition-all"
-
   @impl true
   def render(assigns) do
+    assigns = assign(assigns, :input_class, "w-24 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 hover:outline-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:hover:outline-white/30 dark:focus:outline-emerald-500 text-center cursor-text transition-all")
     ~H"""
     <.page max_width="max-w-2xl" class="pb-8">
       <.page_header>General Settings</.page_header>
