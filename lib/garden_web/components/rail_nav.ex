@@ -587,6 +587,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
     },
     # Settings
     %{
+      id: "set-billing",
+      section: "Settings",
+      icon: "hero-cog-6-tooth",
+      label: "Billing Settings",
+      tooltip: "Billing settings — invoice reminders, late fees, and auto-logout timeout",
+      path: "/finance/settings",
+      badge: 0,
+      hot: false,
+      match: ["/finance/settings"]
+    },
+    %{
       id: "set-agents",
       section: "Settings",
       icon: "hero-cpu-chip",
