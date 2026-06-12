@@ -18,7 +18,8 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
      |> assign(:paid_count, counts.paid)
      |> assign(:balance_total, counts.balance_total)
      |> assign(:organizations, nil)
-     |> assign(:show_export_form, false)}
+     |> assign(:show_export_form, false)
+     |> assign(:orgs_with_credits, load_orgs_with_credits(socket.assigns.current_user))}
   end
 
   @impl true
@@ -169,7 +170,8 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
         theme={GnomeGardenWeb.CinderTheme}
         page_size={25}
         query_opts={[
-          load: [:status_variant, organization: [], agreement: [], project: [], work_order: []]
+          load: [:status_variant, organization: [], agreement: [], project: [], work_order: []],
+          sort: [due_on: :desc]
         ]}
         click={fn row -> JS.navigate(~p"/finance/invoices/#{row}") end}
       >
@@ -204,6 +206,12 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
             <p class="text-xs text-base-content/40">
               Balance {format_amount(invoice.balance_amount)}
             </p>
+            <span
+              :if={invoice.organization_id && MapSet.member?(@orgs_with_credits, invoice.organization_id) && invoice.status in [:issued, :partial]}
+              class="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+            >
+              Credits available
+            </span>
           </div>
         </:col>
 
@@ -229,6 +237,19 @@ defmodule GnomeGardenWeb.Finance.InvoiceLive.Index do
       </Cinder.collection>
     </.page>
     """
+  end
+
+  defp load_orgs_with_credits(actor) do
+    case Finance.list_retainers(actor: actor, authorize?: false,
+           load: [:balance_amount],
+           filter: [status: :paid]) do
+      {:ok, retainers} ->
+        retainers
+        |> Enum.filter(&Decimal.gt?(&1.balance_amount, Decimal.new("0")))
+        |> Enum.map(& &1.organization_id)
+        |> MapSet.new()
+      _ -> MapSet.new()
+    end
   end
 
   defp load_counts(actor) do
