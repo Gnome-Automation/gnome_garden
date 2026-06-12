@@ -52,6 +52,7 @@ defmodule GnomeGarden.Finance.Invoice do
       transition :mark_paid, from: [:issued, :partial], to: :paid
       transition :void, from: [:draft, :issued], to: :void
       transition :reopen, from: [:void], to: :draft
+      transition :unmark_paid, from: [:paid], to: :issued
       transition :write_off, from: [:issued, :partial], to: :write_off
     end
   end
@@ -231,9 +232,15 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     update :reopen do
-      accept []
+      accept [:balance_amount]
       change transition_state(:draft)
       change set_attribute(:issued_on, nil)
+      change set_attribute(:paid_on, nil)
+    end
+
+    update :unmark_paid do
+      accept [:balance_amount]
+      change transition_state(:issued)
       change set_attribute(:paid_on, nil)
     end
 
@@ -397,6 +404,10 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     has_one :credit_note, GnomeGarden.Finance.CreditNote
+
+    has_many :retainer_applications, GnomeGarden.Finance.RetainerApplication do
+      public? true
+    end
   end
 
   calculations do
@@ -434,6 +445,11 @@ defmodule GnomeGarden.Finance.Invoice do
 
     sum :applied_amount, :payment_applications, :amount do
       public? true
+    end
+
+    sum :retainer_applied_amount, :retainer_applications, :amount do
+      public? true
+      default Decimal.new("0")
     end
   end
 end
