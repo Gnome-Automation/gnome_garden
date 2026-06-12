@@ -107,7 +107,11 @@ defmodule GnomeGarden.Finance.JournalEntry do
                     :credit_note_issued,
                     :invoice_voided,
                     :invoice_written_off,
-                    :expense_approved
+                    :expense_approved,
+                    :retainer_received,
+                    :retainer_applied,
+                    :retainer_unapplied,
+                    :retainer_voided
                   ]
     end
 

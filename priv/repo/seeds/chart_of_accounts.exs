@@ -11,7 +11,7 @@ accounts = [
   %{number: 2000, name: "Accounts Payable", type: :liability, is_system: true},
   %{number: 2100, name: "Accrued Expenses", type: :liability, is_system: false},
   %{number: 2200, name: "Sales Tax Payable", type: :liability, is_system: true},
-  %{number: 2300, name: "Unearned Revenue / Deposits", type: :liability, is_system: false},
+  %{number: 2300, name: "Unearned Revenue / Deposits", type: :liability, is_system: true},
 
   # Equity (credit normal balance)
   %{number: 3000, name: "Owner's Equity", type: :equity, is_system: false},
