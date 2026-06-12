@@ -24,7 +24,8 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
      |> assign(:late_fee_value, Decimal.to_string(settings.late_fee_value, :normal))
      |> assign(:late_fee_save_ok, false)
      |> assign(:late_fee_save_error, nil)
-     |> assign(:late_fee_running, false)}
+     |> assign(:late_fee_running, false)
+     |> assign(:session_timeout_minutes, settings.session_timeout_minutes)}
   end
 
   @impl true
@@ -303,6 +304,42 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
             </form>
           </div>
         </.section>
+
+        <div class="mt-6"></div>
+
+        <.section title="Auto-Logout Settings"
+          description="Configure automatic session timeout to enhance security.">
+          <div class="px-5 pb-5">
+            <form id="session-timeout-form" phx-submit="save_session_timeout">
+              <div class="space-y-4">
+                <div class="flex items-center gap-3 text-sm text-gray-900 dark:text-white">
+                  <label for="session_timeout_minutes">Auto-logout after inactivity (minutes):</label>
+                  <input
+                    type="number"
+                    id="session_timeout_minutes"
+                    name="billing_settings[session_timeout_minutes]"
+                    value={@session_timeout_minutes}
+                    min="0"
+                    max="480"
+                    class="w-20 rounded-md bg-white px-2 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 text-center"
+                  />
+                </div>
+                <p class="mt-1 text-xs text-base-content/50 dark:text-gray-400">
+                  Set to 0 to disable auto-logout. Applies to both the staff app and client portal.
+                </p>
+              </div>
+
+              <div class="mt-4 flex items-center gap-3">
+                <button
+                  type="submit"
+                  class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500 hover:scale-105 active:scale-95 dark:bg-emerald-500"
+                >
+                  Save Session Timeout
+                </button>
+              </div>
+            </form>
+          </div>
+        </.section>
       </div>
     </.page>
     """
@@ -317,7 +354,8 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
           late_fee_enabled: false,
           late_fee_days: 30,
           late_fee_type: :percent,
-          late_fee_value: Decimal.new("1.5")
+          late_fee_value: Decimal.new("1.5"),
+          session_timeout_minutes: 30
         }
     end
   end
