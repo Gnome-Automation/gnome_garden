@@ -400,7 +400,10 @@ defmodule GnomeGardenWeb.Router do
 
     ash_authentication_live_session :client_portal,
       layout: {GnomeGardenWeb.Layouts, :portal_app},
-      on_mount: [{GnomeGardenWeb.ClientPortalAuth, :require_client_user}] do
+      on_mount: [
+        {GnomeGardenWeb.ClientPortalAuth, :require_client_user},
+        {GnomeGardenWeb.PortalInactivityHooks, :default}
+      ] do
 
       live "/portal", ClientPortal.DashboardLive, :index
       live "/portal/invoices", ClientPortal.InvoiceLive.Index, :index

@@ -335,6 +335,14 @@ defmodule GnomeGardenWeb.Layouts do
     end
   end
 
+  defp portal_session_timeout_minutes do
+    case GnomeGarden.Finance.get_billing_settings() do
+      {:ok, settings} when is_struct(settings) -> settings.session_timeout_minutes
+      {:ok, [settings | _]} -> settings.session_timeout_minutes
+      _ -> 30
+    end
+  end
+
   # Embed template files in layouts/* (must be after all attr-decorated functions)
   # This creates the root/1 function from root.html.heex
   embed_templates "layouts/*"
