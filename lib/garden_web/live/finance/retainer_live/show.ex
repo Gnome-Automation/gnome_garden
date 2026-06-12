@@ -141,7 +141,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Show do
             </.button>
           <% end %>
           <%= if @retainer.status in [:draft, :issued, :paid] do %>
-            <.button phx-click="void" data-confirm="Void this retainer? This cannot be undone easily.">
+            <.button phx-click="void" data-confirm="Void this retainer? This cannot be undone easily." variant="danger">
               Void
             </.button>
           <% end %>
