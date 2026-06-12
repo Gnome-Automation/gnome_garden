@@ -55,15 +55,16 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Show do
 
   @impl true
   def handle_event("resend_email", _params, socket) do
-    retainer = socket.assigns.retainer
+    retainer = Ash.load!(socket.assigns.retainer, [:organization], authorize?: false)
+    email = GnomeGarden.Mailer.RetainerEmail.build(retainer)
 
-    Task.start(fn ->
-      loaded = Ash.load!(retainer, [:organization], authorize?: false)
-      email = GnomeGarden.Mailer.RetainerEmail.build(loaded)
-      GnomeGarden.Mailer.deliver(email)
-    end)
+    case GnomeGarden.Mailer.deliver(email) do
+      {:ok, _} ->
+        {:noreply, put_flash(socket, :info, "Retainer email re-sent.")}
 
-    {:noreply, put_flash(socket, :info, "Retainer email re-sent.")}
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Email delivery failed — please try again.")}
+    end
   end
 
   @impl true
@@ -85,7 +86,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Show do
     application = Enum.find(socket.assigns.retainer.applications, &(&1.id == application_id))
 
     if application do
-      case Ash.destroy(application, domain: Finance, authorize?: false) do
+      case Ash.destroy(application, domain: Finance, actor: socket.assigns.current_user) do
         :ok ->
           {:noreply,
            socket
@@ -169,7 +170,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Show do
         <div>
           <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Received</p>
           <p class="mt-1 text-sm text-gray-900 dark:text-white">
-            <%= @retainer.received_on || "—" %>
+            <%= format_date(@retainer.received_on) %>
           </p>
         </div>
       </div>
@@ -203,7 +204,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Show do
                     <%= (app.invoice && app.invoice.invoice_number) || app.invoice_id %>
                   </.link>
                 </td>
-                <td class="px-4 py-3 text-gray-500"><%= app.applied_on || "—" %></td>
+                <td class="px-4 py-3 text-gray-500"><%= format_date(app.applied_on) %></td>
                 <td class="px-4 py-3 text-right font-mono text-gray-900 dark:text-white">
                   $<%= Decimal.round(app.amount, 2) %>
                 </td>

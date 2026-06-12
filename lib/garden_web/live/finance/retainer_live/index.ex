@@ -83,7 +83,7 @@ defmodule GnomeGardenWeb.Finance.RetainerLive.Index do
                   <%= format_atom(r.status) %>
                 </span>
               </td>
-              <td class="px-4 py-3 text-gray-500"><%= r.received_on || "—" %></td>
+              <td class="px-4 py-3 text-gray-500"><%= format_date(r.received_on) %></td>
             </tr>
           </tbody>
         </table>
