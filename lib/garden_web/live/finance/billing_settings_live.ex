@@ -67,16 +67,22 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
     with {interval, ""} <- Integer.parse(Map.get(params, "interval", "")),
          true <- interval >= 1 and interval <= 365,
          {max, ""} <- Integer.parse(Map.get(params, "max_reminders", "")),
-         true <- max >= 1 and max <= 10 do
+         true <- max >= 1 and max <= 10,
+         {timeout, ""} <- Integer.parse(Map.get(params, "session_timeout_minutes", "30")),
+         true <- timeout >= 0 and timeout <= 480 do
       days = Enum.map(1..max, &(&1 * interval))
 
-      case Finance.upsert_billing_settings(%{reminder_days: days}) do
+      case Finance.upsert_billing_settings(%{
+             reminder_days: days,
+             session_timeout_minutes: timeout
+           }) do
         {:ok, _} ->
           Process.send_after(self(), :clear_save_ok, 3_000)
           {:noreply,
            socket
            |> assign(:interval, interval)
            |> assign(:max_reminders, max)
+           |> assign(:session_timeout_minutes, timeout)
            |> assign(:save_ok, true)
            |> assign(:save_error, nil)}
 
@@ -85,7 +91,7 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
       end
     else
       _ ->
-        {:noreply, assign(socket, save_ok: false, save_error: "Enter valid numbers. Interval: 1–365 days. Max reminders: 1–10.")}
+        {:noreply, assign(socket, save_ok: false, save_error: "Enter valid numbers. Interval: 1–365 days. Max reminders: 1–10. Session timeout: 0–480 minutes.")}
     end
   end
 
@@ -175,6 +181,24 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
                 <strong>{Enum.join(Enum.map(1..@max_reminders, &(&1 * @interval)), ", ")}</strong>
                 overdue.
               </p>
+
+              <div class="my-6 border-t border-gray-900/10 pt-6 dark:border-white/10">
+                <div class="flex items-center gap-3 text-sm text-gray-900 dark:text-white">
+                  <label for="session_timeout_minutes">Auto-logout after inactivity (minutes):</label>
+                  <input
+                    type="number"
+                    id="session_timeout_minutes"
+                    name="billing_settings[session_timeout_minutes]"
+                    value={@session_timeout_minutes}
+                    min="0"
+                    max="480"
+                    class="w-20 rounded-md bg-white px-2 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 text-center"
+                  />
+                </div>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Set to 0 to disable auto-logout. Applies to both the staff app and client portal.
+                </p>
+              </div>
 
               <div :if={@save_ok} class="mb-4 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
                 Settings saved
@@ -305,41 +329,6 @@ defmodule GnomeGardenWeb.Finance.BillingSettingsLive do
           </div>
         </.section>
 
-        <div class="mt-6"></div>
-
-        <.section title="Auto-Logout Settings"
-          description="Configure automatic session timeout to enhance security.">
-          <div class="px-5 pb-5">
-            <form id="session-timeout-form" phx-submit="save_session_timeout">
-              <div class="space-y-4">
-                <div class="flex items-center gap-3 text-sm text-gray-900 dark:text-white">
-                  <label for="session_timeout_minutes">Auto-logout after inactivity (minutes):</label>
-                  <input
-                    type="number"
-                    id="session_timeout_minutes"
-                    name="billing_settings[session_timeout_minutes]"
-                    value={@session_timeout_minutes}
-                    min="0"
-                    max="480"
-                    class="w-20 rounded-md bg-white px-2 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 text-center"
-                  />
-                </div>
-                <p class="mt-1 text-xs text-base-content/50 dark:text-gray-400">
-                  Set to 0 to disable auto-logout. Applies to both the staff app and client portal.
-                </p>
-              </div>
-
-              <div class="mt-4 flex items-center gap-3">
-                <button
-                  type="submit"
-                  class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500 hover:scale-105 active:scale-95 dark:bg-emerald-500"
-                >
-                  Save Session Timeout
-                </button>
-              </div>
-            </form>
-          </div>
-        </.section>
       </div>
     </.page>
     """
