@@ -337,8 +337,7 @@ defmodule GnomeGardenWeb.Layouts do
 
   defp portal_session_timeout_minutes do
     case GnomeGarden.Finance.get_billing_settings() do
-      {:ok, settings} when is_struct(settings) -> settings.session_timeout_minutes
-      {:ok, [settings | _]} -> settings.session_timeout_minutes
+      {:ok, [settings | _]} -> settings.portal_session_timeout_minutes
       _ -> 30
     end
   end
