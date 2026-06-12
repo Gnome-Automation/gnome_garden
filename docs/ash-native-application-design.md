@@ -4,6 +4,7 @@ Date: 2026-06-12
 Status: design guidance for future GnomeGarden work
 Related app map: `docs/application-structure-map.md`
 Related tenancy design: `docs/customer-plant-data-isolation-design.md`
+Related AshLua/AshAI patterns: `docs/ash-lua-ai-interaction-patterns.md`
 
 ## Purpose
 
@@ -212,7 +213,7 @@ Avoid:
 
 ## AshLua and AshAI as the exploration runtime
 
-Use AshLua and AshAI as the core application-native way to explore, inspect, and interact with vendors, leads, procurement sources, catalog sources, and other external business surfaces.
+Use AshLua and AshAI as the core application-native way to explore, inspect, and interact with vendors, leads, procurement sources, catalog sources, and other external business surfaces. See `docs/ash-lua-ai-interaction-patterns.md` for concrete workflow surfaces and examples.
 
 Current repo direction already supports this:
 

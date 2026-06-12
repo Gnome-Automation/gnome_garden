@@ -24,6 +24,7 @@ mix llm.generate_resource_map
 Related design docs:
 
 - `docs/ash-native-application-design.md`
+- `docs/ash-lua-ai-interaction-patterns.md`
 - `docs/customer-plant-data-isolation-design.md`
 - `docs/parts-catalog-vendor-sourcing-design.md`
 
