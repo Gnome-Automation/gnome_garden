@@ -1,7 +1,10 @@
 defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
   use GnomeGardenWeb, :live_view
 
+  require Ash.Query
+
   import GnomeGardenWeb.Operations.Helpers
+  import GnomeGardenWeb.Finance.Helpers, only: [format_amount: 1]
 
   alias GnomeGarden.Documents
   alias GnomeGarden.Mailer
@@ -15,11 +18,19 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
     organization = load_organization!(id, socket.assigns.current_user)
     merge_review = load_merge_review!(organization, socket.assigns.current_user)
 
+    retainer_balance =
+      GnomeGarden.Finance.Retainer
+      |> Ash.Query.filter(organization_id == ^organization.id and status == :paid)
+      |> Ash.Query.load([:balance_amount])
+      |> Ash.read!(authorize?: false)
+      |> Enum.reduce(Decimal.new("0"), fn r, acc -> Decimal.add(acc, r.balance_amount || Decimal.new("0")) end)
+
     {:ok,
      socket
      |> assign(:page_title, organization.name)
      |> assign(:organization, organization)
      |> assign(:merge_review, merge_review)
+     |> assign(:retainer_balance, retainer_balance)
      |> assign(:invite_ok, false)
      |> assign(:invite_error, nil)
      |> assign(:return_to, params["return_to"] || ~p"/operations/organizations")
@@ -243,6 +254,16 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
           description="Monitored procurement or company-web sources linked to this organization."
           icon="hero-globe-alt"
           accent="rose"
+        />
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-1">
+        <.stat_card
+          title="Retainer Balance"
+          value={format_amount(@retainer_balance)}
+          description="Total available retainer balance for this organization."
+          icon="hero-wallet"
+          accent="emerald"
         />
       </div>
 
