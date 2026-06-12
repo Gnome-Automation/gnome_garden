@@ -71,6 +71,20 @@ defmodule GnomeGarden.Finance.RetainerApplicationTest do
     assert invoice.status in [:issued, :partial]
   end
 
+  test "auto-apply retainer applies when invoice is issued and auto_apply is true" do
+    org = org_fixture()
+    retainer = paid_retainer_fixture(org, "300.00")
+
+    {:ok, _retainer} =
+      Ash.update(retainer, %{auto_apply: true}, action: :update, authorize?: false)
+
+    invoice = draft_invoice_fixture(org, "300.00")
+    {:ok, _invoice} = Ash.update(invoice, %{}, action: :issue, authorize?: false)
+
+    {:ok, updated_invoice} = Ash.get(Finance.Invoice, invoice.id, authorize?: false)
+    assert updated_invoice.status == :paid
+  end
+
   # --- Fixtures ---
   defp org_fixture do
     {:ok, org} =
@@ -108,5 +122,18 @@ defmodule GnomeGarden.Finance.RetainerApplicationTest do
     {:ok, r} = Ash.update(r, %{}, action: :issue, authorize?: false)
     {:ok, r} = Ash.update(r, %{}, action: :mark_paid, authorize?: false)
     r
+  end
+
+  defp draft_invoice_fixture(org, amount) do
+    {:ok, invoice} =
+      Finance.Invoice
+      |> Ash.Changeset.for_create(:create, %{
+        organization_id: org.id,
+        total_amount: Decimal.new(amount),
+        balance_amount: Decimal.new(amount),
+        due_on: Date.utc_today() |> Date.add(30)
+      }, authorize?: false)
+      |> Ash.create()
+    invoice
   end
 end

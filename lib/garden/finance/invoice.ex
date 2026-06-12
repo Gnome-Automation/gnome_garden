@@ -140,6 +140,11 @@ defmodule GnomeGarden.Finance.Invoice do
       end
 
       change GnomeGarden.Finance.Changes.GenerateStripePaymentLink
+
+      change after_action(fn _changeset, invoice, context ->
+        GnomeGarden.Finance.Changes.AutoApplyRetainer.maybe_apply(invoice, context.actor)
+        {:ok, invoice}
+      end)
     end
 
     update :mark_paid do
