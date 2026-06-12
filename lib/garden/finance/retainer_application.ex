@@ -3,7 +3,8 @@ defmodule GnomeGarden.Finance.RetainerApplication do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Finance,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource]
+    extensions: [AshAdmin.Resource],
+    notifiers: [GnomeGarden.Finance.Notifiers.RetainerGLNotifier]
 
   admin do
     table_columns [:id, :retainer_id, :invoice_id, :amount, :applied_on]

@@ -244,6 +244,90 @@ defmodule GnomeGarden.Finance.GLPoster do
     end
   end
 
+  def post_retainer_received(retainer) do
+    with {:ok, cash} <- get_account(1000),
+         {:ok, unearned} <- get_account(2300) do
+      post_entry(%{
+        date: retainer.received_on || Date.utc_today(),
+        description: "Retainer received — #{retainer.retainer_number}",
+        entry_type: :retainer_received,
+        reference_id: retainer.id,
+        reference_type: "retainer",
+        lines: [
+          %{account_id: cash.id, debit: retainer.amount, description: "Cash received — retainer"},
+          %{account_id: unearned.id, credit: retainer.amount, description: "Unearned revenue"}
+        ]
+      })
+    else
+      {:missing, number} ->
+        Logger.warning("GLPoster: account #{number} not found, skipping retainer_received GL entry")
+        :ok
+    end
+  end
+
+  def post_retainer_applied(application) do
+    with {:ok, unearned} <- get_account(2300),
+         {:ok, ar} <- get_account(1100) do
+      post_entry(%{
+        date: application.applied_on || Date.utc_today(),
+        description: "Retainer applied to invoice",
+        entry_type: :retainer_applied,
+        reference_id: application.id,
+        reference_type: "retainer_application",
+        lines: [
+          %{account_id: unearned.id, debit: application.amount, description: "Unearned revenue earned"},
+          %{account_id: ar.id, credit: application.amount, description: "AR reduced — retainer applied"}
+        ]
+      })
+    else
+      {:missing, number} ->
+        Logger.warning("GLPoster: account #{number} not found, skipping retainer_applied GL entry")
+        :ok
+    end
+  end
+
+  def post_retainer_unapplied(application) do
+    with {:ok, ar} <- get_account(1100),
+         {:ok, unearned} <- get_account(2300) do
+      post_entry(%{
+        date: Date.utc_today(),
+        description: "Retainer application reversed",
+        entry_type: :retainer_unapplied,
+        reference_id: application.id,
+        reference_type: "retainer_application",
+        lines: [
+          %{account_id: ar.id, debit: application.amount, description: "AR restored — retainer unapplied"},
+          %{account_id: unearned.id, credit: application.amount, description: "Unearned revenue restored"}
+        ]
+      })
+    else
+      {:missing, number} ->
+        Logger.warning("GLPoster: account #{number} not found, skipping retainer_unapplied GL entry")
+        :ok
+    end
+  end
+
+  def post_retainer_voided(retainer) do
+    with {:ok, unearned} <- get_account(2300),
+         {:ok, cash} <- get_account(1000) do
+      post_entry(%{
+        date: Date.utc_today(),
+        description: "Retainer voided — #{retainer.retainer_number}",
+        entry_type: :retainer_voided,
+        reference_id: retainer.id,
+        reference_type: "retainer",
+        lines: [
+          %{account_id: unearned.id, debit: retainer.amount, description: "Unearned revenue reversed"},
+          %{account_id: cash.id, credit: retainer.amount, description: "Cash returned"}
+        ]
+      })
+    else
+      {:missing, number} ->
+        Logger.warning("GLPoster: account #{number} not found, skipping retainer_voided GL entry")
+        :ok
+    end
+  end
+
   # --- Private helpers ---
 
   defp get_account(number) do
