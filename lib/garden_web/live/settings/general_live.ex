@@ -69,7 +69,7 @@ defmodule GnomeGardenWeb.Settings.GeneralLive do
                   value={@session_timeout_minutes}
                   min="0"
                   max="480"
-                  class="w-24 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-emerald-500 text-center"
+                  class="w-24 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 hover:outline-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:hover:outline-white/30 dark:focus:outline-emerald-500 text-center cursor-text transition-all"
                 />
                 <span class="text-sm text-gray-500 dark:text-gray-400">minutes (0 = disabled)</span>
               </div>
@@ -89,7 +89,7 @@ defmodule GnomeGardenWeb.Settings.GeneralLive do
             <div>
               <button
                 type="submit"
-                class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500"
+                class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 active:scale-95 cursor-pointer transition-all dark:bg-emerald-500"
               >
                 Save
               </button>
