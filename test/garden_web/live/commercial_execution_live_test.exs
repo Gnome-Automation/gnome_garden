@@ -134,7 +134,7 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
     assert Enum.any?(tasks, &(&1.task_type == :email))
   end
 
-  test "pursuit show advances related task state", %{conn: conn} do
+  test "pursuit show blocks, starts, completes, and reopens related tasks", %{conn: conn} do
     {:ok, organization} =
       Operations.create_organization(%{
         name: "Pursuit Task Action Account",
@@ -161,7 +161,16 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
 
     {:ok, view, _html} = live(conn, ~p"/commercial/pursuits/#{pursuit}")
 
+    assert has_element?(view, "#block-task-#{task.id}")
+
+    view
+    |> element("#block-task-#{task.id}")
+    |> render_click()
+
     assert has_element?(view, "#start-task-#{task.id}")
+
+    {:ok, blocked_task} = Operations.get_task(task.id)
+    assert blocked_task.status == :blocked
 
     view
     |> element("#start-task-#{task.id}")
@@ -176,10 +185,19 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
     |> element("#complete-task-#{task.id}")
     |> render_click()
 
-    assert render(view) =~ "No active pursuit tasks"
+    assert has_element?(view, "#reopen-task-#{task.id}")
 
     {:ok, completed_task} = Operations.get_task(task.id)
     assert completed_task.status == :completed
+
+    view
+    |> element("#reopen-task-#{task.id}")
+    |> render_click()
+
+    assert has_element?(view, "#start-task-#{task.id}")
+
+    {:ok, reopened_task} = Operations.get_task(task.id)
+    assert reopened_task.status == :pending
   end
 
   test "pursuit show renders contextual task panel and task prefill", %{conn: conn} do
@@ -210,7 +228,7 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
 
     {:ok, view, html} = live(conn, ~p"/commercial/pursuits/#{pursuit}")
 
-    assert html =~ "Related Tasks"
+    assert html =~ "Pursuit Next Steps"
     assert html =~ task.title
 
     {:error, {:redirect, %{to: path}}} =

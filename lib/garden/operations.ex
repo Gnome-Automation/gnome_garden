@@ -253,4 +253,8 @@ defmodule GnomeGarden.Operations do
       {:error, _error} -> nil
     end
   end
+
+  def operations_workspace(opts \\ []) do
+    GnomeGarden.Operations.Workspace.build(opts)
+  end
 end

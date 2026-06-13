@@ -10,6 +10,7 @@ defmodule GnomeGarden.Release do
 
   alias GnomeGarden.Agents.DefaultDeployments
   alias GnomeGarden.Accounts
+  alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.DefaultCompanyProfiles
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
@@ -147,6 +148,35 @@ defmodule GnomeGarden.Release do
   """
   @spec rotate_admin_passwords() :: :ok
   def rotate_admin_passwords, do: bootstrap_admins()
+
+  @doc """
+  Imports the company vendor-onboarding profile and customer records from JSON.
+
+  Use this for sensitive vendor-registration data that should live in company
+  data, not in the repository:
+
+      bin/gnome_garden eval "GnomeGarden.Release.import_vendor_onboarding!(\\"/var/lib/secrets/vendor-onboarding.json\\")"
+  """
+  @spec import_vendor_onboarding!(Path.t()) :: :ok
+  def import_vendor_onboarding!(path) do
+    [repo | _repos] = repos()
+
+    {:ok, _result, _apps} =
+      Ecto.Migrator.with_repo(repo, fn _repo ->
+        payload = path |> File.read!() |> Jason.decode!()
+        {:ok, result} = Commercial.import_vendor_onboarding(payload, authorize?: false)
+
+        IO.puts("""
+        Imported vendor-onboarding profile.
+        Company profile id: #{result["company_profile_id"]}
+        Customers touched: #{result["customer_count"]}
+        """)
+
+        :ok
+      end)
+
+    :ok
+  end
 
   defp seed_data do
     company_profile = DefaultCompanyProfiles.ensure_default()

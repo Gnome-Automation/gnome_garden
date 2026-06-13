@@ -1,7 +1,6 @@
 defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   use GnomeGardenWeb, :live_view
 
-  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Commercial.Helpers
 
   alias GnomeGarden.{Commercial, Operations}
@@ -111,14 +110,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
         </:actions>
       </.page_header>
 
-      <.related_tasks_panel
-        tasks={@pursuit.tasks || []}
-        description="Operator follow-up linked to this pursuit."
-        empty_description="Estimating, proposal, outreach, and close-plan tasks will appear here."
-        new_task_path={new_pursuit_task_path(@pursuit)}
-      />
-
-      <.pursuit_next_steps pursuit={@pursuit} />
+      <.pursuit_next_steps pursuit={@pursuit} new_task_path={new_pursuit_task_path(@pursuit)} />
 
       <.section
         title="Stage Actions"
@@ -320,6 +312,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   end
 
   attr :pursuit, :map, required: true
+  attr :new_task_path, :string, required: true
 
   defp pursuit_next_steps(assigns) do
     ~H"""
@@ -327,6 +320,11 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
       title="Pursuit Next Steps"
       description="Create and advance the human follow-up needed to keep this opportunity moving."
     >
+      <:actions>
+        <.button href={@new_task_path} variant="primary">
+          New Task
+        </.button>
+      </:actions>
       <div class="grid gap-6 lg:grid-cols-[20rem,minmax(0,1fr)]">
         <div class="rounded-2xl border border-base-300/70 bg-base-100/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/40">
@@ -362,7 +360,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
 
         <div class="space-y-3">
           <div
-            :for={task <- actionable_tasks(@pursuit)}
+            :for={task <- pursuit_task_actions(@pursuit)}
             id={"pursuit-task-action-#{task.id}"}
             class="rounded-2xl border border-base-300/70 bg-base-100/70 p-4 dark:border-white/10 dark:bg-white/[0.03]"
           >
@@ -429,10 +427,10 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
           </div>
 
           <.empty_state
-            :if={actionable_tasks(@pursuit) == []}
+            :if={pursuit_task_actions(@pursuit) == []}
             icon="hero-check-circle"
-            title="No active pursuit tasks"
-            description="Use a quick task or New Task when this pursuit needs another operator move."
+            title="No pursuit tasks"
+            description="Use a quick task or New Task when this pursuit needs an operator move."
           />
         </div>
       </div>
@@ -447,11 +445,9 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
     end
   end
 
-  defp actionable_tasks(%{tasks: tasks}) when is_list(tasks) do
-    Enum.reject(tasks, &(&1.status in [:completed, :cancelled]))
-  end
+  defp pursuit_task_actions(%{tasks: tasks}) when is_list(tasks), do: tasks
 
-  defp actionable_tasks(_pursuit), do: []
+  defp pursuit_task_actions(_pursuit), do: []
 
   defp pursuit_task(%{tasks: tasks}, task_id) when is_list(tasks) do
     case Enum.find(tasks, &(&1.id == task_id)) do
@@ -473,46 +469,50 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   defp transition_task(_task, _action, _actor), do: {:error, :unknown_task_action}
 
   defp create_quick_task(pursuit, kind, actor) do
-    attrs =
-      pursuit
-      |> quick_task_attrs(kind)
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> Map.new()
+    with {:ok, quick_attrs} <- quick_task_attrs(pursuit, kind) do
+      attrs =
+        quick_attrs
+        |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+        |> Map.new()
 
-    Operations.create_task_from_pursuit(attrs, actor: actor)
+      Operations.create_task_from_pursuit(attrs, actor: actor)
+    end
   end
 
   defp quick_task_attrs(pursuit, "research") do
-    base_quick_task_attrs(pursuit, %{
-      title: "Research context: #{pursuit.name}",
-      description:
-        "Collect likely controls, validation, facilities, and plant-floor context before the next outreach.",
-      task_type: :research,
-      priority: :normal
-    })
+    {:ok,
+     base_quick_task_attrs(pursuit, %{
+       title: "Research context: #{pursuit.name}",
+       description:
+         "Collect likely controls, validation, facilities, and plant-floor context before the next outreach.",
+       task_type: :research,
+       priority: :normal
+     })}
   end
 
   defp quick_task_attrs(pursuit, "email") do
-    base_quick_task_attrs(pursuit, %{
-      title: "Draft follow-up email: #{pursuit.name}",
-      description:
-        "Draft a concise follow-up that confirms fit, suspected needs, and the next practical conversation.",
-      task_type: :email,
-      priority: :high
-    })
+    {:ok,
+     base_quick_task_attrs(pursuit, %{
+       title: "Draft follow-up email: #{pursuit.name}",
+       description:
+         "Draft a concise follow-up that confirms fit, suspected needs, and the next practical conversation.",
+       task_type: :email,
+       priority: :high
+     })}
   end
 
   defp quick_task_attrs(pursuit, "call") do
-    base_quick_task_attrs(pursuit, %{
-      title: "Confirm scope and timing: #{pursuit.name}",
-      description:
-        "Confirm active scope, timeline, decision process, and who should join the technical conversation.",
-      task_type: :call,
-      priority: :high
-    })
+    {:ok,
+     base_quick_task_attrs(pursuit, %{
+       title: "Confirm scope and timing: #{pursuit.name}",
+       description:
+         "Confirm active scope, timeline, decision process, and who should join the technical conversation.",
+       task_type: :call,
+       priority: :high
+     })}
   end
 
-  defp quick_task_attrs(_pursuit, _kind), do: %{}
+  defp quick_task_attrs(_pursuit, _kind), do: {:error, :unknown_quick_task_kind}
 
   defp base_quick_task_attrs(pursuit, attrs) do
     Map.merge(attrs, %{

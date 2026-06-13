@@ -77,6 +77,11 @@ defmodule GnomeGarden.Commercial.CompanyProfile do
       ]
     end
 
+    action :import_vendor_onboarding, :map do
+      argument :payload, :map, allow_nil?: false
+      run GnomeGarden.Commercial.Actions.ImportVendorOnboarding
+    end
+
     read :by_key do
       argument :key, :string, allow_nil?: false
       get? true

@@ -151,9 +151,61 @@ defmodule GnomeGarden.Commercial.DefaultCompanyProfiles do
     },
     metadata: %{
       "source" => "default_company_profiles",
+      "vendor_registration" => %{
+        "company" => %{
+          "legal_entity_name" => "Gnome Automation LLC",
+          "entity_type" => "LLC (California)",
+          "registered_agent" => "Northwest Registered Agent",
+          "legal_address" => %{
+            "street" => "2108 N Street, Ste N",
+            "city" => "Sacramento",
+            "state" => "CA",
+            "zip" => "95816",
+            "country" => "US"
+          },
+          "signing_authority" => %{
+            "title" => "Managing Member",
+            "note" =>
+              "Standard signing title per operating agreement; conveys authority to bind the company"
+          }
+        },
+        "tax_identifiers" => %{
+          "fein_us" => %{
+            "status" => "NOT_CAPTURED",
+            "note" => "Pull from IRS CP 575 letter or Mercury onboarding docs."
+          },
+          "sales_tax_id_us" => %{
+            "value" => "N/A",
+            "note" =>
+              "Not registered with CDTFA; engineering/professional services are not taxable in California."
+          },
+          "vat_eu" => %{"value" => "N/A"},
+          "gst_india" => %{"value" => "N/A"},
+          "pan_india" => %{"value" => "N/A"}
+        },
+        "banking" => %{
+          "provider" => "Mercury (fintech layer)",
+          "bank_of_record" => "Column N.A.",
+          "sensitive_values" => "stored outside git; import secure JSON into company data",
+          "authoritative_source" =>
+            "Mercury dashboard > Accounts > checking > wire details PDF (MT103-labeled)"
+        },
+        "standard_terms" => %{
+          "delivery_terms" => %{
+            "default_answer" => "DDP",
+            "policy" =>
+              "Accept DDP for domestic services; prefer DAP if ever shipping internationally."
+          },
+          "payment_terms" => %{
+            "policy" => "Counter Net 60 defaults with Net 30 or early-pay discount when possible."
+          },
+          "invoice_footer" => "Use secure banking profile from company data."
+        }
+      },
       "notes" => [
         "Seeded from current commercial, procurement, and company-positioning heuristics.",
-        "Edit this record over time instead of relying on prompt fragments as the canonical source."
+        "Edit this record over time instead of relying on prompt fragments as the canonical source.",
+        "Vendor-registration defaults are sanitized in source; import raw banking values from a secure JSON file at runtime."
       ]
     }
   }
@@ -164,6 +216,16 @@ defmodule GnomeGarden.Commercial.DefaultCompanyProfiles do
   def ensure_default do
     case Commercial.get_primary_company_profile() do
       {:ok, profile} ->
+        metadata = deep_merge(@primary_profile.metadata, profile.metadata || %{})
+
+        profile =
+          if metadata == (profile.metadata || %{}) do
+            profile
+          else
+            {:ok, profile} = Commercial.update_company_profile(profile, %{metadata: metadata})
+            profile
+          end
+
         %{created?: false, profile: profile}
 
       {:error, _reason} ->
@@ -174,4 +236,12 @@ defmodule GnomeGarden.Commercial.DefaultCompanyProfiles do
 
   @spec primary_profile_attrs() :: map()
   def primary_profile_attrs, do: @primary_profile
+
+  defp deep_merge(left, right) when is_map(left) and is_map(right) do
+    Map.merge(left, right, fn _key, left_value, right_value ->
+      deep_merge(left_value, right_value)
+    end)
+  end
+
+  defp deep_merge(_left, right), do: right
 end

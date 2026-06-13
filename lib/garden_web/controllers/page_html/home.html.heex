@@ -6,6 +6,51 @@
     </:subtitle>
   </.page_header>
 
+  <.section
+    title="Today's Priorities"
+    description="A weighted view of the cross-resource work that most directly affects cash, intake, customer delivery, and pipeline movement."
+  >
+    <div :if={Enum.empty?(@priority_items)}>
+      <.empty_state
+        icon="hero-check-circle"
+        title="No priority pressure"
+        description="The main workspace queues are clear right now."
+      />
+    </div>
+
+    <div :if={@priority_items != []} class="grid gap-3 lg:grid-cols-5">
+      <.link
+        :for={item <- @priority_items}
+        navigate={item.path}
+        class="group flex min-h-36 flex-col justify-between gap-4 rounded-xl border border-base-content/10 bg-base-200 px-3 py-3 transition hover:border-primary/40 hover:bg-base-100 sm:p-4"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class={[
+            "flex size-9 shrink-0 items-center justify-center rounded-md",
+            item.accent == "emerald" && "bg-primary/10 text-primary",
+            item.accent == "sky" && "bg-info/10 text-info",
+            item.accent == "amber" && "bg-warning/10 text-warning",
+            item.accent == "rose" && "bg-error/10 text-error"
+          ]}>
+            <.icon name={item.icon} class="size-5" />
+          </div>
+          <span class="text-xl font-semibold tabular-nums text-base-content">
+            {item.count}
+          </span>
+        </div>
+
+        <div class="space-y-1">
+          <p class="text-sm font-semibold text-base-content group-hover:text-primary">
+            {item.title}
+          </p>
+          <p class="text-xs leading-5 text-base-content/60">
+            {item.description}
+          </p>
+        </div>
+      </.link>
+    </div>
+  </.section>
+
   <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
     <.stat_card
       title="Acquisition Queue"

@@ -22,6 +22,7 @@ defmodule GnomeGarden.Commercial do
       define :get_primary_company_profile, action: :primary
       define :create_company_profile, action: :create
       define :update_company_profile, action: :update
+      define :import_vendor_onboarding, action: :import_vendor_onboarding, args: [:payload]
       define :delete_company_profile, action: :destroy
     end
 
