@@ -21,7 +21,8 @@ Research sources reviewed:
 - Ash docs and examples for resources, actions, domains, relationships, code interfaces, calculations, policies, generic actions, extensions, AshPostgres, AshPhoenix, AshStateMachine, AshOban, and AshStorage
 - AshStorage docs/repository guidance for blobs, attachments, host resources, services, direct uploads, variants, analyzers, mirroring, and test service
 
-I attempted to use the repo's `mix usage_rules.search_docs` tasks, but local deps are not installed in this checkout, so Mix could not run. Use those tasks before implementation work once dependencies are available.
+Before implementing changes from this design guidance, use the repo's
+`mix usage_rules.search_docs` tasks to refresh exact package behavior.
 
 ## Core doctrine
 
