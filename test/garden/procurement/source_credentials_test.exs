@@ -116,6 +116,25 @@ defmodule GnomeGarden.Procurement.SourceCredentialsTest do
              SourceCredentials.publicpurchase_credentials()
   end
 
+  test "resolves OpenGov credentials from encrypted database storage" do
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :opengov,
+        credential_family: "opengov",
+        username: "opengov@example.com",
+        password: "opengov-secret"
+      })
+
+    refute SourceCredentials.opengov_configured?()
+
+    {:ok, _credential} = Procurement.mark_source_credential_verified(credential, %{})
+
+    assert SourceCredentials.opengov_configured?()
+
+    assert {:ok, %{username: "opengov@example.com", password: "opengov-secret"}} =
+             SourceCredentials.opengov_credentials()
+  end
+
   test "resolves SAM.gov API keys from encrypted database storage" do
     {:ok, credential} =
       Procurement.create_source_credential(%{

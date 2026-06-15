@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Commercial.CompanyProfileContext do
+defmodule GnomeGarden.Company.ProfileContext do
   @moduledoc """
   Read helper that turns the primary company profile into runtime-safe context.
 
@@ -7,10 +7,10 @@ defmodule GnomeGarden.Commercial.CompanyProfileContext do
   deployment defaults still have a sensible baseline.
   """
 
-  alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.DefaultCompanyProfiles
+  alias GnomeGarden.Company
+  alias GnomeGarden.Company.DefaultProfiles
 
-  @default_profile DefaultCompanyProfiles.primary_profile_attrs()
+  @default_profile DefaultProfiles.primary_profile_attrs()
   @default_bidnet_queries ["scada", "plc", "controls"]
   @default_sam_gov_naics_codes ["541330", "541512"]
 
@@ -19,14 +19,14 @@ defmodule GnomeGarden.Commercial.CompanyProfileContext do
 
   @spec profile(String.t() | nil) :: map()
   def profile(nil) do
-    case Commercial.get_primary_company_profile() do
+    case Company.get_primary_company_profile() do
       {:ok, profile} -> profile_to_map(profile)
       _ -> @default_profile
     end
   end
 
   def profile(key) when is_binary(key) do
-    case Commercial.get_company_profile_by_key(key) do
+    case Company.get_company_profile_by_key(key) do
       {:ok, profile} -> profile_to_map(profile)
       _ -> @default_profile
     end

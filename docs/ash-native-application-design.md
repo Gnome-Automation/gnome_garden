@@ -356,7 +356,53 @@ For simple host-owned files:
 - work order photos on `WorkOrder`: `has_many_attached :photos`
 - signed proposal PDF on `Proposal`: `has_one_attached :signed_document`
 
-For reusable documents that relate to multiple parents, use a dedicated document resource plus attachment/link resources instead of trying to make the blob itself the business document.
+For reusable documents that relate to multiple parents, use a domain-owned
+document resource plus relationship/requirement resources instead of trying to
+make the blob itself the business document.
+
+### Domain-owned document pattern
+
+Use this pattern when a file represents a reusable business document with
+domain meaning, status, expiry, review, or links to many parent records.
+
+```text
+Company.Document
+  Gnome-owned reusable company document such as W-9, Supplier Code Confirmation,
+  Insurance Certificate, Capability Statement, or banking letter
+
+Company.DocumentBlob
+  AshStorage blob metadata and storage key
+
+Company.DocumentAttachment
+  AshStorage attachment join for company documents
+
+DomainSpecificDocumentLink or DomainSpecificRequirement
+  why the document matters to a customer onboarding, part, quote, project,
+  compliance record, or other parent
+```
+
+Only the resource that owns the file as business state should use `AshStorage`.
+Do not attach the same W-9, supplier code confirmation, datasheet, or
+certificate directly to every customer, part, or workflow that needs it.
+
+For customer vendor onboarding, Gnome's W-9 is a `Company.Document`.
+The customer-specific requirement points at that document and owns packet
+state such as sent date, return email, acceptance, rejection reason, waiver,
+or customer instructions.
+
+Domain-specific joins carry relationship meaning:
+
+- `Commercial.CustomerVendorRequirement` for customer-specific onboarding
+  requirements, send targets, requested terms, acceptance state, and notes.
+- `Inventory.PartDocumentLink` for part datasheet/drawing/manual/SDS roles,
+  primary flags, effective dates, and source notes.
+- Quote, proposal, project, compliance, or acquisition-specific link resources
+  when those workflows need their own statuses or review context.
+
+Non-file requirements should remain first-class records. For example, "invoice
+must include purchase order number" is a customer onboarding requirement, not an
+attachment. It may optionally reference a document or revision if a file proves
+or fulfills the requirement.
 
 ### Storage service choice
 

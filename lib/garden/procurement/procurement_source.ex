@@ -158,6 +158,12 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
+    action :import_seed_rows, :map do
+      description "Import procurement source seed rows parsed from CSV or JSON"
+      argument :rows, {:array, :map}, allow_nil?: false
+      run GnomeGarden.Procurement.Actions.ImportProcurementSources
+    end
+
     update :update do
       require_atomic? false
 

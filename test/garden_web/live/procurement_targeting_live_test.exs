@@ -5,7 +5,7 @@ defmodule GnomeGardenWeb.ProcurementTargetingLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias GnomeGarden.Commercial.CompanyProfileLearning
+  alias GnomeGarden.Company.ProfileLearning, as: CompanyProfileLearning
 
   test "targeting live shows learned excludes and recent feedback", %{conn: conn} do
     {:ok, _result} =

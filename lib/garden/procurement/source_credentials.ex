@@ -7,8 +7,8 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
   """
 
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.Actions.SourceCredentialResolution
   alias GnomeGarden.Procurement.ProcurementSource
-  alias GnomeGarden.Procurement.SourceCredentialCrypto
 
   @planetbids_username "PLANETBIDS_USERNAME"
   @planetbids_password "PLANETBIDS_PASSWORD"
@@ -36,32 +36,56 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
 
   def publicpurchase_env_names, do: [@publicpurchase_username, @publicpurchase_password]
 
+  def opengov_configured? do
+    credentials_configured?(:opengov)
+  end
+
+  def opengov_credentials do
+    credentials_for(:opengov)
+  end
+
   def sam_gov_configured?, do: credentials_configured?(:sam_gov)
 
   def sam_gov_api_key do
-    case stored_credential(:sam_gov) do
-      %{encrypted_api_key: payload} = credential when is_map(payload) ->
-        if verified_credential?(credential) do
-          mark_used(credential)
-          {:ok, SourceCredentialCrypto.decrypt_secret!(payload)}
-        else
-          {:error, credential_problem_message(credential, :sam_gov)}
-        end
-
-      _ ->
+    case credential_status(:sam_gov) do
+      status when status in [:missing, :env_configured] ->
         env_api_key(:sam_gov, @sam_gov_api_key)
+
+      _stored_status ->
+        case Procurement.resolve_source_api_key(family_string(:sam_gov), authorize?: false) do
+          {:ok, api_key} -> {:ok, api_key}
+          {:error, reason} -> {:error, credential_resolution_error(reason)}
+        end
     end
   end
 
   def sam_gov_env_names, do: [@sam_gov_api_key]
 
   def credentials_for(source_or_family) do
-    source_or_family
-    |> credential_family()
-    |> env_names_for_family()
-    |> case do
-      {:ok, env_names} -> username_password_credentials(source_or_family, env_names)
-      :error -> {:error, missing_credentials_message(credential_family(source_or_family))}
+    family = credential_family(source_or_family)
+
+    case credential_status(source_or_family) do
+      status
+      when status in [:missing, :env_configured] and family in [:planetbids, "planetbids"] ->
+        env_username_password(family, @planetbids_username, @planetbids_password)
+
+      status
+      when status in [:missing, :env_configured] and
+             family in [:publicpurchase, "publicpurchase"] ->
+        env_username_password(family, @publicpurchase_username, @publicpurchase_password)
+
+      status when status in [:missing, :env_configured] ->
+        {:error, missing_credentials_message(family)}
+
+      _stored_status ->
+        case Procurement.resolve_source_username_password(
+               family_string(family),
+               procurement_source_id(source_or_family),
+               authorize?: false
+             ) do
+          {:ok, credentials} -> {:ok, credentials}
+          {:error, reason} -> {:error, credential_resolution_error(reason)}
+        end
     end
   end
 
@@ -76,6 +100,9 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
       when source_type in [:publicpurchase, "publicpurchase"],
       do: credential_status(source_type) in [:verified, :env_configured]
 
+  def credentials_configured?(source_type) when source_type in [:opengov, "opengov"],
+    do: credential_status(source_type) in [:verified, :env_configured]
+
   def credentials_configured?(source_type) when source_type in [:sam_gov, "sam_gov"],
     do: credential_status(source_type) in [:verified, :env_configured]
 
@@ -84,30 +111,43 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
   def credential_status(source_or_family) do
     family = credential_family(source_or_family)
 
-    case stored_credential(source_or_family) do
-      nil ->
+    case Procurement.source_credential_status(
+           family_string(family),
+           procurement_source_id(source_or_family),
+           authorize?: false
+         ) do
+      {:ok, :missing} ->
         if env_configured?(family), do: :env_configured, else: :missing
 
-      credential ->
-        stored_credential_status(credential)
+      {:ok, status} ->
+        status
+
+      {:error, _reason} ->
+        :missing
     end
   end
 
   def missing_credentials_message(:planetbids) do
-    "PlanetBids credentials are missing. Add source credentials in the database, or set #{Enum.join(planetbids_env_names(), " and ")} as a fallback."
+    SourceCredentialResolution.missing_credentials_message("planetbids")
   end
 
   def missing_credentials_message("planetbids"), do: missing_credentials_message(:planetbids)
 
   def missing_credentials_message(:publicpurchase) do
-    "PublicPurchase credentials are missing. Add source credentials in the database, or set #{Enum.join(publicpurchase_env_names(), " and ")} as a fallback."
+    SourceCredentialResolution.missing_credentials_message("publicpurchase")
   end
 
   def missing_credentials_message("publicpurchase"),
     do: missing_credentials_message(:publicpurchase)
 
+  def missing_credentials_message(:opengov) do
+    SourceCredentialResolution.missing_credentials_message("opengov")
+  end
+
+  def missing_credentials_message("opengov"), do: missing_credentials_message(:opengov)
+
   def missing_credentials_message(:sam_gov) do
-    "SAM.gov API key is missing. Add a source credential in the database, or set #{Enum.join(sam_gov_env_names(), " and ")} as a fallback."
+    SourceCredentialResolution.missing_credentials_message("sam_gov")
   end
 
   def missing_credentials_message("sam_gov"), do: missing_credentials_message(:sam_gov)
@@ -127,81 +167,10 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
 
   def credential_family(source_type), do: source_type
 
-  defp username_password_credentials(source_or_family, [username_env, password_env]) do
-    family = credential_family(source_or_family)
-
-    case stored_credential(source_or_family) do
-      %{encrypted_password: payload, username: username} = credential
-      when is_map(payload) and is_binary(username) ->
-        if verified_credential?(credential) do
-          mark_used(credential)
-          {:ok, %{username: username, password: SourceCredentialCrypto.decrypt_secret!(payload)}}
-        else
-          {:error, credential_problem_message(credential, family)}
-        end
-
-      _ ->
-        env_username_password(family, username_env, password_env)
-    end
-  end
-
-  defp stored_credential_status(%{status: :invalid}), do: :invalid
-  defp stored_credential_status(%{test_status: :invalid}), do: :invalid
-
-  defp stored_credential_status(%{test_status: test_status})
-       when test_status in [:queued, :testing, :untested],
-       do: :pending
-
-  defp stored_credential_status(credential) do
-    if verified_credential?(credential), do: :verified, else: :pending
-  end
-
-  defp verified_credential?(%{test_status: :verified, encrypted_api_key: payload})
-       when is_map(payload),
-       do: decryptable?(payload)
-
-  defp verified_credential?(%{
-         test_status: :verified,
-         encrypted_password: payload,
-         username: username
-       })
-       when is_map(payload),
-       do: present?(username) and decryptable?(payload)
-
-  defp verified_credential?(_credential), do: false
-
-  defp stored_credential(source_or_family) do
-    stored_source_credential(source_or_family) || stored_family_credential(source_or_family)
-  end
-
-  defp stored_source_credential(source_or_family) do
-    with id when is_binary(id) <- procurement_source_id(source_or_family),
-         {:ok, [credential | _]} <-
-           Procurement.list_source_credentials_for_source(id, authorize?: false) do
-      credential
-    else
-      _ -> nil
-    end
-  end
-
   defp procurement_source_id(%ProcurementSource{id: id}) when is_binary(id), do: id
   defp procurement_source_id(%{procurement_source_id: id}) when is_binary(id), do: id
   defp procurement_source_id(%{"procurement_source_id" => id}) when is_binary(id), do: id
   defp procurement_source_id(_source), do: nil
-
-  defp stored_family_credential(%{} = source),
-    do: source |> credential_family() |> stored_family_credential()
-
-  defp stored_family_credential(family) do
-    family = family_string(family)
-
-    if family do
-      case Procurement.list_source_credentials_for_family(family, authorize?: false) do
-        {:ok, [credential | _]} -> credential
-        _ -> nil
-      end
-    end
-  end
 
   defp env_username_password(family, username_env, password_env) do
     username = System.get_env(username_env)
@@ -236,58 +205,24 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
     end
   end
 
-  defp decryptable?(payload) do
-    SourceCredentialCrypto.decrypt_secret!(payload)
-    true
-  rescue
-    _ -> false
-  end
-
-  defp mark_used(credential) do
-    Procurement.mark_source_credential_used(credential, %{}, authorize?: false)
-    :ok
-  end
-
-  defp credential_problem_message(%{status: :invalid} = credential, family) do
-    invalid_credentials_message(credential, family)
-  end
-
-  defp credential_problem_message(%{test_status: :invalid} = credential, family) do
-    invalid_credentials_message(credential, family)
-  end
-
-  defp credential_problem_message(_credential, family) do
-    "#{credential_family_label(family)} credentials are saved, but verification is still pending."
-  end
-
-  defp invalid_credentials_message(%{last_failure_reason: reason}, family)
-       when is_binary(reason) and reason != "" do
-    "#{credential_family_label(family)} credentials are invalid: #{reason}"
-  end
-
-  defp invalid_credentials_message(_credential, family) do
-    "#{credential_family_label(family)} credentials are invalid. Update credentials and test again."
-  end
-
   defp family_string(family) when is_atom(family), do: Atom.to_string(family)
   defp family_string(family) when is_binary(family), do: family
   defp family_string(_family), do: nil
 
-  defp credential_family_label(:planetbids), do: "PlanetBids"
-  defp credential_family_label("planetbids"), do: "PlanetBids"
-  defp credential_family_label(:publicpurchase), do: "PublicPurchase"
-  defp credential_family_label("publicpurchase"), do: "PublicPurchase"
-  defp credential_family_label(:sam_gov), do: "SAM.gov"
-  defp credential_family_label("sam_gov"), do: "SAM.gov"
-  defp credential_family_label(_family), do: "Source"
+  defp credential_resolution_error(%Ash.Error.Unknown{errors: errors}) do
+    Enum.find_value(errors, &unknown_error_message/1) || "Credential resolution failed."
+  end
 
-  defp env_names_for_family(family) when family in [:planetbids, "planetbids"],
-    do: {:ok, planetbids_env_names()}
+  defp credential_resolution_error(reason), do: reason
 
-  defp env_names_for_family(family) when family in [:publicpurchase, "publicpurchase"],
-    do: {:ok, publicpurchase_env_names()}
+  defp unknown_error_message(%{error: error}) when is_binary(error), do: error
 
-  defp env_names_for_family(_family), do: :error
+  defp unknown_error_message(%{value: value}) when is_binary(value), do: value
+
+  defp unknown_error_message(%{value: [missing_credentials: message]}) when is_binary(message),
+    do: message
+
+  defp unknown_error_message(_error), do: nil
 
   defp publicpurchase_family(url) when is_binary(url) do
     if String.contains?(url, "publicpurchase.com"), do: :publicpurchase

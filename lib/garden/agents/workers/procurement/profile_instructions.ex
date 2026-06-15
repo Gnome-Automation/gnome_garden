@@ -7,7 +7,7 @@ defmodule GnomeGarden.Agents.Workers.Procurement.ProfileInstructions do
   drifting back to stale hard-coded company positioning.
   """
 
-  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
 
   @spec bid_scanner_system_prompt(keyword() | map() | nil) :: String.t()
   def bid_scanner_system_prompt(opts_or_map \\ nil) do

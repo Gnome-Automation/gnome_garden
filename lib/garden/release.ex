@@ -10,49 +10,11 @@ defmodule GnomeGarden.Release do
 
   alias GnomeGarden.Agents.DefaultDeployments
   alias GnomeGarden.Accounts
-  alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.DefaultCompanyProfiles
+  alias GnomeGarden.Company
+  alias GnomeGarden.Company.DefaultProfiles
+  alias GnomeGarden.Imports
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
-
-  @procurement_source_create_fields [
-    :name,
-    :url,
-    :source_type,
-    :portal_id,
-    :region,
-    :priority,
-    :api_available,
-    :requires_login,
-    :scrape_selector,
-    :scan_frequency_hours,
-    :enabled,
-    :metadata,
-    :added_by,
-    :notes,
-    :status
-  ]
-
-  @procurement_source_atom_fields %{
-    source_type: [
-      :planetbids,
-      :opengov,
-      :bidnet,
-      :sam_gov,
-      :cal_eprocure,
-      :utility,
-      :school,
-      :port,
-      :custom,
-      :company_site,
-      :job_board,
-      :directory
-    ],
-    region: [:oc, :la, :ie, :sd, :socal, :norcal, :ca, :national],
-    priority: [:high, :medium, :low],
-    added_by: [:manual, :agent, :import],
-    status: [:candidate, :approved, :ignored, :blocked]
-  }
 
   @spec migrate() :: :ok
   def migrate do
@@ -164,7 +126,7 @@ defmodule GnomeGarden.Release do
     {:ok, _result, _apps} =
       Ecto.Migrator.with_repo(repo, fn _repo ->
         payload = path |> File.read!() |> Jason.decode!()
-        {:ok, result} = Commercial.import_vendor_onboarding(payload, authorize?: false)
+        {:ok, result} = Company.import_vendor_onboarding(payload, authorize?: false)
 
         IO.puts("""
         Imported vendor-onboarding profile.
@@ -179,7 +141,7 @@ defmodule GnomeGarden.Release do
   end
 
   defp seed_data do
-    company_profile = DefaultCompanyProfiles.ensure_default()
+    company_profile = DefaultProfiles.ensure_default()
     deployments = DefaultDeployments.ensure_defaults()
 
     IO.puts("""
@@ -261,124 +223,45 @@ defmodule GnomeGarden.Release do
   """
   @spec import_procurement_sources!(Path.t()) :: :ok
   def import_procurement_sources!(path) do
+    rows = path |> File.read!() |> Jason.decode!()
+    import_procurement_source_rows_from_release!(rows)
+  end
+
+  @doc """
+  Imports procurement sources from a CSV seed file.
+
+      bin/gnome_garden eval "GnomeGarden.Release.import_procurement_sources_csv!(\\"/var/lib/gnome/priv/imports/procurement_sources_import_2026-06-12.csv\\")"
+  """
+  @spec import_procurement_sources_csv!(Path.t()) :: :ok
+  def import_procurement_sources_csv!(path) do
+    path
+    |> Imports.Csv.read!()
+    |> import_procurement_source_rows_from_release!()
+  end
+
+  defp import_procurement_source_rows_from_release!(rows) when is_list(rows) do
     [repo | _repos] = repos()
 
     {:ok, _result, _apps} =
       Ecto.Migrator.with_repo(repo, fn _repo ->
-        path
-        |> File.read!()
-        |> Jason.decode!()
-        |> import_procurement_source_rows!()
+        {:ok, result} = Procurement.import_procurement_source_seed_rows(rows, authorize?: false)
+
+        IO.puts("""
+        Imported procurement sources.
+        Imported: #{result["imported_count"]}
+        Created: #{result["created_count"]}
+        Updated: #{result["updated_count"]}
+        Configured: #{result["configured_count"]}
+        Manual: #{result["manual_count"]}
+        """)
       end)
 
     :ok
   end
 
-  defp import_procurement_source_rows!(rows) when is_list(rows) do
-    result =
-      Enum.reduce(rows, %{imported: 0, failed: []}, fn row, acc ->
-        case import_procurement_source_row(row) do
-          {:ok, _source} ->
-            %{acc | imported: acc.imported + 1}
-
-          {:error, error} ->
-            %{acc | failed: [{Map.get(row, "url"), error} | acc.failed]}
-        end
-      end)
-
-    IO.puts("Imported procurement sources: #{result.imported}")
-
-    if result.failed != [] do
-      for {url, error} <- Enum.reverse(result.failed) do
-        IO.puts("Failed procurement source #{url}: #{inspect(error)}")
-      end
-
-      raise "Failed to import #{length(result.failed)} procurement sources"
-    end
-
-    :ok
-  end
-
-  defp import_procurement_source_rows!(_rows) do
+  defp import_procurement_source_rows_from_release!(_rows) do
     raise "Procurement source import must be a JSON array"
   end
-
-  defp import_procurement_source_row(row) when is_map(row) do
-    with {:ok, source} <-
-           row
-           |> procurement_source_create_attrs()
-           |> Procurement.create_procurement_source(authorize?: false),
-         {:ok, source} <- maybe_restore_procurement_source_config(source, row),
-         {:ok, source} <- maybe_restore_procurement_source_scan(source, row) do
-      {:ok, source}
-    end
-  end
-
-  defp procurement_source_create_attrs(row) do
-    Map.new(@procurement_source_create_fields, fn field ->
-      value = Map.get(row, Atom.to_string(field))
-      {field, normalize_procurement_source_value(field, value)}
-    end)
-    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
-    |> Map.new()
-  end
-
-  defp normalize_procurement_source_value(field, value)
-       when is_map_key(@procurement_source_atom_fields, field) do
-    allowed = Map.fetch!(@procurement_source_atom_fields, field)
-
-    cond do
-      is_nil(value) ->
-        nil
-
-      is_atom(value) and value in allowed ->
-        value
-
-      is_binary(value) ->
-        atom_value = Enum.find(allowed, &(Atom.to_string(&1) == value))
-
-        atom_value ||
-          raise "Invalid procurement source #{field}: #{inspect(value)}"
-
-      true ->
-        raise "Invalid procurement source #{field}: #{inspect(value)}"
-    end
-  end
-
-  defp normalize_procurement_source_value(_field, value), do: value
-
-  defp maybe_restore_procurement_source_config(source, %{"config_status" => config_status} = row)
-       when config_status in ["configured", "manual"] do
-    scrape_config = Map.get(row, "scrape_config") || %{}
-
-    if scrape_config == %{} or source.config_status in [:configured, :manual] do
-      {:ok, source}
-    else
-      source
-      |> Procurement.configure_procurement_source(%{scrape_config: scrape_config},
-        authorize?: false,
-        return_notifications?: true
-      )
-      |> unwrap_notification_result()
-    end
-  end
-
-  defp maybe_restore_procurement_source_config(source, _row), do: {:ok, source}
-
-  defp maybe_restore_procurement_source_scan(source, %{"last_scanned_at" => last_scanned_at})
-       when is_binary(last_scanned_at) and last_scanned_at != "" do
-    source
-    |> Procurement.update_procurement_source(%{last_scanned_at: last_scanned_at},
-      authorize?: false,
-      return_notifications?: true
-    )
-    |> unwrap_notification_result()
-  end
-
-  defp maybe_restore_procurement_source_scan(source, _row), do: {:ok, source}
-
-  defp unwrap_notification_result({:ok, record, _notifications}), do: {:ok, record}
-  defp unwrap_notification_result(result), do: result
 
   defp audit_admin!(env_prefix, default_display_name) do
     email = System.get_env("#{env_prefix}_EMAIL")

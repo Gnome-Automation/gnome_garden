@@ -7,7 +7,7 @@ defmodule GnomeGarden.Acquisition.Review do
   alias GnomeGarden.Acquisition.PromotionRules
   alias GnomeGarden.Acquisition.ReviewReasons
   alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.CompanyProfileLearning
+  alias GnomeGarden.Company.ProfileLearning, as: CompanyProfileLearning
   alias GnomeGarden.Commercial.DiscoveryFeedback
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement

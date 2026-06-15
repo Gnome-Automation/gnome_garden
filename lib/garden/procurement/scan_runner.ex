@@ -10,7 +10,7 @@ defmodule GnomeGarden.Procurement.ScanRunner do
   alias GnomeGarden.Agents.DeploymentRunner
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Agents.TemplateCatalog
-  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
 

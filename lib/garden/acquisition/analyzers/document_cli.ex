@@ -1,6 +1,6 @@
 defmodule GnomeGarden.Acquisition.Analyzers.DocumentCLI do
   @moduledoc """
-  Lightweight AshStorage analyzer for procurement packet files.
+  Lightweight AshStorage analyzer for business document files.
 
   The analyzer is deliberately optional-tool friendly. If local CLI tools are
   missing, upload still succeeds and the blob metadata records what was skipped.
@@ -12,6 +12,8 @@ defmodule GnomeGarden.Acquisition.Analyzers.DocumentCLI do
 
   @impl true
   def accept?("application/pdf"), do: true
+  def accept?("application/vnd.openxmlformats-officedocument.wordprocessingml.document"), do: true
+  def accept?("application/msword"), do: true
   def accept?("text/plain"), do: true
   def accept?("text/" <> _), do: true
   def accept?("image/" <> _), do: true
@@ -49,6 +51,27 @@ defmodule GnomeGarden.Acquisition.Analyzers.DocumentCLI do
     end
   end
 
+  defp extract(path, "application/vnd.openxmlformats-officedocument.wordprocessingml.document") do
+    path
+    |> docx_text()
+    |> case do
+      {:ok, text} -> text_metadata(text, "docx_xml")
+      {:error, reason} -> %{"status" => "failed", "reason" => reason, "tool" => "docx_xml"}
+    end
+  end
+
+  defp extract(path, "application/msword") do
+    case find_tool("antiword") do
+      nil ->
+        unavailable("antiword")
+
+      tool ->
+        tool
+        |> run([path])
+        |> text_result("antiword")
+    end
+  end
+
   defp extract(path, "text/" <> _) do
     path
     |> File.read()
@@ -80,6 +103,33 @@ defmodule GnomeGarden.Acquisition.Analyzers.DocumentCLI do
       "reason" => "unsupported_content_type",
       "content_type" => content_type
     }
+  end
+
+  defp docx_text(path) do
+    with {:ok, {_name, xml}} <-
+           :zip.extract(String.to_charlist(path), [:memory, file_list: [~c"word/document.xml"]]) do
+      text =
+        xml
+        |> to_string()
+        |> String.replace(~r/<w:tab\s*\/>/, " ")
+        |> String.replace(~r/<w:br\s*\/>/, "\n")
+        |> String.replace(~r/<[^>]*>/, " ")
+        |> html_unescape()
+
+      {:ok, text}
+    else
+      {:error, reason} -> {:error, inspect(reason)}
+      other -> {:error, inspect(other)}
+    end
+  end
+
+  defp html_unescape(text) do
+    text
+    |> String.replace("&amp;", "&")
+    |> String.replace("&lt;", "<")
+    |> String.replace("&gt;", ">")
+    |> String.replace("&quot;", "\"")
+    |> String.replace("&apos;", "'")
   end
 
   defp text_result({output, 0}, tool), do: text_metadata(output, tool)

@@ -9,8 +9,8 @@ defmodule GnomeGarden.Commercial.Actions.ImportVendorOnboarding do
 
   use Ash.Resource.Actions.Implementation
 
-  alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.DefaultCompanyProfiles
+  alias GnomeGarden.Company
+  alias GnomeGarden.Company.DefaultProfiles
   alias GnomeGarden.Operations
 
   @supplier_code_task_key "supplier_code_of_conduct_confirmation_letter"
@@ -42,11 +42,11 @@ defmodule GnomeGarden.Commercial.Actions.ImportVendorOnboarding do
   end
 
   defp upsert_company_profile!(payload, actor) do
-    profile = DefaultCompanyProfiles.ensure_default().profile
+    profile = DefaultProfiles.ensure_default().profile
     metadata = deep_merge(profile.metadata || %{}, vendor_metadata(payload))
 
     {:ok, profile} =
-      Commercial.update_company_profile(profile, %{metadata: metadata},
+      Company.update_company_profile(profile, %{metadata: metadata},
         actor: actor,
         authorize?: false
       )

@@ -139,7 +139,9 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
     {:ok, %{url: result["url"], title: result["title"], signal: "login_form_disappeared"}}
   end
 
-  defp interpret_login_result(%{"reason" => reason}), do: {:error, reason}
+  defp interpret_login_result(%{"reason" => reason}) when is_binary(reason) and reason != "",
+    do: {:error, reason}
+
   defp interpret_login_result(_result), do: {:error, "Could not verify login success."}
 
   defp browser do
@@ -184,8 +186,8 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
 
       const form = passInput.closest('form');
       const submit =
-        (form && form.querySelector('button[type="submit"], input[type="submit"], button')) ||
-        document.querySelector('button[type="submit"], input[type="submit"], button');
+        (form && form.querySelector('button[type="submit"], input[type="submit"], input[type="button"], button')) ||
+        document.querySelector('button[type="submit"], input[type="submit"], input[type="button"], button');
 
       if (submit) {
         submit.click();

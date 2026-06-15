@@ -498,7 +498,7 @@ defmodule GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding do
   defp context_profile(context, params) do
     tool_context = Map.get(context, :tool_context, %{})
 
-    GnomeGarden.Commercial.CompanyProfileContext.resolve(
+    GnomeGarden.Company.ProfileContext.resolve(
       profile_key:
         Map.get(params, :company_profile_key) ||
           nested_value(tool_context, [:company_profile_key]) ||

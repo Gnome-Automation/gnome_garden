@@ -9,7 +9,7 @@ defmodule GnomeGarden.Procurement.BidReview do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.CompanyProfileLearning
+  alias GnomeGarden.Company.ProfileLearning, as: CompanyProfileLearning
   alias GnomeGarden.Commercial.DiscoveryRecord
   alias GnomeGarden.Commercial.Events
   alias GnomeGarden.Operations

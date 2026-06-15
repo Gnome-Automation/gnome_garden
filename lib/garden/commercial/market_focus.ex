@@ -12,7 +12,7 @@ defmodule GnomeGarden.Commercial.MarketFocus do
   should not crowd the same backlog as controller and operations-focused work.
   """
 
-  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
 
   @controller_terms [
     "scada",

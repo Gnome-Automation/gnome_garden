@@ -15,16 +15,83 @@ defmodule GnomeGarden.Commercial do
   end
 
   resources do
-    resource GnomeGarden.Commercial.CompanyProfile do
-      define :list_company_profiles, action: :read
-      define :get_company_profile, action: :read, get_by: [:id]
-      define :get_company_profile_by_key, action: :by_key, args: [:key]
-      define :get_primary_company_profile, action: :primary
-      define :create_company_profile, action: :create
-      define :update_company_profile, action: :update
-      define :import_vendor_onboarding, action: :import_vendor_onboarding, args: [:payload]
-      define :delete_company_profile, action: :destroy
+    resource GnomeGarden.Commercial.CustomerVendorOnboarding do
+      define :list_customer_vendor_onboardings, action: :read
+      define :list_active_customer_vendor_onboardings, action: :active
+      define :get_customer_vendor_onboarding, action: :read, get_by: [:id]
+
+      define :get_customer_vendor_onboarding_by_key,
+        action: :by_key,
+        args: [:company_profile_id, :key]
+
+      define :create_customer_vendor_onboarding, action: :create
+      define :update_customer_vendor_onboarding, action: :update
+      define :activate_customer_vendor_onboarding, action: :activate
+      define :complete_customer_vendor_onboarding, action: :complete
+      define :archive_customer_vendor_onboarding, action: :archive
+      define :delete_customer_vendor_onboarding, action: :destroy
     end
+
+    resource GnomeGarden.Commercial.CustomerVendorRequirement do
+      define :list_customer_vendor_requirements, action: :read
+
+      define :list_customer_vendor_requirements_for_onboarding,
+        action: :for_onboarding,
+        args: [:customer_vendor_onboarding_id]
+
+      define :get_customer_vendor_requirement, action: :read, get_by: [:id]
+
+      define :get_customer_vendor_requirement_by_key,
+        action: :by_key,
+        args: [:customer_vendor_onboarding_id, :key]
+
+      define :create_customer_vendor_requirement, action: :create
+      define :update_customer_vendor_requirement, action: :update
+      define :ready_customer_vendor_requirement, action: :mark_ready
+      define :send_customer_vendor_requirement, action: :mark_sent
+      define :accept_customer_vendor_requirement, action: :accept
+      define :reject_customer_vendor_requirement, action: :reject
+      define :waive_customer_vendor_requirement, action: :waive
+      define :delete_customer_vendor_requirement, action: :destroy
+    end
+
+    resource GnomeGarden.Commercial.CustomerVendorRequirementDelivery do
+      define :list_customer_vendor_requirement_deliveries, action: :read
+
+      define :list_customer_vendor_requirement_deliveries_for_requirement,
+        action: :for_requirement,
+        args: [:customer_vendor_requirement_id]
+
+      define :create_customer_vendor_requirement_delivery, action: :create
+      define :delete_customer_vendor_requirement_delivery, action: :destroy
+    end
+
+    resource GnomeGarden.Commercial.CustomerVendorRequirementArtifact do
+      define :list_customer_vendor_requirement_artifacts, action: :read
+
+      define :list_customer_vendor_requirement_artifacts_for_requirement,
+        action: :for_requirement,
+        args: [:customer_vendor_requirement_id]
+
+      define :get_customer_vendor_requirement_artifact, action: :read, get_by: [:id]
+      define :create_customer_vendor_requirement_artifact, action: :create
+      define :update_customer_vendor_requirement_artifact, action: :update
+      define :extract_customer_vendor_requirement_artifact, action: :mark_extracted
+      define :draft_customer_vendor_requirement_artifact, action: :mark_drafted
+      define :sign_customer_vendor_requirement_artifact, action: :mark_signed
+      define :approve_customer_vendor_requirement_artifact, action: :approve
+      define :reject_customer_vendor_requirement_artifact, action: :reject
+      define :send_customer_vendor_requirement_artifact, action: :mark_sent
+
+      define :populate_customer_vendor_requirement_artifact,
+        action: :populate_source_form,
+        args: [:artifact_id]
+
+      define :delete_customer_vendor_requirement_artifact, action: :destroy
+    end
+
+    resource GnomeGarden.Commercial.CustomerVendorRequirementArtifactBlob
+    resource GnomeGarden.Commercial.CustomerVendorRequirementArtifactAttachment
 
     resource GnomeGarden.Commercial.DiscoveryProgram do
       define :list_discovery_programs, action: :read

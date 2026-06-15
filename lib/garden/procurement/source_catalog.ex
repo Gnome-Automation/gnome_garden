@@ -9,7 +9,7 @@ defmodule GnomeGarden.Procurement.SourceCatalog do
 
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
-  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
 
   @standard_notes "Bootstrapped from the default bid source catalog as a deduped portal record."
 

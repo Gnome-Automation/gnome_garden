@@ -3,6 +3,7 @@ defmodule GnomeGarden.Procurement.BidReviewTest do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Company
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.BidReview
 
@@ -44,7 +45,7 @@ defmodule GnomeGarden.Procurement.BidReviewTest do
              "video surveillance"
            ]
 
-    {:ok, profile} = Commercial.get_primary_company_profile()
+    {:ok, profile} = Company.get_primary_company_profile()
 
     assert get_in(
              profile.keyword_profiles,

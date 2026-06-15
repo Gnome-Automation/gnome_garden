@@ -1,12 +1,12 @@
-defmodule GnomeGarden.Commercial.CompanyProfileTest do
+defmodule GnomeGarden.Company.ProfileTest do
   use GnomeGarden.DataCase, async: true
 
-  alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.DefaultCompanyProfiles
+  alias GnomeGarden.Company
+  alias GnomeGarden.Company.DefaultProfiles
 
   test "primary company profile can be bootstrapped idempotently" do
-    first = DefaultCompanyProfiles.ensure_default()
-    second = DefaultCompanyProfiles.ensure_default()
+    first = DefaultProfiles.ensure_default()
+    second = DefaultProfiles.ensure_default()
 
     assert first.profile.key == "primary"
     assert first.profile.default_profile_mode == :industrial_plus_software
@@ -15,7 +15,7 @@ defmodule GnomeGarden.Commercial.CompanyProfileTest do
 
   test "company profile stores positioning, tone, and keyword modes" do
     {:ok, profile} =
-      Commercial.create_company_profile(%{
+      Company.create_company_profile(%{
         key: "secondary",
         name: "Gnome Labs",
         positioning_summary: "Custom industrial and software engineering shop.",
@@ -38,7 +38,7 @@ defmodule GnomeGarden.Commercial.CompanyProfileTest do
     assert "Phoenix apps" in profile.core_capabilities
     assert get_in(profile.keyword_profiles, ["modes", "industrial_core", "include"]) == ["plc"]
 
-    assert {:ok, fetched} = Commercial.get_company_profile_by_key("secondary")
+    assert {:ok, fetched} = Company.get_company_profile_by_key("secondary")
     assert fetched.id == profile.id
   end
 end

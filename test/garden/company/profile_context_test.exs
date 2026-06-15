@@ -1,8 +1,8 @@
-defmodule GnomeGarden.Commercial.CompanyProfileContextTest do
+defmodule GnomeGarden.Company.ProfileContextTest do
   use GnomeGarden.DataCase, async: true
 
-  alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Company
+  alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
 
   test "falls back to the seeded default profile when no record exists" do
     profile = CompanyProfileContext.primary_profile()
@@ -28,7 +28,7 @@ defmodule GnomeGarden.Commercial.CompanyProfileContextTest do
 
   test "uses the durable primary profile when it exists" do
     {:ok, _profile} =
-      Commercial.create_company_profile(%{
+      Company.create_company_profile(%{
         key: "primary",
         name: "Gnome Labs",
         positioning_summary: "Industrial apps and software delivery for operations teams.",
@@ -71,7 +71,7 @@ defmodule GnomeGarden.Commercial.CompanyProfileContextTest do
 
   test "merges learned exclude keywords into resolved profile mode" do
     {:ok, _profile} =
-      Commercial.create_company_profile(%{
+      Company.create_company_profile(%{
         key: "primary",
         name: "Gnome",
         positioning_summary: "Industrial apps",
@@ -112,7 +112,7 @@ defmodule GnomeGarden.Commercial.CompanyProfileContextTest do
 
   test "bidnet query keywords drop terms excluded by the active profile mode" do
     {:ok, _profile} =
-      Commercial.create_company_profile(%{
+      Company.create_company_profile(%{
         key: "primary",
         name: "Gnome",
         positioning_summary: "Industrial apps",
