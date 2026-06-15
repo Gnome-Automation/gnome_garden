@@ -5,7 +5,7 @@ defmodule GnomeGarden.MixProject do
     [
       app: :gnome_garden,
       version: "0.1.0",
-      elixir: "~> 1.15",
+      elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -45,7 +45,7 @@ defmodule GnomeGarden.MixProject do
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
       {:vibe_kit, "== 0.1.2", only: [:dev, :test], runtime: false},
-      {:pi_bridge, "== 0.6.2", only: :dev},
+      {:pi_bridge, "== 0.6.19", only: :dev},
       # Browser automation engine. jido_browser still pulls the minimal Jido
       # libraries it needs transitively; the app no longer owns a Jido runtime.
       {:libgraph, "~> 0.16", override: true},

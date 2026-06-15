@@ -548,7 +548,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
   defp maybe_put_identity_attr(attrs, key, value), do: Map.put(attrs, key, value)
 
   defp dialog_action_param(params) do
-    Map.get(params, "action") || Map.get(params, "value")
+    Map.get(params, "dialog_action") ||
+      Map.get(params, "dialog-action") ||
+      Map.get(params, "action") ||
+      Map.get(params, "value")
   end
 
   defp build_action_dialog(finding, type) do

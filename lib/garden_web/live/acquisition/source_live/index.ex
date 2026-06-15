@@ -518,8 +518,17 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
             <h3 class="mt-2 text-base font-semibold leading-6 text-base-content">
               {@source.name}
             </h3>
-            <p class="mt-1 break-all text-sm leading-5 text-base-content/60">
+            <.link
+              :if={@source.url}
+              href={@source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-1 block break-all text-sm leading-5 text-primary hover:text-primary-focus hover:underline"
+            >
               {@source.url}
+            </.link>
+            <p :if={is_nil(@source.url)} class="mt-1 text-sm leading-5 text-base-content/45">
+              No URL configured
             </p>
           </div>
 

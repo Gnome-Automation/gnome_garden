@@ -10,8 +10,8 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        beamPkgs = pkgs.beam.packages.erlang_28;
-        elixir = beamPkgs.elixir_1_19;
+        beamPkgs = pkgs.beam.packages.erlang_29;
+        elixir = beamPkgs.elixir_1_20;
         erlang = beamPkgs.erlang;
         commonDevTools = [
           elixir

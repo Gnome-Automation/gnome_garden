@@ -1,4 +1,5 @@
 {
-  "thinking": "high",
-  "tools": ["read", "write", "edit", "bash", "grep", "find", "ls"]
+  "defaultThinkingLevel": "high",
+  "enableSkillCommands": true,
+  "skills": ["skills"]
 }
