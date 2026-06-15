@@ -984,16 +984,20 @@ action row should be intentionally designed for:
 
 ## Development Workflow
 
-1. **I run the server** - Don't start/stop Phoenix
-2. **Generate migrations**: `mix ash.codegen`
-3. **Apply migrations**: `mix ash.migrate`
-4. **During development**: batch related edits before running format/tests.
+1. **Use the pinned VM shell** - Prefer `nix develop` for local work. It pins
+   Erlang/OTP, Elixir, Node, PostgreSQL, Tailwind/esbuild, browser tooling, and
+   document-analysis CLIs used by AshStorage analyzers. See
+   `docs/development-vm-setup.md`.
+2. **I run the server** - Don't start/stop Phoenix
+3. **Generate migrations**: `mix ash.codegen`
+4. **Apply migrations**: `mix ash.migrate`
+5. **During development**: batch related edits before running format/tests.
    Prefer connected BEAM tools (`elixir_eval`, Tidewave) for quick runtime
    inspection and shape checks. Then run `mix format` once for the touched files
    and a focused check such as `mix test path:line` or the smallest relevant
    test file. Avoid `mix format && mix test` after every tiny edit because it
    repeatedly recompiles large parts of the Phoenix/Ash app.
-5. **Before opening a PR only**: run `mix precommit` as the final broad check.
+6. **Before opening a PR only**: run `mix precommit` as the final broad check.
 
 ## Code Shape
 

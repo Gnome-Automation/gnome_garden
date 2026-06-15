@@ -13,22 +13,29 @@
         beamPkgs = pkgs.beam.packages.erlang_29;
         elixir = beamPkgs.elixir_1_20;
         erlang = beamPkgs.erlang;
+        postgres = pkgs.postgresql_18;
+        postgresBin = "${postgres}/bin";
         commonDevTools = [
           elixir
           erlang
           pkgs.nodejs_22
           pkgs.tailwindcss_4
           pkgs.esbuild
-          pkgs.postgresql_18
+          postgres
           pkgs.garage_2
           pkgs.awscli2
+          pkgs.antiword
           pkgs.caddy
           pkgs.curl
           pkgs.fd
           pkgs.git
+          pkgs.imagemagick
           pkgs.jq
+          pkgs.libreoffice
           pkgs.openssl
+          pkgs."poppler-utils"
           pkgs.ripgrep
+          pkgs.tesseract
         ];
         linuxDevTools = pkgs.lib.optionals pkgs.stdenv.isLinux [
           pkgs.chromium
@@ -65,19 +72,19 @@
 
             if [ ! -d "$PGDATA" ]; then
               echo "Initializing local PostgreSQL 18..."
-              initdb --no-locale --encoding=UTF8 -D "$PGDATA" > /dev/null
+              "${postgresBin}/initdb" --no-locale --encoding=UTF8 -D "$PGDATA" > /dev/null
               echo "unix_socket_directories = '$PGDATA'" >> "$PGDATA/postgresql.conf"
               echo "listen_addresses = 'localhost'" >> "$PGDATA/postgresql.conf"
               echo "port = $PGPORT" >> "$PGDATA/postgresql.conf"
             fi
 
-            if ! pg_isready -q -h "$PGHOST" -p "$PGPORT" 2>/dev/null; then
+            if ! "${postgresBin}/pg_isready" -q -h "$PGHOST" -p "$PGPORT" 2>/dev/null; then
               echo "Starting PostgreSQL..."
-              pg_ctl -D "$PGDATA" -l "$PGDATA/server.log" start -o "-k $PGDATA" > /dev/null
-              if ! psql -h "$PGHOST" -p "$PGPORT" -lqt 2>/dev/null | grep -q gnome_garden_dev; then
-                createuser -h "$PGHOST" -p "$PGPORT" -s postgres 2>/dev/null || true
-                createdb -h "$PGHOST" -p "$PGPORT" -U postgres gnome_garden_dev 2>/dev/null || true
-                createdb -h "$PGHOST" -p "$PGPORT" -U postgres gnome_garden_test 2>/dev/null || true
+              "${postgresBin}/pg_ctl" -D "$PGDATA" -l "$PGDATA/server.log" start -o "-k $PGDATA" > /dev/null
+              if ! "${postgresBin}/psql" -h "$PGHOST" -p "$PGPORT" -lqt 2>/dev/null | grep -q gnome_garden_dev; then
+                "${postgresBin}/createuser" -h "$PGHOST" -p "$PGPORT" -s postgres 2>/dev/null || true
+                "${postgresBin}/createdb" -h "$PGHOST" -p "$PGPORT" -U postgres gnome_garden_dev 2>/dev/null || true
+                "${postgresBin}/createdb" -h "$PGHOST" -p "$PGPORT" -U postgres gnome_garden_test 2>/dev/null || true
               fi
             fi
             echo "PostgreSQL running on localhost:$PGPORT"
