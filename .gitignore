@@ -48,6 +48,7 @@ playwright-report/
 # Environment variables
 .env
 .env.*
+!.env.example
 
 # Local dependencies
 jido/

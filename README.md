@@ -44,14 +44,37 @@ Copy `.env.example` to `.env` and fill in your values:
 cp .env.example .env
 ```
 
+`.env.example` is committed so another workstation can see every supported
+variable. `.env` stays ignored because committing real API keys or tokens keeps
+them recoverable in Git history even after later edits.
+
 ```bash
 # AI Models - Z.AI (Zhipu AI) for GLM models
 # Get API key from https://open.bigmodel.cn
 ZAI_API_KEY=your_zai_api_key
 
+# Optional model provider key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
 # Web Search - Brave Search API
 # Get API key from https://brave.com/search/api/
 BRAVE_API_KEY=your_brave_api_key
+
+# Mercury banking integration
+MERCURY_API_KEY=your_mercury_api_key
+MERCURY_SANDBOX=true
+MERCURY_WEBHOOK_SECRET=your_mercury_webhook_secret
+
+# Gnome company bootstrap facts
+GNOME_COMPANY_FEIN=your_company_fein
+GNOME_MERCURY_CHECKING_ACCOUNT_NUMBER=your_account_number
+
+# Procurement source fallbacks
+SAM_GOV_API_KEY=your_sam_gov_api_key
+PLANETBIDS_USERNAME=your_planetbids_username
+PLANETBIDS_PASSWORD=your_planetbids_password
+PUBLICPURCHASE_USERNAME=your_publicpurchase_username
+PUBLICPURCHASE_PASSWORD=your_publicpurchase_password
 
 # Database (production)
 DATABASE_URL=postgres://user:pass@host/database
