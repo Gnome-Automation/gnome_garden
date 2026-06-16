@@ -38,6 +38,10 @@ defmodule GnomeGarden.Mercury.Transaction do
   actions do
     defaults [:read, :destroy]
 
+    read :recent do
+      prepare build(sort: [occurred_at: :desc], limit: 6, load: [:account])
+    end
+
     create :create do
       primary? true
 

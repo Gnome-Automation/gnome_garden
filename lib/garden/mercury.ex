@@ -26,6 +26,7 @@ defmodule GnomeGarden.Mercury do
 
     resource GnomeGarden.Mercury.Transaction do
       define :list_mercury_transactions, action: :read
+      define :list_recent_mercury_transactions, action: :recent
       define :get_mercury_transaction, action: :read, get_by: [:id]
       define :get_mercury_transaction_by_mercury_id, action: :read, get_by: [:mercury_id]
       define :create_mercury_transaction, action: :create
