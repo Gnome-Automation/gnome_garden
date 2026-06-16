@@ -81,7 +81,9 @@ defmodule GnomeGarden.Mercury.Transaction do
         :posted_date,
         :failed_at,
         :company_id,
-        :match_confidence
+        :match_confidence,
+        :reconciliation_note,
+        :reconciliation_category
       ]
     end
   end
@@ -149,6 +151,24 @@ defmodule GnomeGarden.Mercury.Transaction do
       constraints one_of: [:exact, :probable, :possible, :unmatched]
     end
 
+    attribute :reconciliation_note, :string do
+      public? true
+    end
+
+    attribute :reconciliation_category, :atom do
+      public? true
+
+      constraints one_of: [
+                    :bank_fee,
+                    :internal_transfer,
+                    :misc_income,
+                    :refund,
+                    :interest_income,
+                    :owner_draw,
+                    :other
+                  ]
+    end
+
     timestamps()
   end
 
@@ -159,6 +179,11 @@ defmodule GnomeGarden.Mercury.Transaction do
     end
 
     has_many :payment_matches, GnomeGarden.Mercury.PaymentMatch do
+      destination_attribute :mercury_transaction_id
+      public? true
+    end
+
+    has_many :transaction_events, GnomeGarden.Mercury.TransactionEvent do
       destination_attribute :mercury_transaction_id
       public? true
     end

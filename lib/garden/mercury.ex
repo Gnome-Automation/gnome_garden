@@ -39,6 +39,16 @@ defmodule GnomeGarden.Mercury do
       define :delete_payment_match, action: :destroy, default_options: [return_destroyed?: true]
     end
 
+    resource GnomeGarden.Mercury.TransactionEvent do
+      define :list_transaction_events, action: :read
+      define :create_transaction_event, action: :create
+    end
+
+    resource GnomeGarden.Mercury.AliasEvent do
+      define :list_alias_events, action: :read
+      define :create_alias_event, action: :create
+    end
+
     resource GnomeGarden.Mercury.ClientBankAlias do
       define :list_client_bank_aliases, action: :read
 
@@ -55,6 +65,14 @@ defmodule GnomeGarden.Mercury do
       define :delete_client_bank_alias,
         action: :destroy,
         default_options: [return_destroyed?: true]
+    end
+
+    resource GnomeGarden.Mercury.BankRule do
+      define :list_bank_rules, action: :sorted
+      define :get_bank_rule, action: :read, get_by: [:id]
+      define :create_bank_rule, action: :create
+      define :update_bank_rule, action: :update
+      define :delete_bank_rule, action: :destroy, default_options: [return_destroyed?: true]
     end
   end
 end

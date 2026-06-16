@@ -336,6 +336,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
     # Finance
     %{
+      id: "fin-mercury",
+      section: "Finance",
+      icon: "hero-building-library",
+      label: "Mercury",
+      path: "/finance/mercury",
+      badge: 0,
+      hot: false,
+      match: ["/finance/mercury"]
+    },
+    %{
       id: "fin-invoices",
       section: "Finance",
       icon: "hero-banknotes",
