@@ -1,5 +1,11 @@
 # Mercury Bank Integration Plan
 
+> Superseded on 2026-06-16 by
+> `docs/superpowers/plans/2026-06-16-finance-banking-domain.md`.
+> Keep this file as historical context for the first Mercury proof of concept.
+> New work should model provider-neutral Finance banking resources and treat
+> Mercury as one provider integration.
+
 ## Goal
 
 Integrate Mercury Bank into gnome_garden to automate invoicing, track payments,
