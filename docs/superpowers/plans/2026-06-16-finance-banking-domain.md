@@ -467,8 +467,10 @@ GnomeGarden.Finance.BankConnection.sync
   -> ReqMercury
 ```
 
-Provider adapters return normalized maps or structs. Finance actions decide what
-to persist and what business transitions to run.
+Provider adapters call provider SDKs directly and return normalized maps or
+structs. Finance actions decide what to persist and what business transitions
+to run. Do not keep a second `GnomeGarden.Providers.Mercury` wrapper around
+`ReqMercury`; it only creates two names for the same transport boundary.
 
 ## Current Branch Refactor Map
 
@@ -488,7 +490,7 @@ Target replacement:
 | `Mercury.PaymentMatcherWorker` | `Finance.BankTransaction.match_receivable` |
 | `Mercury.InvoiceSchedulerWorker` | later Finance billing scheduled action |
 | `/finance/mercury` | `/finance/banking` |
-| `GnomeGarden.Providers.Mercury` | keep as thin adapter or move under `Finance.Integrations.Mercury` |
+| `GnomeGarden.Providers.Mercury` | delete; `Finance.Integrations.Mercury` calls `ReqMercury` directly |
 
 Because this is not production-stable yet, do not preserve backwards
 compatibility for provider-specific names. Prefer clean Finance names and use

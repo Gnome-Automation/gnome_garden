@@ -358,7 +358,7 @@ defmodule GnomeGarden.Finance.Actions.SyncBankConnection do
     }
   end
 
-  defp provider_opts(%{environment: :sandbox}), do: [mercury_sandbox: true]
+  defp provider_opts(%{environment: :sandbox}), do: [sandbox?: true]
   defp provider_opts(_connection), do: []
 
   defp default_connection_name(:mercury, :sandbox), do: "Mercury Sandbox"

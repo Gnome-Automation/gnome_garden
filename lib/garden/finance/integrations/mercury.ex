@@ -3,22 +3,19 @@ defmodule GnomeGarden.Finance.Integrations.Mercury do
   Mercury banking adapter and payload normalizer.
 
   This module deliberately does not write Garden state. It calls `ReqMercury`
-  through the existing provider boundary and normalizes payloads for Finance
-  actions.
+  directly and normalizes payloads for Finance actions.
   """
-
-  alias GnomeGarden.Providers
 
   @spec list_accounts(keyword()) :: {:ok, list(map())} | {:error, term()}
   def list_accounts(opts \\ []) do
-    with {:ok, body} <- Providers.Mercury.list_accounts(opts) do
+    with {:ok, body} <- ReqMercury.list_accounts(opts) do
       {:ok, extract_list(body, "accounts")}
     end
   end
 
   @spec list_transactions(String.t(), keyword()) :: {:ok, list(map())} | {:error, term()}
   def list_transactions(account_id, opts \\ []) do
-    with {:ok, body} <- Providers.Mercury.list_transactions(account_id, opts) do
+    with {:ok, body} <- ReqMercury.list_transactions(account_id, opts) do
       {:ok, extract_list(body, "transactions")}
     end
   end
