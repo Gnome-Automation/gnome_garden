@@ -1,4 +1,4 @@
-defmodule GnomeGardenWeb.Finance.MercuryLive do
+defmodule GnomeGardenWeb.Finance.BankingLive do
   use GnomeGardenWeb, :live_view
   use Cinder.UrlSync
 
@@ -6,12 +6,12 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
 
   require Logger
 
+  alias GnomeGarden.Finance
   alias GnomeGarden.Finance.BankSyncWorker
-  alias GnomeGarden.Mercury
 
   @direction_options [
-    {"Money in", :money_in},
-    {"Money out", :money_out},
+    {"Money in", :credit},
+    {"Money out", :debit},
     {"Both", :both}
   ]
 
@@ -25,12 +25,17 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
   ]
 
   @category_options [
+    {"Customer payment", :customer_payment},
+    {"Vendor payment", :vendor_payment},
     {"Bank fee", :bank_fee},
     {"Internal transfer", :internal_transfer},
     {"Misc income", :misc_income},
     {"Refund", :refund},
     {"Interest income", :interest_income},
     {"Owner draw", :owner_draw},
+    {"Payroll", :payroll},
+    {"Tax", :tax},
+    {"Unknown", :unknown},
     {"Other", :other}
   ]
 
@@ -38,7 +43,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Mercury")
+     |> assign(:page_title, "Banking")
      |> assign(:direction_options, @direction_options)
      |> assign(:amount_operator_options, @amount_operator_options)
      |> assign(:category_options, @category_options)
@@ -68,11 +73,11 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
         {:noreply,
          socket
          |> assign(:syncing?, true)
-         |> put_flash(:info, "Mercury sync started.")}
+         |> put_flash(:info, "Bank sync started.")}
 
       {:error, reason} ->
-        Logger.warning("Mercury sync enqueue failed", reason: inspect(reason))
-        {:noreply, put_flash(socket, :error, "Could not start Mercury sync.")}
+        Logger.warning("Bank sync enqueue failed", reason: inspect(reason))
+        {:noreply, put_flash(socket, :error, "Could not start bank sync.")}
     end
   end
 
@@ -85,7 +90,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
   def handle_event("save_rule", %{"rule" => params}, socket) do
     attrs = rule_attrs(params, next_rule_priority(socket.assigns.bank_rules))
 
-    case Mercury.create_bank_rule(attrs, actor: socket.assigns.current_user) do
+    case Finance.create_bank_rule(attrs, actor: socket.assigns.current_user) do
       {:ok, _rule} ->
         {:noreply,
          socket
@@ -104,8 +109,8 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
 
   @impl true
   def handle_event("delete_rule", %{"id" => id}, socket) do
-    rule = Mercury.get_bank_rule!(id, actor: socket.assigns.current_user)
-    {:ok, _rule} = Mercury.delete_bank_rule(rule, actor: socket.assigns.current_user)
+    rule = Finance.get_bank_rule!(id, actor: socket.assigns.current_user)
+    {:ok, _rule} = Finance.delete_bank_rule(rule, actor: socket.assigns.current_user)
 
     {:noreply,
      socket
@@ -119,8 +124,8 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
      socket
      |> assign(:syncing?, false)
      |> load_workspace()
-     |> Cinder.refresh_table("mercury-transactions-mobile")
-     |> Cinder.refresh_table("mercury-transactions")}
+     |> Cinder.refresh_table("bank-transactions-mobile")
+     |> Cinder.refresh_table("bank-transactions")}
   end
 
   @impl true
@@ -128,9 +133,9 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
     ~H"""
     <.page class="pb-8">
       <.page_header eyebrow="Finance">
-        Mercury
+        Banking
         <:subtitle>
-          Bank accounts, transactions, and categorization rules synced from Mercury.
+          Bank accounts, imported transactions, sync health, and categorization rules.
         </:subtitle>
         <:actions>
           <.button phx-click="sync" disabled={@syncing?} variant="primary">
@@ -144,7 +149,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
         <.stat_card
           title="Accounts"
           value={Integer.to_string(length(@accounts))}
-          description="Mercury accounts mirrored locally."
+          description="Provider accounts mirrored locally."
           icon="hero-building-library"
         />
         <.stat_card
@@ -157,14 +162,14 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
         <.stat_card
           title="Transactions"
           value={Integer.to_string(@transaction_count)}
-          description="Synced Mercury transaction records."
+          description="Synced bank transaction records."
           icon="hero-arrows-right-left"
           accent="amber"
         />
         <.stat_card
-          title="Unmatched"
-          value={Integer.to_string(@unmatched_count)}
-          description="Sent transactions without a confident match."
+          title="Review"
+          value={Integer.to_string(@needs_review_count)}
+          description="Transactions still needing a decision."
           icon="hero-exclamation-triangle"
           accent="rose"
         />
@@ -173,15 +178,15 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
       <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <.section
           title="Transactions"
-          description="Search and sort the local transaction mirror. Matching and reconciliation workflows will build on this table."
+          description="Search and sort imported banking activity. Matching and reconciliation workflows build from this queue."
           compact
         >
           <div class="rounded-lg border border-base-content/10 bg-base-100">
             <div class="md:hidden">
               <Cinder.collection
-                id="mercury-transactions-mobile"
+                id="bank-transactions-mobile"
                 layout={:list}
-                resource={GnomeGarden.Mercury.Transaction}
+                resource={GnomeGarden.Finance.BankTransaction}
                 actor={@current_user}
                 url_state={@url_state}
                 theme={GnomeGardenWeb.CinderTheme}
@@ -192,18 +197,17 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                   placeholder: "Search counterparty or memo"
                 ]}
                 query_opts={[
-                  load: [:account],
-                  sort: [occurred_at: :desc]
+                  load: [:bank_account]
                 ]}
-                empty_message="No Mercury transactions yet."
+                empty_message="No bank transactions yet."
               >
                 <:col field="counterparty_name" search sort label="Counterparty" />
-                <:col field="bank_description" search label="Description" />
-                <:col field="external_memo" search label="Memo" />
+                <:col field="description" search label="Description" />
+                <:col field="memo" search label="Memo" />
                 <:col field="occurred_at" sort label="Date" />
                 <:col field="amount" sort label="Amount" />
                 <:col field="status" sort label="Status" />
-                <:col field="reconciliation_category" sort label="Category" />
+                <:col field="category" sort label="Category" />
 
                 <:item :let={txn}>
                   <div class="rounded-lg border border-base-content/10 bg-base-100 p-3">
@@ -222,18 +226,21 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                     </div>
 
                     <p class="mt-2 line-clamp-2 text-xs text-base-content/55">
-                      {txn.bank_description || txn.external_memo || txn.mercury_id}
+                      {txn.description || txn.memo || txn.provider_transaction_id}
                     </p>
 
                     <div class="mt-3 flex flex-wrap gap-1.5">
                       <.status_badge status={transaction_status_variant(txn.status)}>
                         {format_atom(txn.status)}
                       </.status_badge>
-                      <.status_badge status={match_status_variant(txn.match_confidence)}>
-                        {match_status_label(txn.match_confidence)}
+                      <.status_badge status={review_status_variant(txn.review_status)}>
+                        {format_atom(txn.review_status)}
                       </.status_badge>
-                      <.status_badge :if={txn.reconciliation_category} status={:default}>
-                        {format_atom(txn.reconciliation_category)}
+                      <.status_badge status={match_status_variant(txn.match_status)}>
+                        {match_status_label(txn.match_status)}
+                      </.status_badge>
+                      <.status_badge :if={txn.category != :unknown} status={:default}>
+                        {format_atom(txn.category)}
                       </.status_badge>
                     </div>
                   </div>
@@ -242,8 +249,8 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                 <:empty>
                   <.empty_state
                     icon="hero-building-library"
-                    title="No Mercury transactions yet"
-                    description="Run a sync after configuring Mercury credentials."
+                    title="No bank transactions yet"
+                    description="Run a sync after configuring banking credentials."
                   />
                 </:empty>
               </Cinder.collection>
@@ -251,15 +258,14 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
 
             <div class="hidden md:block">
               <Cinder.collection
-                id="mercury-transactions"
-                resource={GnomeGarden.Mercury.Transaction}
+                id="bank-transactions"
+                resource={GnomeGarden.Finance.BankTransaction}
                 actor={@current_user}
                 url_state={@url_state}
                 theme={GnomeGardenWeb.CinderTheme}
                 page_size={25}
                 query_opts={[
-                  load: [:account],
-                  sort: [occurred_at: :desc]
+                  load: [:bank_account]
                 ]}
               >
                 <:col :let={txn} field="counterparty_name" search sort label="Counterparty">
@@ -268,7 +274,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                       {counterparty(txn)}
                     </p>
                     <p class="truncate text-xs text-base-content/50">
-                      {txn.bank_description || txn.external_memo || txn.mercury_id}
+                      {txn.description || txn.memo || txn.provider_transaction_id}
                     </p>
                   </div>
                 </:col>
@@ -286,15 +292,18 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                     <.status_badge status={transaction_status_variant(txn.status)}>
                       {format_atom(txn.status)}
                     </.status_badge>
-                    <.status_badge status={match_status_variant(txn.match_confidence)}>
-                      {match_status_label(txn.match_confidence)}
+                    <.status_badge status={review_status_variant(txn.review_status)}>
+                      {format_atom(txn.review_status)}
+                    </.status_badge>
+                    <.status_badge status={match_status_variant(txn.match_status)}>
+                      {match_status_label(txn.match_status)}
                     </.status_badge>
                   </div>
                 </:col>
 
-                <:col :let={txn} field="reconciliation_category" sort label="Category">
+                <:col :let={txn} field="category" sort label="Category">
                   <div class="space-y-1">
-                    <p>{format_atom(txn.reconciliation_category)}</p>
+                    <p>{format_atom(txn.category)}</p>
                     <p
                       :if={txn.reconciliation_note}
                       class="line-clamp-2 text-xs text-base-content/50"
@@ -307,8 +316,8 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                 <:empty>
                   <.empty_state
                     icon="hero-building-library"
-                    title="No Mercury transactions yet"
-                    description="Run a sync after configuring Mercury credentials."
+                    title="No bank transactions yet"
+                    description="Run a sync after configuring banking credentials."
                   />
                 </:empty>
               </Cinder.collection>
@@ -319,13 +328,13 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
         <div class="space-y-4">
           <.section
             title="Accounts"
-            description="Routing details stay in company payment destinations; this is the bank mirror."
+            description="Routing details stay in company payment destinations; this is the internal bank mirror."
           >
             <div :if={@accounts == []}>
               <.empty_state
                 icon="hero-building-library"
                 title="No accounts yet"
-                description="Sync Mercury to create account mirrors."
+                description="Sync banking to create account mirrors."
               />
             </div>
 
@@ -337,7 +346,9 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <p class="truncate text-sm font-semibold">{account.name}</p>
-                    <p class="text-xs text-base-content/50">{format_atom(account.kind)}</p>
+                    <p class="text-xs text-base-content/50">
+                      {format_atom(account.provider)} · {format_atom(account.kind)}
+                    </p>
                   </div>
                   <.status_badge status={account_status_variant(account.status)}>
                     {format_atom(account.status)}
@@ -369,7 +380,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
             </div>
 
             <form
-              id="mercury-rule-form"
+              id="bank-rule-form"
               phx-change="validate_rule"
               phx-submit="save_rule"
               class="space-y-3"
@@ -396,8 +407,8 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                 />
                 <.input
                   type="select"
-                  name="rule[reconciliation_category]"
-                  value={@rule_form["reconciliation_category"]}
+                  name="rule[category]"
+                  value={@rule_form["category"]}
                   label="Category"
                   options={@category_options}
                 />
@@ -421,7 +432,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                 name="rule[auto_note]"
                 value={@rule_form["auto_note"]}
                 label="Auto note"
-                placeholder="Categorized from Mercury rule"
+                placeholder="Categorized from bank rule"
               />
               <.button type="submit" variant="primary" class="w-full">Add Rule</.button>
             </form>
@@ -435,7 +446,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                   <div class="min-w-0">
                     <p class="truncate text-sm font-semibold">{rule.name}</p>
                     <p class="text-xs text-base-content/50">
-                      {format_atom(rule.direction)} · {format_atom(rule.reconciliation_category)}
+                      {format_atom(rule.direction)} · {format_atom(rule.category)}
                     </p>
                   </div>
                   <button
@@ -468,26 +479,26 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
 
   defp load_workspace(socket) do
     actor = socket.assigns.current_user
-    accounts = Mercury.list_mercury_accounts!(actor: actor)
-    bank_rules = Mercury.list_bank_rules!(actor: actor)
-    transactions = Mercury.list_mercury_transactions!(actor: actor)
+    accounts = Finance.list_bank_accounts!(actor: actor)
+    bank_rules = Finance.list_bank_rules!(actor: actor)
+    transactions = Finance.list_bank_transactions!(actor: actor)
 
     socket
     |> assign(:accounts, accounts)
     |> assign(:bank_rules, bank_rules)
     |> assign(:transaction_count, length(transactions))
-    |> assign(:unmatched_count, Enum.count(transactions, &unmatched?/1))
+    |> assign(:needs_review_count, Enum.count(transactions, &needs_review?/1))
     |> assign(:current_balance, sum_account_balances(accounts))
   end
 
   defp default_rule_form do
     %{
       "name" => "",
-      "direction" => "money_in",
+      "direction" => "credit",
       "counterparty_contains" => "",
       "amount_operator" => "",
       "amount_value" => "",
-      "reconciliation_category" => "misc_income",
+      "category" => "misc_income",
       "auto_note" => ""
     }
   end
@@ -500,7 +511,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
       counterparty_contains: blank_to_nil(params["counterparty_contains"]),
       amount_operator: atom_param(params["amount_operator"]),
       amount_value: decimal_param(params["amount_value"]),
-      reconciliation_category: atom_param(params["reconciliation_category"]),
+      category: atom_param(params["category"]),
       auto_note: blank_to_nil(params["auto_note"])
     }
   end
@@ -520,10 +531,10 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
     end)
   end
 
-  defp unmatched?(txn), do: txn.match_confidence in [nil, :unmatched] and txn.status != :pending
+  defp needs_review?(txn), do: txn.review_status == :needs_review
 
   defp counterparty(txn),
-    do: txn.counterparty_name || txn.bank_description || "Unknown counterparty"
+    do: txn.counterparty_name || txn.description || "Unknown counterparty"
 
   defp amount_classes(%Decimal{} = amount) do
     if Decimal.compare(amount, Decimal.new(0)) == :gt do
@@ -536,19 +547,29 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
   defp amount_classes(_), do: "font-medium"
 
   defp account_status_variant(:active), do: :success
-  defp account_status_variant(:frozen), do: :warning
-  defp account_status_variant(:deleted), do: :error
+  defp account_status_variant(:error), do: :error
+  defp account_status_variant(:closed), do: :error
   defp account_status_variant(_), do: :default
 
-  defp transaction_status_variant(:sent), do: :success
+  defp transaction_status_variant(:posted), do: :success
   defp transaction_status_variant(:pending), do: :warning
   defp transaction_status_variant(:failed), do: :error
   defp transaction_status_variant(_), do: :default
 
-  defp match_status_variant(value) when value in [:exact, :probable, :possible], do: :success
+  defp review_status_variant(:needs_review), do: :warning
+  defp review_status_variant(:auto_matched), do: :info
+  defp review_status_variant(:reviewed), do: :success
+  defp review_status_variant(:ignored), do: :default
+  defp review_status_variant(_), do: :default
+
+  defp match_status_variant(:matched), do: :success
+  defp match_status_variant(:suggested), do: :warning
+  defp match_status_variant(:not_matchable), do: :default
   defp match_status_variant(_), do: :error
 
-  defp match_status_label(value) when value in [:exact, :probable, :possible], do: "Matched"
+  defp match_status_label(:matched), do: "Matched"
+  defp match_status_label(:suggested), do: "Suggested"
+  defp match_status_label(:not_matchable), do: "Not matchable"
   defp match_status_label(_), do: "Unmatched"
 
   defp atom_param(value) when value in [nil, ""], do: nil

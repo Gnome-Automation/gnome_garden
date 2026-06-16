@@ -28,6 +28,7 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     "/commercial/discovery-programs",
     "/execution/projects",
     "/execution/service-tickets",
+    "/finance/banking",
     "/finance/invoices",
     "/finance/payments",
     "/procurement/targeting"
