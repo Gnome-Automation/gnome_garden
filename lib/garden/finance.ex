@@ -180,6 +180,7 @@ defmodule GnomeGarden.Finance do
     end
 
     resource GnomeGarden.Finance.Invoice do
+      define :get_receivables_workspace, action: :receivables_workspace
       define :list_invoices, action: :read
       define :get_invoice, action: :read, get_by: [:id]
       define :create_invoice, action: :create

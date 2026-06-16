@@ -346,14 +346,14 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/banking"]
     },
     %{
-      id: "fin-invoices",
+      id: "fin-receivables",
       section: "Finance",
       icon: "hero-banknotes",
-      label: "Invoices",
-      path: "/finance/invoices",
+      label: "Receivables",
+      path: "/finance/receivables",
       badge: 0,
       hot: false,
-      match: ["/finance/invoices"]
+      match: ["/finance/receivables", "/finance/invoices", "/finance/payments"]
     },
 
     # Reports

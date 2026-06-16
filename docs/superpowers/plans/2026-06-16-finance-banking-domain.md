@@ -846,6 +846,9 @@ large modals should behave like sheets or full-screen panels.
   ignore, reopen, match, and unmatch actions. Accepting or rejecting a
   `BankTransactionMatch` drives the related transaction state through Finance
   actions.
+- `/finance/receivables` is the founder-facing receivables workspace. It
+  combines open invoices, overdue balances, received payments, and bank review
+  signals behind a single Finance workspace action.
 - `GnomeGarden.Mercury` and the old Mercury tables have been retired.
 
 ## Acceptance Criteria

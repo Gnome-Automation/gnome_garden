@@ -57,6 +57,10 @@ defmodule GnomeGarden.Finance.Invoice do
   actions do
     defaults [:read, :destroy]
 
+    action :receivables_workspace, :map do
+      run GnomeGarden.Finance.Actions.BuildReceivablesWorkspace
+    end
+
     create :create do
       primary? true
 
