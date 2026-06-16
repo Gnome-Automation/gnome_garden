@@ -294,13 +294,13 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
                 name="rule[name]"
                 value={@rule_form["name"]}
                 label="Rule name"
-                placeholder="Stripe deposits"
+                placeholder="Customer ACH deposits"
               />
               <.input
                 name="rule[counterparty_contains]"
                 value={@rule_form["counterparty_contains"]}
                 label="Counterparty contains"
-                placeholder="stripe"
+                placeholder="customer"
               />
               <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <.input

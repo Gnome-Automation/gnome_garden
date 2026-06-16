@@ -31,7 +31,7 @@ defmodule GnomeGarden.Mercury.BankRulesTest do
         %{
           id: Ecto.UUID.generate(),
           amount: Decimal.new("100"),
-          counterparty_name: "STRIPE",
+          counterparty_name: "ACME",
           reconciliation_category: nil
         },
         attrs
@@ -45,19 +45,19 @@ defmodule GnomeGarden.Mercury.BankRulesTest do
     end
 
     test "returns first matching rule" do
-      r1 = rule(%{priority: 0, counterparty_contains: "STRIPE"})
-      r2 = rule(%{priority: 1, counterparty_contains: "STRIPE"})
-      assert BankRules.match(txn(%{counterparty_name: "STRIPE PAYOUT"}), [r1, r2]) == r1
+      r1 = rule(%{priority: 0, counterparty_contains: "ACME"})
+      r2 = rule(%{priority: 1, counterparty_contains: "ACME"})
+      assert BankRules.match(txn(%{counterparty_name: "ACME PAYMENT"}), [r1, r2]) == r1
     end
 
     test "skips rule when counterparty does not match" do
       r = rule(%{counterparty_contains: "AWS"})
-      assert BankRules.match(txn(%{counterparty_name: "STRIPE"}), [r]) == nil
+      assert BankRules.match(txn(%{counterparty_name: "ACME"}), [r]) == nil
     end
 
     test "counterparty matching is case-insensitive" do
-      r = rule(%{counterparty_contains: "stripe"})
-      assert BankRules.match(txn(%{counterparty_name: "STRIPE PAYOUT"}), [r]) == r
+      r = rule(%{counterparty_contains: "acme"})
+      assert BankRules.match(txn(%{counterparty_name: "ACME PAYMENT"}), [r]) == r
     end
 
     test "nil counterparty_contains matches any counterparty_name" do
@@ -71,7 +71,7 @@ defmodule GnomeGarden.Mercury.BankRulesTest do
     end
 
     test "non-nil counterparty_contains does not match nil counterparty_name" do
-      r = rule(%{counterparty_contains: "STRIPE"})
+      r = rule(%{counterparty_contains: "ACME"})
       assert BankRules.match(txn(%{counterparty_name: nil}), [r]) == nil
     end
 
@@ -112,8 +112,8 @@ defmodule GnomeGarden.Mercury.BankRulesTest do
     end
 
     test "skips transaction already reconciled" do
-      r = rule(%{counterparty_contains: "STRIPE"})
-      already_reconciled = txn(%{counterparty_name: "STRIPE", reconciliation_category: :bank_fee})
+      r = rule(%{counterparty_contains: "ACME"})
+      already_reconciled = txn(%{counterparty_name: "ACME", reconciliation_category: :bank_fee})
       assert BankRules.match(already_reconciled, [r]) == nil
     end
   end
@@ -133,12 +133,12 @@ defmodule GnomeGarden.Mercury.BankRulesTest do
       {:ok, _rule} =
         Mercury.create_bank_rule(
           %{
-            name: "Stripe Fees",
+            name: "Acme ACH Fees",
             priority: 0,
             direction: :money_out,
-            counterparty_contains: "STRIPE",
+            counterparty_contains: "ACME",
             reconciliation_category: :bank_fee,
-            auto_note: "Monthly Stripe fee"
+            auto_note: "Monthly ACH fee"
           },
           authorize?: false
         )
@@ -151,7 +151,7 @@ defmodule GnomeGarden.Mercury.BankRulesTest do
             amount: Decimal.new("-9.99"),
             kind: :fee,
             status: :sent,
-            counterparty_name: "STRIPE PAYOUT",
+            counterparty_name: "ACME PAYMENT",
             occurred_at: DateTime.utc_now()
           },
           authorize?: false
@@ -161,7 +161,7 @@ defmodule GnomeGarden.Mercury.BankRulesTest do
       matched = BankRules.match(txn, rules)
 
       assert matched != nil
-      assert matched.name == "Stripe Fees"
+      assert matched.name == "Acme ACH Fees"
 
       # Apply rule manually (mirrors what sync worker does)
       {:ok, updated} =
@@ -175,7 +175,7 @@ defmodule GnomeGarden.Mercury.BankRulesTest do
         )
 
       assert updated.reconciliation_category == :bank_fee
-      assert updated.reconciliation_note == "Monthly Stripe fee"
+      assert updated.reconciliation_note == "Monthly ACH fee"
     end
   end
 end
