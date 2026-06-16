@@ -90,7 +90,7 @@ config :llm_db,
 config :gnome_garden, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
-  queues: [default: 10, procurement_configuring: 1, procurement_scanning: 2, mercury: 10],
+  queues: [default: 10, procurement_configuring: 1, procurement_scanning: 2, finance: 10],
   repo: GnomeGarden.Repo,
   plugins: [
     {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(60)},
@@ -98,8 +98,7 @@ config :gnome_garden, Oban,
      crontab: [
        {"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker},
        {"17 * * * *", GnomeGarden.Agents.AgentEvalSweepWorker},
-       {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker},
-       {"0 6 * * *", GnomeGarden.Mercury.InvoiceSchedulerWorker}
+       {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker}
      ],
      timezone: "Etc/UTC"}
   ]
@@ -155,7 +154,6 @@ config :gnome_garden,
   ecto_repos: [GnomeGarden.Repo],
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [
-    GnomeGarden.Mercury,
     GnomeGarden.Accounts,
     GnomeGarden.Acquisition,
     GnomeGarden.Agents,

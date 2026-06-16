@@ -496,6 +496,12 @@ Because this is not production-stable yet, do not preserve backwards
 compatibility for provider-specific names. Prefer clean Finance names and use
 Ash codegen to produce the migration.
 
+Implementation update, 2026-06-16: the `GnomeGarden.Mercury` Ash domain,
+provider-owned workers, resource snapshots, and tests have been retired. The
+drop migration is `priv/repo/migrations/20260616064143_retire_mercury_domain.exs`.
+Mercury remains only as a provider value, webhook endpoint, and `ReqMercury`
+transport integration used by `GnomeGarden.Finance`.
+
 ## Finance Navigation and View Plan
 
 Finance should be organized by operating workflow, not by resource table.

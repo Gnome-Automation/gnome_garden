@@ -3,7 +3,7 @@ defmodule GnomeGarden.Finance.BankSyncWorker do
   Oban worker that triggers provider-neutral Finance bank sync.
   """
 
-  use Oban.Worker, queue: :mercury, max_attempts: 3
+  use Oban.Worker, queue: :finance, max_attempts: 3
 
   alias GnomeGarden.Finance
 
