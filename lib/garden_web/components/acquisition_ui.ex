@@ -454,6 +454,7 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
       phx-click={@click}
       phx-value-id={@target_id}
       phx-value-action={@action}
+      phx-value-dialog_action={if(@click == "open_dialog", do: @action)}
       class={button_class(@compact, @tone)}
     >
       <.icon name={@icon} class={icon_class(@compact)} />

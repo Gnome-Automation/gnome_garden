@@ -26,6 +26,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
   @rail_areas [
     %{id: "Workspace", icon: "hero-home", label: "Workspace"},
+    %{id: "Company", icon: "hero-building-office-2", label: "Company"},
     %{id: "Acquisition", icon: "hero-inbox-stack", label: "Acquisition"},
     %{id: "Procurement", icon: "hero-viewfinder-circle", label: "Procurement"},
     %{id: "Commercial", icon: "hero-rocket-launch", label: "Commercial"},
@@ -58,6 +59,48 @@ defmodule GnomeGardenWeb.Components.RailNav do
       badge: 0,
       hot: false,
       match: ["/"]
+    },
+
+    # Company
+    %{
+      id: "company-facts",
+      section: "Company",
+      icon: "hero-building-office",
+      label: "Profile",
+      path: "/company/facts",
+      badge: 0,
+      hot: false,
+      match: ["/company/facts", "/company/profile"]
+    },
+    %{
+      id: "company-documents",
+      section: "Company",
+      icon: "hero-document-text",
+      label: "Documents",
+      path: "/company/documents",
+      badge: 0,
+      hot: false,
+      match: ["/company/documents"]
+    },
+    %{
+      id: "company-compliance",
+      section: "Company",
+      icon: "hero-shield-check",
+      label: "Compliance",
+      path: "/company/compliance",
+      badge: 0,
+      hot: false,
+      match: ["/company/compliance"]
+    },
+    %{
+      id: "company-sources",
+      section: "Company",
+      icon: "hero-clipboard-document-check",
+      label: "Sources",
+      path: "/company/sources",
+      badge: 0,
+      hot: false,
+      match: ["/company/sources"]
     },
 
     # Acquisition
@@ -125,6 +168,20 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/commercial/signals"]
     },
     %{
+      id: "com-vendor-onboarding",
+      section: "Commercial",
+      icon: "hero-identification",
+      label: "Customer onboarding",
+      path: "/commercial/vendor-onboarding",
+      badge: 0,
+      hot: false,
+      match: [
+        "/commercial/vendor-onboarding",
+        "/commercial/vendor-packet",
+        "/company/vendor-packet"
+      ]
+    },
+    %{
       id: "com-deals",
       section: "Commercial",
       icon: "hero-banknotes",
@@ -164,7 +221,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/commercial/change-orders"]
     },
-
     # Operations
     %{
       id: "ops-review",
@@ -361,6 +417,8 @@ defmodule GnomeGardenWeb.Components.RailNav do
   def area_for_path(path) when is_binary(path) do
     cond do
       path == "/" -> "Workspace"
+      path == "/company/vendor-packet" -> "Commercial"
+      String.starts_with?(path, "/company") -> "Company"
       String.starts_with?(path, "/acquisition") -> "Acquisition"
       String.starts_with?(path, "/procurement") -> "Procurement"
       String.starts_with?(path, "/commercial") -> "Commercial"
@@ -590,7 +648,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
     items =
       case assigns.area_id do
         "more" ->
-          for area <- ["Finance", "Reports", "Settings", "Workspace"],
+          for area <- ["Company", "Finance", "Reports", "Settings", "Workspace"],
               d <- area_dests(area),
               do: d
 

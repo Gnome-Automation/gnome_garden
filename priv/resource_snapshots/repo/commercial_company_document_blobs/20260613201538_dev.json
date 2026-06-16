@@ -1,0 +1,246 @@
+{
+  "attributes": [
+    {
+      "allow_nil?": false,
+      "default": "fragment(\"gen_random_uuid()\")",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": true,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "key",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "filename",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "content_type",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "byte_size",
+      "type": "bigint"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "checksum",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "service_name",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "%{}",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "service_opts",
+      "type": "map"
+    },
+    {
+      "allow_nil?": true,
+      "default": "%{}",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "metadata",
+      "type": "map"
+    },
+    {
+      "allow_nil?": true,
+      "default": "%{}",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "analyzers",
+      "type": "map"
+    },
+    {
+      "allow_nil?": false,
+      "default": "false",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "pending_purge",
+      "type": "boolean"
+    },
+    {
+      "allow_nil?": false,
+      "default": "false",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "pending_analyzers",
+      "type": "boolean"
+    },
+    {
+      "allow_nil?": false,
+      "default": "false",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "pending_variants",
+      "type": "boolean"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "commercial_company_document_blobs_variant_of_blob_id_fkey",
+        "on_delete": null,
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "commercial_company_document_blobs"
+      },
+      "scale": null,
+      "size": null,
+      "source": "variant_of_blob_id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "variant_name",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "variant_digest",
+      "type": "text"
+    }
+  ],
+  "base_filter": null,
+  "check_constraints": [],
+  "create_table_options": null,
+  "custom_indexes": [],
+  "custom_statements": [],
+  "has_create_action": true,
+  "hash": "7AE9120C504EDE642D04CE93A14D6049A40B6DE212CE09DB31F92385178C787E",
+  "identities": [
+    {
+      "all_tenants?": false,
+      "base_filter": null,
+      "index_name": "commercial_company_document_blobs_unique_storage_key_index",
+      "keys": [
+        {
+          "type": "atom",
+          "value": "key"
+        }
+      ],
+      "name": "unique_storage_key",
+      "nils_distinct?": true,
+      "where": null
+    }
+  ],
+  "multitenancy": {
+    "attribute": null,
+    "global": null,
+    "strategy": null
+  },
+  "repo": "Elixir.GnomeGarden.Repo",
+  "schema": null,
+  "table": "commercial_company_document_blobs"
+}

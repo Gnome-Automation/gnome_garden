@@ -16,6 +16,14 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     "/acquisition/sources",
     "/acquisition/programs",
     "/operations/organizations",
+    "/company/facts",
+    "/company/profile",
+    "/company/documents",
+    "/company/compliance",
+    "/company/sources",
+    "/commercial/vendor-onboarding",
+    "/company/vendor-packet",
+    "/commercial/vendor-packet",
     "/commercial/signals",
     "/commercial/discovery-programs",
     "/execution/projects",
@@ -44,6 +52,34 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     for path <- @operator_live_routes do
       assert {:error, {:redirect, %{to: "/sign-in"}}} = live(conn, path)
     end
+  end
+
+  test "company routes belong to the Company navigation area" do
+    assert GnomeGardenWeb.Components.RailNav.area_for_path("/company/facts") == "Company"
+    assert GnomeGardenWeb.Components.RailNav.area_for_path("/company/documents") == "Company"
+    assert GnomeGardenWeb.Components.RailNav.area_for_path("/company/compliance") == "Company"
+    assert GnomeGardenWeb.Components.RailNav.area_for_path("/company/sources") == "Company"
+
+    assert GnomeGardenWeb.Components.RailNav.area_for_path("/company/vendor-packet") ==
+             "Commercial"
+
+    assert GnomeGardenWeb.Components.RailNav.area_for_path("/commercial/vendor-onboarding") ==
+             "Commercial"
+
+    assert Enum.any?(
+             GnomeGardenWeb.Components.RailNav.area_dests("Company"),
+             &(&1.path == "/company/facts")
+           )
+
+    assert Enum.any?(
+             GnomeGardenWeb.Components.RailNav.area_dests("Company"),
+             &(&1.path == "/company/documents")
+           )
+
+    assert Enum.any?(
+             GnomeGardenWeb.Components.RailNav.area_dests("Commercial"),
+             &(&1.path == "/commercial/vendor-onboarding")
+           )
   end
 
   test "legacy agent page redirects to the durable agent console", %{conn: conn} do

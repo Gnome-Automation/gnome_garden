@@ -1,7 +1,7 @@
 defmodule GnomeGardenWeb.Agents.ProcurementTargetingLive do
   use GnomeGardenWeb, :live_view
 
-  alias GnomeGarden.Commercial.CompanyProfileLearning
+  alias GnomeGarden.Company.ProfileLearning, as: CompanyProfileLearning
 
   @modes [:industrial_core, :industrial_plus_software, :broad_software]
 

@@ -116,6 +116,15 @@ defmodule GnomeGardenWeb.Router do
       live "/operations/assets/:id/edit", Operations.AssetLive.Form, :edit
 
       # Commercial - Signals
+      live "/commercial/company-facts", Commercial.CompanyFactsLive, :index
+      live "/commercial/vendor-onboarding", Commercial.VendorPacketLive, :index
+      live "/commercial/vendor-packet", Commercial.VendorPacketLive, :index
+      live "/company/facts", Commercial.CompanyFactsLive, :index
+      live "/company/profile", Commercial.CompanyFactsLive, :index
+      live "/company/documents", Company.DocumentLive.Index, :index
+      live "/company/compliance", Company.ComplianceLive.Index, :index
+      live "/company/sources", Company.SourceReviewLive.Index, :index
+      live "/company/vendor-packet", Commercial.VendorPacketLive, :index
       live "/commercial/signals", Commercial.SignalLive.Index, :index
       live "/commercial/leads/new", Commercial.LeadLive.New, :new
       live "/commercial/signals/new", Commercial.SignalLive.Form, :new

@@ -1,16 +1,16 @@
 defmodule GnomeGarden.Commercial.VendorOnboardingTest do
   use GnomeGarden.DataCase, async: false
 
-  alias GnomeGarden.Commercial
+  alias GnomeGarden.Company
   alias GnomeGarden.Operations
 
   test "imports vendor profile and PolyPeptide onboarding records idempotently" do
     payload = vendor_payload()
 
-    assert {:ok, result} = Commercial.import_vendor_onboarding(payload, authorize?: false)
+    assert {:ok, result} = Company.import_vendor_onboarding(payload, authorize?: false)
     assert result["customer_count"] == 1
 
-    {:ok, profile} = Commercial.get_primary_company_profile(authorize?: false)
+    {:ok, profile} = Company.get_primary_company_profile(authorize?: false)
     {:ok, organization} = Operations.get_organization_by_name("PolyPeptide Laboratories Group")
     {:ok, people} = Operations.list_people_for_organization(organization.id, authorize?: false)
     {:ok, affiliations} = Operations.list_affiliations_for_organization(organization.id)
@@ -45,9 +45,9 @@ defmodule GnomeGarden.Commercial.VendorOnboardingTest do
            ]) == "supplier_code_of_conduct_confirmation_letter"
 
     assert {:ok, %{"customer_count" => 1}} =
-             Commercial.import_vendor_onboarding(payload, authorize?: false)
+             Company.import_vendor_onboarding(payload, authorize?: false)
 
-    {:ok, profile} = Commercial.get_primary_company_profile(authorize?: false)
+    {:ok, profile} = Company.get_primary_company_profile(authorize?: false)
     {:ok, organization} = Operations.get_organization_by_name("PolyPeptide Laboratories Group")
     {:ok, tasks} = Operations.list_tasks_by_organization(organization.id, authorize?: false)
     {:ok, affiliations} = Operations.list_affiliations_for_organization(organization.id)

@@ -26,7 +26,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.TargetingFilter
-  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
   alias GnomeGarden.Browser
   alias GnomeGarden.Agents.Tools.Procurement.{SaveBid, ScoreBid, ScanBidNet, ScanPlanetBids}
 

@@ -1,8 +1,8 @@
-defmodule GnomeGarden.Commercial.CompanyProfileLearningTest do
+defmodule GnomeGarden.Company.ProfileLearningTest do
   use GnomeGarden.DataCase, async: true
 
-  alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.CompanyProfileLearning
+  alias GnomeGarden.Company
+  alias GnomeGarden.Company.ProfileLearning, as: CompanyProfileLearning
 
   test "manual learned excludes can be added and removed per mode" do
     {:ok, result} =
@@ -29,7 +29,7 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearningTest do
     assert updated_snapshot.learned_exclude == ["video surveillance"]
     assert hd(updated_snapshot.feedback_history)["feedback_scope"] == "manual_remove"
 
-    {:ok, profile} = Commercial.get_primary_company_profile()
+    {:ok, profile} = Company.get_primary_company_profile()
 
     assert get_in(
              profile.keyword_profiles,

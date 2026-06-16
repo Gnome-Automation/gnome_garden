@@ -60,7 +60,7 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
 
     assert {:error, {:live_redirect, %{to: path}}} =
              view
-             |> element("#finding-card-#{bid_finding.id}")
+             |> element("#finding-card-#{bid_finding.id} a", bid.title)
              |> render_click()
 
     assert path == ~p"/acquisition/findings/#{bid_finding.id}"
@@ -70,6 +70,48 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     {:ok, view, _html} = live(conn, ~p"/acquisition/findings?queue=procurement")
 
     assert render(view) =~ "Review · All"
+  end
+
+  test "acquisition queue reject action opens required feedback dialog", %{conn: conn} do
+    {:ok, finding} =
+      Acquisition.create_finding(%{
+        title: "Queue reject modal controls retrofit",
+        summary: "Controls work that should be rejected from the queue card.",
+        external_ref: "test:queue-reject-modal-controls-retrofit",
+        source_url: "https://example.com/queue-reject-modal-controls-retrofit",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        fit_score: 63,
+        intent_score: 57,
+        confidence: :medium,
+        observed_at: DateTime.utc_now()
+      })
+
+    {:ok, finding} = Acquisition.start_review_for_finding(finding.id)
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings?family=procurement")
+
+    assert has_element?(view, "#finding-reject-#{finding.id}")
+
+    view
+    |> element("#finding-reject-#{finding.id}")
+    |> render_click()
+
+    assert has_element?(view, "#finding-reject-form select[name='reason_code']")
+    assert render(view) =~ "Rejection reason"
+
+    view
+    |> form("#finding-reject-form", %{
+      "reason_code" => "wrong_geography",
+      "reason" => "Outside the current service territory",
+      "feedback_scope" => "",
+      "exclude_terms" => ""
+    })
+    |> render_submit()
+
+    {:ok, rejected_finding} = Acquisition.get_finding(finding.id)
+
+    assert rejected_finding.status == :rejected
+    refute has_element?(view, "#finding-card-#{finding.id}")
   end
 
   test "acquisition queue shows source and run provenance", %{conn: conn} do

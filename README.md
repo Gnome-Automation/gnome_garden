@@ -1,29 +1,40 @@
 # GnomeGarden
 
-CRM and sales automation platform built with Phoenix, Ash Framework, and Jido AI agents.
+CRM and operations automation platform built with Phoenix, Ash Framework, Oban,
+AshLua/AshAI, and `jido_browser` as the browser automation engine.
 
 ## Setup
 
 ### Prerequisites
 
-- Elixir 1.15+
-- PostgreSQL
-- Node.js (for assets)
+The preferred local setup is the Nix dev shell in this repo. It pins:
+
+- Erlang/OTP 29
+- Elixir 1.20
+- Node.js 22
+- PostgreSQL 18 on local port `5433`
+- Tailwind CSS 4 and esbuild
+- document tooling used by AshStorage analyzers and vendor onboarding flows:
+  Poppler (`pdftotext`/`pdfinfo`), Tesseract, ImageMagick, Antiword, and
+  LibreOffice
 
 ### Installation
 
 ```bash
-# Install dependencies
-mix setup
+# Enter the pinned VM/dev shell. This initializes .pgdata and starts Postgres.
+nix develop
 
-# Install browser automation backend (required for agents)
-mix jido_browser.install
+# Install dependencies, prepare the database, and build assets.
+mix setup
 
 # Start the server
 iex -S mix phx.server
 ```
 
 Visit [`localhost:4000`](http://localhost:4000) from your browser.
+
+See [`docs/development-vm-setup.md`](docs/development-vm-setup.md) for the full
+VM/dev-shell checklist.
 
 ### Environment Variables
 
@@ -59,7 +70,9 @@ SECRET_KEY_BASE=your_secret_key
 
 ## Browser Automation
 
-The agents use `jido_browser` for web automation (scanning bid sites, researching prospects).
+The app keeps `jido_browser` as the browser automation engine behind
+`GnomeGarden.Browser`. Durable business behavior should live in Ash actions,
+Oban jobs, AshLua/AshAI orchestration, or bounded workers.
 
 ### Install Browser Backend
 
@@ -75,44 +88,45 @@ mix jido_browser.install web
 
 The browser binary is installed to `_build/jido_browser-{platform}/`.
 
-### Recommended Mix Aliases
-
-Add to `mix.exs` for automatic browser installation:
-
-```elixir
-defp aliases do
-  [
-    setup: ["deps.get", "ecto.setup", "jido_browser.install --if-missing"],
-    test: ["jido_browser.install --if-missing", "test"]
-  ]
-end
-```
-
 ## Project Structure
 
 ```
-lib/
-├── garden/                 # Business logic
-│   ├── accounts/          # User authentication
-│   ├── agents/            # AI agent resources (Bid, Prospect, LeadSource)
-│   └── sales/             # CRM resources (Company, Contact, Opportunity, Lead, Task)
-└── garden_web/            # Web layer
-    ├── live/
-    │   ├── crm/           # CRM LiveViews
-    │   └── agents/sales/  # Agent LiveViews
-    └── components/        # Shared components
+lib/garden/
+  accounts/        # users and auth
+  acquisition/     # findings and review workflow
+  company/         # reusable Gnome facts, documents, tax, payment data
+  commercial/      # discovery, customer onboarding, agreements
+  execution/       # projects, tickets, delivery
+  finance/         # payments and finance records
+  operations/      # orgs, people, tasks, assets
+  procurement/     # sources, bids, credentials, scans
+lib/garden_web/
+  live/            # LiveViews
+  components/      # shared UI
+  router.ex
 ```
 
 ## Domains
 
-### Sales (CRM)
-- Companies, Contacts, Opportunities, Leads, Tasks
-- Activities, Notes, Addresses
+### Company
 
-### Agents (Automation)
-- **Bids** - Government/public bid opportunities
-- **Prospects** - Discovered potential customers
-- **LeadSources** - URLs to scan for leads
+- Reusable Gnome facts, documents, tax identifiers, payment destinations,
+  compliance records, and source review items.
+
+### Commercial
+
+- Discovery records, signals, pursuits, agreements, customer vendor onboarding,
+  and customer-specific requirement artifacts.
+
+### Procurement
+
+- Public procurement sources, source credentials, bid review, crawl artifacts,
+  and import/scan workflows.
+
+### Acquisition, Operations, Execution, Finance
+
+- Review queue, organizations/people/tasks/assets, delivery records, and
+  payment/finance records.
 
 ## Admin
 
@@ -121,6 +135,9 @@ Ash Admin is available at [`localhost:4000/admin`](http://localhost:4000/admin) 
 ## Development
 
 ```bash
+# Enter the pinned dev shell
+nix develop
+
 # Run in IEx for hot reloading
 iex -S mix phx.server
 
@@ -130,6 +147,12 @@ recompile()
 # Generate Ash migrations
 mix ash.codegen migration_name
 mix ash.migrate
+
+# Refresh the machine-readable resource map after Ash changes
+mix llm.generate_resource_map
+
+# Final broad check before PRs
+mix precommit
 ```
 
 ## Production Operations

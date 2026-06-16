@@ -14,7 +14,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   API limit: 1000 requests/day
   """
 
-  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
 
   require Logger
 

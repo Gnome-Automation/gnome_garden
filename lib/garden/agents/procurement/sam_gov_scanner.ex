@@ -12,7 +12,7 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
   alias GnomeGarden.Agents.Tools.Procurement.QuerySamGov
   alias GnomeGarden.Agents.Tools.Procurement.SaveBid
   alias GnomeGarden.Agents.Tools.Procurement.ScoreBid
-  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
   alias GnomeGarden.Procurement.SourceSearchFilter

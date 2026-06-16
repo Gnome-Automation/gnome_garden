@@ -1,15 +1,44 @@
 ---
 name: ash-framework
-description: Ash Framework idiomatic patterns, anti-patterns, and mix task references for Elixir/Phoenix projects. Use when creating or modifying Ash resources, domains, actions, relationships, policies, migrations, forms, or LiveViews that interact with Ash data.
+description: MUST use before editing or reviewing Elixir/Phoenix/Ash code in GnomeGarden, especially resources, domains, actions, relationships, policies, migrations, AshPhoenix forms, LiveViews that read/write Ash data, Cinder tables, Oban jobs, AshStorage, AshStateMachine, or any code touching GnomeGarden.Repo/Ecto. Enforces docs lookup, architecture map checks, Ash code interfaces, and Ash migration workflow.
 ---
 
 # Ash Framework — Idiomatic Practices
 
-Load this skill when working with Ash resources, domains, actions, policies, migrations, or any LiveView/component that reads or writes Ash-managed data.
+Load this skill before working with any Elixir, Phoenix, LiveView, or test code
+that might read, write, present, migrate, or model Ash-managed data. If the task
+mentions Ash, Ecto, Repo, migrations, forms, LiveViews, domains, resources,
+actions, policies, relationships, calculations, aggregates, Cinder, Oban,
+AshStorage, or AshStateMachine, this skill applies.
+
+Before editing, say that this skill is loaded, then follow the documentation
+lookup workflow near the end of this file.
 
 ## Critical Rules
 
 These rules override any tendency to fall back to raw Ecto or hand-rolled patterns.
+
+### 0. Ash-First Decision Ladder
+
+When modeling persisted business behavior, try these Ash mechanisms before
+plain Elixir services, LiveView helpers, raw Ecto, or manual Phoenix forms:
+
+1. Existing domain code interface.
+2. Existing resource action/preparation/change/validation/policy/calculation/
+   aggregate/relationship/identity.
+3. New intent-named Ash action exposed through the domain.
+4. Domain-local Ash extension module under `changes/`, `preparations/`,
+   `calculations/`, `validations/`, or `aggregates/`.
+5. Embedded resources or `Ash.Type.Union` when the data is structured,
+   resource-like, validated, or form-backed but should live inside another
+   resource rather than its own table.
+6. AshPhoenix forms, including nested forms and union forms, for Ash-backed UI.
+7. Plain Elixir service modules only for external orchestration, protocol
+   parsing, transport, LLM/tool coordination, runtime process concerns, or cases
+   where Ash's DSL is genuinely the wrong fit.
+
+If you choose option 7, say why the Ash action/calculation/aggregate/embedded
+resource/union/form approach is not appropriate for the specific case.
 
 ### 1. Never Use Repo Directly
 
@@ -36,6 +65,8 @@ Ash.create!(MyResource, %{name: "foo"})
 | Default value for new records | `attribute :status, :atom, default: :draft` |
 | Derive a value | `calculate :full_name, :string, expr(first_name <> " " <> last_name)` |
 | Count/sum related records | `count :comment_count, :comments` or `sum :total, :line_items, :amount` |
+| First/latest related value | `first :latest_comment, :comments, :body` with sort |
+| List related values | `list :tag_names, :tags, :name` |
 | Filter reads | `filter expr(status == :published)` in a preparation |
 | Sort reads | `prepare build(sort: [inserted_at: :desc])` |
 | Validate input | `validations` block with `validate present(:title)` etc. |
@@ -43,6 +74,9 @@ Ash.create!(MyResource, %{name: "foo"})
 | Manage nested relationships | `change manage_relationship(:tags, type: :append)` |
 | Atomic increment | `change increment(:view_count)` |
 | Scope reads to actor | `prepare filter expr(user_id == ^actor(:id))` |
+| Structured JSON-like data | Embedded resources or constrained map types |
+| Variant payloads | `Ash.Type.Union` and AshPhoenix union forms |
+| Ash-backed UI input | `AshPhoenix.Form.for_create/for_update`, nested forms, union forms |
 
 ### 3. Migrations — Always Use Ash Workflow
 
@@ -412,6 +446,19 @@ end
 ```
 
 ## AshPhoenix Forms in LiveViews
+
+For Ash-backed resources, Phoenix's generated `to_form(changeset)` guidance is
+not enough. Use `AshPhoenix.Form` as the default form boundary:
+
+- `AshPhoenix.Form.for_create/3` for new records.
+- `AshPhoenix.Form.for_update/3` for editing records.
+- `AshPhoenix.Form.validate/2` for `phx-change`.
+- `AshPhoenix.Form.submit/2` for `phx-submit`.
+- `forms: [auto?: true]` or explicit nested form config for relationships,
+  embedded resources, and union-backed data when appropriate.
+
+Use Phoenix `<.form>` and `<.input>` components to render the form, but the form
+source should come from `AshPhoenix.Form`, not an Ecto changeset.
 
 ```elixir
 # Create form

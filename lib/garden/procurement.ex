@@ -25,6 +25,7 @@ defmodule GnomeGarden.Procurement do
       define :get_procurement_source_by_url, action: :by_url, args: [:url]
       define :create_procurement_source, action: :create
       define :create_procurement_source_for_organization, action: :create_for_organization
+      define :import_procurement_source_seed_rows, action: :import_seed_rows, args: [:rows]
       define :update_procurement_source, action: :update
       define :approve_procurement_source, action: :approve
       define :ignore_procurement_source, action: :ignore
@@ -34,6 +35,7 @@ defmodule GnomeGarden.Procurement do
       define :configure_procurement_source, action: :configure
       define :auto_configure_procurement_source, action: :auto_configure
       define :config_fail_procurement_source, action: :config_fail
+      define :set_manual_procurement_source, action: :set_manual
       define :scan_procurement_source, action: :scan
       define :scan_fail_procurement_source, action: :scan_fail
       define :retry_procurement_source_config, action: :retry_config
@@ -128,6 +130,17 @@ defmodule GnomeGarden.Procurement do
       define :mark_source_credential_test_queued, action: :queue_test
       define :mark_source_credential_test_running, action: :mark_test_running
       define :mark_source_credential_used, action: :mark_used
+
+      define :resolve_source_username_password,
+        action: :resolve_username_password,
+        args: [:credential_family, :procurement_source_id]
+
+      define :resolve_source_api_key, action: :resolve_api_key, args: [:credential_family]
+
+      define :source_credential_status,
+        action: :credential_status,
+        args: [:credential_family, :procurement_source_id]
+
       define :mark_source_credential_verified, action: :mark_verified
       define :mark_source_credential_failed, action: :mark_failed
       define :disable_source_credential, action: :disable

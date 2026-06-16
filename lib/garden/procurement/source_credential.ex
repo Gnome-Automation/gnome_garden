@@ -150,6 +150,28 @@ defmodule GnomeGarden.Procurement.SourceCredential do
       change set_attribute(:status, :disabled)
     end
 
+    action :resolve_username_password, :map do
+      argument :credential_family, :string, allow_nil?: false
+      argument :procurement_source_id, :uuid
+
+      run GnomeGarden.Procurement.Actions.ResolveSourceUsernamePassword
+    end
+
+    action :resolve_api_key, :string do
+      argument :credential_family, :string, allow_nil?: false
+
+      run GnomeGarden.Procurement.Actions.ResolveSourceApiKey
+    end
+
+    action :credential_status, :atom do
+      constraints one_of: [:verified, :pending, :invalid, :missing]
+
+      argument :credential_family, :string, allow_nil?: false
+      argument :procurement_source_id, :uuid
+
+      run GnomeGarden.Procurement.Actions.SourceCredentialStatus
+    end
+
     read :active_for_source do
       argument :procurement_source_id, :uuid, allow_nil?: false
 

@@ -671,7 +671,10 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   defp blank_to_nil(value), do: value
 
   defp dialog_action_param(params) do
-    Map.get(params, "action") || Map.get(params, "value")
+    Map.get(params, "dialog_action") ||
+      Map.get(params, "dialog-action") ||
+      Map.get(params, "action") ||
+      Map.get(params, "value")
   end
 
   defp queue_path(queue, family, source, program),

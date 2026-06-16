@@ -170,7 +170,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScoreBidTest do
 
   test "learned exclude keywords reject CCTV-style bids" do
     {:ok, _profile} =
-      GnomeGarden.Commercial.create_company_profile(%{
+      GnomeGarden.Company.create_company_profile(%{
         key: "primary",
         name: "Gnome",
         positioning_summary: "Industrial apps and software delivery for operations teams.",

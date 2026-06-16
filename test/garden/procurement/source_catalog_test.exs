@@ -73,7 +73,7 @@ defmodule GnomeGarden.Procurement.SourceCatalogTest do
 
   test "bidnet controls pilot respects active profile query exclusions" do
     {:ok, _profile} =
-      GnomeGarden.Commercial.create_company_profile(%{
+      GnomeGarden.Company.create_company_profile(%{
         key: "primary",
         name: "Gnome",
         positioning_summary: "Industrial and software shop.",

@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Commercial.CompanyProfileLearning do
+defmodule GnomeGarden.Company.ProfileLearning do
   @moduledoc """
   Applies operator feedback back into the durable company profile.
 
@@ -6,9 +6,9 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
   drives prompts, discovery scope, and procurement scoring.
   """
 
-  alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.CompanyProfileContext
-  alias GnomeGarden.Commercial.DefaultCompanyProfiles
+  alias GnomeGarden.Company
+  alias GnomeGarden.Company.DefaultProfiles
+  alias GnomeGarden.Company.ProfileContext
 
   @learning_scopes ~w(out_of_scope not_targeting_right_now)
   @history_limit 50
@@ -19,9 +19,9 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
       profile_map = profile_to_map(profile)
 
       context =
-        CompanyProfileContext.resolve(profile: profile_map, mode: Keyword.get(opts, :mode))
+        ProfileContext.resolve(profile: profile_map, mode: Keyword.get(opts, :mode))
 
-      keyword_mode = CompanyProfileContext.keyword_mode(profile_map, context.company_profile_mode)
+      keyword_mode = ProfileContext.keyword_mode(profile_map, context.company_profile_mode)
 
       {:ok,
        %{
@@ -40,12 +40,12 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
   def record_targeting_feedback(opts) do
     with {:ok, profile} <- load_profile(Keyword.get(opts, :company_profile_key)),
          context <-
-           CompanyProfileContext.resolve(
+           ProfileContext.resolve(
              profile: profile_to_map(profile),
              mode: Keyword.get(opts, :company_profile_mode)
            ),
          {:ok, updated_profile} <-
-           Commercial.update_company_profile(
+           Company.update_company_profile(
              profile,
              build_update_attrs(profile, context.company_profile_mode, opts)
            ) do
@@ -96,12 +96,12 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
   def remove_learned_exclude(opts) do
     with {:ok, profile} <- load_profile(Keyword.get(opts, :company_profile_key)),
          context <-
-           CompanyProfileContext.resolve(
+           ProfileContext.resolve(
              profile: profile_to_map(profile),
              mode: Keyword.get(opts, :company_profile_mode)
            ),
          {:ok, updated_profile} <-
-           Commercial.update_company_profile(
+           Company.update_company_profile(
              profile,
              remove_learned_exclude_attrs(profile, context.company_profile_mode, opts)
            ) do
@@ -115,12 +115,12 @@ defmodule GnomeGarden.Commercial.CompanyProfileLearning do
   end
 
   defp load_profile(nil) do
-    DefaultCompanyProfiles.ensure_default()
-    Commercial.get_primary_company_profile()
+    DefaultProfiles.ensure_default()
+    Company.get_primary_company_profile()
   end
 
   defp load_profile(profile_key) when is_binary(profile_key) do
-    case Commercial.get_company_profile_by_key(profile_key) do
+    case Company.get_company_profile_by_key(profile_key) do
       {:ok, profile} ->
         {:ok, profile}
 

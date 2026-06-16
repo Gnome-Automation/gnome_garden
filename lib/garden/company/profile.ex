@@ -1,4 +1,4 @@
-defmodule GnomeGarden.Commercial.CompanyProfile do
+defmodule GnomeGarden.Company.Profile do
   @moduledoc """
   Durable internal profile for how the company should describe and target itself.
 
@@ -15,7 +15,7 @@ defmodule GnomeGarden.Commercial.CompanyProfile do
 
   use Ash.Resource,
     otp_app: :gnome_garden,
-    domain: GnomeGarden.Commercial,
+    domain: GnomeGarden.Company,
     data_layer: AshPostgres.DataLayer,
     extensions: [AshAdmin.Resource],
     notifiers: [Ash.Notifier.PubSub]
@@ -200,6 +200,34 @@ defmodule GnomeGarden.Commercial.CompanyProfile do
     end
 
     timestamps()
+  end
+
+  relationships do
+    has_many :company_documents, GnomeGarden.Company.Document do
+      destination_attribute :company_profile_id
+      public? true
+    end
+
+    has_many :tax_identifiers, GnomeGarden.Company.TaxIdentifier do
+      destination_attribute :company_profile_id
+      public? true
+    end
+
+    has_many :compliance_obligations, GnomeGarden.Company.ComplianceObligation do
+      destination_attribute :company_profile_id
+      public? true
+    end
+
+    has_many :source_review_items, GnomeGarden.Company.SourceReviewItem do
+      destination_attribute :company_profile_id
+      public? true
+    end
+
+    has_many :customer_vendor_onboardings,
+             GnomeGarden.Commercial.CustomerVendorOnboarding do
+      destination_attribute :company_profile_id
+      public? true
+    end
   end
 
   identities do

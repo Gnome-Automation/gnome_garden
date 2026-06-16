@@ -16,7 +16,7 @@ defmodule GnomeGarden.Agents.Commercial.SiteScanner do
   """
 
   alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.CompanyProfileContext
+  alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
   alias GnomeGarden.Commercial.DiscoveryIdentityResolver
   alias GnomeGarden.Commercial.MarketFocus
   alias GnomeGarden.Operations

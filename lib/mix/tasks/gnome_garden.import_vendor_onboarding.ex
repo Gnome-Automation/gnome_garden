@@ -10,7 +10,7 @@ defmodule Mix.Tasks.GnomeGarden.ImportVendorOnboarding do
 
   use Mix.Task
 
-  alias GnomeGarden.Commercial
+  alias GnomeGarden.Company
 
   @shortdoc "Import vendor-onboarding company/customer data from JSON"
   @requirements ["app.start"]
@@ -18,7 +18,7 @@ defmodule Mix.Tasks.GnomeGarden.ImportVendorOnboarding do
   @impl Mix.Task
   def run([path]) do
     payload = path |> File.read!() |> Jason.decode!()
-    {:ok, result} = Commercial.import_vendor_onboarding(payload, authorize?: false)
+    {:ok, result} = Company.import_vendor_onboarding(payload, authorize?: false)
 
     Mix.shell().info("""
     Imported vendor-onboarding profile.

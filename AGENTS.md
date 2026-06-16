@@ -256,7 +256,7 @@ relationships do
 end
 ```
 
-### AshStorage and Shared Documents
+### AshStorage and Domain-Owned Documents
 
 When using `ash_storage`, remember that the extension itself only gives you
 one host resource to one file or one host resource to many files. If the same
@@ -264,15 +264,25 @@ file needs to apply to multiple parent records, or the parent-to-file link has
 its own metadata, model that explicitly in Ash instead of trying to force it
 into the attachment primitive.
 
-- Use a dedicated document/file resource for the reusable file metadata.
-- Put `ash_storage` on the resource that actually owns the blob/attachment
-  behavior.
+- Prefer domain-owned document resources over a generic global document domain.
+  For example, Gnome's W-9 belongs on `GnomeGarden.Company.Document`, not on a
+  generic `Documents.Document` or a customer onboarding record.
+- Put `ash_storage` on the domain resource that actually owns the file as
+  business state. That host resource declares `has_one_attached :file` or
+  `has_many_attached :files`.
+- Use blob and attachment resources as storage infrastructure only. They should
+  not own business concepts like W-9, supplier code confirmation, customer
+  requirement, part document role, acceptance state, or rejection reason.
 - If parent-specific metadata exists, add a join resource for the relationship
   (for example `FindingDocument`, `ParentRecordDocument`, etc.).
 - Keep relationship-specific fields like `is_primary`, `effective_on`, `notes`,
   `document_role`, or `required_for_promotion` on the join resource, not on the
   blob itself.
-- If you need convenience access from parent to shared document, use Ash
+- Do not model requirements as fake attachments. For customer onboarding,
+  parts, quotes, or compliance workflows, create a domain-specific requirement
+  or link resource that optionally points at the domain document and carries
+  status, required flags, send targets, acceptance/rejection state, and notes.
+- If you need convenience access from a parent to a domain document, use Ash
   `through` relationships instead of duplicating file state.
 
 Use the right `through` feature for the job:
@@ -974,16 +984,20 @@ action row should be intentionally designed for:
 
 ## Development Workflow
 
-1. **I run the server** - Don't start/stop Phoenix
-2. **Generate migrations**: `mix ash.codegen`
-3. **Apply migrations**: `mix ash.migrate`
-4. **During development**: batch related edits before running format/tests.
+1. **Use the pinned VM shell** - Prefer `nix develop` for local work. It pins
+   Erlang/OTP, Elixir, Node, PostgreSQL, Tailwind/esbuild, browser tooling, and
+   document-analysis CLIs used by AshStorage analyzers. See
+   `docs/development-vm-setup.md`.
+2. **I run the server** - Don't start/stop Phoenix
+3. **Generate migrations**: `mix ash.codegen`
+4. **Apply migrations**: `mix ash.migrate`
+5. **During development**: batch related edits before running format/tests.
    Prefer connected BEAM tools (`elixir_eval`, Tidewave) for quick runtime
    inspection and shape checks. Then run `mix format` once for the touched files
    and a focused check such as `mix test path:line` or the smallest relevant
    test file. Avoid `mix format && mix test` after every tiny edit because it
    repeatedly recompiles large parts of the Phoenix/Ash app.
-5. **Before opening a PR only**: run `mix precommit` as the final broad check.
+6. **Before opening a PR only**: run `mix precommit` as the final broad check.
 
 ## Code Shape
 
