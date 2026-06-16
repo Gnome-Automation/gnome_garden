@@ -369,6 +369,82 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
           </.section>
 
           <.section
+            title="Sync Health"
+            description="Provider pulls and webhook hints recorded by Finance."
+          >
+            <div
+              :if={@latest_sync_run}
+              class="rounded-lg border border-base-content/10 bg-base-200 p-3"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold">
+                    {format_sync_source(@latest_sync_run.source)}
+                  </p>
+                  <p class="text-xs text-base-content/50">
+                    Started {format_datetime(@latest_sync_run.started_at)}
+                  </p>
+                </div>
+                <.status_badge status={sync_run_status_variant(@latest_sync_run.status)}>
+                  {format_atom(@latest_sync_run.status)}
+                </.status_badge>
+              </div>
+
+              <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <p class="text-base-content/50">Seen</p>
+                  <p class="font-medium">{@latest_sync_run.transactions_seen_count || 0}</p>
+                </div>
+                <div>
+                  <p class="text-base-content/50">Created</p>
+                  <p class="font-medium">{@latest_sync_run.transactions_created_count || 0}</p>
+                </div>
+                <div>
+                  <p class="text-base-content/50">Updated</p>
+                  <p class="font-medium">{@latest_sync_run.transactions_updated_count || 0}</p>
+                </div>
+              </div>
+
+              <p
+                :if={@latest_sync_run.error_message}
+                class="mt-3 line-clamp-3 text-xs text-error"
+              >
+                {@latest_sync_run.error_message}
+              </p>
+            </div>
+
+            <div :if={is_nil(@latest_sync_run)}>
+              <.empty_state
+                icon="hero-arrow-path"
+                title="No sync runs yet"
+                description="Manual syncs, webhook-triggered pulls, and scheduled pulls will appear here."
+              />
+            </div>
+
+            <div :if={@integration_events != []} class="mt-4 space-y-2">
+              <p class="text-xs font-semibold uppercase text-base-content/50">
+                Recent events
+              </p>
+              <div
+                :for={event <- Enum.take(@integration_events, 4)}
+                class="rounded-lg border border-base-content/10 bg-base-100 px-3 py-2"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="truncate text-xs font-medium">{event.event_type}</p>
+                    <p class="text-xs text-base-content/50">
+                      {format_atom(event.source)} · {format_datetime(event.received_at)}
+                    </p>
+                  </div>
+                  <.status_badge status={integration_event_status_variant(event.status)}>
+                    {format_atom(event.status)}
+                  </.status_badge>
+                </div>
+              </div>
+            </div>
+          </.section>
+
+          <.section
             title="Bank Rules"
             description="Rules categorize new synced transactions before manual review."
           >
@@ -478,17 +554,21 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
   end
 
   defp load_workspace(socket) do
-    actor = socket.assigns.current_user
-    accounts = Finance.list_bank_accounts!(actor: actor)
-    bank_rules = Finance.list_bank_rules!(actor: actor)
-    transactions = Finance.list_bank_transactions!(actor: actor)
+    workspace = Finance.get_banking_workspace!(actor: socket.assigns.current_user)
 
     socket
-    |> assign(:accounts, accounts)
-    |> assign(:bank_rules, bank_rules)
-    |> assign(:transaction_count, length(transactions))
-    |> assign(:needs_review_count, Enum.count(transactions, &needs_review?/1))
-    |> assign(:current_balance, sum_account_balances(accounts))
+    |> assign(:accounts, workspace.accounts)
+    |> assign(:bank_rules, workspace.bank_rules)
+    |> assign(:transaction_count, workspace.transaction_count)
+    |> assign(:needs_review_count, workspace.needs_review_count)
+    |> assign(:current_balance, workspace.current_balance)
+    |> assign(:sync_runs, workspace.sync_runs)
+    |> assign(:integration_events, workspace.integration_events)
+    |> assign(:latest_sync_run, workspace.latest_sync_run)
+    |> assign(:latest_integration_event, workspace.latest_integration_event)
+    |> assign(:running_sync_count, workspace.running_sync_count)
+    |> assign(:failed_sync_count, workspace.failed_sync_count)
+    |> assign(:failed_integration_event_count, workspace.failed_integration_event_count)
   end
 
   defp default_rule_form do
@@ -525,14 +605,6 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
     |> Kernel.+(10)
   end
 
-  defp sum_account_balances(accounts) do
-    Enum.reduce(accounts, Decimal.new(0), fn account, total ->
-      Decimal.add(total, account.current_balance || Decimal.new(0))
-    end)
-  end
-
-  defp needs_review?(txn), do: txn.review_status == :needs_review
-
   defp counterparty(txn),
     do: txn.counterparty_name || txn.description || "Unknown counterparty"
 
@@ -550,6 +622,24 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
   defp account_status_variant(:error), do: :error
   defp account_status_variant(:closed), do: :error
   defp account_status_variant(_), do: :default
+
+  defp sync_run_status_variant(:succeeded), do: :success
+  defp sync_run_status_variant(:failed), do: :error
+  defp sync_run_status_variant(:partial), do: :warning
+  defp sync_run_status_variant(:running), do: :info
+  defp sync_run_status_variant(_), do: :default
+
+  defp integration_event_status_variant(:processed), do: :success
+  defp integration_event_status_variant(:failed), do: :error
+  defp integration_event_status_variant(:processing), do: :info
+  defp integration_event_status_variant(:ignored), do: :default
+  defp integration_event_status_variant(_), do: :warning
+
+  defp format_sync_source(:manual_sync), do: "Manual sync"
+  defp format_sync_source(:scheduled_sync), do: "Scheduled sync"
+  defp format_sync_source(:webhook), do: "Webhook sync"
+  defp format_sync_source(:operator), do: "Operator sync"
+  defp format_sync_source(source), do: format_atom(source)
 
   defp transaction_status_variant(:posted), do: :success
   defp transaction_status_variant(:pending), do: :warning

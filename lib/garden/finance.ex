@@ -28,6 +28,7 @@ defmodule GnomeGarden.Finance do
       define :update_bank_connection, action: :update
       define :sync_bank_connection, action: :sync, args: [:bank_connection_id, :source]
       define :sync_bank_provider, action: :sync_provider, args: [:provider, :environment, :source]
+      define :get_banking_workspace, action: :banking_workspace
       define :activate_bank_connection, action: :activate
       define :pause_bank_connection, action: :pause
       define :archive_bank_connection, action: :archive
@@ -106,6 +107,7 @@ defmodule GnomeGarden.Finance do
 
     resource GnomeGarden.Finance.BankIntegrationEvent do
       define :list_bank_integration_events, action: :read
+      define :list_recent_bank_integration_events, action: :recent
       define :get_bank_integration_event, action: :read, get_by: [:id]
       define :record_bank_integration_event, action: :record
       define :process_bank_integration_event, action: :process
@@ -122,6 +124,7 @@ defmodule GnomeGarden.Finance do
 
     resource GnomeGarden.Finance.BankSyncRun do
       define :list_bank_sync_runs, action: :read
+      define :list_recent_bank_sync_runs, action: :recent
       define :get_bank_sync_run, action: :read, get_by: [:id]
       define :start_bank_sync_run, action: :start
       define :finish_bank_sync_run_success, action: :finish_success

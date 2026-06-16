@@ -38,6 +38,10 @@ defmodule GnomeGarden.Finance.BankIntegrationEvent do
   actions do
     defaults [:read, :destroy]
 
+    read :recent do
+      prepare build(sort: [received_at: :desc], limit: 8, load: [:bank_connection])
+    end
+
     create :record do
       primary? true
 

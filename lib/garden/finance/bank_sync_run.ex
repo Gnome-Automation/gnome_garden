@@ -34,6 +34,10 @@ defmodule GnomeGarden.Finance.BankSyncRun do
   actions do
     defaults [:read, :destroy]
 
+    read :recent do
+      prepare build(sort: [started_at: :desc], limit: 8, load: [:bank_connection])
+    end
+
     create :start do
       primary? true
 

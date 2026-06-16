@@ -47,6 +47,7 @@ defmodule GnomeGardenWeb.FinanceBankingLiveTest do
     assert html =~ "Banking"
     assert html =~ "Transactions"
     assert html =~ "Accounts"
+    assert html =~ "Sync Health"
     assert html =~ "Bank Rules"
     assert render(view) =~ "ACME CORPORATION"
   end
