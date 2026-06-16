@@ -1,0 +1,93 @@
+defmodule GnomeGarden.Finance.BankTransactionEvent do
+  @moduledoc """
+  Audit trail for imported bank transaction decisions and lifecycle events.
+  """
+
+  use Ash.Resource,
+    otp_app: :gnome_garden,
+    domain: GnomeGarden.Finance,
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshAdmin.Resource]
+
+  admin do
+    table_columns [
+      :id,
+      :bank_transaction_id,
+      :event_type,
+      :source,
+      :actor_id,
+      :amount,
+      :inserted_at
+    ]
+  end
+
+  postgres do
+    table "finance_bank_transaction_events"
+    repo GnomeGarden.Repo
+
+    references do
+      reference :bank_transaction, on_delete: :delete
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :record do
+      primary? true
+
+      accept [
+        :bank_transaction_id,
+        :event_type,
+        :source,
+        :message,
+        :metadata,
+        :actor_id,
+        :amount,
+        :invoice_ids
+      ]
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :event_type, :atom do
+      allow_nil? false
+      public? true
+
+      constraints one_of: [
+                    :imported,
+                    :updated,
+                    :rule_applied,
+                    :match_suggested,
+                    :matched,
+                    :unmatched,
+                    :categorized,
+                    :ignored,
+                    :reopened
+                  ]
+    end
+
+    attribute :source, :atom do
+      allow_nil? false
+      public? true
+      constraints one_of: [:provider, :rule, :operator, :sync, :ai]
+    end
+
+    attribute :message, :string, public?: true
+    attribute :metadata, :map, public?: true, default: %{}
+    attribute :actor_id, :uuid, public?: true
+    attribute :amount, :decimal, public?: true
+    attribute :invoice_ids, {:array, :uuid}, public?: true, default: []
+
+    timestamps()
+  end
+
+  relationships do
+    belongs_to :bank_transaction, GnomeGarden.Finance.BankTransaction do
+      allow_nil? false
+      public? true
+    end
+  end
+end
