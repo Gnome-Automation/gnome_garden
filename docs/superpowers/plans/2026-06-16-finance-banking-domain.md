@@ -24,7 +24,7 @@ Finance banking should answer the questions a founding member asks every day:
 - What bank activity needs review?
 - Which invoices are overdue or partially paid?
 - What work is ready to bill?
-- Did sync or webhook ingestion fail?
+- Did scheduled or manual sync fail?
 - Which rules are helping, and which rules need correction?
 
 The UI should be organized around those workflows. It should not expose one
@@ -54,12 +54,38 @@ Garden owns all business state:
 - counterparty aliases
 - payment matches
 - reconciliation state
-- provider webhook/event processing
+- provider pull-sync state and optional integration events
 
 `GnomeGarden.Mercury` should not remain a top-level Ash domain in the final
 shape. Provider-specific code should live under a Finance integration namespace
 such as `GnomeGarden.Finance.Integrations.Mercury`, and should be called by
 Finance actions.
+
+## Data Flow: Pull Canonical, Webhooks as Hints
+
+Mercury should be modeled with pull sync as the canonical source of local bank
+state. Webhooks are still useful, but they should wake up or prioritize sync
+work rather than replace reconciliation.
+
+The normal path is:
+
+1. A founder clicks sync, or AshOban schedules a sync.
+2. `Finance.BankConnection.sync` calls the Mercury adapter.
+3. The Mercury adapter calls `ReqMercury`.
+4. Finance actions upsert bank accounts, balances, and transactions.
+5. Finance actions apply rules, suggest matches, and record audit events.
+
+Webhook path:
+
+1. Mercury sends a webhook notification.
+2. The controller verifies transport concerns.
+3. Finance records a `BankIntegrationEvent` with `source: :webhook`.
+4. The event triggers or schedules `BankConnection.sync`.
+5. The sync pulls current account and transaction state from Mercury.
+
+This gives us fast updates without trusting a webhook payload as the complete
+banking ledger. If a webhook is missed, scheduled sync catches up. If a webhook
+payload is partial, pull sync fills the gap.
 
 ## Related Boundary: Company Payment Destinations
 
@@ -225,7 +251,7 @@ Fields:
 - `bank_transaction_id`
 - `payment_id`
 - `invoice_id`, optional denormalized convenience when matched to an invoice
-- `match_source`: `:rule`, `:amount_date`, `:operator`, `:webhook`, `:ai`
+- `match_source`: `:rule`, `:amount_date`, `:operator`, `:sync`, `:ai`
 - `status`: `:suggested`, `:accepted`, `:rejected`, `:superseded`
 - `confidence`
 - `matched_at`
@@ -316,15 +342,20 @@ Implementation notes:
 - Replaces `GnomeGarden.Mercury.ClientBankAlias`.
 - Useful for matching incoming customer payments and future vendor payments.
 
-### BankProviderEvent
+### BankIntegrationEvent
 
-Idempotent provider event ingestion record.
+Idempotent integration activity record.
+
+For Mercury this records scheduled sync, manual sync, provider responses, and
+webhook notifications. Webhook notifications can trigger sync, but bank
+accounts and transactions should still be reconciled through pull sync.
 
 Fields:
 
 - `provider`
 - `provider_event_id`, optional
 - `event_type`
+- `source`: `:scheduled_sync`, `:manual_sync`, `:webhook`, `:operator`
 - `status`: `:received`, `:processing`, `:processed`, `:failed`, `:ignored`
 - `payload`
 - `received_at`
@@ -336,7 +367,7 @@ Fields:
 
 Actions:
 
-- `receive`
+- `record`
 - `process`
 - `mark_processed`
 - `mark_failed`
@@ -345,10 +376,13 @@ Actions:
 
 Implementation notes:
 
-- Webhook controllers verify transport concerns, then call `receive`.
-- Processing is an Ash action. It imports or updates provider data and records
-  resulting transaction events.
-- This replaces controller-owned payload mapping.
+- Pull-sync actions create these records for sync attempts, errors, and provider
+  responses that need audit history.
+- If a provider webhook is used, the controller verifies transport concerns and
+  records an integration event. It should not directly map payloads into
+  persistent banking resources.
+- Processing is an Ash action. It can trigger a pull sync, import or update
+  provider data, and record resulting transaction events.
 
 ### BankTransactionEvent
 
@@ -358,7 +392,7 @@ Fields:
 
 - `bank_transaction_id`
 - `event_type`
-- `source`: `:provider`, `:rule`, `:operator`, `:sync`, `:webhook`, `:ai`
+- `source`: `:provider`, `:rule`, `:operator`, `:sync`, `:ai`
 - `message`
 - `metadata`
 - `actor_id`, optional
@@ -400,7 +434,7 @@ Implementation notes:
 
 - This makes sync status visible to a founder without reading logs.
 - If this feels too much for the first migration, fold it into
-  `BankProviderEvent` initially, but the UI wants sync history eventually.
+  `BankIntegrationEvent` initially, but the UI wants sync history eventually.
 
 ## Ash Action and Job Boundaries
 
@@ -409,15 +443,16 @@ Use Ash actions as the business boundary.
 Allowed orchestration:
 
 - A LiveView calls `GnomeGarden.Finance.sync_bank_connection/2`.
-- A webhook controller verifies Mercury signature, then calls
-  `GnomeGarden.Finance.receive_bank_provider_event/2`.
 - AshOban schedules `BankConnection.sync` with explicit module names.
-- Resource actions call provider adapters and write Finance resources.
+- `BankConnection.sync` calls provider adapters and writes Finance resources
+  through resource actions.
+- Webhook controllers record `BankIntegrationEvent` rows and trigger pull sync.
+  They do not own banking writes.
 
 Avoid:
 
 - LiveView calling `Oban.insert(Mercury.SyncWorker.new(...))`.
-- Controller mapping provider payloads directly into persistent business
+- Controller mapping provider push payloads directly into persistent business
   resources.
 - `Mercury.SyncWorker` owning import, rule matching, and payment matching.
 - A provider-specific `PaymentMatcherWorker` creating Finance payments.
@@ -642,12 +677,12 @@ Sections:
 
 - latest sync status
 - failures
-- webhook/provider events
+- sync and provider integration events
 - sync history
 
 Actions:
 
-- Retry failed event
+- Retry failed sync or event
 - Retry sync
 - Mark event ignored
 
@@ -759,10 +794,10 @@ large modals should behave like sheets or full-screen panels.
   resources are registered.
 - Regenerate `docs/llm/generated/resources.json`.
 
-### Phase 2: Provider Event and Sync Boundary
+### Phase 2: Pull Sync, Webhook Hints, and Integration Events
 
-- Add `BankProviderEvent`.
-- Move webhook controller mapping into Finance actions.
+- Add `BankIntegrationEvent`.
+- Add Mercury webhook handling as an event hint if account setup is available.
 - Replace `Mercury.SyncWorker` with `BankConnection.sync`.
 - Add AshOban scheduled sync on `BankConnection`.
 - Ensure explicit AshOban module names.
