@@ -1,6 +1,23 @@
 defmodule GnomeGardenWeb.Finance.Helpers do
   @moduledoc false
 
+  def bank_transaction_category_options do
+    [
+      {"Customer payment", :customer_payment},
+      {"Vendor payment", :vendor_payment},
+      {"Bank fee", :bank_fee},
+      {"Internal transfer", :internal_transfer},
+      {"Misc income", :misc_income},
+      {"Refund", :refund},
+      {"Interest income", :interest_income},
+      {"Owner draw", :owner_draw},
+      {"Payroll", :payroll},
+      {"Tax", :tax},
+      {"Unknown", :unknown},
+      {"Other", :other}
+    ]
+  end
+
   def format_atom(nil), do: "-"
 
   def format_atom(atom) when is_atom(atom) do
@@ -44,4 +61,38 @@ defmodule GnomeGardenWeb.Finance.Helpers do
       Decimal.add(total, Map.get(record, field) || Decimal.new(0))
     end)
   end
+
+  def bank_transaction_counterparty(transaction),
+    do: transaction.counterparty_name || transaction.description || "Unknown counterparty"
+
+  def bank_amount_classes(%Decimal{} = amount) do
+    if Decimal.compare(amount, Decimal.new(0)) == :gt do
+      "font-medium text-success"
+    else
+      "font-medium text-error"
+    end
+  end
+
+  def bank_amount_classes(_), do: "font-medium"
+
+  def bank_transaction_status_variant(:posted), do: :success
+  def bank_transaction_status_variant(:pending), do: :warning
+  def bank_transaction_status_variant(:failed), do: :error
+  def bank_transaction_status_variant(_), do: :default
+
+  def bank_review_status_variant(:needs_review), do: :warning
+  def bank_review_status_variant(:auto_matched), do: :info
+  def bank_review_status_variant(:reviewed), do: :success
+  def bank_review_status_variant(:ignored), do: :default
+  def bank_review_status_variant(_), do: :default
+
+  def bank_match_status_variant(:matched), do: :success
+  def bank_match_status_variant(:suggested), do: :warning
+  def bank_match_status_variant(:not_matchable), do: :default
+  def bank_match_status_variant(_), do: :error
+
+  def bank_match_status_label(:matched), do: "Matched"
+  def bank_match_status_label(:suggested), do: "Suggested"
+  def bank_match_status_label(:not_matchable), do: "Not matchable"
+  def bank_match_status_label(_), do: "Unmatched"
 end

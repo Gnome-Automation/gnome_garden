@@ -24,21 +24,6 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
     {"Equal to", :eq}
   ]
 
-  @category_options [
-    {"Customer payment", :customer_payment},
-    {"Vendor payment", :vendor_payment},
-    {"Bank fee", :bank_fee},
-    {"Internal transfer", :internal_transfer},
-    {"Misc income", :misc_income},
-    {"Refund", :refund},
-    {"Interest income", :interest_income},
-    {"Owner draw", :owner_draw},
-    {"Payroll", :payroll},
-    {"Tax", :tax},
-    {"Unknown", :unknown},
-    {"Other", :other}
-  ]
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
@@ -46,7 +31,7 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
      |> assign(:page_title, "Banking")
      |> assign(:direction_options, @direction_options)
      |> assign(:amount_operator_options, @amount_operator_options)
-     |> assign(:category_options, @category_options)
+     |> assign(:category_options, bank_transaction_category_options())
      |> assign(:syncing?, false)
      |> assign(:rule_error, nil)
      |> assign(:rule_form, default_rule_form())
@@ -138,6 +123,9 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
           Bank accounts, imported transactions, sync health, and categorization rules.
         </:subtitle>
         <:actions>
+          <.button navigate={~p"/finance/banking/review"}>
+            <.icon name="hero-queue-list" class="size-4" /> Review Queue
+          </.button>
           <.button phx-click="sync" disabled={@syncing?} variant="primary">
             <.icon name="hero-arrow-path" class={["size-4", @syncing? && "animate-spin"]} />
             {if @syncing?, do: "Syncing", else: "Sync"}
@@ -214,13 +202,13 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="truncate text-sm font-semibold text-base-content">
-                          {counterparty(txn)}
+                          {bank_transaction_counterparty(txn)}
                         </p>
                         <p class="mt-0.5 text-xs text-base-content/50">
                           {format_datetime(txn.occurred_at)}
                         </p>
                       </div>
-                      <span class={["shrink-0 text-sm", amount_classes(txn.amount)]}>
+                      <span class={["shrink-0 text-sm", bank_amount_classes(txn.amount)]}>
                         {format_amount(txn.amount)}
                       </span>
                     </div>
@@ -230,14 +218,14 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
                     </p>
 
                     <div class="mt-3 flex flex-wrap gap-1.5">
-                      <.status_badge status={transaction_status_variant(txn.status)}>
+                      <.status_badge status={bank_transaction_status_variant(txn.status)}>
                         {format_atom(txn.status)}
                       </.status_badge>
-                      <.status_badge status={review_status_variant(txn.review_status)}>
+                      <.status_badge status={bank_review_status_variant(txn.review_status)}>
                         {format_atom(txn.review_status)}
                       </.status_badge>
-                      <.status_badge status={match_status_variant(txn.match_status)}>
-                        {match_status_label(txn.match_status)}
+                      <.status_badge status={bank_match_status_variant(txn.match_status)}>
+                        {bank_match_status_label(txn.match_status)}
                       </.status_badge>
                       <.status_badge :if={txn.category != :unknown} status={:default}>
                         {format_atom(txn.category)}
@@ -271,7 +259,7 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
                 <:col :let={txn} field="counterparty_name" search sort label="Counterparty">
                   <div class="min-w-0 space-y-1">
                     <p class="truncate font-medium text-base-content">
-                      {counterparty(txn)}
+                      {bank_transaction_counterparty(txn)}
                     </p>
                     <p class="truncate text-xs text-base-content/50">
                       {txn.description || txn.memo || txn.provider_transaction_id}
@@ -284,19 +272,19 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
                 </:col>
 
                 <:col :let={txn} field="amount" sort label="Amount">
-                  <span class={amount_classes(txn.amount)}>{format_amount(txn.amount)}</span>
+                  <span class={bank_amount_classes(txn.amount)}>{format_amount(txn.amount)}</span>
                 </:col>
 
                 <:col :let={txn} field="status" sort label="Status">
                   <div class="flex flex-wrap gap-1.5">
-                    <.status_badge status={transaction_status_variant(txn.status)}>
+                    <.status_badge status={bank_transaction_status_variant(txn.status)}>
                       {format_atom(txn.status)}
                     </.status_badge>
-                    <.status_badge status={review_status_variant(txn.review_status)}>
+                    <.status_badge status={bank_review_status_variant(txn.review_status)}>
                       {format_atom(txn.review_status)}
                     </.status_badge>
-                    <.status_badge status={match_status_variant(txn.match_status)}>
-                      {match_status_label(txn.match_status)}
+                    <.status_badge status={bank_match_status_variant(txn.match_status)}>
+                      {bank_match_status_label(txn.match_status)}
                     </.status_badge>
                   </div>
                 </:col>
@@ -605,19 +593,6 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
     |> Kernel.+(10)
   end
 
-  defp counterparty(txn),
-    do: txn.counterparty_name || txn.description || "Unknown counterparty"
-
-  defp amount_classes(%Decimal{} = amount) do
-    if Decimal.compare(amount, Decimal.new(0)) == :gt do
-      "font-medium text-success"
-    else
-      "font-medium text-error"
-    end
-  end
-
-  defp amount_classes(_), do: "font-medium"
-
   defp account_status_variant(:active), do: :success
   defp account_status_variant(:error), do: :error
   defp account_status_variant(:closed), do: :error
@@ -640,27 +615,6 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
   defp format_sync_source(:webhook), do: "Webhook sync"
   defp format_sync_source(:operator), do: "Operator sync"
   defp format_sync_source(source), do: format_atom(source)
-
-  defp transaction_status_variant(:posted), do: :success
-  defp transaction_status_variant(:pending), do: :warning
-  defp transaction_status_variant(:failed), do: :error
-  defp transaction_status_variant(_), do: :default
-
-  defp review_status_variant(:needs_review), do: :warning
-  defp review_status_variant(:auto_matched), do: :info
-  defp review_status_variant(:reviewed), do: :success
-  defp review_status_variant(:ignored), do: :default
-  defp review_status_variant(_), do: :default
-
-  defp match_status_variant(:matched), do: :success
-  defp match_status_variant(:suggested), do: :warning
-  defp match_status_variant(:not_matchable), do: :default
-  defp match_status_variant(_), do: :error
-
-  defp match_status_label(:matched), do: "Matched"
-  defp match_status_label(:suggested), do: "Suggested"
-  defp match_status_label(:not_matchable), do: "Not matchable"
-  defp match_status_label(_), do: "Unmatched"
 
   defp atom_param(value) when value in [nil, ""], do: nil
   defp atom_param(value) when is_atom(value), do: value

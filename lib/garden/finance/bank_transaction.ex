@@ -42,6 +42,12 @@ defmodule GnomeGarden.Finance.BankTransaction do
       prepare build(sort: [occurred_at: :desc, inserted_at: :desc])
     end
 
+    read :needs_review_page do
+      filter expr(review_status == :needs_review)
+      pagination offset?: true, keyset?: true, default_limit: 25
+      prepare build(sort: [occurred_at: :desc, inserted_at: :desc])
+    end
+
     create :create do
       primary? true
 

@@ -830,6 +830,20 @@ large modals should behave like sheets or full-screen panels.
 - Add bank statements if useful.
 - Add month-close workflow after transaction review and matching are stable.
 
+## Implementation Progress
+
+- Finance banking foundation is implemented with provider-neutral
+  `BankConnection`, `BankAccount`, `BankTransaction`, rule, match, sync-run, and
+  integration-event resources.
+- Mercury now lives behind `GnomeGarden.Finance.Integrations.Mercury` and the
+  local `req_mercury` dependency. It is not a top-level Ash business domain.
+- `/finance/banking` is the provider-neutral banking workspace with account
+  balances, transactions, sync health, and manual sync controls.
+- `/finance/banking/review` is the transaction review queue. It uses Cinder
+  desktop tables and mobile cards, with quick actions for categorizing,
+  reviewing, and ignoring bank transactions.
+- `GnomeGarden.Mercury` and the old Mercury tables have been retired.
+
 ## Acceptance Criteria
 
 - No provider-named primary Finance route such as `/finance/mercury`.
