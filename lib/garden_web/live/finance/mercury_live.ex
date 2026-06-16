@@ -6,8 +6,8 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
 
   require Logger
 
+  alias GnomeGarden.Finance.BankSyncWorker
   alias GnomeGarden.Mercury
-  alias GnomeGarden.Mercury.SyncWorker
 
   @direction_options [
     {"Money in", :money_in},
@@ -55,7 +55,13 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
 
   @impl true
   def handle_event("sync", _params, socket) do
-    case Oban.insert(SyncWorker.new(%{})) do
+    case Oban.insert(
+           BankSyncWorker.new(%{
+             "provider" => "mercury",
+             "environment" => "production",
+             "source" => "manual_sync"
+           })
+         ) do
       {:ok, _job} ->
         Process.send_after(self(), :reload_after_sync, 4_000)
 

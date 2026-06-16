@@ -32,6 +32,40 @@ defmodule GnomeGarden.Finance.BankConnection do
   actions do
     defaults [:read, :destroy]
 
+    action :sync, :map do
+      argument :bank_connection_id, :uuid, allow_nil?: false
+
+      argument :source, :atom do
+        allow_nil? false
+        default :manual_sync
+        constraints one_of: [:scheduled_sync, :manual_sync, :webhook, :operator]
+      end
+
+      run GnomeGarden.Finance.Actions.SyncBankConnection
+    end
+
+    action :sync_provider, :map do
+      argument :provider, :atom do
+        allow_nil? false
+        default :mercury
+        constraints one_of: [:mercury]
+      end
+
+      argument :environment, :atom do
+        allow_nil? false
+        default :production
+        constraints one_of: [:sandbox, :production]
+      end
+
+      argument :source, :atom do
+        allow_nil? false
+        default :manual_sync
+        constraints one_of: [:scheduled_sync, :manual_sync, :webhook, :operator]
+      end
+
+      run GnomeGarden.Finance.Actions.SyncBankConnection
+    end
+
     read :active do
       filter expr(status == :active)
       prepare build(sort: [name: :asc])

@@ -2,7 +2,7 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
   use GnomeGardenWeb.ConnCase, async: true
   use Oban.Testing, repo: GnomeGarden.Repo
 
-  alias GnomeGarden.Mercury
+  alias GnomeGarden.Finance
 
   @test_secret "test-webhook-secret"
 
@@ -12,7 +12,7 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
     :ok
   end
 
-  defp sign(body, secret \\ @test_secret) do
+  defp sign(body, secret) do
     timestamp = System.system_time(:second) |> Integer.to_string()
     signed = "#{timestamp}.#{body}"
     hmac = :crypto.mac(:hmac, :sha256, secret, signed) |> Base.encode16(case: :lower)
@@ -27,32 +27,6 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
     |> put_req_header("content-type", "application/json")
     |> put_req_header("mercury-signature", sig)
     |> post("/webhooks/mercury", body)
-  end
-
-  defp make_account do
-    {:ok, account} =
-      Mercury.create_mercury_account(%{
-        mercury_id: "acct-#{System.unique_integer([:positive])}",
-        name: "Checking",
-        status: :active,
-        kind: :checking
-      })
-
-    account
-  end
-
-  defp make_transaction(account) do
-    {:ok, txn} =
-      Mercury.create_mercury_transaction(%{
-        mercury_id: "txn-#{System.unique_integer([:positive])}",
-        account_id: account.id,
-        amount: Decimal.new("500.00"),
-        kind: :ach,
-        status: :pending,
-        occurred_at: DateTime.utc_now()
-      })
-
-    txn
   end
 
   test "rejects request with missing signature header", %{conn: conn} do
@@ -90,13 +64,11 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
     assert conn.status == 200
   end
 
-  test "transaction.created inserts transaction and enqueues job", %{conn: conn} do
-    account = make_account()
-
+  test "transaction.created records integration event and enqueues sync", %{conn: conn} do
     payload = %{
       "type" => "transaction.created",
       "id" => "txn-new-#{System.unique_integer([:positive])}",
-      "accountId" => account.mercury_id,
+      "accountId" => "acct-webhook",
       "amount" => 1000.0,
       "kind" => "ach",
       "status" => "sent",
@@ -106,16 +78,16 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
     conn = webhook_post(conn, payload)
     assert conn.status == 200
 
-    assert {:ok, txn} = Mercury.get_mercury_transaction_by_mercury_id(payload["id"])
-    assert txn.status == :sent
+    assert {:ok, events} = Finance.list_bank_integration_events()
+    assert Enum.any?(events, &(&1.provider_event_id == payload["id"]))
 
     assert_enqueued(
-      worker: GnomeGarden.Mercury.PaymentMatcherWorker,
-      args: %{"transaction_id" => txn.id}
+      worker: GnomeGarden.Finance.BankSyncWorker,
+      args: %{"provider" => "mercury", "environment" => "production", "source" => "webhook"}
     )
   end
 
-  test "transaction.created returns 422 when account not found", %{conn: conn} do
+  test "transaction.created does not require a local account", %{conn: conn} do
     payload = %{
       "type" => "transaction.created",
       "id" => "txn-#{System.unique_integer([:positive])}",
@@ -127,43 +99,27 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
     }
 
     conn = webhook_post(conn, payload)
-    assert conn.status == 422
+    assert conn.status == 200
   end
 
-  test "transaction.updated updates transaction status", %{conn: conn} do
-    account = make_account()
-    txn = make_transaction(account)
-
+  test "transaction.updated records integration event", %{conn: conn} do
     payload = %{
       "type" => "transaction.updated",
-      "id" => txn.mercury_id,
+      "id" => "txn-update-#{System.unique_integer([:positive])}",
       "status" => "sent"
     }
 
     conn = webhook_post(conn, payload)
     assert conn.status == 200
 
-    assert {:ok, updated} = Mercury.get_mercury_transaction_by_mercury_id(txn.mercury_id)
-    assert updated.status == :sent
+    assert {:ok, events} = Finance.list_bank_integration_events()
+    assert Enum.any?(events, &(&1.provider_event_id == payload["id"]))
   end
 
-  test "transaction.updated returns 422 when transaction not found", %{conn: conn} do
-    payload = %{
-      "type" => "transaction.updated",
-      "id" => "nonexistent-txn-id",
-      "status" => "sent"
-    }
-
-    conn = webhook_post(conn, payload)
-    assert conn.status == 422
-  end
-
-  test "balance.updated updates account balances", %{conn: conn} do
-    account = make_account()
-
+  test "balance.updated records integration event", %{conn: conn} do
     payload = %{
       "type" => "balance.updated",
-      "accountId" => account.mercury_id,
+      "accountId" => "acct-balance-#{System.unique_integer([:positive])}",
       "currentBalance" => 50000.0,
       "availableBalance" => 49000.0
     }
@@ -171,20 +127,7 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
     conn = webhook_post(conn, payload)
     assert conn.status == 200
 
-    assert {:ok, updated} = Mercury.get_mercury_account_by_mercury_id(account.mercury_id)
-    assert Decimal.equal?(updated.current_balance, Decimal.new("50000.0"))
-    assert Decimal.equal?(updated.available_balance, Decimal.new("49000.0"))
-  end
-
-  test "balance.updated returns 422 when account not found", %{conn: conn} do
-    payload = %{
-      "type" => "balance.updated",
-      "accountId" => "nonexistent-account-id",
-      "currentBalance" => 100.0,
-      "availableBalance" => 100.0
-    }
-
-    conn = webhook_post(conn, payload)
-    assert conn.status == 422
+    assert {:ok, events} = Finance.list_bank_integration_events()
+    assert Enum.any?(events, &(&1.event_type == "balance.updated"))
   end
 end

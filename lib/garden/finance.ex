@@ -19,8 +19,15 @@ defmodule GnomeGarden.Finance do
       define :list_bank_connections, action: :read
       define :list_active_bank_connections, action: :active
       define :get_bank_connection, action: :read, get_by: [:id]
+
+      define :get_bank_connection_by_provider_environment,
+        action: :read,
+        get_by: [:provider, :environment]
+
       define :create_bank_connection, action: :create
       define :update_bank_connection, action: :update
+      define :sync_bank_connection, action: :sync, args: [:bank_connection_id, :source]
+      define :sync_bank_provider, action: :sync_provider, args: [:provider, :environment, :source]
       define :activate_bank_connection, action: :activate
       define :pause_bank_connection, action: :pause
       define :archive_bank_connection, action: :archive
@@ -54,6 +61,7 @@ defmodule GnomeGarden.Finance do
       define :create_bank_transaction, action: :create
       define :update_bank_transaction, action: :update
       define :categorize_bank_transaction, action: :categorize
+      define :apply_bank_rule_to_transaction, action: :apply_rule
       define :mark_bank_transaction_reviewed, action: :mark_reviewed
       define :ignore_bank_transaction, action: :ignore
       define :reopen_bank_transaction_review, action: :reopen_review

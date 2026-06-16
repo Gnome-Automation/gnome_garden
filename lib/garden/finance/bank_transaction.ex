@@ -100,6 +100,10 @@ defmodule GnomeGarden.Finance.BankTransaction do
       change set_attribute(:review_status, :reviewed)
     end
 
+    update :apply_rule do
+      accept [:category, :reconciliation_note, :review_status, :match_status]
+    end
+
     update :mark_reviewed do
       accept [:reconciliation_note]
       change set_attribute(:review_status, :reviewed)
