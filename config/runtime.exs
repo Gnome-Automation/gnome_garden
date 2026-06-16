@@ -43,9 +43,15 @@ config :gnome_garden, GnomeGardenWeb.Endpoint,
 
 # Mercury Bank API configuration
 if mercury_api_key = System.get_env("MERCURY_API_KEY") do
+  mercury_sandbox? = System.get_env("MERCURY_SANDBOX", "true") == "true"
+
   config :gnome_garden,
     mercury_api_key: mercury_api_key,
-    mercury_sandbox: System.get_env("MERCURY_SANDBOX", "true") == "true"
+    mercury_sandbox: mercury_sandbox?
+
+  config :req_mercury,
+    api_key: mercury_api_key,
+    sandbox?: mercury_sandbox?
 end
 
 if mercury_webhook_secret = System.get_env("MERCURY_WEBHOOK_SECRET") do

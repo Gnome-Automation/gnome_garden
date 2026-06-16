@@ -102,6 +102,7 @@ defmodule GnomeGarden.MixProject do
        compile: false,
        depth: 1},
       {:swoosh, "~> 1.16"},
+      {:req_mercury, github: "Gnome-Automation/req_mercury"},
       {:req, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
