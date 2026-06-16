@@ -57,6 +57,10 @@ defmodule GnomeGarden.Finance.TimeEntry do
   actions do
     defaults [:read, :destroy]
 
+    action :work_to_bill_workspace, :map do
+      run GnomeGarden.Finance.Actions.BuildWorkToBillWorkspace
+    end
+
     create :create do
       primary? true
 
@@ -156,11 +160,11 @@ defmodule GnomeGarden.Finance.TimeEntry do
     end
 
     read :approved_unbilled do
-      filter expr(status == :approved)
+      filter expr(status == :approved and billable == true)
 
       prepare build(
                 sort: [work_date: :desc, inserted_at: :desc],
-                load: [:organization, :project, :work_order]
+                load: [:organization, :agreement, :project, :work_order, :member_team_member]
               )
     end
   end

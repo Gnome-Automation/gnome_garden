@@ -152,11 +152,11 @@ defmodule GnomeGarden.Finance.Expense do
     end
 
     read :approved_unbilled do
-      filter expr(status == :approved)
+      filter expr(status == :approved and billable == true)
 
       prepare build(
                 sort: [incurred_on: :desc, inserted_at: :desc],
-                load: [:organization, :project, :work_order]
+                load: [:organization, :agreement, :project, :work_order, :incurred_by_team_member]
               )
     end
   end

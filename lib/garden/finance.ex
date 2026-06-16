@@ -144,6 +144,7 @@ defmodule GnomeGarden.Finance do
     end
 
     resource GnomeGarden.Finance.TimeEntry do
+      define :get_work_to_bill_workspace, action: :work_to_bill_workspace
       define :list_time_entries, action: :read
       define :get_time_entry, action: :read, get_by: [:id]
       define :create_time_entry, action: :create

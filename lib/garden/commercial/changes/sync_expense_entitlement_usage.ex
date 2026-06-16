@@ -31,9 +31,8 @@ defmodule GnomeGarden.Commercial.Changes.SyncExpenseEntitlementUsage do
     with {:ok, usages} <- Commercial.list_usage_for_expense(expense.id),
          :ok <- destroy_all(usages),
          {:ok, entitlement} <- matching_entitlement(expense) do
-      create_usage(expense, entitlement)
+      maybe_create_usage(expense, entitlement)
     else
-      {:ok, nil} -> {:ok, expense}
       {:error, error} -> {:error, error}
     end
   end
@@ -59,6 +58,9 @@ defmodule GnomeGarden.Commercial.Changes.SyncExpenseEntitlementUsage do
       {:ok, entitlement}
     end
   end
+
+  defp maybe_create_usage(expense, nil), do: {:ok, expense}
+  defp maybe_create_usage(expense, entitlement), do: create_usage(expense, entitlement)
 
   defp create_usage(expense, entitlement) do
     Commercial.create_service_entitlement_usage(%{

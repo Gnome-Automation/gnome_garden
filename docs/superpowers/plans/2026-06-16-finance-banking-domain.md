@@ -849,6 +849,9 @@ large modals should behave like sheets or full-screen panels.
 - `/finance/receivables` is the founder-facing receivables workspace. It
   combines open invoices, overdue balances, received payments, and bank review
   signals behind a single Finance workspace action.
+- `/finance/work-to-bill` is the billing-prep workspace. It combines approved
+  billable time and expenses into invoice candidate groups behind a single
+  Finance workspace action.
 - `GnomeGarden.Mercury` and the old Mercury tables have been retired.
 
 ## Acceptance Criteria

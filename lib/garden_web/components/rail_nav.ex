@@ -355,6 +355,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/finance/receivables", "/finance/invoices", "/finance/payments"]
     },
+    %{
+      id: "fin-work-to-bill",
+      section: "Finance",
+      icon: "hero-document-check",
+      label: "Work to Bill",
+      path: "/finance/work-to-bill",
+      badge: 0,
+      hot: false,
+      match: ["/finance/work-to-bill", "/finance/time-entries", "/finance/expenses"]
+    },
 
     # Reports
     %{

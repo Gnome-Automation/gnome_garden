@@ -31,6 +31,7 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     "/finance/banking",
     "/finance/banking/review",
     "/finance/receivables",
+    "/finance/work-to-bill",
     "/finance/invoices",
     "/finance/payments",
     "/procurement/targeting"
