@@ -842,6 +842,10 @@ large modals should behave like sheets or full-screen panels.
 - `/finance/banking/review` is the transaction review queue. It uses Cinder
   desktop tables and mobile cards, with quick actions for categorizing,
   reviewing, and ignoring bank transactions.
+- Bank transaction decisions now record audit events for categorize, review,
+  ignore, reopen, match, and unmatch actions. Accepting or rejecting a
+  `BankTransactionMatch` drives the related transaction state through Finance
+  actions.
 - `GnomeGarden.Mercury` and the old Mercury tables have been retired.
 
 ## Acceptance Criteria

@@ -47,6 +47,13 @@ defmodule GnomeGarden.Finance.BankTransactionEvent do
         :invoice_ids
       ]
     end
+
+    read :for_transaction do
+      argument :bank_transaction_id, :uuid, allow_nil?: false
+
+      filter expr(bank_transaction_id == ^arg(:bank_transaction_id))
+      prepare build(sort: [inserted_at: :asc])
+    end
   end
 
   attributes do
@@ -63,6 +70,7 @@ defmodule GnomeGarden.Finance.BankTransactionEvent do
                     :match_suggested,
                     :matched,
                     :unmatched,
+                    :reviewed,
                     :categorized,
                     :ignored,
                     :reopened

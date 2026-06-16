@@ -9,6 +9,8 @@ defmodule GnomeGarden.Finance.BankTransaction do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshAdmin.Resource]
 
+  alias GnomeGarden.Finance
+
   admin do
     table_columns [
       :id,
@@ -102,8 +104,11 @@ defmodule GnomeGarden.Finance.BankTransaction do
     end
 
     update :categorize do
+      require_atomic? false
+
       accept [:category, :reconciliation_note]
       change set_attribute(:review_status, :reviewed)
+      change after_action(&record_transaction_event(&1, &2, &3, :categorized))
     end
 
     update :apply_rule do
@@ -111,19 +116,47 @@ defmodule GnomeGarden.Finance.BankTransaction do
     end
 
     update :mark_reviewed do
+      require_atomic? false
+
       accept [:reconciliation_note]
       change set_attribute(:review_status, :reviewed)
+      change after_action(&record_transaction_event(&1, &2, &3, :reviewed))
     end
 
     update :ignore do
+      require_atomic? false
+
       accept [:reconciliation_note]
       change set_attribute(:review_status, :ignored)
       change set_attribute(:match_status, :not_matchable)
+      change after_action(&record_transaction_event(&1, &2, &3, :ignored))
     end
 
     update :reopen_review do
+      require_atomic? false
+
       accept []
       change set_attribute(:review_status, :needs_review)
+      change set_attribute(:match_status, :unmatched)
+      change after_action(&record_transaction_event(&1, &2, &3, :reopened))
+    end
+
+    update :mark_matched do
+      require_atomic? false
+
+      accept [:reconciliation_note]
+      change set_attribute(:review_status, :reviewed)
+      change set_attribute(:match_status, :matched)
+      change after_action(&record_transaction_event(&1, &2, &3, :matched))
+    end
+
+    update :mark_unmatched do
+      require_atomic? false
+
+      accept [:reconciliation_note]
+      change set_attribute(:review_status, :needs_review)
+      change set_attribute(:match_status, :unmatched)
+      change after_action(&record_transaction_event(&1, &2, &3, :unmatched))
     end
   end
 
@@ -249,4 +282,49 @@ defmodule GnomeGarden.Finance.BankTransaction do
   identities do
     identity :unique_provider_transaction, [:provider, :provider_transaction_id]
   end
+
+  defp record_transaction_event(changeset, transaction, context, event_type) do
+    attrs =
+      %{
+        bank_transaction_id: transaction.id,
+        event_type: event_type,
+        source: :operator,
+        message: transaction_event_message(event_type),
+        metadata: transaction_event_metadata(changeset, transaction),
+        actor_id: actor_id(context.actor),
+        amount: transaction.amount
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+      |> Map.new()
+
+    case Finance.record_bank_transaction_event(attrs, actor: context.actor, authorize?: false) do
+      {:ok, _event} -> {:ok, transaction}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp transaction_event_message(:categorized), do: "Categorized bank transaction"
+  defp transaction_event_message(:reviewed), do: "Marked bank transaction reviewed"
+  defp transaction_event_message(:ignored), do: "Ignored bank transaction"
+  defp transaction_event_message(:reopened), do: "Reopened bank transaction review"
+  defp transaction_event_message(:matched), do: "Matched bank transaction"
+  defp transaction_event_message(:unmatched), do: "Marked bank transaction unmatched"
+  defp transaction_event_message(event_type), do: "Updated bank transaction #{event_type}"
+
+  defp transaction_event_metadata(changeset, transaction) do
+    %{
+      "category" => atom_string(transaction.category),
+      "review_status" => atom_string(transaction.review_status),
+      "match_status" => atom_string(transaction.match_status),
+      "reconciliation_note" => Ash.Changeset.get_attribute(changeset, :reconciliation_note)
+    }
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
+  end
+
+  defp actor_id(%{id: id}), do: id
+  defp actor_id(_actor), do: nil
+
+  defp atom_string(value) when is_atom(value), do: Atom.to_string(value)
+  defp atom_string(value), do: value
 end

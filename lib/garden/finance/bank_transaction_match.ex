@@ -9,6 +9,8 @@ defmodule GnomeGarden.Finance.BankTransactionMatch do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshAdmin.Resource]
 
+  alias GnomeGarden.Finance
+
   admin do
     table_columns [
       :id,
@@ -51,20 +53,36 @@ defmodule GnomeGarden.Finance.BankTransactionMatch do
       ]
     end
 
+    read :for_transaction do
+      argument :bank_transaction_id, :uuid, allow_nil?: false
+
+      filter expr(bank_transaction_id == ^arg(:bank_transaction_id))
+      prepare build(sort: [inserted_at: :asc], load: [:payment, :invoice])
+    end
+
     update :accept do
+      require_atomic? false
+
       accept [:notes]
       change set_attribute(:status, :accepted)
       change set_attribute(:matched_at, &DateTime.utc_now/0)
+      change after_action(&sync_transaction_for_match(&1, &2, &3, :accept))
     end
 
     update :reject do
+      require_atomic? false
+
       accept [:notes]
       change set_attribute(:status, :rejected)
+      change after_action(&sync_transaction_for_match(&1, &2, &3, :reject))
     end
 
     update :supersede do
+      require_atomic? false
+
       accept [:notes]
       change set_attribute(:status, :superseded)
+      change after_action(&sync_transaction_for_match(&1, &2, &3, :supersede))
     end
   end
 
@@ -115,5 +133,45 @@ defmodule GnomeGarden.Finance.BankTransactionMatch do
 
   identities do
     identity :unique_bank_transaction_payment, [:bank_transaction_id, :payment_id]
+  end
+
+  defp sync_transaction_for_match(changeset, match, context, :accept) do
+    with {:ok, transaction} <- load_transaction(match, context.actor),
+         {:ok, _transaction} <-
+           Finance.mark_bank_transaction_matched(
+             transaction,
+             %{reconciliation_note: match_note(changeset, match)},
+             actor: context.actor,
+             authorize?: false
+           ) do
+      {:ok, match}
+    end
+  end
+
+  defp sync_transaction_for_match(changeset, match, context, :reject) do
+    with {:ok, transaction} <- load_transaction(match, context.actor),
+         {:ok, _transaction} <-
+           Finance.mark_bank_transaction_unmatched(
+             transaction,
+             %{reconciliation_note: match_note(changeset, match)},
+             actor: context.actor,
+             authorize?: false
+           ) do
+      {:ok, match}
+    end
+  end
+
+  defp sync_transaction_for_match(_changeset, match, _context, :supersede) do
+    {:ok, match}
+  end
+
+  defp load_transaction(match, actor) do
+    Finance.get_bank_transaction(match.bank_transaction_id, actor: actor, authorize?: false)
+  end
+
+  defp match_note(changeset, match) do
+    Ash.Changeset.get_attribute(changeset, :notes) ||
+      match.notes ||
+      "Bank transaction match #{match.status}"
   end
 end

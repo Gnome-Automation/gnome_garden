@@ -64,12 +64,19 @@ defmodule GnomeGarden.Finance do
       define :categorize_bank_transaction, action: :categorize
       define :apply_bank_rule_to_transaction, action: :apply_rule
       define :mark_bank_transaction_reviewed, action: :mark_reviewed
+      define :mark_bank_transaction_matched, action: :mark_matched
+      define :mark_bank_transaction_unmatched, action: :mark_unmatched
       define :ignore_bank_transaction, action: :ignore
       define :reopen_bank_transaction_review, action: :reopen_review
     end
 
     resource GnomeGarden.Finance.BankTransactionMatch do
       define :list_bank_transaction_matches, action: :read
+
+      define :list_bank_transaction_matches_for_transaction,
+        action: :for_transaction,
+        args: [:bank_transaction_id]
+
       define :get_bank_transaction_match, action: :read, get_by: [:id]
       define :create_bank_transaction_match, action: :create
       define :accept_bank_transaction_match, action: :accept
@@ -119,6 +126,11 @@ defmodule GnomeGarden.Finance do
 
     resource GnomeGarden.Finance.BankTransactionEvent do
       define :list_bank_transaction_events, action: :read
+
+      define :list_bank_transaction_events_for_transaction,
+        action: :for_transaction,
+        args: [:bank_transaction_id]
+
       define :record_bank_transaction_event, action: :record
     end
 
