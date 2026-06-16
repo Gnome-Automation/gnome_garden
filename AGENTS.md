@@ -967,6 +967,20 @@ action row should be intentionally designed for:
   - visible status/state
   - low-friction mobile tap targets
 
+### Cinder Responsive Collections
+
+- Cinder cards are `Cinder.collection` with `layout={:list}` or `layout={:grid}`
+  and an `:item` slot. `layout={:table}` is for desktop/tablet tables.
+- Cinder's `layout` option is not breakpoint-aware. When a screen needs table
+  on desktop and cards on mobile, render separate breakpoint-gated collections
+  with unique IDs, the same Ash `resource`/`action` shape, the same `url_state`,
+  and equivalent columns for filtering, sorting, and search.
+- Do not replace Cinder mobile layouts with hand-rolled separate query results
+  unless there is a measured performance reason. If a special backend shape is
+  needed, model it as an Ash read action and use it from both collections.
+- Mobile list/grid collections should usually hide bulky sort controls and keep
+  global search/filtering compact. Desktop tables can keep sortable headers.
+
 ### Uniformity Expectations
 
 - Before creating a new layout pattern, check for an existing shared component that should

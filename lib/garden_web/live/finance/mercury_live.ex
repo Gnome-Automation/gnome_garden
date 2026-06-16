@@ -113,6 +113,7 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
      socket
      |> assign(:syncing?, false)
      |> load_workspace()
+     |> Cinder.refresh_table("mercury-transactions-mobile")
      |> Cinder.refresh_table("mercury-transactions")}
   end
 
@@ -170,44 +171,76 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
           compact
         >
           <div class="rounded-lg border border-base-content/10 bg-base-100">
-            <div class="space-y-2 p-3 md:hidden">
-              <div
-                :for={txn <- @recent_transactions}
-                class="rounded-lg border border-base-content/10 bg-base-200 p-3"
+            <div class="md:hidden">
+              <Cinder.collection
+                id="mercury-transactions-mobile"
+                layout={:list}
+                resource={GnomeGarden.Mercury.Transaction}
+                actor={@current_user}
+                url_state={@url_state}
+                theme={GnomeGardenWeb.CinderTheme}
+                page_size={10}
+                show_sort={false}
+                search={[
+                  label: "Search transactions",
+                  placeholder: "Search counterparty or memo"
+                ]}
+                query_opts={[
+                  load: [:account],
+                  sort: [occurred_at: :desc]
+                ]}
+                empty_message="No Mercury transactions yet."
               >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold text-base-content">
-                      {counterparty(txn)}
+                <:col field="counterparty_name" search sort label="Counterparty" />
+                <:col field="bank_description" search label="Description" />
+                <:col field="external_memo" search label="Memo" />
+                <:col field="occurred_at" sort label="Date" />
+                <:col field="amount" sort label="Amount" />
+                <:col field="status" sort label="Status" />
+                <:col field="reconciliation_category" sort label="Category" />
+
+                <:item :let={txn}>
+                  <div class="rounded-lg border border-base-content/10 bg-base-100 p-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <p class="truncate text-sm font-semibold text-base-content">
+                          {counterparty(txn)}
+                        </p>
+                        <p class="mt-0.5 text-xs text-base-content/50">
+                          {format_datetime(txn.occurred_at)}
+                        </p>
+                      </div>
+                      <span class={["shrink-0 text-sm", amount_classes(txn.amount)]}>
+                        {format_amount(txn.amount)}
+                      </span>
+                    </div>
+
+                    <p class="mt-2 line-clamp-2 text-xs text-base-content/55">
+                      {txn.bank_description || txn.external_memo || txn.mercury_id}
                     </p>
-                    <p class="mt-0.5 text-xs text-base-content/50">
-                      {format_datetime(txn.occurred_at)}
-                    </p>
+
+                    <div class="mt-3 flex flex-wrap gap-1.5">
+                      <.status_badge status={transaction_status_variant(txn.status)}>
+                        {format_atom(txn.status)}
+                      </.status_badge>
+                      <.status_badge status={match_status_variant(txn.match_confidence)}>
+                        {match_status_label(txn.match_confidence)}
+                      </.status_badge>
+                      <.status_badge :if={txn.reconciliation_category} status={:default}>
+                        {format_atom(txn.reconciliation_category)}
+                      </.status_badge>
+                    </div>
                   </div>
-                  <span class={["shrink-0 text-sm", amount_classes(txn.amount)]}>
-                    {format_amount(txn.amount)}
-                  </span>
-                </div>
+                </:item>
 
-                <div class="mt-3 flex flex-wrap gap-1.5">
-                  <.status_badge status={transaction_status_variant(txn.status)}>
-                    {format_atom(txn.status)}
-                  </.status_badge>
-                  <.status_badge status={match_status_variant(txn.match_confidence)}>
-                    {match_status_label(txn.match_confidence)}
-                  </.status_badge>
-                  <.status_badge :if={txn.reconciliation_category} status={:default}>
-                    {format_atom(txn.reconciliation_category)}
-                  </.status_badge>
-                </div>
-              </div>
-
-              <.empty_state
-                :if={@recent_transactions == []}
-                icon="hero-building-library"
-                title="No Mercury transactions yet"
-                description="Run a sync after configuring Mercury credentials."
-              />
+                <:empty>
+                  <.empty_state
+                    icon="hero-building-library"
+                    title="No Mercury transactions yet"
+                    description="Run a sync after configuring Mercury credentials."
+                  />
+                </:empty>
+              </Cinder.collection>
             </div>
 
             <div class="hidden md:block">
@@ -432,12 +465,10 @@ defmodule GnomeGardenWeb.Finance.MercuryLive do
     accounts = Mercury.list_mercury_accounts!(actor: actor)
     bank_rules = Mercury.list_bank_rules!(actor: actor)
     transactions = Mercury.list_mercury_transactions!(actor: actor)
-    recent_transactions = Mercury.list_recent_mercury_transactions!(actor: actor)
 
     socket
     |> assign(:accounts, accounts)
     |> assign(:bank_rules, bank_rules)
-    |> assign(:recent_transactions, recent_transactions)
     |> assign(:transaction_count, length(transactions))
     |> assign(:unmatched_count, Enum.count(transactions, &unmatched?/1))
     |> assign(:current_balance, sum_account_balances(accounts))
