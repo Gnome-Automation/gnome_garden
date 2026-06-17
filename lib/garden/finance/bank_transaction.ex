@@ -50,6 +50,15 @@ defmodule GnomeGarden.Finance.BankTransaction do
       prepare build(sort: [occurred_at: :desc, inserted_at: :desc])
     end
 
+    read :recent_for_account do
+      argument :bank_account_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(bank_account_id == ^arg(:bank_account_id))
+      prepare build(sort: [occurred_at: :desc, inserted_at: :desc], limit: 12)
+    end
+
     create :create do
       primary? true
 

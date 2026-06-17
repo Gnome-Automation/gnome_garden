@@ -200,6 +200,7 @@ defmodule GnomeGardenWeb.Router do
       # Finance - Invoices
       live "/finance", Finance.OverviewLive, :index
       live "/finance/banking", Finance.BankingLive, :index
+      live "/finance/banking/accounts/:id", Finance.BankAccountLive, :show
       live "/finance/banking/review", Finance.BankingReviewLive, :index
       live "/finance/banking/rules", Finance.BankRuleLive.Index, :index
       live "/finance/banking/sync-runs", Finance.BankingSyncLive, :index

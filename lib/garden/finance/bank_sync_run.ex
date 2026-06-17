@@ -42,6 +42,15 @@ defmodule GnomeGarden.Finance.BankSyncRun do
       prepare build(sort: [started_at: :desc], limit: 50, load: [:bank_connection])
     end
 
+    read :recent_for_connection do
+      argument :bank_connection_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(bank_connection_id == ^arg(:bank_connection_id))
+      prepare build(sort: [started_at: :desc], limit: 8, load: [:bank_connection])
+    end
+
     action :sync_history_workspace, :map do
       run GnomeGarden.Finance.Actions.BuildBankSyncHistoryWorkspace
     end

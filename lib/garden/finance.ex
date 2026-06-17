@@ -40,6 +40,8 @@ defmodule GnomeGarden.Finance do
     resource GnomeGarden.Finance.BankAccount do
       define :list_bank_accounts, action: :read
       define :get_bank_account, action: :read, get_by: [:id]
+      define :get_bank_account_workspace_record, action: :workspace, args: [:id]
+      define :get_bank_account_workspace, action: :account_workspace, args: [:bank_account_id]
 
       define :get_bank_account_by_provider_id,
         action: :read,
@@ -54,6 +56,11 @@ defmodule GnomeGarden.Finance do
     resource GnomeGarden.Finance.BankTransaction do
       define :list_bank_transactions, action: :read
       define :list_bank_transactions_needing_review, action: :needs_review
+
+      define :list_recent_bank_transactions_for_account,
+        action: :recent_for_account,
+        args: [:bank_account_id]
+
       define :get_bank_transaction, action: :read, get_by: [:id]
 
       define :get_bank_transaction_by_provider_id,
@@ -117,6 +124,11 @@ defmodule GnomeGarden.Finance do
       define :list_bank_integration_events, action: :read
       define :list_recent_bank_integration_events, action: :recent
       define :list_bank_integration_event_history, action: :history
+
+      define :list_recent_bank_integration_events_for_account,
+        action: :recent_for_account,
+        args: [:bank_account_id]
+
       define :get_bank_integration_event, action: :read, get_by: [:id]
       define :record_bank_integration_event, action: :record
       define :process_bank_integration_event, action: :process
@@ -140,6 +152,11 @@ defmodule GnomeGarden.Finance do
       define :list_bank_sync_runs, action: :read
       define :list_recent_bank_sync_runs, action: :recent
       define :list_bank_sync_run_history, action: :history
+
+      define :list_recent_bank_sync_runs_for_connection,
+        action: :recent_for_connection,
+        args: [:bank_connection_id]
+
       define :get_bank_sync_history_workspace, action: :sync_history_workspace
       define :get_bank_sync_run, action: :read, get_by: [:id]
       define :start_bank_sync_run, action: :start

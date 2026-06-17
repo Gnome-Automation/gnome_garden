@@ -46,6 +46,15 @@ defmodule GnomeGarden.Finance.BankIntegrationEvent do
       prepare build(sort: [received_at: :desc], limit: 50, load: [:bank_connection])
     end
 
+    read :recent_for_account do
+      argument :bank_account_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(bank_account_id == ^arg(:bank_account_id))
+      prepare build(sort: [received_at: :desc], limit: 8, load: [:bank_connection])
+    end
+
     create :record do
       primary? true
 

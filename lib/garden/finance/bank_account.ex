@@ -38,6 +38,23 @@ defmodule GnomeGarden.Finance.BankAccount do
   actions do
     defaults [:read, :destroy]
 
+    read :workspace do
+      get? true
+
+      argument :id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(id == ^arg(:id))
+      prepare build(load: [:bank_connection])
+    end
+
+    action :account_workspace, :map do
+      argument :bank_account_id, :uuid, allow_nil?: false
+
+      run GnomeGarden.Finance.Actions.BuildBankAccountWorkspace
+    end
+
     create :create do
       primary? true
 

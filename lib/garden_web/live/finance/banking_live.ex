@@ -276,9 +276,10 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
             </div>
 
             <div :if={@accounts != []} class="space-y-3">
-              <div
+              <.link
                 :for={account <- @accounts}
-                class="rounded-lg border border-base-content/10 bg-base-200 p-3"
+                navigate={~p"/finance/banking/accounts/#{account.id}"}
+                class="block rounded-lg border border-base-content/10 bg-base-200 p-3"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
@@ -301,7 +302,8 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
                     <p class="font-medium">{format_amount(account.available_balance)}</p>
                   </div>
                 </div>
-              </div>
+                <p class="mt-3 text-xs font-medium text-primary">Open account</p>
+              </.link>
             </div>
           </.section>
 
