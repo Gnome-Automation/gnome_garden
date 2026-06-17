@@ -9,32 +9,12 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
   alias GnomeGarden.Finance
   alias GnomeGarden.Finance.BankSyncWorker
 
-  @direction_options [
-    {"Money in", :credit},
-    {"Money out", :debit},
-    {"Both", :both}
-  ]
-
-  @amount_operator_options [
-    {"Any amount", ""},
-    {"Less than", :lt},
-    {"Greater than", :gt},
-    {"Less than or equal", :lte},
-    {"Greater than or equal", :gte},
-    {"Equal to", :eq}
-  ]
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:page_title, "Banking")
-     |> assign(:direction_options, @direction_options)
-     |> assign(:amount_operator_options, @amount_operator_options)
-     |> assign(:category_options, bank_transaction_category_options())
      |> assign(:syncing?, false)
-     |> assign(:rule_error, nil)
-     |> assign(:rule_form, default_rule_form())
      |> load_workspace()}
   end
 
@@ -67,43 +47,6 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
   end
 
   @impl true
-  def handle_event("validate_rule", %{"rule" => params}, socket) do
-    {:noreply, assign(socket, :rule_form, Map.merge(default_rule_form(), params))}
-  end
-
-  @impl true
-  def handle_event("save_rule", %{"rule" => params}, socket) do
-    attrs = rule_attrs(params, next_rule_priority(socket.assigns.bank_rules))
-
-    case Finance.create_bank_rule(attrs, actor: socket.assigns.current_user) do
-      {:ok, _rule} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Bank rule added.")
-         |> assign(:rule_error, nil)
-         |> assign(:rule_form, default_rule_form())
-         |> load_workspace()}
-
-      {:error, error} ->
-        {:noreply,
-         socket
-         |> assign(:rule_error, error_message(error))
-         |> assign(:rule_form, params)}
-    end
-  end
-
-  @impl true
-  def handle_event("delete_rule", %{"id" => id}, socket) do
-    rule = Finance.get_bank_rule!(id, actor: socket.assigns.current_user)
-    {:ok, _rule} = Finance.delete_bank_rule(rule, actor: socket.assigns.current_user)
-
-    {:noreply,
-     socket
-     |> put_flash(:info, "Bank rule deleted.")
-     |> load_workspace()}
-  end
-
-  @impl true
   def handle_info(:reload_after_sync, socket) do
     {:noreply,
      socket
@@ -123,6 +66,9 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
           Bank accounts, imported transactions, sync health, and categorization rules.
         </:subtitle>
         <:actions>
+          <.button navigate={~p"/finance/banking/rules"}>
+            <.icon name="hero-funnel" class="size-4" /> Rules
+          </.button>
           <.button navigate={~p"/finance/banking/review"}>
             <.icon name="hero-queue-list" class="size-4" /> Review Queue
           </.button>
@@ -433,106 +379,21 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
           </.section>
 
           <.section
-            title="Bank Rules"
-            description="Rules categorize new synced transactions before manual review."
+            title="Automation"
+            description="Rules stay in the banking rules workspace so daily banking stays focused on balances, sync health, and transaction review."
           >
-            <div
-              :if={@rule_error}
-              class="mb-3 rounded-lg border border-error/20 bg-error/10 px-3 py-2 text-sm text-error"
-            >
-              {@rule_error}
-            </div>
-
-            <form
-              id="bank-rule-form"
-              phx-change="validate_rule"
-              phx-submit="save_rule"
-              class="space-y-3"
-            >
-              <.input
-                name="rule[name]"
-                value={@rule_form["name"]}
-                label="Rule name"
-                placeholder="Customer ACH deposits"
-              />
-              <.input
-                name="rule[counterparty_contains]"
-                value={@rule_form["counterparty_contains"]}
-                label="Counterparty contains"
-                placeholder="customer"
-              />
-              <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <.input
-                  type="select"
-                  name="rule[direction]"
-                  value={@rule_form["direction"]}
-                  label="Direction"
-                  options={@direction_options}
-                />
-                <.input
-                  type="select"
-                  name="rule[category]"
-                  value={@rule_form["category"]}
-                  label="Category"
-                  options={@category_options}
-                />
-              </div>
-              <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <.input
-                  type="select"
-                  name="rule[amount_operator]"
-                  value={@rule_form["amount_operator"]}
-                  label="Amount rule"
-                  options={@amount_operator_options}
-                />
-                <.input
-                  name="rule[amount_value]"
-                  value={@rule_form["amount_value"]}
-                  label="Amount value"
-                  placeholder="100.00"
-                />
-              </div>
-              <.input
-                name="rule[auto_note]"
-                value={@rule_form["auto_note"]}
-                label="Auto note"
-                placeholder="Categorized from bank rule"
-              />
-              <.button type="submit" variant="primary" class="w-full">Add Rule</.button>
-            </form>
-
-            <div class="mt-5 space-y-2">
-              <div
-                :for={rule <- @bank_rules}
-                class="rounded-lg border border-base-content/10 bg-base-200 p-3"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold">{rule.name}</p>
-                    <p class="text-xs text-base-content/50">
-                      {format_atom(rule.direction)} · {format_atom(rule.category)}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    phx-click="delete_rule"
-                    phx-value-id={rule.id}
-                    class="rounded-md p-1.5 text-base-content/50 hover:bg-base-300 hover:text-error"
-                    aria-label="Delete bank rule"
-                  >
-                    <.icon name="hero-trash" class="size-4" />
-                  </button>
+            <div class="rounded-lg border border-base-content/10 bg-base-200 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-base-content">Bank Rules</p>
+                  <p class="mt-1 text-xs leading-5 text-base-content/60">
+                    {@bank_rule_count} configured, {@enabled_bank_rule_count} enabled.
+                  </p>
                 </div>
-                <p class="mt-2 text-xs text-base-content/60">
-                  Counterparty {if rule.counterparty_contains,
-                    do: "contains #{rule.counterparty_contains}",
-                    else: "can be any value"}
-                </p>
+                <.button navigate={~p"/finance/banking/rules"}>
+                  <.icon name="hero-funnel" class="size-4" /> Manage
+                </.button>
               </div>
-
-              <p :if={@bank_rules == []} class="text-sm text-base-content/60">
-                No bank rules yet.
-              </p>
             </div>
           </.section>
         </div>
@@ -546,7 +407,8 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
 
     socket
     |> assign(:accounts, workspace.accounts)
-    |> assign(:bank_rules, workspace.bank_rules)
+    |> assign(:bank_rule_count, length(workspace.bank_rules))
+    |> assign(:enabled_bank_rule_count, Enum.count(workspace.bank_rules, & &1.enabled))
     |> assign(:transaction_count, workspace.transaction_count)
     |> assign(:needs_review_count, workspace.needs_review_count)
     |> assign(:current_balance, workspace.current_balance)
@@ -557,40 +419,6 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
     |> assign(:running_sync_count, workspace.running_sync_count)
     |> assign(:failed_sync_count, workspace.failed_sync_count)
     |> assign(:failed_integration_event_count, workspace.failed_integration_event_count)
-  end
-
-  defp default_rule_form do
-    %{
-      "name" => "",
-      "direction" => "credit",
-      "counterparty_contains" => "",
-      "amount_operator" => "",
-      "amount_value" => "",
-      "category" => "misc_income",
-      "auto_note" => ""
-    }
-  end
-
-  defp rule_attrs(params, priority) do
-    %{
-      name: blank_to_nil(params["name"]),
-      priority: priority,
-      direction: atom_param(params["direction"]),
-      counterparty_contains: blank_to_nil(params["counterparty_contains"]),
-      amount_operator: atom_param(params["amount_operator"]),
-      amount_value: decimal_param(params["amount_value"]),
-      category: atom_param(params["category"]),
-      auto_note: blank_to_nil(params["auto_note"])
-    }
-  end
-
-  defp next_rule_priority([]), do: 10
-
-  defp next_rule_priority(rules) do
-    rules
-    |> Enum.map(&(&1.priority || 0))
-    |> Enum.max()
-    |> Kernel.+(10)
   end
 
   defp account_status_variant(:active), do: :success
@@ -615,27 +443,4 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
   defp format_sync_source(:webhook), do: "Webhook sync"
   defp format_sync_source(:operator), do: "Operator sync"
   defp format_sync_source(source), do: format_atom(source)
-
-  defp atom_param(value) when value in [nil, ""], do: nil
-  defp atom_param(value) when is_atom(value), do: value
-  defp atom_param(value) when is_binary(value), do: String.to_existing_atom(value)
-
-  defp decimal_param(value) when value in [nil, ""], do: nil
-
-  defp decimal_param(value) do
-    Decimal.new(value)
-  rescue
-    _ -> nil
-  end
-
-  defp blank_to_nil(value) when value in [nil, ""], do: nil
-  defp blank_to_nil(value), do: value
-
-  defp error_message(error) do
-    error
-    |> Ash.Error.to_error_class()
-    |> Exception.message()
-  rescue
-    _ -> "Could not save bank rule."
-  end
 end

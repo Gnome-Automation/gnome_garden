@@ -48,22 +48,38 @@ defmodule GnomeGardenWeb.FinanceBankingLiveTest do
     assert html =~ "Transactions"
     assert html =~ "Accounts"
     assert html =~ "Sync Health"
-    assert html =~ "Bank Rules"
+    assert html =~ "Automation"
+    assert html =~ "Rules"
     assert render(view) =~ "ACME CORPORATION"
   end
 
-  test "creates a bank rule from the banking workspace", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/finance/banking")
+  test "links to provider-neutral bank rules workspace", %{conn: conn} do
+    {:ok, _view, html} = live(conn, ~p"/finance/banking")
+
+    assert html =~ ~p"/finance/banking/rules"
+  end
+
+  test "creates a bank rule from the bank rules workspace", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/finance/banking/rules")
+
+    view
+    |> element("#open-bank-rule-modal")
+    |> render_click()
 
     view
     |> form("#bank-rule-form", %{
-      "rule" => %{
+      "form" => %{
         "name" => "Customer ACH",
+        "enabled" => "true",
+        "priority" => "10",
         "direction" => "credit",
         "counterparty_contains" => "ACME",
+        "description_contains" => "",
         "category" => "customer_payment",
         "amount_operator" => "",
         "amount_value" => "",
+        "review_status_result" => "reviewed",
+        "match_behavior" => "suggest",
         "auto_note" => "Likely customer payment"
       }
     })

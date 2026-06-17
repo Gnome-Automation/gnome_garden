@@ -343,7 +343,17 @@ defmodule GnomeGardenWeb.Components.RailNav do
       path: "/finance/banking",
       badge: 0,
       hot: false,
-      match: ["/finance/banking"]
+      match: ["/finance/banking/review"]
+    },
+    %{
+      id: "fin-bank-rules",
+      section: "Finance",
+      icon: "hero-funnel",
+      label: "Bank Rules",
+      path: "/finance/banking/rules",
+      badge: 0,
+      hot: false,
+      match: ["/finance/banking/rules"]
     },
     %{
       id: "fin-receivables",

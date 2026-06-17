@@ -838,10 +838,15 @@ large modals should behave like sheets or full-screen panels.
 - Mercury now lives behind `GnomeGarden.Finance.Integrations.Mercury` and the
   local `req_mercury` dependency. It is not a top-level Ash business domain.
 - `/finance/banking` is the provider-neutral banking workspace with account
-  balances, transactions, sync health, and manual sync controls.
+  balances, transactions, sync health, manual sync controls, and a compact link
+  into automation configuration.
 - `/finance/banking/review` is the transaction review queue. It uses Cinder
   desktop tables and mobile cards, with quick actions for categorizing,
   reviewing, and ignoring bank transactions.
+- `/finance/banking/rules` is the provider-neutral bank automation workspace.
+  It owns rule create/edit/enable/disable/delete flows in one LiveView instead
+  of embedding rule CRUD in the daily Banking screen or reintroducing a
+  Mercury-specific rule page.
 - Bank transaction decisions now record audit events for categorize, review,
   ignore, reopen, match, and unmatch actions. Accepting or rejecting a
   `BankTransactionMatch` drives the related transaction state through Finance
