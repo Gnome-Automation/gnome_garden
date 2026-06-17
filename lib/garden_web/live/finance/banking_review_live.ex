@@ -15,6 +15,8 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
      |> assign(:category_options, bank_transaction_category_options())
      |> assign(:category_dialog, nil)
      |> assign(:category_form, default_category_form())
+     |> assign(:review_dialog, nil)
+     |> assign(:review_form, default_review_form())
      |> assign_queue_summary()}
   end
 
@@ -69,19 +71,41 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
     end
   end
 
-  def handle_event("mark_reviewed", %{"id" => id}, socket) do
+  def handle_event("open_review", %{"id" => id}, socket) do
     transaction = Finance.get_bank_transaction!(id, actor: socket.assigns.current_user)
+
+    {:noreply,
+     socket
+     |> assign(:review_dialog, transaction)
+     |> assign(:review_form, %{
+       "reconciliation_note" => transaction.reconciliation_note || ""
+     })}
+  end
+
+  def handle_event("close_review", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:review_dialog, nil)
+     |> assign(:review_form, default_review_form())}
+  end
+
+  def handle_event("validate_review", %{"review" => params}, socket) do
+    {:noreply, assign(socket, :review_form, Map.merge(default_review_form(), params))}
+  end
+
+  def handle_event("mark_reviewed", %{"review" => params}, socket) do
+    transaction = socket.assigns.review_dialog
 
     case Finance.mark_bank_transaction_reviewed(
            transaction,
-           %{reconciliation_note: "Reviewed from bank queue"},
+           %{reconciliation_note: blank_to_nil(params["reconciliation_note"])},
            actor: socket.assigns.current_user
          ) do
       {:ok, _transaction} ->
         {:noreply,
          socket
          |> put_flash(:info, "Transaction marked reviewed.")
-         |> refresh_queue()}
+         |> close_and_refresh()}
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, error_message(error))}
@@ -107,6 +131,23 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
     end
   end
 
+  def handle_event("reopen", %{"id" => id}, socket) do
+    transaction = Finance.get_bank_transaction!(id, actor: socket.assigns.current_user)
+
+    case Finance.reopen_bank_transaction_review(transaction, %{},
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, _transaction} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Transaction reopened.")
+         |> refresh_queue()}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, error_message(error))}
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -114,7 +155,7 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
       <.page_header eyebrow="Finance">
         Bank Review Queue
         <:subtitle>
-          Clear imported transactions that still need a human finance decision.
+          Categorize, ignore, reopen, and audit imported banking transactions.
         </:subtitle>
         <:actions>
           <.button navigate={~p"/finance/banking"}>
@@ -123,32 +164,39 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
         </:actions>
       </.page_header>
 
-      <div class="grid grid-cols-3 gap-2 sm:gap-3">
+      <div class="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <.stat_card
-          title="Queue"
-          value={Integer.to_string(@queue_count)}
+          title="Needs Review"
+          value={Integer.to_string(@needs_review_count)}
           description="Transactions needing review."
           icon="hero-queue-list"
         />
         <.stat_card
-          title="Money In"
-          value={Integer.to_string(@credit_count)}
-          description="Credits to classify or match."
-          icon="hero-arrow-down-tray"
+          title="Reviewed"
+          value={Integer.to_string(@reviewed_count)}
+          description="Transactions cleared by review."
+          icon="hero-check-circle"
           accent="sky"
         />
         <.stat_card
-          title="Money Out"
-          value={Integer.to_string(@debit_count)}
-          description="Debits to categorize."
-          icon="hero-arrow-up-tray"
+          title="Ignored"
+          value={Integer.to_string(@ignored_count)}
+          description="Transactions excluded from matching."
+          icon="hero-no-symbol"
           accent="amber"
+        />
+        <.stat_card
+          title="Total"
+          value={Integer.to_string(@queue_count)}
+          description="Transactions in the review workspace."
+          icon="hero-arrows-right-left"
+          accent="rose"
         />
       </div>
 
       <.section
-        title="Transactions Needing Review"
-        description="Use quick actions for obvious rows. Categorize anything that should leave the queue with a finance category."
+        title="Bank Transaction Review"
+        description="Use quick actions for obvious rows, open detail for events and match candidates, or return to account context."
         compact
       >
         <div class="rounded-lg border border-base-content/10 bg-base-100">
@@ -157,7 +205,7 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
               id="bank-review-mobile"
               layout={:list}
               resource={GnomeGarden.Finance.BankTransaction}
-              action={:needs_review_page}
+              action={:review_queue_page}
               actor={@current_user}
               url_state={@url_state}
               theme={GnomeGardenWeb.CinderTheme}
@@ -170,7 +218,7 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
               query_opts={[
                 load: [:bank_account]
               ]}
-              empty_message="No bank transactions need review."
+              empty_message="No bank transactions are available for review."
             >
               <:col field="counterparty_name" search sort label="Counterparty" />
               <:col field="description" search label="Description" />
@@ -187,8 +235,8 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
               <:empty>
                 <.empty_state
                   icon="hero-check-circle"
-                  title="Queue is clear"
-                  description="New synced transactions that need a decision will appear here."
+                  title="No bank transactions"
+                  description="Synced transactions will appear here for review and audit."
                 />
               </:empty>
             </Cinder.collection>
@@ -198,7 +246,7 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
             <Cinder.collection
               id="bank-review"
               resource={GnomeGarden.Finance.BankTransaction}
-              action={:needs_review_page}
+              action={:review_queue_page}
               actor={@current_user}
               url_state={@url_state}
               theme={GnomeGardenWeb.CinderTheme}
@@ -247,8 +295,8 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
               <:empty>
                 <.empty_state
                   icon="hero-check-circle"
-                  title="Queue is clear"
-                  description="New synced transactions that need a decision will appear here."
+                  title="No bank transactions"
+                  description="Synced transactions will appear here for review and audit."
                 />
               </:empty>
             </Cinder.collection>
@@ -296,6 +344,43 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
           <div class="flex items-center justify-end gap-2">
             <.button type="button" phx-click="close_category">Cancel</.button>
             <.button type="submit" variant="primary">Save Category</.button>
+          </div>
+        </form>
+      </.modal>
+
+      <.modal
+        :if={@review_dialog}
+        id="bank-transaction-review-modal"
+        on_cancel={JS.push("close_review")}
+      >
+        <:title>Mark Transaction Reviewed</:title>
+
+        <div class="space-y-1">
+          <p class="text-sm font-semibold text-base-content">
+            {bank_transaction_counterparty(@review_dialog)}
+          </p>
+          <p class="text-sm text-base-content/60">
+            {format_amount(@review_dialog.amount)} - {format_datetime(@review_dialog.occurred_at)}
+          </p>
+        </div>
+
+        <form
+          id="bank-transaction-review-form"
+          phx-change="validate_review"
+          phx-submit="mark_reviewed"
+          class="mt-4 space-y-4"
+        >
+          <.input
+            type="textarea"
+            name="review[reconciliation_note]"
+            value={@review_form["reconciliation_note"]}
+            label="Review note"
+            placeholder="Why this transaction can leave active review"
+          />
+
+          <div class="flex items-center justify-end gap-2">
+            <.button type="button" phx-click="close_review">Cancel</.button>
+            <.button type="submit" variant="primary">Mark Reviewed</.button>
           </div>
         </form>
       </.modal>
@@ -350,7 +435,20 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
   defp review_actions(assigns) do
     ~H"""
     <div class="flex flex-wrap items-center gap-1.5">
+      <.link
+        navigate={~p"/finance/banking/transactions/#{@transaction.id}"}
+        class="inline-flex items-center gap-1 rounded-md border border-base-content/10 px-2 py-1 text-xs font-medium text-base-content hover:bg-base-200"
+      >
+        <.icon name="hero-eye" class="size-3.5" /> View
+      </.link>
+      <.link
+        navigate={account_path(@transaction.bank_account)}
+        class="inline-flex items-center gap-1 rounded-md border border-base-content/10 px-2 py-1 text-xs font-medium text-base-content hover:bg-base-200"
+      >
+        <.icon name="hero-building-library" class="size-3.5" /> Account
+      </.link>
       <button
+        :if={@transaction.review_status != :ignored}
         type="button"
         phx-click="open_category"
         phx-value-id={@transaction.id}
@@ -359,14 +457,16 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
         <.icon name="hero-tag" class="size-3.5" /> Categorize
       </button>
       <button
+        :if={@transaction.review_status != :reviewed}
         type="button"
-        phx-click="mark_reviewed"
+        phx-click="open_review"
         phx-value-id={@transaction.id}
         class="inline-flex items-center gap-1 rounded-md border border-success/20 px-2 py-1 text-xs font-medium text-success hover:bg-success/10"
       >
         <.icon name="hero-check" class="size-3.5" /> Reviewed
       </button>
       <button
+        :if={@transaction.review_status != :ignored}
         type="button"
         phx-click="ignore"
         phx-value-id={@transaction.id}
@@ -374,28 +474,37 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
       >
         <.icon name="hero-no-symbol" class="size-3.5" /> Ignore
       </button>
+      <button
+        :if={@transaction.review_status != :needs_review}
+        type="button"
+        phx-click="reopen"
+        phx-value-id={@transaction.id}
+        class="inline-flex items-center gap-1 rounded-md border border-warning/20 px-2 py-1 text-xs font-medium text-warning hover:bg-warning/10"
+      >
+        <.icon name="hero-arrow-uturn-left" class="size-3.5" /> Reopen
+      </button>
     </div>
     """
   end
 
   defp assign_queue_summary(socket) do
     transactions =
-      Finance.list_bank_transactions_needing_review!(
-        actor: socket.assigns.current_user,
-        load: [:bank_account]
-      )
+      Finance.list_bank_transactions_review_queue!(actor: socket.assigns.current_user)
       |> page_results()
 
     socket
     |> assign(:queue_count, length(transactions))
-    |> assign(:credit_count, Enum.count(transactions, &(&1.direction == :credit)))
-    |> assign(:debit_count, Enum.count(transactions, &(&1.direction == :debit)))
+    |> assign(:needs_review_count, Enum.count(transactions, &(&1.review_status == :needs_review)))
+    |> assign(:reviewed_count, Enum.count(transactions, &(&1.review_status == :reviewed)))
+    |> assign(:ignored_count, Enum.count(transactions, &(&1.review_status == :ignored)))
   end
 
   defp close_and_refresh(socket) do
     socket
     |> assign(:category_dialog, nil)
     |> assign(:category_form, default_category_form())
+    |> assign(:review_dialog, nil)
+    |> assign(:review_form, default_review_form())
     |> refresh_queue()
   end
 
@@ -410,9 +519,17 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
     %{"category" => "misc_income", "reconciliation_note" => ""}
   end
 
+  defp default_review_form do
+    %{"reconciliation_note" => ""}
+  end
+
   defp page_results(%Ash.Page.Keyset{results: results}), do: results
   defp page_results(%Ash.Page.Offset{results: results}), do: results
   defp page_results(results), do: results
+
+  defp account_path(%Ash.NotLoaded{}), do: ~p"/finance/banking"
+  defp account_path(nil), do: ~p"/finance/banking"
+  defp account_path(%{id: id}), do: ~p"/finance/banking/accounts/#{id}"
 
   defp atom_param(value) when value in [nil, ""], do: nil
   defp atom_param(value) when is_atom(value), do: value

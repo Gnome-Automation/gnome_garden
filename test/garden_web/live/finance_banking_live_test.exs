@@ -28,7 +28,7 @@ defmodule GnomeGardenWeb.FinanceBankingLiveTest do
         available_balance: Decimal.new("2300.00")
       })
 
-    {:ok, _transaction} =
+    {:ok, transaction} =
       Finance.create_bank_transaction(%{
         bank_account_id: account.id,
         provider: :mercury,
@@ -51,6 +51,7 @@ defmodule GnomeGardenWeb.FinanceBankingLiveTest do
     assert html =~ "Automation"
     assert html =~ "Rules"
     assert render(view) =~ "ACME CORPORATION"
+    assert render(view) =~ ~p"/finance/banking/transactions/#{transaction.id}"
   end
 
   test "links to provider-neutral bank rules workspace", %{conn: conn} do

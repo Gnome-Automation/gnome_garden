@@ -62,6 +62,11 @@ defmodule GnomeGardenWeb.MercuryWebhookControllerTest do
   test "returns 200 for unknown event type", %{conn: conn} do
     conn = webhook_post(conn, %{"type" => "some.future.event", "id" => "x"})
     assert conn.status == 200
+
+    assert {:ok, events} = Finance.list_bank_integration_events()
+    assert Enum.any?(events, &(&1.provider_event_id == "x" and &1.status == :ignored))
+
+    refute_enqueued(worker: GnomeGarden.Finance.BankSyncWorker)
   end
 
   test "transaction.created records integration event and enqueues sync", %{conn: conn} do

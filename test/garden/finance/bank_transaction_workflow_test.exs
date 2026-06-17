@@ -24,9 +24,69 @@ defmodule GnomeGarden.Finance.BankTransactionWorkflowTest do
       assert event.metadata["category"] == "customer_payment"
       assert event.metadata["review_status"] == "reviewed"
     end
+
+    test "creating a bank rule from a reviewed transaction derives repeatable conditions" do
+      transaction =
+        bank_transaction!(%{
+          category: :customer_payment,
+          review_status: :reviewed,
+          reconciliation_note: "Reviewed customer ACH"
+        })
+
+      assert {:ok, %{rule: rule}} = Finance.create_bank_rule_from_transaction(transaction.id)
+
+      assert rule.name == "ACME CORPORATION banking rule"
+      assert rule.counterparty_contains == "ACME CORPORATION"
+      assert rule.description_contains == "Customer ACH"
+      assert rule.direction == :credit
+      assert rule.category == :customer_payment
+      assert rule.review_status_result == :reviewed
+      assert rule.match_behavior == :none
+    end
+
+    test "creating a bank rule from an unreviewed transaction fails" do
+      transaction = bank_transaction!()
+
+      assert {:error, _error} = Finance.create_bank_rule_from_transaction(transaction.id)
+
+      assert {:ok, rules} = Finance.list_bank_rules()
+      assert rules == []
+    end
   end
 
   describe "bank transaction matches" do
+    test "transaction workspace returns account, matches, and events" do
+      transaction = bank_transaction!()
+      payment = payment!(transaction.amount)
+
+      {:ok, _match} =
+        Finance.create_bank_transaction_match(%{
+          bank_transaction_id: transaction.id,
+          payment_id: payment.id,
+          match_source: :amount_date,
+          status: :suggested,
+          confidence: :probable
+        })
+
+      {:ok, _event} =
+        Finance.record_bank_transaction_event(%{
+          bank_transaction_id: transaction.id,
+          event_type: :match_suggested,
+          source: :sync,
+          message: "Suggested payment match",
+          amount: transaction.amount
+        })
+
+      assert {:ok, workspace} = Finance.get_bank_transaction_workspace(transaction.id)
+      assert workspace.transaction.id == transaction.id
+      assert workspace.bank_account.id == transaction.bank_account_id
+      assert workspace.match_count == 1
+      assert workspace.pending_match_count == 1
+      assert workspace.event_count == 1
+      assert [%{status: :suggested}] = workspace.matches
+      assert [%{event_type: :match_suggested}] = workspace.events
+    end
+
     test "accepting a match marks the transaction matched and records an event" do
       transaction = bank_transaction!()
       payment = payment!(transaction.amount)

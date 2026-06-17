@@ -56,6 +56,11 @@ defmodule GnomeGarden.Finance do
     resource GnomeGarden.Finance.BankTransaction do
       define :list_bank_transactions, action: :read
       define :list_bank_transactions_needing_review, action: :needs_review
+      define :list_bank_transactions_review_queue, action: :review_queue
+
+      define :get_bank_transaction_workspace,
+        action: :transaction_workspace,
+        args: [:bank_transaction_id]
 
       define :list_recent_bank_transactions_for_account,
         action: :recent_for_account,
@@ -99,6 +104,11 @@ defmodule GnomeGarden.Finance do
     resource GnomeGarden.Finance.BankRule do
       define :list_bank_rules, action: :sorted
       define :get_bank_rule, action: :read, get_by: [:id]
+
+      define :create_bank_rule_from_transaction,
+        action: :create_from_transaction,
+        args: [:bank_transaction_id]
+
       define :create_bank_rule, action: :create
       define :update_bank_rule, action: :update
       define :enable_bank_rule, action: :enable
@@ -124,6 +134,10 @@ defmodule GnomeGarden.Finance do
       define :list_bank_integration_events, action: :read
       define :list_recent_bank_integration_events, action: :recent
       define :list_bank_integration_event_history, action: :history
+
+      define :ingest_mercury_webhook_event,
+        action: :ingest_mercury_webhook,
+        args: [:event_type, :payload]
 
       define :list_recent_bank_integration_events_for_account,
         action: :recent_for_account,

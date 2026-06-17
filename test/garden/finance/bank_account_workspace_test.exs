@@ -93,4 +93,36 @@ defmodule GnomeGarden.Finance.BankAccountWorkspaceTest do
     assert workspace.needs_review_count == 1
     assert Decimal.eq?(workspace.current_balance, Decimal.new("4200.00"))
   end
+
+  test "includes Mercury webhook events linked through Finance ingestion" do
+    {:ok, connection} =
+      Finance.create_bank_connection(%{
+        provider: :mercury,
+        name: "Mercury Production",
+        status: :active,
+        environment: :production
+      })
+
+    {:ok, account} =
+      Finance.create_bank_account(%{
+        bank_connection_id: connection.id,
+        provider: :mercury,
+        provider_account_id: "acct-webhook-workspace",
+        name: "Operating Checking",
+        status: :active,
+        kind: :checking
+      })
+
+    assert {:ok, %{event: event}} =
+             Finance.ingest_mercury_webhook_event("balance.updated", %{
+               "id" => "evt-workspace-#{System.unique_integer([:positive])}",
+               "accountId" => account.provider_account_id
+             })
+
+    workspace = Finance.get_bank_account_workspace!(account.id)
+
+    assert event.bank_account_id == account.id
+    assert Enum.map(workspace.integration_events, & &1.id) == [event.id]
+    assert workspace.latest_integration_event.id == event.id
+  end
 end

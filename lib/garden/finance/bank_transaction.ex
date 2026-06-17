@@ -39,6 +39,12 @@ defmodule GnomeGarden.Finance.BankTransaction do
   actions do
     defaults [:read, :destroy]
 
+    action :transaction_workspace, :map do
+      argument :bank_transaction_id, :uuid, allow_nil?: false
+
+      run GnomeGarden.Finance.Actions.BuildBankTransactionWorkspace
+    end
+
     read :needs_review do
       filter expr(review_status == :needs_review)
       prepare build(sort: [occurred_at: :desc, inserted_at: :desc])
@@ -48,6 +54,15 @@ defmodule GnomeGarden.Finance.BankTransaction do
       filter expr(review_status == :needs_review)
       pagination offset?: true, keyset?: true, default_limit: 25
       prepare build(sort: [occurred_at: :desc, inserted_at: :desc])
+    end
+
+    read :review_queue do
+      prepare build(sort: [occurred_at: :desc, inserted_at: :desc], load: [:bank_account])
+    end
+
+    read :review_queue_page do
+      pagination offset?: true, keyset?: true, default_limit: 25
+      prepare build(default_sort: [occurred_at: :desc, inserted_at: :desc], load: [:bank_account])
     end
 
     read :recent_for_account do

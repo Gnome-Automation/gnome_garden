@@ -180,6 +180,13 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
                         {format_atom(txn.category)}
                       </.status_badge>
                     </div>
+
+                    <.link
+                      navigate={~p"/finance/banking/transactions/#{txn.id}"}
+                      class="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary"
+                    >
+                      Open transaction <.icon name="hero-arrow-right" class="size-3.5" />
+                    </.link>
                   </div>
                 </:item>
 
@@ -248,6 +255,12 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
                       {txn.reconciliation_note}
                     </p>
                   </div>
+                </:col>
+
+                <:col :let={txn} label="Actions">
+                  <.button navigate={~p"/finance/banking/transactions/#{txn.id}"}>
+                    <.icon name="hero-eye" class="size-4" /> Open
+                  </.button>
                 </:col>
 
                 <:empty>

@@ -30,6 +30,7 @@ defmodule GnomeGardenWeb.AuthenticatedRoutesTest do
     "/execution/service-tickets",
     "/finance/banking",
     "/finance/banking/accounts/00000000-0000-0000-0000-000000000000",
+    "/finance/banking/transactions/00000000-0000-0000-0000-000000000000",
     "/finance/banking/review",
     "/finance/banking/rules",
     "/finance/banking/sync-runs",

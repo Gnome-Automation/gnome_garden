@@ -34,6 +34,12 @@ defmodule GnomeGarden.Finance.BankRule do
       prepare build(sort: [priority: :asc, inserted_at: :asc])
     end
 
+    action :create_from_transaction, :map do
+      argument :bank_transaction_id, :uuid, allow_nil?: false
+
+      run GnomeGarden.Finance.Actions.CreateBankRuleFromTransaction
+    end
+
     create :create do
       primary? true
 

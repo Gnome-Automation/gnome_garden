@@ -38,6 +38,13 @@ defmodule GnomeGarden.Finance.BankIntegrationEvent do
   actions do
     defaults [:read, :destroy]
 
+    action :ingest_mercury_webhook, :map do
+      argument :event_type, :string, allow_nil?: false
+      argument :payload, :map, allow_nil?: false
+
+      run GnomeGarden.Finance.Actions.IngestMercuryWebhookEvent
+    end
+
     read :recent do
       prepare build(sort: [received_at: :desc], limit: 8, load: [:bank_connection])
     end
