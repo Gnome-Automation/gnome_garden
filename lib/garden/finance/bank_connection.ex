@@ -70,6 +70,10 @@ defmodule GnomeGarden.Finance.BankConnection do
       run GnomeGarden.Finance.Actions.BuildBankingWorkspace
     end
 
+    action :finance_overview, :map do
+      run GnomeGarden.Finance.Actions.BuildFinanceOverviewWorkspace
+    end
+
     read :active do
       filter expr(status == :active)
       prepare build(sort: [name: :asc])

@@ -336,6 +336,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
     # Finance
     %{
+      id: "fin-overview",
+      section: "Finance",
+      icon: "hero-chart-pie",
+      label: "Overview",
+      path: "/finance",
+      badge: 0,
+      hot: false,
+      match: ["/finance/overview"]
+    },
+    %{
       id: "fin-banking",
       section: "Finance",
       icon: "hero-building-library",

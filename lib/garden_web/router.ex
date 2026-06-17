@@ -198,6 +198,7 @@ defmodule GnomeGardenWeb.Router do
       live "/execution/maintenance-plans/:id/edit", Execution.MaintenancePlanLive.Form, :edit
 
       # Finance - Invoices
+      live "/finance", Finance.OverviewLive, :index
       live "/finance/banking", Finance.BankingLive, :index
       live "/finance/banking/review", Finance.BankingReviewLive, :index
       live "/finance/banking/rules", Finance.BankRuleLive.Index, :index

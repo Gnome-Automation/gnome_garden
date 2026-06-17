@@ -28,6 +28,7 @@ defmodule GnomeGarden.Finance do
       define :update_bank_connection, action: :update
       define :sync_bank_connection, action: :sync, args: [:bank_connection_id, :source]
       define :sync_bank_provider, action: :sync_provider, args: [:provider, :environment, :source]
+      define :get_finance_overview, action: :finance_overview
       define :get_banking_workspace, action: :banking_workspace
       define :activate_bank_connection, action: :activate
       define :pause_bank_connection, action: :pause

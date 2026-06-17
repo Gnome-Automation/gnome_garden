@@ -835,6 +835,10 @@ large modals should behave like sheets or full-screen panels.
 - Finance banking foundation is implemented with provider-neutral
   `BankConnection`, `BankAccount`, `BankTransaction`, rule, match, sync-run, and
   integration-event resources.
+- `/finance` is the top-level Finance overview. It is backed by the
+  `get_finance_overview` Finance code interface and composes the existing
+  Banking, Receivables, and Work to Bill workspace actions into one
+  founder-facing shape.
 - Mercury now lives behind `GnomeGarden.Finance.Integrations.Mercury` and the
   local `req_mercury` dependency. It is not a top-level Ash business domain.
 - `/finance/banking` is the provider-neutral banking workspace with account
