@@ -851,6 +851,10 @@ large modals should behave like sheets or full-screen panels.
   It owns rule create/edit/enable/disable/delete flows in one LiveView instead
   of embedding rule CRUD in the daily Banking screen or reintroducing a
   Mercury-specific rule page.
+- `/finance/banking/sync-runs` is the provider sync health workspace. It is
+  backed by the `get_bank_sync_history_workspace` Finance code interface and
+  shows recent pull attempts, webhook/sync integration events, and failures
+  without requiring log access.
 - Bank transaction decisions now record audit events for categorize, review,
   ignore, reopen, match, and unmatch actions. Accepting or rejecting a
   `BankTransactionMatch` drives the related transaction state through Finance

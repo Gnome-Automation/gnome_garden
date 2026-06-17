@@ -116,6 +116,7 @@ defmodule GnomeGarden.Finance do
     resource GnomeGarden.Finance.BankIntegrationEvent do
       define :list_bank_integration_events, action: :read
       define :list_recent_bank_integration_events, action: :recent
+      define :list_bank_integration_event_history, action: :history
       define :get_bank_integration_event, action: :read, get_by: [:id]
       define :record_bank_integration_event, action: :record
       define :process_bank_integration_event, action: :process
@@ -138,6 +139,8 @@ defmodule GnomeGarden.Finance do
     resource GnomeGarden.Finance.BankSyncRun do
       define :list_bank_sync_runs, action: :read
       define :list_recent_bank_sync_runs, action: :recent
+      define :list_bank_sync_run_history, action: :history
+      define :get_bank_sync_history_workspace, action: :sync_history_workspace
       define :get_bank_sync_run, action: :read, get_by: [:id]
       define :start_bank_sync_run, action: :start
       define :finish_bank_sync_run_success, action: :finish_success

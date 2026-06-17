@@ -346,16 +346,6 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/overview"]
     },
     %{
-      id: "fin-banking",
-      section: "Finance",
-      icon: "hero-building-library",
-      label: "Banking",
-      path: "/finance/banking",
-      badge: 0,
-      hot: false,
-      match: ["/finance/banking/review"]
-    },
-    %{
       id: "fin-bank-rules",
       section: "Finance",
       icon: "hero-funnel",
@@ -364,6 +354,26 @@ defmodule GnomeGardenWeb.Components.RailNav do
       badge: 0,
       hot: false,
       match: ["/finance/banking/rules"]
+    },
+    %{
+      id: "fin-bank-sync",
+      section: "Finance",
+      icon: "hero-arrow-path",
+      label: "Sync Health",
+      path: "/finance/banking/sync-runs",
+      badge: 0,
+      hot: false,
+      match: ["/finance/banking/sync-runs"]
+    },
+    %{
+      id: "fin-banking",
+      section: "Finance",
+      icon: "hero-building-library",
+      label: "Banking",
+      path: "/finance/banking",
+      badge: 0,
+      hot: false,
+      match: ["/finance/banking"]
     },
     %{
       id: "fin-receivables",

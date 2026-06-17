@@ -105,6 +105,12 @@ defmodule GnomeGardenWeb.Finance.OverviewLive do
                 navigate={~p"/finance/banking/rules"}
               />
               <.action_card
+                title="Sync Health"
+                description="Provider pull history, webhook hints, and failed integration events."
+                icon="hero-arrow-path"
+                navigate={~p"/finance/banking/sync-runs"}
+              />
+              <.action_card
                 title="Receivables"
                 description="Open invoices, overdue balances, unapplied payments, and money in."
                 icon="hero-banknotes"

@@ -66,6 +66,9 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
           Bank accounts, imported transactions, sync health, and categorization rules.
         </:subtitle>
         <:actions>
+          <.button navigate={~p"/finance/banking/sync-runs"}>
+            <.icon name="hero-arrow-path" class="size-4" /> Sync Health
+          </.button>
           <.button navigate={~p"/finance/banking/rules"}>
             <.icon name="hero-funnel" class="size-4" /> Rules
           </.button>
@@ -375,6 +378,12 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
                   </.status_badge>
                 </div>
               </div>
+            </div>
+
+            <div class="mt-4">
+              <.button navigate={~p"/finance/banking/sync-runs"} class="w-full">
+                <.icon name="hero-arrow-path" class="size-4" /> Open Sync Health
+              </.button>
             </div>
           </.section>
 
