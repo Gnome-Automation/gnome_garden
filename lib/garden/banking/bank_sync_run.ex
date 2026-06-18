@@ -74,6 +74,10 @@ defmodule GnomeGarden.Banking.BankSyncRun do
       filter expr(bank_connection_id == ^arg(:bank_connection_id))
       prepare build(sort: [started_at: :desc])
     end
+
+    action :sync_history_workspace, :map do
+      run GnomeGarden.Banking.Actions.BuildBankSyncHistoryWorkspace
+    end
   end
 
   attributes do

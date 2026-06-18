@@ -94,6 +94,10 @@ defmodule GnomeGarden.Banking.BankConnection do
       filter expr(status == :active)
       prepare build(sort: [inserted_at: :asc])
     end
+
+    action :banking_workspace, :map do
+      run GnomeGarden.Banking.Actions.BuildBankingWorkspace
+    end
   end
 
   attributes do

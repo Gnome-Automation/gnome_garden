@@ -93,6 +93,11 @@ defmodule GnomeGarden.Banking.BankAccount do
       filter expr(bank_connection_id == ^arg(:bank_connection_id))
       prepare build(sort: [name: :asc])
     end
+
+    action :account_workspace, :map do
+      argument :bank_account_id, :uuid, allow_nil?: false
+      run GnomeGarden.Banking.Actions.BuildBankAccountWorkspace
+    end
   end
 
   attributes do

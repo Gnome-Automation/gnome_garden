@@ -191,6 +191,18 @@ defmodule GnomeGarden.Finance.Invoice do
       argument :as_of, :date, default: &Date.utc_today/0
       run GnomeGarden.Finance.Actions.BuildArAging
     end
+
+    action :finance_overview_workspace, :map do
+      run GnomeGarden.Finance.Actions.BuildFinanceOverviewWorkspace
+    end
+
+    action :receivables_workspace, :map do
+      run GnomeGarden.Finance.Actions.BuildReceivablesWorkspace
+    end
+
+    action :work_to_bill_workspace, :map do
+      run GnomeGarden.Finance.Actions.BuildWorkToBillWorkspace
+    end
   end
 
   attributes do

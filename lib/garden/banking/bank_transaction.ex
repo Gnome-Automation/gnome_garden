@@ -134,6 +134,11 @@ defmodule GnomeGarden.Banking.BankTransaction do
       filter expr(bank_account_id == ^arg(:bank_account_id))
       prepare build(sort: [occurred_at: :desc])
     end
+
+    action :transaction_workspace, :map do
+      argument :bank_transaction_id, :uuid, allow_nil?: false
+      run GnomeGarden.Banking.Actions.BuildBankTransactionWorkspace
+    end
   end
 
   attributes do
@@ -198,6 +203,10 @@ defmodule GnomeGarden.Banking.BankTransaction do
     end
 
     has_many :bank_transaction_matches, GnomeGarden.Banking.BankTransactionMatch do
+      public? true
+    end
+
+    has_many :bank_transaction_events, GnomeGarden.Banking.BankTransactionEvent do
       public? true
     end
   end

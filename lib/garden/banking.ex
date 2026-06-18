@@ -33,6 +33,7 @@ defmodule GnomeGarden.Banking do
       define :archive_bank_connection, action: :archive
       define :mark_bank_connection_synced, action: :mark_synced
       define :sync_bank_connection, action: :sync
+      define :get_banking_workspace, action: :banking_workspace
     end
 
     resource GnomeGarden.Banking.BankAccount do
@@ -51,6 +52,7 @@ defmodule GnomeGarden.Banking do
       define :upsert_bank_account, action: :upsert
       define :update_bank_account, action: :update
       define :mark_bank_account_inactive, action: :mark_inactive
+      define :get_bank_account_workspace, action: :account_workspace, args: [:bank_account_id]
     end
 
     resource GnomeGarden.Banking.BankTransaction do
@@ -74,6 +76,10 @@ defmodule GnomeGarden.Banking do
       define :mark_bank_transaction_matched, action: :mark_matched
       define :ignore_bank_transaction, action: :ignore
       define :reopen_bank_transaction_review, action: :reopen_review
+
+      define :get_bank_transaction_workspace,
+        action: :transaction_workspace,
+        args: [:bank_transaction_id]
     end
 
     resource GnomeGarden.Banking.BankTransactionMatch do
@@ -101,6 +107,47 @@ defmodule GnomeGarden.Banking do
       define :delete_bank_rule, action: :destroy
     end
 
+    resource GnomeGarden.Banking.BankCounterpartyAlias do
+      define :list_bank_counterparty_aliases, action: :read
+      define :get_bank_counterparty_alias, action: :read, get_by: [:id]
+
+      define :list_bank_counterparty_aliases_for_counterparty,
+        action: :matching_counterparty,
+        args: [:counterparty_name]
+
+      define :create_bank_counterparty_alias, action: :create
+      define :confirm_bank_counterparty_alias, action: :confirm
+      define :ignore_bank_counterparty_alias, action: :ignore
+      define :merge_bank_counterparty_alias, action: :merge
+    end
+
+    resource GnomeGarden.Banking.BankIntegrationEvent do
+      define :list_bank_integration_events, action: :read
+      define :list_recent_bank_integration_events, action: :recent
+      define :list_bank_integration_event_history, action: :history
+
+      define :list_recent_bank_integration_events_for_account,
+        action: :recent_for_account,
+        args: [:bank_account_id]
+
+      define :get_bank_integration_event, action: :read, get_by: [:id]
+      define :record_bank_integration_event, action: :record
+      define :process_bank_integration_event, action: :process
+      define :mark_bank_integration_event_processed, action: :mark_processed
+      define :mark_bank_integration_event_failed, action: :mark_failed
+      define :ignore_bank_integration_event, action: :ignore
+      define :retry_bank_integration_event, action: :retry
+    end
+
+    resource GnomeGarden.Banking.BankTransactionEvent do
+      define :list_bank_transaction_events, action: :read
+      define :record_bank_transaction_event, action: :record
+
+      define :list_bank_transaction_events_for_transaction,
+        action: :for_transaction,
+        args: [:bank_transaction_id]
+    end
+
     resource GnomeGarden.Banking.BankSyncRun do
       define :list_bank_sync_runs, action: :read
       define :list_recent_bank_sync_runs, action: :recent
@@ -113,6 +160,7 @@ defmodule GnomeGarden.Banking do
       define :start_bank_sync_run, action: :start
       define :finish_bank_sync_run_success, action: :finish_success
       define :finish_bank_sync_run_failure, action: :finish_failure
+      define :get_bank_sync_history_workspace, action: :sync_history_workspace
     end
   end
 end

@@ -70,6 +70,9 @@ defmodule GnomeGarden.Finance do
       define :list_open_invoices, action: :open
       define :list_overdue_invoices, action: :overdue
       define :build_ar_aging, action: :ar_aging
+      define :get_finance_overview_workspace, action: :finance_overview_workspace
+      define :get_receivables_workspace, action: :receivables_workspace
+      define :get_work_to_bill_workspace, action: :work_to_bill_workspace
     end
 
     resource GnomeGarden.Finance.InvoiceLine do
