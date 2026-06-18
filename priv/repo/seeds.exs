@@ -12,9 +12,11 @@
 
 alias GnomeGarden.Agents.DefaultDeployments
 alias GnomeGarden.Commercial.DefaultCompanyProfiles
+alias GnomeGarden.Ledger.DefaultChartOfAccounts
 
 company_profile = DefaultCompanyProfiles.ensure_default()
 result = DefaultDeployments.ensure_defaults()
+ledger_accounts = DefaultChartOfAccounts.ensure_defaults()
 
 IO.puts("""
 Seeded agent deployments.
@@ -26,4 +28,9 @@ IO.puts("""
 Seeded company profile.
 Created: #{company_profile.created?}
 Profile: #{company_profile.profile.name} (#{company_profile.profile.key})
+""")
+
+IO.puts("""
+Seeded ledger chart of accounts.
+Created: #{Enum.map_join(ledger_accounts, ", ", &"#{&1.number} #{&1.name}")}
 """)

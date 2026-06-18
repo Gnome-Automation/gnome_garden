@@ -115,13 +115,16 @@ defmodule GnomeGarden.Finance.Invoice do
         total_amount = Ash.Changeset.get_attribute(changeset, :total_amount)
         Ash.Changeset.change_attribute(changeset, :balance_amount, total_amount)
       end
+
+      change GnomeGarden.Finance.Changes.PostInvoiceIssuedToLedger
     end
 
     update :mark_paid do
+      require_atomic? false
       accept []
       change transition_state(:paid)
       change set_attribute(:paid_on, &Date.utc_today/0)
-      change set_attribute(:balance_amount, Decimal.new("0"))
+      change GnomeGarden.Finance.Changes.ZeroInvoiceBalance
     end
 
     update :partial do
@@ -130,14 +133,17 @@ defmodule GnomeGarden.Finance.Invoice do
     end
 
     update :write_off do
+      require_atomic? false
       accept []
       change transition_state(:write_off)
-      change set_attribute(:balance_amount, Decimal.new("0"))
+      change GnomeGarden.Finance.Changes.ZeroInvoiceBalance
     end
 
     update :void do
+      require_atomic? false
       accept []
       change transition_state(:void)
+      change GnomeGarden.Finance.Changes.PostInvoiceVoidedReversal
     end
 
     update :reopen do
@@ -180,6 +186,11 @@ defmodule GnomeGarden.Finance.Invoice do
                 ]
               )
     end
+
+    action :ar_aging, :map do
+      argument :as_of, :date, default: &Date.utc_today/0
+      run GnomeGarden.Finance.Actions.BuildArAging
+    end
   end
 
   attributes do
@@ -210,19 +221,19 @@ defmodule GnomeGarden.Finance.Invoice do
       public? true
     end
 
-    attribute :subtotal, :decimal do
+    attribute :subtotal, :money do
       public? true
     end
 
-    attribute :tax_total, :decimal do
+    attribute :tax_total, :money do
       public? true
     end
 
-    attribute :total_amount, :decimal do
+    attribute :total_amount, :money do
       public? true
     end
 
-    attribute :balance_amount, :decimal do
+    attribute :balance_amount, :money do
       public? true
     end
 
@@ -299,10 +310,12 @@ defmodule GnomeGarden.Finance.Invoice do
 
     sum :line_total_amount, :invoice_lines, :line_total do
       public? true
+      filter expr(line_total[:currency] == "USD")
     end
 
     sum :applied_amount, :payment_applications, :amount do
       public? true
+      filter expr(amount[:currency] == "USD")
     end
   end
 end

@@ -475,10 +475,10 @@ defmodule GnomeGardenWeb.CommercialExecutionLiveTest do
         agreement_id: agreement.id,
         invoice_number: "INV-100",
         due_on: ~D[2026-05-01],
-        subtotal: Decimal.new("1000.00"),
-        tax_total: Decimal.new("0.00"),
-        total_amount: Decimal.new("1000.00"),
-        balance_amount: Decimal.new("1000.00")
+        subtotal: Money.new!(:USD,"1000.00"),
+        tax_total: Money.new!(:USD,"0.00"),
+        total_amount: Money.new!(:USD,"1000.00"),
+        balance_amount: Money.new!(:USD,"1000.00")
       })
 
     {:ok, _index_view, _index_html} = live(conn, ~p"/finance/invoices")

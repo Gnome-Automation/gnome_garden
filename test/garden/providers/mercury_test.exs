@@ -289,10 +289,10 @@ defmodule GnomeGarden.Providers.MercuryTest do
       end)
     end
 
-    test "calls GET /api/v1/accounts/:id/transactions" do
+    test "calls GET /api/v1/account/:id/transactions" do
       Req.Test.stub(__MODULE__, fn conn ->
         assert conn.method == "GET"
-        assert conn.request_path == "/api/v1/accounts/acc-1/transactions"
+        assert conn.request_path == "/api/v1/account/acc-1/transactions"
         Req.Test.json(conn, %{"transactions" => [], "total" => 0})
       end)
 
@@ -377,10 +377,10 @@ defmodule GnomeGarden.Providers.MercuryTest do
       end)
     end
 
-    test "calls GET /api/v1/accounts/:account_id/transactions/:txn_id" do
+    test "calls GET /api/v1/account/:account_id/transactions/:txn_id" do
       Req.Test.stub(__MODULE__, fn conn ->
         assert conn.method == "GET"
-        assert conn.request_path == "/api/v1/accounts/acc-1/transactions/txn-99"
+        assert conn.request_path == "/api/v1/account/acc-1/transactions/txn-99"
         Req.Test.json(conn, %{"id" => "txn-99", "amount" => 500.0})
       end)
 

@@ -124,12 +124,12 @@ defmodule GnomeGarden.Finance.InvoiceLine do
       public? true
     end
 
-    attribute :unit_price, :decimal do
+    attribute :unit_price, :money do
       allow_nil? false
       public? true
     end
 
-    attribute :line_total, :decimal do
+    attribute :line_total, :money do
       allow_nil? false
       public? true
     end

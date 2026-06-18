@@ -83,9 +83,11 @@ defmodule GnomeGarden.Finance.Payment do
     end
 
     update :reverse do
+      require_atomic? false
       accept []
       change transition_state(:reversed)
       change set_attribute(:reversed_on, &Date.utc_today/0)
+      change GnomeGarden.Finance.Changes.PostPaymentReversedToLedger
     end
 
     read :open do
@@ -140,7 +142,7 @@ defmodule GnomeGarden.Finance.Payment do
       public? true
     end
 
-    attribute :amount, :decimal do
+    attribute :amount, :money do
       allow_nil? false
       public? true
     end
@@ -191,6 +193,7 @@ defmodule GnomeGarden.Finance.Payment do
 
     sum :applied_amount, :applications, :amount do
       public? true
+      filter expr(amount[:currency] == "USD")
     end
   end
 end

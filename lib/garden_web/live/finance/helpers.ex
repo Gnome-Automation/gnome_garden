@@ -13,6 +13,8 @@ defmodule GnomeGardenWeb.Finance.Helpers do
 
   def format_amount(nil), do: "-"
 
+  def format_amount(%Money{} = amount), do: Money.to_string!(amount)
+
   def format_amount(%Decimal{} = amount),
     do: "$#{Decimal.round(amount, 2) |> Decimal.to_string()}"
 
@@ -40,8 +42,17 @@ defmodule GnomeGardenWeb.Finance.Helpers do
   def display_team_member(%{display_name: display_name}, _fallback), do: display_name
 
   def sum_amounts(records, field) do
-    Enum.reduce(records, Decimal.new(0), fn record, total ->
-      Decimal.add(total, Map.get(record, field) || Decimal.new(0))
-    end)
+    records
+    |> Enum.map(&Map.get(&1, field))
+    |> Enum.reject(&is_nil/1)
+    |> sum_values()
   end
+
+  defp sum_values([]), do: Decimal.new(0)
+
+  defp sum_values([%Money{} = first | rest]),
+    do: Enum.reduce(rest, first, fn money, total -> Money.add!(total, money) end)
+
+  defp sum_values(values),
+    do: Enum.reduce(values, Decimal.new(0), fn value, total -> Decimal.add(total, value) end)
 end

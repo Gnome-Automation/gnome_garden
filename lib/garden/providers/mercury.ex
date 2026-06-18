@@ -116,14 +116,14 @@ defmodule GnomeGarden.Providers.Mercury do
     params = build_params(query_opts)
 
     new_client(client_opts)
-    |> Req.get(url: "/accounts/#{account_id}/transactions", params: params)
+    |> Req.get(url: "/account/#{account_id}/transactions", params: params)
     |> unwrap()
   end
 
   @doc "Get a single transaction by ID."
   def get_transaction(account_id, transaction_id, opts \\ []) do
     new_client(opts)
-    |> Req.get(url: "/accounts/#{account_id}/transactions/#{transaction_id}")
+    |> Req.get(url: "/account/#{account_id}/transactions/#{transaction_id}")
     |> unwrap()
   end
 

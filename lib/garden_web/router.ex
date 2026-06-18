@@ -280,7 +280,7 @@ defmodule GnomeGardenWeb.Router do
 
   scope "/webhooks", GnomeGardenWeb do
     pipe_through :webhooks
-    post "/mercury", MercuryWebhookController, :receive
+    # Bank webhook endpoint to be re-added against the Banking domain.
   end
 
   # Other scopes may use custom stacks.

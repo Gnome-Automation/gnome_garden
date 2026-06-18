@@ -39,6 +39,14 @@ defmodule GnomeGarden.DataCase do
     reset_test_storage()
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(GnomeGarden.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+    seed_reference_data()
+  end
+
+  # System reference data that exists in every environment. The ledger chart of
+  # accounts is required by GL-posting changes (invoice issue, payment apply),
+  # so it must be present for tests that exercise those flows.
+  defp seed_reference_data do
+    GnomeGarden.Ledger.DefaultChartOfAccounts.ensure_defaults()
   end
 
   defp reset_test_storage do

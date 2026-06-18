@@ -67,7 +67,7 @@ defmodule GnomeGarden.Commercial.Changes.SyncExpenseEntitlementUsage do
       expense_id: expense.id,
       source_type: :expense,
       usage_on: expense.incurred_on,
-      quantity: expense.amount,
+      quantity: usage_quantity(expense.amount),
       notes: "Auto-recorded from approved expense"
     })
     |> case do
@@ -75,6 +75,12 @@ defmodule GnomeGarden.Commercial.Changes.SyncExpenseEntitlementUsage do
       {:error, error} -> {:error, error}
     end
   end
+
+  # service_entitlement_usage.quantity is a :decimal; USD-denominated
+  # entitlements record the expense's dollar amount, so pull the Decimal out of
+  # the :money value.
+  defp usage_quantity(%Money{amount: amount}), do: amount
+  defp usage_quantity(amount), do: amount
 
   defp destroy_all(usages) do
     Enum.reduce_while(usages, :ok, fn usage, _result ->

@@ -17,6 +17,8 @@ defmodule GnomeGardenWeb.Commercial.Helpers do
 
   def format_amount(nil), do: "-"
 
+  def format_amount(%Money{} = amount), do: Money.to_string!(amount)
+
   def format_amount(%Decimal{} = amount),
     do: "$#{Decimal.round(amount, 2) |> Decimal.to_string()}"
 

@@ -69,6 +69,7 @@ defmodule GnomeGarden.Finance do
       define :reopen_invoice, action: :reopen
       define :list_open_invoices, action: :open
       define :list_overdue_invoices, action: :overdue
+      define :build_ar_aging, action: :ar_aging
     end
 
     resource GnomeGarden.Finance.InvoiceLine do

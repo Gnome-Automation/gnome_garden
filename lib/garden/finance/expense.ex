@@ -190,7 +190,7 @@ defmodule GnomeGarden.Finance.Expense do
       public? true
     end
 
-    attribute :amount, :decimal do
+    attribute :amount, :money do
       allow_nil? false
       public? true
     end

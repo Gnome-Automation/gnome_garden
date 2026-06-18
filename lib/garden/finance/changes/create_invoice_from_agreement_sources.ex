@@ -11,7 +11,6 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSources do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Finance
 
-  @zero Decimal.new("0")
   @sixty Decimal.new("60")
 
   @impl true
@@ -23,16 +22,19 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSources do
          {:ok, time_entries, expenses} <- load_sources(agreement_id),
          :ok <- validate_sources_present(time_entries, expenses),
          :ok <- validate_time_entry_rates(time_entries) do
+      currency = agreement.currency_code || "USD"
+      sub = subtotal(time_entries, expenses, currency)
+
       changeset
       |> set_if_unchanged(:organization_id, agreement.organization_id)
       |> set_if_unchanged(:agreement_id, agreement.id)
       |> set_if_unchanged(:project_id, common_project_id(time_entries, expenses))
       |> set_if_unchanged(:work_order_id, common_work_order_id(time_entries, expenses))
-      |> set_if_unchanged(:currency_code, agreement.currency_code)
-      |> set_if_unchanged(:subtotal, subtotal(time_entries, expenses))
-      |> set_if_unchanged(:tax_total, @zero)
-      |> set_if_unchanged(:total_amount, subtotal(time_entries, expenses))
-      |> set_if_unchanged(:balance_amount, subtotal(time_entries, expenses))
+      |> set_if_unchanged(:currency_code, currency)
+      |> set_if_unchanged(:subtotal, sub)
+      |> set_if_unchanged(:tax_total, Money.new!(currency, 0))
+      |> set_if_unchanged(:total_amount, sub)
+      |> set_if_unchanged(:balance_amount, sub)
       |> Ash.Changeset.after_action(fn _changeset, invoice ->
         create_invoice_lines_and_mark_sources(invoice, time_entries, expenses)
       end)
@@ -83,14 +85,13 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSources do
     end
   end
 
-  defp subtotal(time_entries, expenses) do
-    time_total =
-      Enum.reduce(time_entries, @zero, fn time_entry, total ->
-        Decimal.add(total, time_entry_line_total(time_entry))
-      end)
+  defp subtotal(time_entries, expenses, currency) do
+    values =
+      Enum.map(time_entries, &time_entry_line_total/1) ++
+        Enum.map(expenses, & &1.amount)
 
-    Enum.reduce(expenses, time_total, fn expense, total ->
-      Decimal.add(total, expense.amount)
+    Enum.reduce(values, Money.new!(currency, 0), fn money, total ->
+      Money.add!(total, money)
     end)
   end
 
@@ -212,9 +213,9 @@ defmodule GnomeGarden.Finance.Changes.CreateInvoiceFromAgreementSources do
   end
 
   defp time_entry_line_total(time_entry) do
-    time_entry_quantity(time_entry)
-    |> Decimal.mult(time_entry.bill_rate)
-    |> Decimal.round(2)
+    time_entry.bill_rate
+    |> Money.mult!(time_entry_quantity(time_entry))
+    |> Money.round()
   end
 
   defp expense_line_kind(%{category: category})

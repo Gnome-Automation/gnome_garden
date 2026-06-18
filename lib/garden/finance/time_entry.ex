@@ -203,11 +203,11 @@ defmodule GnomeGarden.Finance.TimeEntry do
       public? true
     end
 
-    attribute :bill_rate, :decimal do
+    attribute :bill_rate, :money do
       public? true
     end
 
-    attribute :cost_rate, :decimal do
+    attribute :cost_rate, :money do
       public? true
     end
 

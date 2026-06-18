@@ -104,7 +104,7 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
         organization_id: organization.id,
         payment_number: "PAY-100",
         received_on: ~D[2026-04-18],
-        amount: Decimal.new("1200.00")
+        amount: Money.new!(:USD,"1200.00")
       })
 
     {:ok, _index_view, _index_html} = live(conn, ~p"/finance/payments")
@@ -137,10 +137,10 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
         agreement_id: agreement.id,
         invoice_number: "INV-200",
         due_on: ~D[2026-05-10],
-        subtotal: Decimal.new("1000.00"),
-        tax_total: Decimal.new("0.00"),
-        total_amount: Decimal.new("1000.00"),
-        balance_amount: Decimal.new("1000.00")
+        subtotal: Money.new!(:USD,"1000.00"),
+        tax_total: Money.new!(:USD,"0.00"),
+        total_amount: Money.new!(:USD,"1000.00"),
+        balance_amount: Money.new!(:USD,"1000.00")
       })
 
     {:ok, payment} =
@@ -149,14 +149,14 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
         agreement_id: agreement.id,
         payment_number: "PAY-200",
         received_on: ~D[2026-04-18],
-        amount: Decimal.new("1000.00")
+        amount: Money.new!(:USD,"1000.00")
       })
 
     {:ok, payment_application} =
       Finance.create_payment_application(%{
         payment_id: payment.id,
         invoice_id: invoice.id,
-        amount: Decimal.new("1000.00"),
+        amount: Money.new!(:USD,"1000.00"),
         applied_on: ~D[2026-04-18]
       })
 
@@ -265,7 +265,7 @@ defmodule GnomeGardenWeb.MaintenanceFinanceLiveTest do
         incurred_on: ~D[2026-04-18],
         category: :travel,
         description: "Mileage and tolls",
-        amount: Decimal.new("84.50")
+        amount: Money.new!(:USD,"84.50")
       })
 
     {:ok, _index_view, _index_html} = live(conn, ~p"/finance/expenses")

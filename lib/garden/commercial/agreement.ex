@@ -454,11 +454,12 @@ defmodule GnomeGarden.Commercial.Agreement do
 
     sum :invoiced_amount, :invoices, :total_amount do
       public? true
+      filter expr(total_amount[:currency] == "USD")
     end
 
     sum :received_amount, :payments, :amount do
       public? true
-      filter expr(status in [:received, :deposited])
+      filter expr(status in [:received, :deposited] and amount[:currency] == "USD")
     end
 
     sum :billable_minutes, :time_entries, :minutes do
@@ -468,6 +469,7 @@ defmodule GnomeGarden.Commercial.Agreement do
 
     sum :expense_amount, :expenses, :amount do
       public? true
+      filter expr(amount[:currency] == "USD")
     end
 
     sum :approved_change_order_amount, :change_orders, :total_amount do

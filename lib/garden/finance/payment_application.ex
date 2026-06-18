@@ -42,6 +42,8 @@ defmodule GnomeGarden.Finance.PaymentApplication do
         :applied_on,
         :notes
       ]
+
+      change GnomeGarden.Finance.Changes.PostPaymentAppliedToLedger
     end
 
     update :update do
@@ -70,7 +72,7 @@ defmodule GnomeGarden.Finance.PaymentApplication do
   attributes do
     uuid_primary_key :id
 
-    attribute :amount, :decimal do
+    attribute :amount, :money do
       allow_nil? false
       public? true
     end
