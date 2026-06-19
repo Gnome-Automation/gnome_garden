@@ -16,7 +16,10 @@ defmodule GnomeGarden.Finance.Actions.BuildWorkToBillWorkspace do
     actor = context.actor
 
     with {:ok, time_entries} <-
-           Finance.list_unbilled_approved_time_entries(actor: actor, load: [organization: [], agreement: []]),
+           Finance.list_unbilled_approved_time_entries(
+             actor: actor,
+             load: [:billable_amount, organization: [], agreement: []]
+           ),
          {:ok, expenses} <-
            Finance.list_unbilled_approved_expenses(actor: actor, load: [organization: [], agreement: []]) do
       source_groups = source_groups(time_entries, expenses)
@@ -101,15 +104,9 @@ defmodule GnomeGarden.Finance.Actions.BuildWorkToBillWorkspace do
     |> Enum.max_by(&Date.to_iso8601/1, fn -> nil end)
   end
 
-  defp labor_amount(%{bill_rate: nil}), do: @zero
-
-  defp labor_amount(%{minutes: minutes, bill_rate: bill_rate}) when is_integer(minutes) do
-    minutes
-    |> Decimal.new()
-    |> Decimal.div(Decimal.new(60))
-    |> Decimal.mult(Reports.amount(bill_rate))
-  end
-
+  # Single source of truth for billable labor is the TimeEntry.billable_amount
+  # calculation; here we only convert the (USD) money to a decimal for summing.
+  defp labor_amount(%{billable_amount: %Money{} = amount}), do: Reports.amount(amount)
   defp labor_amount(_time_entry), do: @zero
 
   defp related_name(%Ash.NotLoaded{}), do: "Unassigned"

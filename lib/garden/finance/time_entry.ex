@@ -275,6 +275,10 @@ defmodule GnomeGarden.Finance.TimeEntry do
                  billed: :info
                ],
                default: :default}
+
+    calculate :billable_amount, :money, GnomeGarden.Finance.Calculations.BillableAmount do
+      public? true
+    end
   end
 
   aggregates do

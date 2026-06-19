@@ -29,6 +29,14 @@ defmodule GnomeGardenWeb.Finance.Helpers do
   def format_minutes(nil), do: "-"
   def format_minutes(value) when is_integer(value), do: "#{value} min"
 
+  # Match confidence is stored as a 0..1 decimal probability; show it as a percent.
+  def format_confidence(nil), do: "-"
+
+  def format_confidence(%Decimal{} = confidence) do
+    pct = confidence |> Decimal.mult(Decimal.new(100)) |> Decimal.round(0) |> Decimal.to_integer()
+    "#{pct}% match"
+  end
+
   def display_email(value, fallback \\ "-")
   def display_email(nil, fallback), do: fallback
   def display_email(%Ash.NotLoaded{}, fallback), do: fallback

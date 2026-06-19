@@ -173,7 +173,7 @@ defmodule GnomeGardenWeb.Finance.WorkToBillLive do
 
         <div class="shrink-0 text-right">
           <p class="font-semibold tabular-nums">{format_minutes(@entry.minutes)}</p>
-          <p class="text-xs text-base-content/50">{format_amount(labor_amount(@entry))}</p>
+          <p class="text-xs text-base-content/50">{format_amount(@entry.billable_amount)}</p>
         </div>
       </div>
     </div>
@@ -232,15 +232,4 @@ defmodule GnomeGardenWeb.Finance.WorkToBillLive do
 
   defp format_hours(nil), do: "0 hr"
   defp format_hours(minutes), do: "#{Float.round(minutes / 60, 1)} hr"
-
-  defp labor_amount(%{bill_rate: nil}), do: Decimal.new(0)
-
-  defp labor_amount(%{minutes: minutes, bill_rate: bill_rate}) when is_integer(minutes) do
-    minutes
-    |> Decimal.new()
-    |> Decimal.div(Decimal.new(60))
-    |> Decimal.mult(bill_rate)
-  end
-
-  defp labor_amount(_entry), do: Decimal.new(0)
 end

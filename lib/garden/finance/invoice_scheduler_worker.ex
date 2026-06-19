@@ -155,7 +155,7 @@ defmodule GnomeGarden.Finance.InvoiceSchedulerWorker do
     lines_html =
       invoice.invoice_lines
       |> Enum.map(fn line ->
-        "<tr><td>#{line.description}</td><td>#{line.amount}</td></tr>"
+        "<tr><td>#{line.description}</td><td>#{line.line_total}</td></tr>"
       end)
       |> Enum.join("\n")
 

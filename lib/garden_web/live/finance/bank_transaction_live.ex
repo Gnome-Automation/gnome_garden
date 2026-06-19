@@ -102,7 +102,7 @@ defmodule GnomeGardenWeb.Finance.BankTransactionLive do
          {:ok, _match} <-
            Banking.accept_bank_transaction_match(
              match,
-             %{notes: "Accepted from transaction detail"},
+             %{note: "Accepted from transaction detail"},
              actor: socket.assigns.current_user
            ) do
       {:noreply,
@@ -120,7 +120,7 @@ defmodule GnomeGardenWeb.Finance.BankTransactionLive do
          {:ok, _match} <-
            Banking.reject_bank_transaction_match(
              match,
-             %{notes: "Rejected from transaction detail"},
+             %{note: "Rejected from transaction detail"},
              actor: socket.assigns.current_user
            ) do
       {:noreply,
@@ -449,10 +449,10 @@ defmodule GnomeGardenWeb.Finance.BankTransactionLive do
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <p class="text-sm font-semibold text-base-content">
-            {payment_label(@match.payment)}
+            {journal_entry_label(@match.journal_entry)}
           </p>
           <p class="mt-1 text-xs text-base-content/55">
-            {invoice_label(@match.invoice)}
+            {format_amount(@match.amount)}
           </p>
         </div>
         <.status_badge status={match_status_variant(@match.status)}>
@@ -460,16 +460,15 @@ defmodule GnomeGardenWeb.Finance.BankTransactionLive do
         </.status_badge>
       </div>
 
-      <div class="mt-3 flex flex-wrap gap-1.5">
-        <.status_badge status={:default}>{format_atom(@match.match_source)}</.status_badge>
-        <.status_badge status={:info}>{format_atom(@match.confidence)}</.status_badge>
+      <div :if={@match.confidence} class="mt-3 flex flex-wrap gap-1.5">
+        <.status_badge status={:info}>{format_confidence(@match.confidence)}</.status_badge>
       </div>
 
-      <p :if={@match.notes} class="mt-3 text-xs text-base-content/60">
-        {@match.notes}
+      <p :if={@match.note} class="mt-3 text-xs text-base-content/60">
+        {@match.note}
       </p>
 
-      <div :if={@match.status == :suggested} class="mt-3 flex flex-wrap gap-2">
+      <div :if={@match.status == :proposed} class="mt-3 flex flex-wrap gap-2">
         <.button phx-click="accept_match" phx-value-id={@match.id} variant="primary">
           <.icon name="hero-check" class="size-4" /> Accept
         </.button>
@@ -579,18 +578,16 @@ defmodule GnomeGardenWeb.Finance.BankTransactionLive do
   defp masked_last4(nil), do: "-"
   defp masked_last4(value), do: "****#{value}"
 
-  defp payment_label(%Ash.NotLoaded{}), do: "Payment"
-  defp payment_label(nil), do: "Payment"
+  defp journal_entry_label(%Ash.NotLoaded{}), do: "Ledger entry"
+  defp journal_entry_label(nil), do: "Ledger entry"
 
-  defp payment_label(%{payment_number: nil, amount: amount}),
-    do: "Payment #{format_amount(amount)}"
+  defp journal_entry_label(%{entry_number: number, description: description})
+       when is_binary(number) and is_binary(description),
+       do: "#{number} · #{description}"
 
-  defp payment_label(%{payment_number: number}), do: number
-
-  defp invoice_label(%Ash.NotLoaded{}), do: "No invoice linked"
-  defp invoice_label(nil), do: "No invoice linked"
-  defp invoice_label(%{invoice_number: nil}), do: "Invoice"
-  defp invoice_label(%{invoice_number: number}), do: number
+  defp journal_entry_label(%{entry_number: number}) when is_binary(number), do: number
+  defp journal_entry_label(%{description: description}) when is_binary(description), do: description
+  defp journal_entry_label(_entry), do: "Ledger entry"
 
   defp match_status_variant(:accepted), do: :success
   defp match_status_variant(:rejected), do: :error
