@@ -47,11 +47,11 @@ defmodule GnomeGarden.Search.Exa do
     with {:ok, api_key} <- api_key() do
       body = build_body(query, opts)
 
-      case Req.post(@endpoint,
-             json: body,
-             headers: [{"x-api-key", api_key}],
-             receive_timeout: @receive_timeout
-           ) do
+      request_options =
+        [json: body, headers: [{"x-api-key", api_key}], receive_timeout: @receive_timeout]
+        |> Keyword.merge(req_options())
+
+      case Req.post(@endpoint, request_options) do
         {:ok, %Req.Response{status: 200, body: payload}} ->
           {:ok, normalize(payload)}
 
@@ -100,9 +100,14 @@ defmodule GnomeGarden.Search.Exa do
   end
 
   defp api_key do
-    case Application.get_env(:gnome_garden, :exa)[:api_key] || System.get_env("EXA_API_KEY") do
+    case exa_config()[:api_key] || System.get_env("EXA_API_KEY") do
       key when is_binary(key) and key != "" -> {:ok, key}
       _ -> {:error, :missing_exa_api_key}
     end
   end
+
+  # Extra Req options (e.g. a test stub via `plug: {Req.Test, __MODULE__}`).
+  defp req_options, do: exa_config()[:req_options] || []
+
+  defp exa_config, do: Application.get_env(:gnome_garden, :exa, [])
 end

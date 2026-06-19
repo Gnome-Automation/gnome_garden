@@ -35,6 +35,12 @@ config :gnome_garden, GnomeGardenWeb.Endpoint,
 # In test we don't send emails
 config :gnome_garden, GnomeGarden.Mailer, adapter: Swoosh.Adapters.Test
 
+# Exa: a fixed test key + route all requests through a Req.Test stub so tests
+# never hit the network.
+config :gnome_garden, :exa,
+  api_key: "test-exa-key",
+  req_options: [plug: {Req.Test, GnomeGarden.Search.Exa}]
+
 config :gnome_garden, GnomeGarden.Acquisition.Document,
   storage: [service: {AshStorage.Service.Test, []}]
 
