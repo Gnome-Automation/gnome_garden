@@ -1,15 +1,15 @@
 defmodule GnomeGarden.Banking.Reconciliation do
   @moduledoc """
-  Auto-reconciliation: categorizes bank transactions via `BankRule`s and proposes
-  `BankTransactionMatch`es against posted ledger entries.
+  Auto-reconciliation: applies `BankRule`s to bank transactions (categorize, set
+  review status) and proposes `BankTransactionMatch`es against posted ledger
+  entries.
 
-  Matching follows the "propose, human disposes" pattern — it only creates
-  `:proposed` matches; a human accepts/rejects them. Proposals are idempotent:
-  the `(bank_transaction_id, journal_entry_id)` identity prevents duplicates, and
-  transactions that already have any match are skipped.
-
-  An entry is a candidate for a transaction when it is posted within a ±5-day
-  window of the transaction date and its total equals the transaction amount.
+  Rule matching considers direction, counterparty/description substrings, and an
+  optional amount condition. The first matching enabled rule (lowest priority)
+  wins. Its `match_behavior` controls matching: `:none` proposes nothing,
+  `:suggest` proposes candidates, `:auto_accept_when_exact` auto-accepts a single
+  candidate. Proposals are idempotent (the (transaction, entry) identity prevents
+  duplicates; already-matched transactions are skipped).
   """
 
   require Logger
@@ -37,47 +37,79 @@ defmodule GnomeGarden.Banking.Reconciliation do
     end)
   end
 
-  @doc "Categorizes a single transaction and proposes matches for it."
+  @doc "Applies the first matching rule (if any) to a transaction and proposes matches."
   def reconcile_transaction(transaction, rules) do
-    categorize(transaction, rules)
-    propose_matches(transaction)
-  end
-
-  # --- Categorization ---
-
-  defp categorize(transaction, rules) do
     case Enum.find(rules, &rule_matches?(&1, transaction)) do
       nil ->
-        :ok
+        propose_matches(transaction, :suggest)
 
       rule ->
-        if transaction.category != rule.set_category do
-          Banking.categorize_bank_transaction(transaction, %{category: rule.set_category})
-        end
+        apply_rule(transaction, rule)
     end
   end
 
+  # --- Rule matching ---
+
   defp rule_matches?(rule, transaction) do
-    value = field_value(transaction, rule.match_field)
-    value != nil and test_match(rule.match_type, String.downcase(value), String.downcase(rule.match_value))
+    rule.enabled and
+      direction_matches?(rule, transaction) and
+      substring_matches?(rule.counterparty_contains, transaction.counterparty_name) and
+      substring_matches?(rule.description_contains, transaction.description) and
+      amount_matches?(rule, transaction)
   end
 
-  defp field_value(transaction, :counterparty_name), do: transaction.counterparty_name
-  defp field_value(transaction, :description), do: transaction.description
+  defp direction_matches?(%{direction: :both}, _transaction), do: true
+  defp direction_matches?(%{direction: direction}, %{direction: direction}), do: true
+  defp direction_matches?(_rule, _transaction), do: false
 
-  defp test_match(:contains, value, target), do: String.contains?(value, target)
-  defp test_match(:equals, value, target), do: value == target
-  defp test_match(:starts_with, value, target), do: String.starts_with?(value, target)
+  defp substring_matches?(nil, _value), do: true
+  defp substring_matches?("", _value), do: true
+  defp substring_matches?(_needle, nil), do: false
+
+  defp substring_matches?(needle, value),
+    do: String.contains?(String.downcase(value), String.downcase(needle))
+
+  defp amount_matches?(%{amount_operator: nil}, _transaction), do: true
+
+  defp amount_matches?(%{amount_operator: operator, amount_value: target}, transaction) do
+    amount = Reports.amount(transaction.amount)
+
+    case Decimal.compare(amount, target) do
+      :lt -> operator in [:lt, :lte]
+      :eq -> operator in [:eq, :lte, :gte]
+      :gt -> operator in [:gt, :gte]
+    end
+  end
+
+  # --- Rule application ---
+
+  defp apply_rule(transaction, rule) do
+    category = Atom.to_string(rule.category)
+
+    if transaction.category != category do
+      Banking.categorize_bank_transaction(transaction, %{category: category})
+    end
+
+    apply_review_status(transaction, rule.review_status_result)
+    propose_matches(transaction, rule.match_behavior)
+  end
+
+  # Map a rule's review_status_result to our BankTransaction review_status.
+  defp apply_review_status(_transaction, :needs_review), do: :ok
+  defp apply_review_status(transaction, :reviewed), do: safe(fn -> Banking.mark_bank_transaction_reviewed(transaction) end)
+  defp apply_review_status(transaction, :ignored), do: safe(fn -> Banking.ignore_bank_transaction(transaction) end)
+  defp apply_review_status(transaction, :auto_matched), do: safe(fn -> Banking.mark_bank_transaction_matched(transaction) end)
 
   # --- Match proposal ---
 
-  defp propose_matches(transaction) do
+  defp propose_matches(_transaction, :none), do: :ok
+
+  defp propose_matches(transaction, behavior) do
     if already_matched?(transaction) do
       :ok
     else
-      transaction
-      |> candidate_entries()
-      |> create_proposals(transaction)
+      candidates = candidate_entries(transaction)
+      create_proposals(candidates, transaction, behavior)
     end
   end
 
@@ -94,10 +126,7 @@ defmodule GnomeGarden.Banking.Reconciliation do
     date = DateTime.to_date(transaction.occurred_at)
     amount = Reports.amount(transaction.amount)
 
-    case Ledger.list_posted_journal_entries_between(
-           Date.add(date, -@window_days),
-           Date.add(date, @window_days)
-         ) do
+    case Ledger.list_posted_journal_entries_between(Date.add(date, -@window_days), Date.add(date, @window_days)) do
       {:ok, entries} ->
         Enum.filter(entries, fn entry ->
           Decimal.equal?(Reports.sum(entry.journal_lines, :debit), amount)
@@ -108,28 +137,44 @@ defmodule GnomeGarden.Banking.Reconciliation do
     end
   end
 
-  defp create_proposals([], _transaction), do: :ok
+  defp create_proposals([], _transaction, _behavior), do: :ok
 
-  defp create_proposals(entries, transaction) do
+  defp create_proposals(entries, transaction, behavior) do
     confidence = if length(entries) == 1, do: Decimal.new("1.0"), else: Decimal.new("0.5")
 
     Enum.each(entries, fn entry ->
-      case Banking.create_bank_transaction_match(%{
-             bank_transaction_id: transaction.id,
-             journal_entry_id: entry.id,
-             amount: transaction.amount,
-             confidence: confidence
-           }) do
-        {:ok, _match} -> :ok
-        {:error, reason} -> Logger.debug("skip duplicate/invalid match proposal: #{inspect(reason)}")
+      with {:ok, match} <-
+             Banking.create_bank_transaction_match(%{
+               bank_transaction_id: transaction.id,
+               journal_entry_id: entry.id,
+               amount: transaction.amount,
+               confidence: confidence
+             }) do
+        maybe_auto_accept(match, behavior, length(entries))
+      else
+        {:error, reason} -> Logger.debug("skip duplicate/invalid match: #{inspect(reason)}")
       end
     end)
   end
+
+  defp maybe_auto_accept(match, :auto_accept_when_exact, 1),
+    do: safe(fn -> Banking.accept_bank_transaction_match(match) end)
+
+  defp maybe_auto_accept(_match, _behavior, _count), do: :ok
 
   defp list_rules do
     case Banking.list_bank_rules_sorted() do
       {:ok, rules} -> rules
       _ -> []
     end
+  end
+
+  defp safe(fun) do
+    fun.()
+    :ok
+  rescue
+    error ->
+      Logger.debug("reconciliation transition skipped: #{inspect(error)}")
+      :ok
   end
 end

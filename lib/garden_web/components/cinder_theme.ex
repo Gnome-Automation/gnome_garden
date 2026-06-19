@@ -112,7 +112,14 @@ defmodule GnomeGardenWeb.CinderTheme do
   set :empty_class, "py-10"
   set :empty_container_class, "text-center text-sm text-base-content/50"
 
+  # List layout
+  set :list_container_class, "space-y-2 p-3 sm:p-4"
+  set :list_item_class, ""
+  set :list_item_clickable_class, "cursor-pointer transition hover:bg-base-200"
+  set :list_selection_container_class, "mb-2"
+
   # Grid layout
-  set :grid_class, "grid gap-4 p-4 sm:p-5"
+  set :grid_container_class, "grid gap-4 p-4 sm:p-5"
   set :grid_item_class, ""
+  set :grid_item_clickable_class, "cursor-pointer transition hover:bg-base-200"
 end

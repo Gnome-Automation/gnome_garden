@@ -55,4 +55,61 @@ defmodule GnomeGardenWeb.Finance.Helpers do
 
   defp sum_values(values),
     do: Enum.reduce(values, Decimal.new(0), fn value, total -> Decimal.add(total, value) end)
+
+  # --- Banking display helpers (adapted to the Banking domain's enums) ---
+
+  def bank_transaction_counterparty(transaction),
+    do: transaction.counterparty_name || transaction.description || "Unknown counterparty"
+
+  def bank_amount_classes(%Decimal{} = amount) do
+    if Decimal.compare(amount, Decimal.new(0)) == :gt,
+      do: "font-medium text-success",
+      else: "font-medium text-error"
+  end
+
+  def bank_amount_classes(_), do: "font-medium"
+
+  # provider status: pending | sent | cancelled | failed
+  def bank_transaction_status_variant(:sent), do: :success
+  def bank_transaction_status_variant(:pending), do: :warning
+  def bank_transaction_status_variant(:failed), do: :error
+  def bank_transaction_status_variant(:cancelled), do: :default
+  def bank_transaction_status_variant(_), do: :default
+
+  # review_status: unreviewed | reviewed | ignored | matched
+  def bank_review_status_variant(:unreviewed), do: :warning
+  def bank_review_status_variant(:matched), do: :info
+  def bank_review_status_variant(:reviewed), do: :success
+  def bank_review_status_variant(:ignored), do: :default
+  def bank_review_status_variant(_), do: :default
+
+  # match status: proposed | accepted | rejected | superseded
+  def bank_match_status_variant(:accepted), do: :success
+  def bank_match_status_variant(:proposed), do: :warning
+  def bank_match_status_variant(:superseded), do: :default
+  def bank_match_status_variant(:rejected), do: :error
+  def bank_match_status_variant(_), do: :error
+
+  def bank_match_status_label(:accepted), do: "Accepted"
+  def bank_match_status_label(:proposed), do: "Proposed"
+  def bank_match_status_label(:rejected), do: "Rejected"
+  def bank_match_status_label(:superseded), do: "Superseded"
+  def bank_match_status_label(_), do: "Unmatched"
+
+  def bank_transaction_category_options do
+    [
+      {"Customer payment", :customer_payment},
+      {"Vendor payment", :vendor_payment},
+      {"Bank fee", :bank_fee},
+      {"Internal transfer", :internal_transfer},
+      {"Misc income", :misc_income},
+      {"Refund", :refund},
+      {"Interest income", :interest_income},
+      {"Owner draw", :owner_draw},
+      {"Payroll", :payroll},
+      {"Tax", :tax},
+      {"Unknown", :unknown},
+      {"Other", :other}
+    ]
+  end
 end

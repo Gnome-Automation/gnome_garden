@@ -336,14 +336,64 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
     # Finance
     %{
-      id: "fin-invoices",
+      id: "fin-overview",
       section: "Finance",
-      icon: "hero-banknotes",
-      label: "Invoices",
-      path: "/finance/invoices",
+      icon: "hero-chart-pie",
+      label: "Overview",
+      path: "/finance",
       badge: 0,
       hot: false,
-      match: ["/finance/invoices"]
+      match: ["/finance/overview"]
+    },
+    %{
+      id: "fin-bank-rules",
+      section: "Finance",
+      icon: "hero-funnel",
+      label: "Bank Rules",
+      path: "/finance/banking/rules",
+      badge: 0,
+      hot: false,
+      match: ["/finance/banking/rules"]
+    },
+    %{
+      id: "fin-bank-sync",
+      section: "Finance",
+      icon: "hero-arrow-path",
+      label: "Sync Health",
+      path: "/finance/banking/sync-runs",
+      badge: 0,
+      hot: false,
+      match: ["/finance/banking/sync-runs"]
+    },
+    %{
+      id: "fin-banking",
+      section: "Finance",
+      icon: "hero-building-library",
+      label: "Banking",
+      path: "/finance/banking",
+      badge: 0,
+      hot: false,
+      match: ["/finance/banking"]
+    },
+    %{
+      id: "fin-receivables",
+      section: "Finance",
+      icon: "hero-banknotes",
+      label: "Receivables",
+      path: "/finance/receivables",
+      badge: 0,
+      hot: false,
+      match: ["/finance/receivables", "/finance/invoices", "/finance/payments"]
+    },
+    %{
+      id: "fin-work-to-bill",
+      section: "Finance",
+      icon: "hero-document-check",
+      label: "Work to Bill",
+      path: "/finance/work-to-bill",
+      badge: 0,
+      hot: false,
+      match: ["/finance/work-to-bill", "/finance/time-entries", "/finance/expenses"]
     },
 
     # Reports

@@ -197,6 +197,17 @@ defmodule GnomeGardenWeb.Router do
       live "/execution/maintenance-plans/:id", Execution.MaintenancePlanLive.Show, :show
       live "/execution/maintenance-plans/:id/edit", Execution.MaintenancePlanLive.Form, :edit
 
+      # Finance - Overview & Banking
+      live "/finance", Finance.OverviewLive, :index
+      live "/finance/banking", Finance.BankingLive, :index
+      live "/finance/banking/accounts/:id", Finance.BankAccountLive, :show
+      live "/finance/banking/transactions/:id", Finance.BankTransactionLive, :show
+      live "/finance/banking/review", Finance.BankingReviewLive, :index
+      live "/finance/banking/rules", Finance.BankRuleLive.Index, :index
+      live "/finance/banking/sync-runs", Finance.BankingSyncLive, :index
+      live "/finance/receivables", Finance.ReceivablesLive, :index
+      live "/finance/work-to-bill", Finance.WorkToBillLive, :index
+
       # Finance - Invoices
       live "/finance/invoices", Finance.InvoiceLive.Index, :index
       live "/finance/invoices/new", Finance.InvoiceLive.Form, :new

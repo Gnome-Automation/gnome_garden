@@ -101,9 +101,15 @@ defmodule GnomeGarden.Banking do
       define :list_bank_rules_sorted, action: :sorted
       define :get_bank_rule, action: :read, get_by: [:id]
       define :create_bank_rule, action: :create
+
+      define :create_bank_rule_from_transaction,
+        action: :create_from_transaction,
+        args: [:bank_transaction_id]
+
       define :update_bank_rule, action: :update
       define :enable_bank_rule, action: :enable
       define :disable_bank_rule, action: :disable
+      define :reorder_bank_rule, action: :reorder
       define :delete_bank_rule, action: :destroy
     end
 
