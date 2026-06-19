@@ -52,5 +52,12 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLiveTest do
     render_click(view, "promote", %{"index" => "0"})
 
     assert {:ok, _record} = Commercial.get_discovery_record_by_website_domain(domain)
+
+    # The run + candidate were persisted, and the promote outcome was mirrored.
+    {:ok, [run]} = GnomeGarden.Acquisition.list_recent_lead_preview_runs()
+    {:ok, candidates} = GnomeGarden.Acquisition.list_lead_preview_candidates_for_run(run.id)
+    promoted = Enum.find(candidates, &(&1.website_domain == domain))
+    assert promoted.status == :promoted
+    assert promoted.promoted_record_id
   end
 end

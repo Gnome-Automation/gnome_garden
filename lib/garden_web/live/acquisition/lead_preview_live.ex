@@ -13,6 +13,7 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
 
   import GnomeGardenWeb.Finance.Helpers, only: [format_atom: 1]
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.{LeadPreview, LeadPromote}
   alias GnomeGarden.Commercial
 
@@ -81,20 +82,10 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
 
   @impl true
   def handle_event("promote_keepers", _params, socket) do
-    program_id = blank_to_nil(socket.assigns.program_id)
-    actor = socket.assigns.current_user
-
     candidates =
       Enum.map(socket.assigns.candidates, fn candidate ->
         if candidate.route == :promote and candidate.status != :promoted do
-          status =
-            case LeadPromote.promote(candidate, actor: actor, discovery_program_id: program_id) do
-              {:promoted, _} -> :promoted
-              {:needs_enrichment, _} -> :needs_enrichment
-              {:skipped, _} -> :skipped
-            end
-
-          %{candidate | status: status}
+          %{candidate | status: do_promote(candidate, socket)}
         else
           candidate
         end
@@ -244,14 +235,45 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
   defp maybe_warn_failures(socket, _preview), do: socket
 
   defp promote_outcome(candidate, socket) do
-    case LeadPromote.promote(candidate,
-           actor: socket.assigns.current_user,
-           discovery_program_id: blank_to_nil(socket.assigns.program_id)
-         ) do
-      {:promoted, _record} -> {:promoted, :info, "Promoted to the review queue."}
-      {:needs_enrichment, _} -> {:needs_enrichment, :error, "Needs enrichment — the page domain isn't the prospect."}
-      {:skipped, %{reason: reason}} -> {:skipped, :error, "Skipped: #{reason}"}
+    case do_promote(candidate, socket) do
+      :promoted -> {:promoted, :info, "Promoted to the review queue."}
+      :needs_enrichment -> {:needs_enrichment, :error, "Needs enrichment — the page domain isn't the prospect."}
+      :skipped -> {:skipped, :error, "Skipped — already known / context, not a new lead."}
     end
+  end
+
+  # Promotes via LeadPromote and mirrors the outcome onto the persisted preview
+  # candidate, so the run record reflects what the operator did.
+  defp do_promote(candidate, socket) do
+    run_id = socket.assigns.preview && socket.assigns.preview.run_id
+
+    {status, record_id} =
+      case LeadPromote.promote(candidate,
+             actor: socket.assigns.current_user,
+             discovery_program_id: blank_to_nil(socket.assigns.program_id)
+           ) do
+        {:promoted, record} -> {:promoted, record.id}
+        {:needs_enrichment, _} -> {:needs_enrichment, nil}
+        {:skipped, _} -> {:skipped, nil}
+      end
+
+    sync_persisted(run_id, candidate, status, record_id)
+    status
+  end
+
+  defp sync_persisted(nil, _candidate, _status, _record_id), do: :ok
+
+  defp sync_persisted(run_id, candidate, status, record_id) do
+    with {:ok, persisted} <- Acquisition.list_lead_preview_candidates_for_run(run_id),
+         %{} = row <- Enum.find(persisted, &(&1.url == candidate.url)) do
+      if status == :promoted and record_id do
+        Acquisition.mark_lead_preview_candidate_promoted(row, %{promoted_record_id: record_id})
+      else
+        Acquisition.mark_lead_preview_candidate_status(row, %{status: status})
+      end
+    end
+
+    :ok
   end
 
   defp programs(actor) do

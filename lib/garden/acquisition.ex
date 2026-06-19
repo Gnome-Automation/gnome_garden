@@ -113,6 +113,19 @@ defmodule GnomeGarden.Acquisition do
       define :list_research_links, action: :read
       define :create_research_link, action: :create
     end
+
+    resource GnomeGarden.Acquisition.LeadPreviewRun do
+      define :create_lead_preview_run, action: :create
+      define :get_lead_preview_run, action: :read, get_by: [:id]
+      define :list_recent_lead_preview_runs, action: :recent
+    end
+
+    resource GnomeGarden.Acquisition.LeadPreviewCandidate do
+      define :get_lead_preview_candidate, action: :read, get_by: [:id]
+      define :list_lead_preview_candidates_for_run, action: :for_run, args: [:lead_preview_run_id]
+      define :mark_lead_preview_candidate_promoted, action: :mark_promoted
+      define :mark_lead_preview_candidate_status, action: :mark_status
+    end
   end
 
   def sync_bid_finding(bid_or_id, opts \\ []), do: Projector.sync_bid(bid_or_id, opts)

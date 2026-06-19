@@ -55,13 +55,40 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
       assert preview.total_cost == 0.007
 
       contexts = Enum.map(preview.candidates, & &1.dedupe.context)
-      # Signal-intent query: a known org becomes a new-signal (kept), not a dupe.
-      assert :known_organization_new_signal in contexts
+      # A known org's OWN page (company domain) is a duplicate, even when found
+      # via a signal-shaped query — type is decided by the domain, not the query.
+      assert :duplicate_existing_lead in contexts
       assert :new in contexts
+
+      # Both candidates are on plain company domains -> company type.
+      assert Enum.all?(preview.candidates, &(&1.type == :company))
 
       # Kept candidates rank ahead of suppressed ones.
       suppress_flags = Enum.map(preview.candidates, & &1.dedupe.suppress?)
       assert suppress_flags == Enum.sort(suppress_flags)
+    end
+
+    test "persists the run and its candidates, and a signal-query company page is promotable" do
+      Req.Test.stub(Exa, fn conn ->
+        Req.Test.json(conn, %{
+          "costDollars" => %{"total" => 0.01},
+          "results" => [%{"title" => "Acme Co", "url" => "https://acme-#{uniq()}.example.com", "publishedDate" => nil}]
+        })
+      end)
+
+      assert {:ok, %{run_id: run_id, promotable_count: 1}} =
+               LeadPreview.run(industries: ["manufacturing"], regions: ["california"], max_queries: 1, spend_ceiling: 1.0)
+
+      assert is_binary(run_id)
+      assert {:ok, run} = GnomeGarden.Acquisition.get_lead_preview_run(run_id)
+      assert run.candidate_count == 1
+      assert run.promotable_count == 1
+      assert Decimal.equal?(run.total_cost, Decimal.new("0.01"))
+
+      assert {:ok, [candidate]} = GnomeGarden.Acquisition.list_lead_preview_candidates_for_run(run_id)
+      # Company domain from a signal-shaped query -> :company -> promotable, not enrichment.
+      assert candidate.candidate_type == :company
+      assert candidate.route == :promote
     end
 
     test "always excludes vendor domains and passes recency + category through to Exa" do

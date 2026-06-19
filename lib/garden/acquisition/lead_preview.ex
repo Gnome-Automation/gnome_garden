@@ -14,7 +14,10 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   surfaces vendors rather than prospects. Edit `@signal_templates` to retune.
   """
 
-  alias GnomeGarden.Acquisition.LeadDedup
+  require Logger
+
+  alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.{LeadDedup, LeadPromote}
   alias GnomeGarden.Commercial
   alias GnomeGarden.Search.Exa
   alias GnomeGarden.Support.WebIdentity
@@ -45,12 +48,14 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     {:signal, "{region} water district SCADA upgrade board agenda"}
   ]
 
-  # Host substrings that mark a page as a signal (job board / press / portal),
-  # not a company homepage.
+  # Host substrings that mark a page as a signal (job board / press / portal /
+  # social / bid portal), NOT the prospect's own company page.
   @signal_host_markers ~w(
     job jobs careers hiring greenhouse lever workable indeed ziprecruiter
     prnewswire businesswire globenewswire einpresswire prweb
     linkedin breakroom tealhq applytojob earnbetter
+    facebook twitter crunchbase glassdoor
+    planetbids bidnet demandstar bonfirehub publicpurchase opengov bidexpress periscope
   )
 
   @context_rank %{
@@ -103,19 +108,114 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       |> LeadDedup.classify_all(actor: actor)
       |> Enum.map(fn {candidate, dedupe} -> Map.put(candidate, :dedupe, dedupe) end)
       |> Enum.sort_by(&rank_key/1)
+      |> Enum.with_index()
+      |> Enum.map(fn {candidate, rank} ->
+        candidate |> Map.put(:route, LeadPromote.route(candidate)) |> Map.put(:rank, rank)
+      end)
+
+    promotable = Enum.count(ranked, &(&1.route == :promote))
+    needs_enrichment = Enum.count(ranked, &(&1.route == :needs_enrichment))
+    suppressed = Enum.count(ranked, & &1.dedupe.suppress?)
+    error_strings = errors |> Enum.reverse() |> Enum.map(&inspect/1)
+
+    summary = %{
+      executed: executed,
+      cost: Float.round(cost, 4),
+      promotable: promotable,
+      needs_enrichment: needs_enrichment,
+      suppressed: suppressed,
+      errors: error_strings
+    }
+
+    run = persist_run(ranked, opts, summary)
 
     {:ok,
      %{
+       run_id: run && run.id,
        queries_run: executed,
        total_cost: Float.round(cost, 4),
        candidate_count: length(ranked),
+       promotable_count: promotable,
+       needs_enrichment_count: needs_enrichment,
        kept_count: Enum.count(ranked, &(not &1.dedupe.suppress?)),
-       suppressed_count: Enum.count(ranked, & &1.dedupe.suppress?),
+       suppressed_count: suppressed,
        failed_queries: length(errors),
-       errors: Enum.reverse(errors),
+       errors: error_strings,
        candidates: ranked
      }}
   end
+
+  defp persist_run(ranked, opts, summary) do
+    if Keyword.get(opts, :persist, true) do
+      now = DateTime.truncate(DateTime.utc_now(), :second)
+
+      attrs = %{
+        source: :exa,
+        status: run_status(summary),
+        started_at: now,
+        finished_at: now,
+        query_count: summary.executed,
+        candidate_count: length(ranked),
+        promotable_count: summary.promotable,
+        needs_enrichment_count: summary.needs_enrichment,
+        suppressed_count: summary.suppressed,
+        total_cost: cost_decimal(summary.cost),
+        errors: summary.errors,
+        discovery_program_id: Keyword.get(opts, :discovery_program_id),
+        created_by_id: actor_id(Keyword.get(opts, :actor)),
+        candidates: Enum.map(ranked, &candidate_attrs/1)
+      }
+
+      case Acquisition.create_lead_preview_run(attrs, actor: Keyword.get(opts, :actor)) do
+        {:ok, run} ->
+          run
+
+        {:error, reason} ->
+          Logger.warning("LeadPreview: failed to persist run: #{inspect(reason)}")
+          nil
+      end
+    end
+  end
+
+  defp candidate_attrs(candidate) do
+    %{
+      title: candidate[:title],
+      url: candidate[:url],
+      website_domain: WebIdentity.website_domain(candidate[:url]),
+      query: candidate[:query],
+      published_date: candidate[:published_date],
+      candidate_type: candidate[:type],
+      dedupe_context: candidate.dedupe.context,
+      route: candidate.route,
+      suppressed: candidate.dedupe.suppress?,
+      recommendation: candidate.dedupe.recommendation,
+      rank: candidate.rank,
+      status: :pending,
+      metadata: %{"related" => related_metadata(candidate.dedupe)}
+    }
+  end
+
+  defp related_metadata(%{related: related}) when is_list(related) do
+    Enum.map(related, fn r -> %{"kind" => to_string(r[:kind]), "id" => r[:id], "label" => r[:label]} end)
+  end
+
+  defp related_metadata(_dedupe), do: []
+
+  defp run_status(%{executed: 0}), do: :failed
+
+  defp run_status(%{errors: errors, promotable: p, needs_enrichment: n, suppressed: s}) do
+    cond do
+      errors == [] -> :completed
+      p + n + s == 0 -> :failed
+      true -> :partial_failure
+    end
+  end
+
+  defp cost_decimal(cost) when is_float(cost), do: Decimal.from_float(cost)
+  defp cost_decimal(cost), do: Decimal.new(cost)
+
+  defp actor_id(%{id: id}), do: id
+  defp actor_id(_actor), do: nil
 
   @doc "Runs a preview from a `DiscoveryProgram`'s terms/regions/industries."
   def run_for_program(program, opts \\ [])
@@ -205,8 +305,11 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
 
   defp dedupe_within_run(candidates), do: Enum.uniq_by(candidates, & &1.url)
 
-  defp candidate_type(%{url: url, intent: intent}) do
-    if signal_host?(WebIdentity.website_domain(url)) or intent == :signal, do: :signal, else: :company
+  # Type is decided by the PAGE/DOMAIN, not the query intent: a company's own
+  # page found via a signal-shaped query is still a company (promotable), not a
+  # signal page needing enrichment. Query intent only affects ranking/context.
+  defp candidate_type(%{url: url}) do
+    if signal_host?(WebIdentity.website_domain(url)), do: :signal, else: :company
   end
 
   defp signal_host?(nil), do: false
