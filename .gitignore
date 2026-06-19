@@ -61,3 +61,6 @@ jido/
 .nix-mix/
 .nix-hex/
 result
+
+# Playwright MCP output
+.playwright-mcp/

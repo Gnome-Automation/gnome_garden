@@ -26,7 +26,7 @@ defmodule GnomeGarden.Finance.Actions.BuildFinanceOverviewWorkspace do
          cash_balance: banking.current_balance || @zero,
          bank_account_count: length(banking.accounts),
          bank_rule_count: length(banking.bank_rules),
-         enabled_bank_rule_count: Enum.count(banking.bank_rules, & &1.enabled?),
+         enabled_bank_rule_count: Enum.count(banking.bank_rules, & &1.enabled),
          needs_review_count: banking.needs_review_count || 0,
          failed_sync_count: banking.failed_sync_count || 0,
          running_sync_count: banking.running_sync_count || 0,

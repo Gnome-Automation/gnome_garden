@@ -31,7 +31,11 @@ defmodule GnomeGarden.Banking.Integrations.Mercury do
         {:ok, %{accounts: accounts, transactions: transactions}} ->
           Banking.finish_bank_sync_run_success(run, %{
             accounts_synced: accounts,
-            transactions_synced: transactions
+            transactions_synced: transactions,
+            accounts_seen_count: accounts,
+            transactions_seen_count: transactions,
+            transactions_created_count: transactions,
+            transactions_updated_count: 0
           })
 
           {:ok, %{accounts: accounts, transactions: transactions}}

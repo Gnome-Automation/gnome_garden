@@ -54,7 +54,15 @@ defmodule GnomeGarden.Banking.BankSyncRun do
     end
 
     update :finish_success do
-      accept [:accounts_synced, :transactions_synced]
+      accept [
+        :accounts_synced,
+        :transactions_synced,
+        :accounts_seen_count,
+        :transactions_seen_count,
+        :transactions_created_count,
+        :transactions_updated_count
+      ]
+
       change transition_state(:succeeded)
       change set_attribute(:finished_at, &DateTime.utc_now/0)
     end
@@ -114,6 +122,11 @@ defmodule GnomeGarden.Banking.BankSyncRun do
       default 0
       public? true
     end
+
+    attribute :accounts_seen_count, :integer, default: 0, public?: true
+    attribute :transactions_seen_count, :integer, default: 0, public?: true
+    attribute :transactions_created_count, :integer, default: 0, public?: true
+    attribute :transactions_updated_count, :integer, default: 0, public?: true
 
     attribute :error_message, :string do
       public? true
