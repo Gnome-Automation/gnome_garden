@@ -25,11 +25,13 @@ defmodule GnomeGarden.Banking.Reconciliation do
     rules = list_rules()
 
     Enum.each(accounts, fn account ->
+      cash_account_id = cash_account_id(account)
+
       case Banking.list_bank_transactions_for_account(account.id) do
         {:ok, transactions} ->
           transactions
           |> Enum.filter(&(&1.review_status == :unreviewed))
-          |> Enum.each(&reconcile_transaction(&1, rules))
+          |> Enum.each(&reconcile_transaction(&1, rules, cash_account_id))
 
         _ ->
           :ok
@@ -38,13 +40,25 @@ defmodule GnomeGarden.Banking.Reconciliation do
   end
 
   @doc "Applies the first matching rule (if any) to a transaction and proposes matches."
-  def reconcile_transaction(transaction, rules) do
+  def reconcile_transaction(transaction, rules, cash_account_id) do
     case Enum.find(rules, &rule_matches?(&1, transaction)) do
       nil ->
-        propose_matches(transaction, :suggest)
+        propose_matches(transaction, :suggest, cash_account_id)
 
       rule ->
-        apply_rule(transaction, rule)
+        apply_rule(transaction, rule, cash_account_id)
+    end
+  end
+
+  # The GL cash account a bank account reconciles against: the explicit link if
+  # set, otherwise the default operating bank account. Returns nil when neither
+  # can be resolved — in which case no matches are proposed (fail safe).
+  defp cash_account_id(%{ledger_account_id: id}) when not is_nil(id), do: id
+
+  defp cash_account_id(_account) do
+    case Ledger.get_account_by_number("1000") do
+      {:ok, account} -> account.id
+      _ -> nil
     end
   end
 
@@ -83,7 +97,7 @@ defmodule GnomeGarden.Banking.Reconciliation do
 
   # --- Rule application ---
 
-  defp apply_rule(transaction, rule) do
+  defp apply_rule(transaction, rule, cash_account_id) do
     category = Atom.to_string(rule.category)
 
     if transaction.category != category do
@@ -91,7 +105,7 @@ defmodule GnomeGarden.Banking.Reconciliation do
     end
 
     apply_review_status(transaction, rule.review_status_result)
-    propose_matches(transaction, rule.match_behavior)
+    propose_matches(transaction, rule.match_behavior, cash_account_id)
   end
 
   # Map a rule's review_status_result to our BankTransaction review_status.
@@ -102,14 +116,14 @@ defmodule GnomeGarden.Banking.Reconciliation do
 
   # --- Match proposal ---
 
-  defp propose_matches(_transaction, :none), do: :ok
+  defp propose_matches(_transaction, :none, _cash_account_id), do: :ok
 
-  defp propose_matches(transaction, behavior) do
+  defp propose_matches(transaction, behavior, cash_account_id) do
     if already_matched?(transaction) do
       :ok
     else
-      candidates = candidate_entries(transaction)
-      create_proposals(candidates, transaction, behavior)
+      candidates = candidate_entries(transaction, cash_account_id)
+      create_proposals(candidates, transaction, behavior, cash_account_id)
     end
   end
 
@@ -120,26 +134,56 @@ defmodule GnomeGarden.Banking.Reconciliation do
     end
   end
 
-  defp candidate_entries(%{occurred_at: nil}), do: []
+  # A posted ledger entry is a candidate only when it moves the bank's GL cash
+  # account, on the side that matches the transaction's direction, by the exact
+  # amount — within the date window, and excluding reversal entries. Matching on
+  # the cash-account side (not a blind debit total) is what keeps a deposit from
+  # being matched to an unrelated same-amount expense.
+  defp candidate_entries(%{occurred_at: nil}, _cash_account_id), do: []
+  defp candidate_entries(_transaction, nil), do: []
 
-  defp candidate_entries(transaction) do
-    date = DateTime.to_date(transaction.occurred_at)
-    amount = Reports.amount(transaction.amount)
-
-    case Ledger.list_posted_journal_entries_between(Date.add(date, -@window_days), Date.add(date, @window_days)) do
-      {:ok, entries} ->
-        Enum.filter(entries, fn entry ->
-          Decimal.equal?(Reports.sum(entry.journal_lines, :debit), amount)
-        end)
-
-      _ ->
+  defp candidate_entries(transaction, cash_account_id) do
+    case entry_side(transaction.direction) do
+      nil ->
         []
+
+      side ->
+        date = DateTime.to_date(transaction.occurred_at)
+        amount = Reports.amount(transaction.amount)
+
+        case Ledger.list_posted_journal_entries_between(
+               Date.add(date, -@window_days),
+               Date.add(date, @window_days)
+             ) do
+          {:ok, entries} ->
+            entries
+            |> Enum.reject(&reversal_entry?/1)
+            |> Enum.filter(&cash_account_moves?(&1, cash_account_id, side, amount))
+
+          _ ->
+            []
+        end
     end
   end
 
-  defp create_proposals([], _transaction, _behavior), do: :ok
+  # Money in (a bank credit) corresponds to a ledger entry that DEBITS cash;
+  # money out (a bank debit) corresponds to one that CREDITS cash.
+  defp entry_side(:credit), do: :debit
+  defp entry_side(:debit), do: :credit
+  defp entry_side(_), do: nil
 
-  defp create_proposals(entries, transaction, behavior) do
+  defp reversal_entry?(%{entry_type: :reversal}), do: true
+  defp reversal_entry?(_entry), do: false
+
+  defp cash_account_moves?(entry, cash_account_id, side, amount) do
+    cash_lines = Enum.filter(entry.journal_lines, &(&1.account_id == cash_account_id))
+
+    cash_lines != [] and Decimal.equal?(Reports.sum(cash_lines, side), amount)
+  end
+
+  defp create_proposals([], _transaction, _behavior, _cash_account_id), do: :ok
+
+  defp create_proposals(entries, transaction, behavior, _cash_account_id) do
     confidence = if length(entries) == 1, do: Decimal.new("1.0"), else: Decimal.new("0.5")
 
     Enum.each(entries, fn entry ->
@@ -157,6 +201,9 @@ defmodule GnomeGarden.Banking.Reconciliation do
     end)
   end
 
+  # Auto-accept only a single, structurally-proven candidate (exact amount,
+  # correct cash account and direction). Anything ambiguous stays a proposal for
+  # a human to decide.
   defp maybe_auto_accept(match, :auto_accept_when_exact, 1),
     do: safe(fn -> Banking.accept_bank_transaction_match(match) end)
 

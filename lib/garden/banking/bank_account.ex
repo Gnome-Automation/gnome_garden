@@ -52,7 +52,8 @@ defmodule GnomeGarden.Banking.BankAccount do
         :wire_routing_number,
         :account_number_last4,
         :currency_code,
-        :balance_as_of
+        :balance_as_of,
+        :ledger_account_id
       ]
     end
 
@@ -74,7 +75,8 @@ defmodule GnomeGarden.Banking.BankAccount do
         :wire_routing_number,
         :account_number_last4,
         :currency_code,
-        :balance_as_of
+        :balance_as_of,
+        :ledger_account_id
       ]
     end
 
@@ -85,7 +87,8 @@ defmodule GnomeGarden.Banking.BankAccount do
         :kind,
         :status,
         :current_balance,
-        :available_balance
+        :available_balance,
+        :ledger_account_id
       ]
     end
 
@@ -171,6 +174,14 @@ defmodule GnomeGarden.Banking.BankAccount do
   relationships do
     belongs_to :bank_connection, GnomeGarden.Banking.BankConnection do
       allow_nil? false
+      public? true
+    end
+
+    # The general-ledger cash account this bank account reconciles against.
+    # Reconciliation uses it to match a bank transaction to a posted entry that
+    # moves this account in the correct direction. Optional: when unset,
+    # reconciliation falls back to the default operating bank account.
+    belongs_to :ledger_account, GnomeGarden.Ledger.Account do
       public? true
     end
 
