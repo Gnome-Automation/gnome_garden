@@ -26,19 +26,26 @@ defmodule GnomeGarden.Banking.Integrations.Mercury do
 
     opts = [mercury_sandbox: connection.environment == :sandbox]
 
-    case do_sync(connection, opts) do
-      {:ok, %{accounts: accounts, transactions: transactions}} ->
-        Banking.finish_bank_sync_run_success(run, %{
-          accounts_synced: accounts,
-          transactions_synced: transactions
-        })
+    try do
+      case do_sync(connection, opts) do
+        {:ok, %{accounts: accounts, transactions: transactions}} ->
+          Banking.finish_bank_sync_run_success(run, %{
+            accounts_synced: accounts,
+            transactions_synced: transactions
+          })
 
-        {:ok, %{accounts: accounts, transactions: transactions}}
+          {:ok, %{accounts: accounts, transactions: transactions}}
 
-      {:error, reason} ->
-        Logger.warning("Mercury sync failed for connection #{connection.id}: #{inspect(reason)}")
-        Banking.finish_bank_sync_run_failure(run, %{error_message: inspect(reason)})
-        {:error, reason}
+        {:error, reason} ->
+          Logger.warning("Mercury sync failed for connection #{connection.id}: #{inspect(reason)}")
+          Banking.finish_bank_sync_run_failure(run, %{error_message: inspect(reason)})
+          {:error, reason}
+      end
+    rescue
+      error ->
+        Logger.warning("Mercury sync crashed for connection #{connection.id}: #{inspect(error)}")
+        Banking.finish_bank_sync_run_failure(run, %{error_message: Exception.message(error)})
+        {:error, error}
     end
   end
 

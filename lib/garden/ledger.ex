@@ -28,6 +28,7 @@ defmodule GnomeGarden.Ledger do
       define :get_account_by_number, action: :read, get_by: [:number]
       define :create_account, action: :create
       define :update_account, action: :update
+      define :destroy_account, action: :destroy
 
       define :build_trial_balance, action: :trial_balance
       define :build_balance_sheet, action: :balance_sheet
