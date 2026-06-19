@@ -134,6 +134,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/acquisition/programs"]
     },
+    %{
+      id: "acq-lead-preview",
+      section: "Acquisition",
+      icon: "hero-magnifying-glass",
+      label: "Lead Preview",
+      path: "/acquisition/lead-preview",
+      badge: 0,
+      hot: false,
+      match: ["/acquisition/lead-preview"]
+    },
 
     # Procurement
     %{

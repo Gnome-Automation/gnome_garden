@@ -34,15 +34,25 @@ defmodule GnomeGarden.Acquisition.LeadPromote do
   def promote(candidate, opts \\ []) when is_map(candidate) do
     dedupe = candidate[:dedupe] || %{context: :new, suppress?: false, related: []}
 
+    case route(candidate) do
+      :skip -> {:skipped, %{context: dedupe.context, reason: dedupe[:recommendation]}}
+      :promote -> create_record(candidate, dedupe, opts)
+      :needs_enrichment -> {:needs_enrichment, candidate}
+    end
+  end
+
+  @doc """
+  The routing decision for a candidate, with no side effects: `:promote`,
+  `:needs_enrichment`, or `:skip`. Lets callers (e.g. the preview UI) group
+  candidates before deciding to act.
+  """
+  def route(candidate) when is_map(candidate) do
+    dedupe = candidate[:dedupe] || %{context: :new, suppress?: false}
+
     cond do
-      dedupe.suppress? ->
-        {:skipped, %{context: dedupe.context, reason: dedupe[:recommendation]}}
-
-      promotable?(candidate, dedupe) ->
-        create_record(candidate, dedupe, opts)
-
-      true ->
-        {:needs_enrichment, candidate}
+      dedupe.suppress? -> :skip
+      promotable?(candidate, dedupe) -> :promote
+      true -> :needs_enrichment
     end
   end
 

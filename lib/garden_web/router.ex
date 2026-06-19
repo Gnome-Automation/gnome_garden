@@ -71,6 +71,7 @@ defmodule GnomeGardenWeb.Router do
       live "/acquisition/sources", Acquisition.SourceLive.Index, :index
       live "/acquisition/sources/:id/configure", Acquisition.SourceLive.Configure, :configure
       live "/acquisition/programs", Acquisition.ProgramLive.Index, :index
+      live "/acquisition/lead-preview", Acquisition.LeadPreviewLive, :index
 
       # Operations - Tasks
       live "/operations/review", Operations.ReviewLive, :index
