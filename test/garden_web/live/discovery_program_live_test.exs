@@ -67,11 +67,10 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
     |> element("button[phx-click='run_now']")
     |> render_click()
 
-    assert render(show_view) =~ "Could not start discovery run"
-    assert render(show_view) =~ "Commercial target discovery has not been ported to AshLua yet"
+    assert render(show_view) =~ "Discovery run complete"
 
     {:ok, refreshed_program} = Commercial.get_discovery_program(discovery_program.id)
-    refute refreshed_program.last_run_at
+    assert refreshed_program.last_run_at
 
     {:ok, form_view, _form_html} = live(conn, ~p"/commercial/discovery-programs/new")
     assert has_element?(form_view, "#discovery-program-form")

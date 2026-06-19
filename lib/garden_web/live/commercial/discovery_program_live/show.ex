@@ -61,7 +61,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
     case Commercial.launch_discovery_program(discovery_program,
            actor: socket.assigns.current_user
          ) do
-      {:ok, %{program: refreshed_program, run: run}} ->
+      {:ok, %{program: refreshed_program} = result} ->
         refreshed_program =
           load_discovery_program!(refreshed_program.id, socket.assigns.current_user)
 
@@ -75,7 +75,10 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
          |> assign(:acquisition_program_id, acquisition_program && acquisition_program.id)
          |> assign(:latest_run, load_latest_run(refreshed_program))
          |> assign(:findings, load_findings(acquisition_program, socket.assigns.current_user))
-         |> put_flash(:info, "Started discovery run #{short_id(run.id)}.")}
+         |> put_flash(
+           :info,
+           "Discovery run complete — #{result.candidate_count} candidate(s), #{result.saved} saved."
+         )}
 
       {:error, :active_run_exists} ->
         {:noreply,

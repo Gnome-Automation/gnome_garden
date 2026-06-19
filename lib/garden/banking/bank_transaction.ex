@@ -154,6 +154,13 @@ defmodule GnomeGarden.Banking.BankTransaction do
       prepare build(sort: [occurred_at: :desc])
     end
 
+    # Backs the reconciliation review-queue Cinder table.
+    read :review_queue_page do
+      pagination keyset?: true, offset?: true, required?: false, default_limit: 25
+      filter expr(review_status == :unreviewed)
+      prepare build(sort: [occurred_at: :desc], load: [:bank_account])
+    end
+
     action :transaction_workspace, :map do
       argument :bank_transaction_id, :uuid, allow_nil?: false
       run GnomeGarden.Banking.Actions.BuildBankTransactionWorkspace
