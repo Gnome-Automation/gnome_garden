@@ -30,7 +30,8 @@ defmodule Mix.Tasks.Exa.Preview do
           term: :keep,
           max_queries: :integer,
           max_results: :integer,
-          ceiling: :float
+          ceiling: :float,
+          no_persist: :boolean
         ]
       )
 
@@ -38,7 +39,8 @@ defmodule Mix.Tasks.Exa.Preview do
       [
         industries: Keyword.get_values(opts, :industry),
         regions: Keyword.get_values(opts, :region),
-        search_terms: Keyword.get_values(opts, :term)
+        search_terms: Keyword.get_values(opts, :term),
+        persist: not (opts[:no_persist] || false)
       ]
       |> put_if(:max_queries, opts[:max_queries])
       |> put_if(:max_results_per_query, opts[:max_results])

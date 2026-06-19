@@ -11,7 +11,7 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
 
   use GnomeGardenWeb, :live_view
 
-  import GnomeGardenWeb.Finance.Helpers, only: [format_atom: 1]
+  import GnomeGardenWeb.Finance.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.{LeadPreview, LeadPromote}
@@ -27,6 +27,7 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
      |> assign(:program_id, "")
      |> assign(:preview, nil)
      |> assign(:candidates, [])
+     |> assign(:recent_runs, recent_runs(socket.assigns.current_user))
      |> assign(:running?, false)}
   end
 
@@ -37,8 +38,8 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
         industries: split(params["industries"]),
         regions: split(params["regions"]),
         search_terms: split(params["terms"]),
-        max_queries: to_int(params["max_queries"], 6),
-        spend_ceiling: to_float(params["ceiling"], 0.15),
+        max_queries: clamp(to_int(params["max_queries"], 6), 1, 25),
+        spend_ceiling: clamp(to_float(params["ceiling"], 0.15), 0.01, 5.0),
         actor: socket.assigns.current_user
       ]
       |> maybe_put(:start_published_date, blank_to_nil(params["since"]))
@@ -61,7 +62,22 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
      |> assign(:program_id, params["program_id"] || "")
      |> assign(:preview, preview)
      |> assign(:candidates, candidates)
+     |> assign(:recent_runs, recent_runs(socket.assigns.current_user))
      |> maybe_warn_failures(preview)}
+  end
+
+  @impl true
+  def handle_event("open_run", %{"id" => id}, socket) do
+    with {:ok, run} <- Acquisition.get_lead_preview_run(id),
+         {:ok, candidates} <- Acquisition.list_lead_preview_candidates_for_run(id) do
+      {:noreply,
+       socket
+       |> assign(:preview, preview_from_run(run))
+       |> assign(:candidates, Enum.map(candidates, &candidate_from_persisted/1))
+       |> put_flash(:info, "Reopened a previous preview run.")}
+    else
+      _ -> {:noreply, put_flash(socket, :error, "Could not open that run.")}
+    end
   end
 
   @impl true
@@ -130,6 +146,27 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
             </.button>
           </div>
         </form>
+      </.section>
+
+      <.section
+        :if={@recent_runs != []}
+        title="Recent runs"
+        description="Reopen a prior preview — runs and their candidates are persisted."
+      >
+        <div class="space-y-2">
+          <div
+            :for={run <- @recent_runs}
+            class="flex items-center justify-between gap-3 rounded-lg border border-base-content/10 bg-base-200 px-3 py-2"
+          >
+            <div class="min-w-0 text-sm">
+              <span class="font-medium text-base-content">{format_datetime(run.inserted_at)}</span>
+              <span class="text-base-content/60">
+                — {run.candidate_count} candidates · {run.promotable_count} promotable · {run.needs_enrichment_count} enrich · ${run.total_cost}
+              </span>
+            </div>
+            <.button phx-click="open_run" phx-value-id={run.id}>Open</.button>
+          </div>
+        </div>
       </.section>
 
       <div :if={@preview}>
@@ -245,8 +282,6 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
   # Promotes via LeadPromote and mirrors the outcome onto the persisted preview
   # candidate, so the run record reflects what the operator did.
   defp do_promote(candidate, socket) do
-    run_id = socket.assigns.preview && socket.assigns.preview.run_id
-
     {status, record_id} =
       case LeadPromote.promote(candidate,
              actor: socket.assigns.current_user,
@@ -257,15 +292,15 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
         {:skipped, _} -> {:skipped, nil}
       end
 
-    sync_persisted(run_id, candidate, status, record_id)
+    sync_persisted(candidate, status, record_id)
     status
   end
 
-  defp sync_persisted(nil, _candidate, _status, _record_id), do: :ok
-
-  defp sync_persisted(run_id, candidate, status, record_id) do
-    with {:ok, persisted} <- Acquisition.list_lead_preview_candidates_for_run(run_id),
-         %{} = row <- Enum.find(persisted, &(&1.url == candidate.url)) do
+  # The candidate carries its persisted id (from LeadPreview.run), so mirror the
+  # outcome with a direct get + update — no list/find, no URL ambiguity.
+  defp sync_persisted(candidate, status, record_id) do
+    with id when is_binary(id) <- candidate[:id],
+         {:ok, row} <- Acquisition.get_lead_preview_candidate(id) do
       if status == :promoted and record_id do
         Acquisition.mark_lead_preview_candidate_promoted(row, %{promoted_record_id: record_id})
       else
@@ -281,6 +316,66 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
       {:ok, programs} -> programs
       _ -> []
     end
+  end
+
+  defp recent_runs(actor) do
+    case Acquisition.list_recent_lead_preview_runs(actor: actor) do
+      {:ok, runs} -> runs
+      _ -> []
+    end
+  end
+
+  # Rebuild the in-memory preview/candidate shapes from a persisted run so a
+  # reopened run renders and promotes exactly like a fresh one.
+  defp preview_from_run(run) do
+    %{
+      run_id: run.id,
+      queries_run: run.query_count,
+      total_cost: run.total_cost,
+      candidate_count: run.candidate_count,
+      promotable_count: run.promotable_count,
+      needs_enrichment_count: run.needs_enrichment_count,
+      suppressed_count: run.suppressed_count,
+      failed_queries: length(run.errors || []),
+      errors: run.errors || []
+    }
+  end
+
+  defp candidate_from_persisted(pc) do
+    %{
+      id: pc.id,
+      index: pc.rank,
+      rank: pc.rank,
+      title: pc.title,
+      url: pc.url,
+      type: pc.candidate_type,
+      published_date: pc.published_date,
+      query: pc.query,
+      route: pc.route,
+      status: pc.status,
+      dedupe: %{
+        context: pc.dedupe_context,
+        suppress?: pc.suppressed,
+        recommendation: pc.recommendation,
+        related: related_from_metadata(pc.metadata)
+      }
+    }
+  end
+
+  defp related_from_metadata(%{"related" => related}) when is_list(related) do
+    Enum.map(related, fn r ->
+      %{kind: safe_atom(r["kind"]), id: r["id"], label: r["label"]}
+    end)
+  end
+
+  defp related_from_metadata(_metadata), do: []
+
+  defp safe_atom(nil), do: nil
+
+  defp safe_atom(value) when is_binary(value) do
+    String.to_existing_atom(value)
+  rescue
+    ArgumentError -> nil
   end
 
   defp default_form, do: %{"industries" => "", "regions" => "", "terms" => "", "since" => "", "max_queries" => "6", "ceiling" => "0.15", "program_id" => ""}
@@ -301,6 +396,12 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
       _ -> default
     end
   end
+
+  # Clamp paid-search inputs so a negative/huge value can't cause odd behavior
+  # or accidental spend.
+  defp clamp(value, min, _max) when value < min, do: min
+  defp clamp(value, _min, max) when value > max, do: max
+  defp clamp(value, _min, _max), do: value
 
   defp blank_to_nil(nil), do: nil
   defp blank_to_nil(""), do: nil

@@ -5,8 +5,11 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   spend ceiling, dedupes within the run, classifies every candidate against the
   data we already have (`LeadDedup`), and returns a ranked preview.
 
-  **Preview only — it never creates findings.** It is the surface for proving
-  query quality before any contents fetch, extraction, or lead creation.
+  **Preview creates no business records** (no findings, organizations, or
+  discovery records) — only the operator's explicit promote does. It does,
+  however, persist preview *telemetry* by default: a `LeadPreviewRun` + its
+  `LeadPreviewCandidate`s, so cost/quality/split history accrues. Pass
+  `persist: false` for a pure dry-run (e.g. the mix task's `--no-persist`).
 
   Query phrasing deliberately targets operational SIGNALS (expansion, new
   production line, hiring controls/maintenance, capital projects, public-sector
@@ -128,6 +131,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     }
 
     run = persist_run(ranked, opts, summary)
+    ranked = attach_persisted_ids(ranked, run)
 
     {:ok,
      %{
@@ -143,6 +147,19 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
        errors: error_strings,
        candidates: ranked
      }}
+  end
+
+  defp attach_persisted_ids(ranked, nil), do: ranked
+
+  defp attach_persisted_ids(ranked, run) do
+    case Acquisition.list_lead_preview_candidates_for_run(run.id) do
+      {:ok, persisted} ->
+        by_url = Map.new(persisted, &{&1.url, &1.id})
+        Enum.map(ranked, fn candidate -> Map.put(candidate, :id, Map.get(by_url, candidate[:url])) end)
+
+      _ ->
+        ranked
+    end
   end
 
   defp persist_run(ranked, opts, summary) do

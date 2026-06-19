@@ -22,6 +22,10 @@ defmodule GnomeGarden.Acquisition.LeadPreviewCandidate do
     references do
       reference :lead_preview_run, on_delete: :delete
     end
+
+    custom_indexes do
+      index [:lead_preview_run_id]
+    end
   end
 
   actions do

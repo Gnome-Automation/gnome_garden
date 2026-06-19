@@ -60,4 +60,22 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLiveTest do
     assert promoted.status == :promoted
     assert promoted.promoted_record_id
   end
+
+  test "reopens a persisted run and renders its candidates", %{conn: conn} do
+    Req.Test.stub(Exa, fn conn ->
+      Req.Test.json(conn, %{
+        "costDollars" => %{"total" => 0.01},
+        "results" => [%{"title" => "ReopenCo Manufacturing", "url" => "https://reopen-#{System.unique_integer([:positive])}.example.com", "publishedDate" => nil}]
+      })
+    end)
+
+    {:ok, %{run_id: run_id}} =
+      GnomeGarden.Acquisition.LeadPreview.run(industries: ["x"], regions: ["y"], max_queries: 1, spend_ceiling: 1.0)
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/lead-preview")
+    html = render_click(view, "open_run", %{"id" => run_id})
+
+    assert html =~ "ReopenCo Manufacturing"
+    assert html =~ "Recent runs"
+  end
 end

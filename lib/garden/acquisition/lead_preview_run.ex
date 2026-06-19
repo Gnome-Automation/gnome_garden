@@ -33,6 +33,11 @@ defmodule GnomeGarden.Acquisition.LeadPreviewRun do
   postgres do
     table "acquisition_lead_preview_runs"
     repo GnomeGarden.Repo
+
+    custom_indexes do
+      index [:inserted_at]
+      index [:discovery_program_id, :inserted_at]
+    end
   end
 
   actions do
