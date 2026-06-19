@@ -71,11 +71,13 @@ defmodule GnomeGarden.Finance do
       define :void_invoice, action: :void
       define :reopen_invoice, action: :reopen
       define :list_open_invoices, action: :open
+      define :list_draft_invoices, action: :drafts
       define :list_overdue_invoices, action: :overdue
       define :build_ar_aging, action: :ar_aging
       define :get_finance_overview_workspace, action: :finance_overview_workspace
       define :get_receivables_workspace, action: :receivables_workspace
       define :get_work_to_bill_workspace, action: :work_to_bill_workspace
+      define :get_money_morning_workspace, action: :money_morning_workspace
     end
 
     resource GnomeGarden.Finance.InvoiceLine do
@@ -94,6 +96,7 @@ defmodule GnomeGarden.Finance do
       define :deposit_payment, action: :deposit
       define :reverse_payment, action: :reverse
       define :list_open_payments, action: :open
+      define :list_payments_received_since, action: :received_since, args: [:since]
     end
 
     resource GnomeGarden.Finance.PaymentApplication do

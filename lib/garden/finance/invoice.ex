@@ -191,6 +191,11 @@ defmodule GnomeGarden.Finance.Invoice do
               )
     end
 
+    read :drafts do
+      filter expr(status == :draft)
+      prepare build(sort: [inserted_at: :desc], load: [:organization])
+    end
+
     read :overdue do
       filter expr(
                status in [:issued, :partial] and not is_nil(due_on) and due_on < ^Date.utc_today()
@@ -224,6 +229,10 @@ defmodule GnomeGarden.Finance.Invoice do
 
     action :work_to_bill_workspace, :map do
       run GnomeGarden.Finance.Actions.BuildWorkToBillWorkspace
+    end
+
+    action :money_morning_workspace, :map do
+      run GnomeGarden.Finance.Actions.BuildMoneyMorningWorkspace
     end
   end
 

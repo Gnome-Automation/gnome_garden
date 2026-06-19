@@ -252,4 +252,15 @@ defmodule GnomeGardenWeb.FinanceBankingLiveTest do
     {:ok, entries} = Ledger.list_journal_entries_for_reference("invoice", invoice.id)
     assert Enum.any?(entries, &(&1.entry_type == :invoice_issued))
   end
+
+  test "money morning renders the daily action queue", %{conn: conn} do
+    # Setup seeds an unreviewed transaction and a failed sync run, so the review
+    # and failed-sync queues are actionable.
+    {:ok, _view, html} = live(conn, ~p"/finance/today")
+
+    assert html =~ "Money Morning"
+    assert html =~ "Today&#39;s queue" or html =~ "Today's queue"
+    assert html =~ "Bank transactions to review"
+    assert html =~ "Cash this week"
+  end
 end

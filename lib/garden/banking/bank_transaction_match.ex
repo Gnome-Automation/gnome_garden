@@ -75,6 +75,11 @@ defmodule GnomeGarden.Banking.BankTransactionMatch do
       filter expr(bank_transaction_id == ^arg(:bank_transaction_id))
       prepare build(sort: [inserted_at: :desc], load: [:journal_entry])
     end
+
+    read :proposed do
+      filter expr(status == :proposed)
+      prepare build(sort: [inserted_at: :desc])
+    end
   end
 
   attributes do

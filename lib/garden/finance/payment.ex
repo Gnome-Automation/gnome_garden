@@ -98,6 +98,12 @@ defmodule GnomeGarden.Finance.Payment do
                 load: [:organization, :applications]
               )
     end
+
+    read :received_since do
+      argument :since, :date, allow_nil?: false
+      filter expr(status != :reversed and not is_nil(received_on) and received_on >= ^arg(:since))
+      prepare build(sort: [received_on: :desc])
+    end
   end
 
   attributes do

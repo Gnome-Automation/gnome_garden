@@ -199,6 +199,7 @@ defmodule GnomeGardenWeb.Router do
 
       # Finance - Overview & Banking
       live "/finance", Finance.OverviewLive, :index
+      live "/finance/today", Finance.MoneyMorningLive, :index
       live "/finance/banking", Finance.BankingLive, :index
       live "/finance/banking/accounts/:id", Finance.BankAccountLive, :show
       live "/finance/banking/transactions/:id", Finance.BankTransactionLive, :show

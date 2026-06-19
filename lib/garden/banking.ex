@@ -90,6 +90,7 @@ defmodule GnomeGarden.Banking do
         action: :for_transaction,
         args: [:bank_transaction_id]
 
+      define :list_proposed_bank_transaction_matches, action: :proposed
       define :create_bank_transaction_match, action: :create
       define :accept_bank_transaction_match, action: :accept
       define :reject_bank_transaction_match, action: :reject
