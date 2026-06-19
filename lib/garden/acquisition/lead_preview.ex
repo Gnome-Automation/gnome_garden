@@ -1,7 +1,7 @@
 defmodule GnomeGarden.Acquisition.LeadPreview do
   @moduledoc """
   Dry-run lead preview. Turns discovery inputs (search terms / regions /
-  industries) into signal-shaped Exa queries, searches within hard caps and a
+  industries) into firmographic Exa queries, searches within hard caps and a
   spend ceiling, dedupes within the run, classifies every candidate against the
   data we already have (`LeadDedup`), and returns a ranked preview.
 
@@ -11,10 +11,13 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   `LeadPreviewCandidate`s, so cost/quality/split history accrues. Pass
   `persist: false` for a pure dry-run (e.g. the mix task's `--no-persist`).
 
-  Query phrasing deliberately targets operational SIGNALS (expansion, new
-  production line, hiring controls/maintenance, capital projects, public-sector
-  agendas) and avoids the word "automation", which the tuning loop showed
-  surfaces vendors rather than prospects. Edit `@signal_templates` to retune.
+  Strategy: find the prospect COMPANIES themselves on their own sites
+  (`category: "company"` + the firmographic `@company_templates`), so a promoted
+  candidate carries a real company domain. It deliberately avoids news/press,
+  expansion, and hiring framing — those surfaced articles and vendors, not
+  reachable prospects. News/media and vendor domains are excluded outright and,
+  if any slip through, classified as `:signal` (never promoted). Edit
+  `@company_templates` to retune.
   """
 
   require Logger
@@ -37,28 +40,37 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     siemens.com schneider-electric.com honeywell.com
   )
 
-  # {intent, template}. `{industry}` / `{region}` are filled per combination.
-  @signal_templates [
-    {:signal, "{industry} company expanding production {region}"},
-    {:signal, "{industry} new production line {region}"},
-    {:signal, "{industry} facility expansion {region}"},
-    {:signal, "{industry} plant hiring controls engineer {region}"},
-    {:signal, "{industry} plant hiring maintenance technician {region}"},
-    {:signal, "{industry} capital project {region}"}
+  # Firmographic company-discovery templates: find the prospect companies
+  # themselves on their own sites (paired with Exa's `category: "company"`).
+  # Deliberately NO expansion / hiring / news framing — those surface articles
+  # and vendors, not the companies we want to reach directly. `{industry}` /
+  # `{region}` are filled per combination.
+  @company_templates [
+    {:company, "{industry} manufacturer {region}"},
+    {:company, "{industry} company {region}"},
+    {:company, "contract {industry} manufacturer {region}"},
+    {:company, "{industry} production facility {region}"}
   ]
 
-  @public_sector_templates [
-    {:signal, "{region} water district SCADA upgrade board agenda"}
-  ]
-
-  # Host substrings that mark a page as a signal (job board / press / portal /
-  # social / bid portal), NOT the prospect's own company page.
+  # Host substrings that mark a page as NOT the prospect's own company page —
+  # news/media, press wires, job boards, social, and bid portals. These are
+  # classified as :signal (never promoted as a company) and excluded from search.
   @signal_host_markers ~w(
     job jobs careers hiring greenhouse lever workable indeed ziprecruiter
-    prnewswire businesswire globenewswire einpresswire prweb
+    prnewswire businesswire globenewswire einpresswire prweb prweb
     linkedin breakroom tealhq applytojob earnbetter
     facebook twitter crunchbase glassdoor
     planetbids bidnet demandstar bonfirehub publicpurchase opengov bidexpress periscope
+    ocbj.com chapelboro morningstar thepacker flexpackvoice bizjournals reuters
+    bloomberg prweb yahoo forbes inc.com news- -news
+  )
+
+  # News/media domains excluded from search by default (belt-and-suspenders with
+  # category: "company"). News is not a useful discovery channel here.
+  @default_news_domains ~w(
+    prnewswire.com businesswire.com globenewswire.com einpresswire.com prweb.com
+    ocbj.com chapelboro.com morningstar.com thepacker.com flexpackvoice.com
+    bizjournals.com reuters.com bloomberg.com yahoo.com forbes.com
   )
 
   @context_rank %{
@@ -93,8 +105,10 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       [
         num_results: max_results,
         type: "auto",
-        exclude_domains: Enum.uniq(@default_vendor_domains ++ Keyword.get(opts, :exclude_domains, [])),
-        category: Keyword.get(opts, :category),
+        # Bias toward company homepages (not articles); news is excluded outright.
+        category: Keyword.get(opts, :category, "company"),
+        exclude_domains:
+          Enum.uniq(@default_vendor_domains ++ @default_news_domains ++ Keyword.get(opts, :exclude_domains, [])),
         start_published_date: Keyword.get(opts, :start_published_date)
       ]
 
@@ -264,20 +278,15 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     terms = present(Keyword.get(opts, :search_terms, []))
 
     templated =
-      for {intent, template} <- @signal_templates,
+      for {intent, template} <- @company_templates,
           industry <- industries || [""],
           region <- regions || [""] do
         %{intent: intent, text: fill(template, industry, region)}
       end
 
-    public_sector =
-      for {intent, template} <- @public_sector_templates, region <- regions || [""] do
-        %{intent: intent, text: fill(template, "", region)}
-      end
-
     raw = for term <- terms || [], do: %{intent: :company, text: String.trim(term)}
 
-    (raw ++ templated ++ public_sector)
+    (raw ++ templated)
     |> Enum.reject(&(&1.text == ""))
     |> Enum.uniq_by(& &1.text)
   end
@@ -320,7 +329,11 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     end)
   end
 
-  defp dedupe_within_run(candidates), do: Enum.uniq_by(candidates, & &1.url)
+  # Dedupe by registrable domain (falling back to URL) so the same company
+  # surfaced via several pages collapses to one candidate.
+  defp dedupe_within_run(candidates) do
+    Enum.uniq_by(candidates, fn candidate -> WebIdentity.website_domain(candidate.url) || candidate.url end)
+  end
 
   # Type is decided by the PAGE/DOMAIN, not the query intent: a company's own
   # page found via a signal-shaped query is still a company (promotable), not a

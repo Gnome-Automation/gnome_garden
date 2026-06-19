@@ -7,14 +7,15 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
   defp uniq, do: System.unique_integer([:positive])
 
   describe "build_queries/1" do
-    test "fills industry + region, never emits 'automation', and dedupes" do
+    test "builds firmographic queries — no expansion/hiring/automation framing" do
       queries = LeadPreview.build_queries(industries: ["food processing"], regions: ["orange county"])
       texts = Enum.map(queries, & &1.text)
 
       assert Enum.any?(texts, &(&1 =~ "food processing"))
       assert Enum.any?(texts, &(&1 =~ "orange county"))
-      assert Enum.any?(texts, &(&1 =~ "expanding production"))
-      refute Enum.any?(texts, &(&1 =~ "automation"))
+      assert Enum.any?(texts, &(&1 =~ "manufacturer"))
+      refute Enum.any?(texts, &(&1 =~ ~r/automation|expand|hiring|production line/))
+      assert Enum.all?(queries, &(&1.intent == :company))
       assert length(texts) == length(Enum.uniq(texts))
     end
 
@@ -115,6 +116,32 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
       assert "competitor.example.com" in body["excludeDomains"]
       assert body["startPublishedDate"] == "2026-01-01"
       assert body["category"] == "company"
+    end
+
+    test "defaults to category: company, excludes news, and classifies a news page as signal" do
+      test_pid = self()
+
+      Req.Test.stub(Exa, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        send(test_pid, {:exa_body, Jason.decode!(body)})
+
+        Req.Test.json(conn, %{
+          "costDollars" => %{"total" => 0.005},
+          "results" => [
+            %{"title" => "Acme on its own site", "url" => "https://acme-co-#{uniq()}.example.com", "publishedDate" => nil},
+            %{"title" => "Acme in the news", "url" => "https://www.ocbj.com/article/acme-#{uniq()}", "publishedDate" => nil}
+          ]
+        })
+      end)
+
+      {:ok, preview} = LeadPreview.run(industries: ["food processing"], regions: ["oc"], max_queries: 1, spend_ceiling: 1.0)
+
+      assert_received {:exa_body, body}
+      assert body["category"] == "company"
+      assert "ocbj.com" in body["excludeDomains"]
+
+      assert Enum.any?(preview.candidates, &(&1.url =~ "acme-co-" and &1.type == :company))
+      assert Enum.any?(preview.candidates, &(&1.url =~ "ocbj.com" and &1.type == :signal))
     end
 
     test "respects the spend ceiling" do
