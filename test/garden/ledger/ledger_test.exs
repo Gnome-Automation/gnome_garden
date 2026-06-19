@@ -69,6 +69,55 @@ defmodule GnomeGarden.LedgerTest do
                  lines: []
                })
     end
+
+    test "a line carrying both a debit and a credit is rejected" do
+      lines = [
+        %{account_id: account!("1000").id, debit: Money.new!(:USD, "100"), credit: Money.new!(:USD, "100")},
+        %{account_id: account!("1100").id, credit: Money.new!(:USD, "100")}
+      ]
+
+      assert {:error, _} =
+               Ledger.post_journal_entry(%{date: Date.utc_today(), description: "Two-sided", entry_type: :manual, lines: lines})
+    end
+
+    test "a negative line amount is rejected" do
+      lines = [
+        %{account_id: account!("1000").id, debit: Money.new!(:USD, "-100")},
+        %{account_id: account!("1100").id, credit: Money.new!(:USD, "-100")}
+      ]
+
+      assert {:error, _} =
+               Ledger.post_journal_entry(%{date: Date.utc_today(), description: "Negative", entry_type: :manual, lines: lines})
+    end
+
+    test "a line with neither a debit nor a credit is rejected" do
+      lines = [
+        %{account_id: account!("1000").id},
+        %{account_id: account!("1100").id, credit: Money.new!(:USD, "100")}
+      ]
+
+      assert {:error, _} =
+               Ledger.post_journal_entry(%{date: Date.utc_today(), description: "Empty line", entry_type: :manual, lines: lines})
+    end
+  end
+
+  describe "immutability of posted entries" do
+    test "a posted journal entry exposes no update or destroy action" do
+      actions = Ash.Resource.Info.actions(GnomeGarden.Ledger.JournalEntry)
+      names = Enum.map(actions, & &1.name)
+
+      # The only update is :post (draft -> posted, accepting no field changes);
+      # there is no destroy and no action that edits a posted entry's content.
+      refute :destroy in names
+      assert Enum.filter(actions, &(&1.type == :update)) |> Enum.map(& &1.name) == [:post]
+      assert Ash.Resource.Info.action(GnomeGarden.Ledger.JournalEntry, :post).accept == []
+    end
+
+    test "journal lines expose no update or destroy action" do
+      names = GnomeGarden.Ledger.JournalLine |> Ash.Resource.Info.actions() |> Enum.map(& &1.name)
+      refute :update in names
+      refute :destroy in names
+    end
   end
 
   describe "reversal" do

@@ -46,6 +46,8 @@ defmodule GnomeGarden.Ledger.JournalLine do
         :credit,
         :description
       ]
+
+      validate GnomeGarden.Ledger.JournalLine.Validations.OneSidedPositiveLine
     end
 
     read :for_entry do
