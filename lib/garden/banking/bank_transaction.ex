@@ -66,6 +66,12 @@ defmodule GnomeGarden.Banking.BankTransaction do
         :description,
         :counterparty_name,
         :category,
+        :kind,
+        :memo,
+        :counterparty_id,
+        :counterparty_account_last4,
+        :dashboard_link,
+        :posted_at,
         :occurred_at
       ]
     end
@@ -84,6 +90,12 @@ defmodule GnomeGarden.Banking.BankTransaction do
         :description,
         :counterparty_name,
         :category,
+        :kind,
+        :memo,
+        :counterparty_id,
+        :counterparty_account_last4,
+        :dashboard_link,
+        :posted_at,
         :occurred_at
       ]
     end
@@ -96,27 +108,34 @@ defmodule GnomeGarden.Banking.BankTransaction do
         :description,
         :counterparty_name,
         :category,
+        :kind,
+        :memo,
+        :counterparty_id,
+        :counterparty_account_last4,
+        :dashboard_link,
+        :posted_at,
         :occurred_at
       ]
     end
 
     update :categorize do
-      accept [:category]
+      accept [:category, :reconciliation_note]
     end
 
     update :mark_reviewed do
-      accept []
+      accept [:reconciliation_note]
       change transition_state(:reviewed)
     end
 
     update :ignore do
-      accept []
+      accept [:reconciliation_note]
       change transition_state(:ignored)
     end
 
     update :mark_matched do
       accept []
       change transition_state(:matched)
+      change set_attribute(:match_status, :matched)
     end
 
     update :reopen_review do
@@ -186,6 +205,29 @@ defmodule GnomeGarden.Banking.BankTransaction do
     end
 
     attribute :category, :string do
+      public? true
+    end
+
+    attribute :reconciliation_note, :string do
+      public? true
+    end
+
+    # Denormalized match state for quick display (authoritative matches live in
+    # BankTransactionMatch). Set to :matched by mark_matched.
+    attribute :match_status, :atom do
+      allow_nil? false
+      default :unmatched
+      public? true
+      constraints one_of: [:unmatched, :suggested, :matched]
+    end
+
+    attribute :kind, :string, public?: true
+    attribute :memo, :string, public?: true
+    attribute :counterparty_id, :string, public?: true
+    attribute :counterparty_account_last4, :string, public?: true
+    attribute :dashboard_link, :string, public?: true
+
+    attribute :posted_at, :utc_datetime do
       public? true
     end
 

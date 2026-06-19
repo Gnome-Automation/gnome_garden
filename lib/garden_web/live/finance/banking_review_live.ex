@@ -204,7 +204,7 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
             <Cinder.collection
               id="bank-review-mobile"
               layout={:list}
-              resource={GnomeGarden.Finance.BankTransaction}
+              resource={GnomeGarden.Banking.BankTransaction}
               action={:review_queue_page}
               actor={@current_user}
               url_state={@url_state}
@@ -245,7 +245,7 @@ defmodule GnomeGardenWeb.Finance.BankingReviewLive do
           <div class="hidden md:block">
             <Cinder.collection
               id="bank-review"
-              resource={GnomeGarden.Finance.BankTransaction}
+              resource={GnomeGarden.Banking.BankTransaction}
               action={:review_queue_page}
               actor={@current_user}
               url_state={@url_state}

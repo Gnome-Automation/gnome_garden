@@ -107,7 +107,10 @@ defmodule GnomeGarden.Banking.Integrations.Mercury do
       current_balance: money(raw["currentBalance"]),
       available_balance: money(raw["availableBalance"]),
       routing_number: raw["routingNumber"],
-      account_number_last4: last4(raw["accountNumber"])
+      wire_routing_number: raw["electronicRoutingNumber"] || raw["routingNumber"],
+      account_number_last4: last4(raw["accountNumber"]),
+      currency_code: "USD",
+      balance_as_of: parse_datetime(raw["createdAt"])
     }
   end
 
@@ -121,6 +124,11 @@ defmodule GnomeGarden.Banking.Integrations.Mercury do
       status: transaction_status(raw["status"]),
       description: raw["bankDescription"] || raw["externalMemo"] || raw["note"],
       counterparty_name: raw["counterpartyName"],
+      counterparty_id: raw["counterpartyId"],
+      kind: raw["kind"],
+      memo: raw["externalMemo"] || raw["note"],
+      dashboard_link: raw["dashboardLink"],
+      posted_at: parse_datetime(raw["postedAt"]),
       occurred_at: parse_datetime(raw["postedAt"] || raw["createdAt"])
     }
   end

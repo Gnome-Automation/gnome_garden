@@ -120,7 +120,7 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
               <Cinder.collection
                 id="bank-transactions-mobile"
                 layout={:list}
-                resource={GnomeGarden.Finance.BankTransaction}
+                resource={GnomeGarden.Banking.BankTransaction}
                 actor={@current_user}
                 url_state={@url_state}
                 theme={GnomeGardenWeb.CinderTheme}
@@ -200,7 +200,7 @@ defmodule GnomeGardenWeb.Finance.BankingLive do
             <div class="hidden md:block">
               <Cinder.collection
                 id="bank-transactions"
-                resource={GnomeGarden.Finance.BankTransaction}
+                resource={GnomeGarden.Banking.BankTransaction}
                 actor={@current_user}
                 url_state={@url_state}
                 theme={GnomeGardenWeb.CinderTheme}

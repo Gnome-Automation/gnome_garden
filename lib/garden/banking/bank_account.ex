@@ -49,7 +49,10 @@ defmodule GnomeGarden.Banking.BankAccount do
         :current_balance,
         :available_balance,
         :routing_number,
-        :account_number_last4
+        :wire_routing_number,
+        :account_number_last4,
+        :currency_code,
+        :balance_as_of
       ]
     end
 
@@ -68,7 +71,10 @@ defmodule GnomeGarden.Banking.BankAccount do
         :current_balance,
         :available_balance,
         :routing_number,
-        :account_number_last4
+        :wire_routing_number,
+        :account_number_last4,
+        :currency_code,
+        :balance_as_of
       ]
     end
 
@@ -146,7 +152,16 @@ defmodule GnomeGarden.Banking.BankAccount do
       public? true
     end
 
-    attribute :account_number_last4, :string do
+    attribute :wire_routing_number, :string, public?: true
+    attribute :account_number_last4, :string, public?: true
+
+    attribute :currency_code, :string do
+      allow_nil? false
+      default "USD"
+      public? true
+    end
+
+    attribute :balance_as_of, :utc_datetime do
       public? true
     end
 
