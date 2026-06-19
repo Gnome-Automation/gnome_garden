@@ -44,6 +44,7 @@ defmodule GnomeGarden.Finance.PaymentApplication do
       ]
 
       change GnomeGarden.Finance.Changes.PostPaymentAppliedToLedger
+      change GnomeGarden.Finance.Changes.SyncInvoiceBalanceFromApplications
     end
 
     update :update do
