@@ -3,10 +3,9 @@ defmodule GnomeGarden.Agents.Procurement.SourceConfigurator do
   Runs bounded source inspection for procurement sources that do not have a
   known deterministic provider configuration.
 
-  The old open-ended Jido SmartScanner path has been removed. Unknown public
-  sources are inspected and recorded in crawl traversal storage; if the system
-  cannot derive a deterministic configuration, the source is moved to
-  `:config_failed` with a clear operator-facing error.
+  Unknown public sources are inspected and recorded in crawl traversal storage;
+  if the system cannot derive a deterministic configuration, the source is moved
+  to `:config_failed` with a clear operator-facing error.
   """
 
   require Logger

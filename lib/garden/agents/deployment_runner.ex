@@ -2,9 +2,8 @@ defmodule GnomeGarden.Agents.DeploymentRunner do
   @moduledoc """
   Deployment-centric orchestration for runtime agent executions.
 
-    The durable source of truth is `AgentRun`. Runtime execution is now limited
-    to direct application workers that expose `execute_run/1`; open-ended Jido
-    AI agent execution has been removed from production paths.
+  The durable source of truth is `AgentRun`. Runtime execution runs direct
+  application workers that expose `execute_run/1`.
   """
 
   require Logger

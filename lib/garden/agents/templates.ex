@@ -2,8 +2,7 @@ defmodule GnomeGarden.Agents.Templates do
   @moduledoc """
   Registry of durable automation templates.
 
-  The old Jido AI worker templates have been removed. Templates now point only
-  at direct application workers that can be launched by `DeploymentRunner`
+  Templates point at direct application workers launched by `DeploymentRunner`
   through `execute_run/1`.
   """
 

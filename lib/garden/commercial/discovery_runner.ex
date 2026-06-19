@@ -2,9 +2,8 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
   @moduledoc """
   Bridges commercial discovery programs onto the bounded AshLua discovery pipeline.
 
-  The previous open-ended Jido target discovery worker has been removed. This
-  runner now executes deterministic program candidates through AshLua and writes
-  results through Ash-backed commercial/acquisition actions.
+  Executes deterministic program candidates through AshLua and writes results
+  through Ash-backed commercial/acquisition actions.
   """
 
   alias GnomeGarden.Agents
@@ -36,7 +35,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
     _ = actor
 
     {:error,
-     "Commercial target discovery now runs through the bounded AshLua discovery pipeline and does not create Jido deployments."}
+     "Commercial target discovery runs through the bounded AshLua discovery pipeline; it does not create agent deployments."}
   end
 
   defp load_program(%{id: id}, actor), do: load_program(id, actor)

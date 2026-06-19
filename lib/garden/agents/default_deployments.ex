@@ -2,8 +2,8 @@ defmodule GnomeGarden.Agents.DefaultDeployments do
   @moduledoc """
   Idempotent bootstrap for operator-facing automation deployments.
 
-  Open-ended Jido AI defaults were removed. Source-specific procurement scans
-  are created on demand by `GnomeGarden.Procurement.ScanRunner`.
+  Source-specific procurement scans are created on demand by
+  `GnomeGarden.Procurement.ScanRunner`.
   """
 
   alias GnomeGarden.Agents
