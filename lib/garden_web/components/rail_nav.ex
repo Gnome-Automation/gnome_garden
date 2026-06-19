@@ -346,6 +346,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/finance/overview"]
     },
     %{
+      id: "fin-today",
+      section: "Finance",
+      icon: "hero-sun",
+      label: "Money Morning",
+      path: "/finance/today",
+      badge: 0,
+      hot: false,
+      match: ["/finance/today"]
+    },
+    %{
       id: "fin-bank-rules",
       section: "Finance",
       icon: "hero-funnel",
