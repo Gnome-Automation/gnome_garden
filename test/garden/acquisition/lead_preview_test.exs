@@ -64,6 +64,32 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
       assert suppress_flags == Enum.sort(suppress_flags)
     end
 
+    test "always excludes vendor domains and passes recency + category through to Exa" do
+      test_pid = self()
+
+      Req.Test.stub(Exa, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        send(test_pid, {:exa_body, Jason.decode!(body)})
+        Req.Test.json(conn, %{"costDollars" => %{"total" => 0.001}, "results" => []})
+      end)
+
+      LeadPreview.run(
+        industries: ["food processing"],
+        regions: ["orange county"],
+        max_queries: 1,
+        spend_ceiling: 1.0,
+        exclude_domains: ["competitor.example.com"],
+        start_published_date: "2026-01-01",
+        category: "company"
+      )
+
+      assert_received {:exa_body, body}
+      assert "rockwellautomation.com" in body["excludeDomains"]
+      assert "competitor.example.com" in body["excludeDomains"]
+      assert body["startPublishedDate"] == "2026-01-01"
+      assert body["category"] == "company"
+    end
+
     test "respects the spend ceiling" do
       Req.Test.stub(Exa, fn conn ->
         Req.Test.json(conn, %{"costDollars" => %{"total" => 0.5}, "results" => []})

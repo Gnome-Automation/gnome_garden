@@ -23,6 +23,14 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   @default_max_results 8
   @default_spend_ceiling 0.25
 
+  # Automation vendors/integrators the tuning loop showed dominate "automation"
+  # queries. Always excluded (operators can add more via :exclude_domains).
+  @default_vendor_domains ~w(
+    rockwellautomation.com fanucamerica.com fanuc.com emersonautomationexperts.com
+    emerson.com eclipseautomation.com atsindustrialautomation.com atsautomation.com
+    siemens.com schneider-electric.com honeywell.com
+  )
+
   # {intent, template}. `{industry}` / `{region}` are filled per combination.
   @signal_templates [
     {:signal, "{industry} company expanding production {region}"},
@@ -71,7 +79,18 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
 
     queries = opts |> build_queries() |> Enum.take(max_queries)
 
-    %{cost: cost, candidates: raw, executed: executed} = search_all(queries, max_results, ceiling)
+    # Enforce the tuning lessons: always exclude known vendor domains; pass
+    # recency (start_published_date) and category through when provided.
+    search_opts =
+      [
+        num_results: max_results,
+        type: "auto",
+        exclude_domains: Enum.uniq(@default_vendor_domains ++ Keyword.get(opts, :exclude_domains, [])),
+        category: Keyword.get(opts, :category),
+        start_published_date: Keyword.get(opts, :start_published_date)
+      ]
+
+    %{cost: cost, candidates: raw, executed: executed} = search_all(queries, search_opts, ceiling)
 
     candidates =
       raw
@@ -145,12 +164,12 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
 
   # --- search with caps + spend ceiling ---
 
-  defp search_all(queries, max_results, ceiling) do
+  defp search_all(queries, search_opts, ceiling) do
     Enum.reduce_while(queries, %{cost: 0.0, candidates: [], executed: 0}, fn query, acc ->
       if acc.cost >= ceiling do
         {:halt, acc}
       else
-        case Exa.search(query.text, num_results: max_results, type: "auto") do
+        case Exa.search(query.text, search_opts) do
           {:ok, %{cost: cost, results: results}} ->
             acc = %{
               acc

@@ -70,6 +70,9 @@ defmodule GnomeGarden.Acquisition.LeadPromote do
   defp promotable?(_candidate, _dedupe), do: false
 
   defp create_record(candidate, dedupe, opts) do
+    actor = Keyword.get(opts, :actor)
+    program_id = Keyword.get(opts, :discovery_program_id)
+
     attrs =
       %{
         name: candidate[:title] || WebIdentity.website_domain(candidate[:url]),
@@ -83,16 +86,73 @@ defmodule GnomeGarden.Acquisition.LeadPromote do
         }
       }
       |> maybe_put(:organization_id, organization_id(dedupe))
-      |> maybe_put(:discovery_program_id, Keyword.get(opts, :discovery_program_id))
+      |> maybe_put(:discovery_program_id, program_id)
 
-    case Commercial.create_discovery_record(attrs, actor: Keyword.get(opts, :actor), authorize?: false) do
+    # Authorization is owned by Commercial.create_discovery_record (no bypass);
+    # a UI caller threads its actor through opts.
+    case Commercial.create_discovery_record(attrs, actor: actor) do
       {:ok, record} ->
+        record_evidence(record, candidate, dedupe, program_id, actor)
         {:promoted, record}
 
       {:error, reason} ->
         Logger.warning("LeadPromote: failed to create discovery record: #{inspect(reason)}")
         {:skipped, %{context: dedupe.context, reason: "create failed: #{inspect(reason)}"}}
     end
+  end
+
+  # Evidence requires a program (it is a required argument), so program-less
+  # ad-hoc promotes keep only the discovery-record metadata. When a program is
+  # present, every promote appends an evidence row (keyed by source URL), giving
+  # one company many signals over time rather than collapsing history.
+  defp record_evidence(_record, _candidate, _dedupe, nil, _actor), do: :ok
+
+  defp record_evidence(record, candidate, dedupe, program_id, actor) do
+    attrs = %{
+      discovery_record_id: record.id,
+      discovery_program_id: program_id,
+      external_ref: candidate[:url],
+      source_url: candidate[:url],
+      observed_at: DateTime.truncate(DateTime.utc_now(), :second),
+      observation_type: observation_type(candidate, dedupe),
+      source_channel: source_channel(candidate[:url]),
+      summary: "Exa lead preview (#{dedupe.context}). Query: #{candidate[:query]}",
+      metadata: %{
+        "preview_context" => to_string(dedupe.context),
+        "preview_type" => to_string(candidate[:type])
+      }
+    }
+
+    case Commercial.create_discovery_evidence(attrs, actor: actor) do
+      {:ok, _evidence} -> :ok
+      # A duplicate source URL just means the signal is already recorded.
+      {:error, reason} -> Logger.debug("LeadPromote: evidence not recorded: #{inspect(reason)}")
+    end
+  end
+
+  defp observation_type(_candidate, %{context: :known_bid_source}), do: :bid_notice
+  defp observation_type(_candidate, %{context: :known_organization_new_signal}), do: :expansion
+
+  defp observation_type(%{url: url, type: :signal}, _dedupe) do
+    if job_host?(url), do: :hiring, else: :news
+  end
+
+  defp observation_type(_candidate, _dedupe), do: :other
+
+  defp source_channel(url) do
+    domain = WebIdentity.website_domain(url) || ""
+
+    cond do
+      job_host?(url) -> :job_board
+      String.ends_with?(domain, [".gov", ".us"]) -> :directory
+      Enum.any?(~w(prnewswire businesswire globenewswire einpresswire prweb), &String.contains?(domain, &1)) -> :news_site
+      true -> :company_website
+    end
+  end
+
+  defp job_host?(url) do
+    domain = WebIdentity.website_domain(url) || ""
+    Enum.any?(~w(job jobs careers hiring greenhouse lever workable indeed ziprecruiter tealhq applytojob earnbetter), &String.contains?(domain, &1))
   end
 
   defp organization_id(%{related: related}) when is_list(related) do

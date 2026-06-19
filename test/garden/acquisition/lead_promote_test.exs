@@ -50,6 +50,24 @@ defmodule GnomeGarden.Acquisition.LeadPromoteTest do
     assert record.organization_id == org.id
   end
 
+  test "a program-scoped promote records discovery evidence (one company, many signals)" do
+    {:ok, program} =
+      Commercial.create_discovery_program(%{
+        name: "OC Hunt #{uniq()}",
+        program_type: :industry_watch,
+        priority: :normal
+      })
+
+    domain = "evco-#{uniq()}.example.com"
+    cand = candidate(%{title: "EvCo", url: "https://#{domain}", type: :company, dedupe: %{context: :new, suppress?: false, related: []}})
+
+    assert {:promoted, record} = LeadPromote.promote(cand, discovery_program_id: program.id)
+
+    assert {:ok, [evidence]} = Commercial.list_discovery_evidence_for_discovery_record(record.id)
+    assert evidence.source_url == "https://#{domain}"
+    assert evidence.discovery_program_id == program.id
+  end
+
   test "promote_all summarizes outcomes" do
     candidates = [
       candidate(%{url: "https://a-#{uniq()}.example.com", type: :company, dedupe: %{context: :new, suppress?: false, related: []}}),
