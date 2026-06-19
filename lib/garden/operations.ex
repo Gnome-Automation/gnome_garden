@@ -60,6 +60,7 @@ defmodule GnomeGarden.Operations do
         args: [:website_domain]
 
       define :list_organizations_by_name_key, action: :by_name_key, args: [:name_key]
+      define :search_organizations, action: :search, args: [:query]
 
       define :create_organization, action: :create
       define :update_organization, action: :update

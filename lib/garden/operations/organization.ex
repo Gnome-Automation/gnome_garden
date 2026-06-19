@@ -126,6 +126,18 @@ defmodule GnomeGarden.Operations.Organization do
       filter expr(is_nil(merged_into_id))
     end
 
+    read :search do
+      argument :query, :string, allow_nil?: false
+
+      filter expr(
+               is_nil(merged_into_id) and
+                 (fragment("? ILIKE '%' || ? || '%'", name, ^arg(:query)) or
+                    fragment("? ILIKE '%' || ? || '%'", website, ^arg(:query)))
+             )
+
+      prepare build(sort: [inserted_at: :desc], limit: 50)
+    end
+
     read :by_name_key do
       argument :name_key, :string, allow_nil?: false
 

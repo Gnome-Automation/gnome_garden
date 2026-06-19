@@ -46,6 +46,7 @@ defmodule GnomeGarden.Acquisition do
       define :get_source, action: :read, get_by: [:id]
       define :get_source_by_external_ref, action: :by_external_ref, args: [:external_ref]
       define :get_source_by_url, action: :by_url, args: [:url]
+      define :search_sources, action: :search, args: [:query]
       define :create_source, action: :create
       define :update_source, action: :update
     end
@@ -86,6 +87,7 @@ defmodule GnomeGarden.Acquisition do
         args: [:source_discovery_record_id]
 
       define :get_finding_by_signal, action: :by_signal, args: [:signal_id]
+      define :search_findings, action: :search, args: [:query]
 
       define :create_finding, action: :create
       define :update_finding, action: :update

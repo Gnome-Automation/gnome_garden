@@ -426,6 +426,18 @@ defmodule GnomeGarden.Acquisition.Finding do
       get? true
       filter expr(signal_id == ^arg(:signal_id))
     end
+
+    read :search do
+      argument :query, :string, allow_nil?: false
+
+      filter expr(
+               fragment("? ILIKE '%' || ? || '%'", title, ^arg(:query)) or
+                 fragment("? ILIKE '%' || ? || '%'", summary, ^arg(:query)) or
+                 fragment("? ILIKE '%' || ? || '%'", work_summary, ^arg(:query))
+             )
+
+      prepare build(sort: [inserted_at: :desc], limit: 50)
+    end
   end
 
   pub_sub do

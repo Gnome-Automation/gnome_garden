@@ -283,6 +283,18 @@ defmodule GnomeGarden.Commercial.DiscoveryRecord do
       argument :website_domain, :string, allow_nil?: false
       get_by [:website_domain]
     end
+
+    read :search do
+      argument :query, :string, allow_nil?: false
+
+      filter expr(
+               fragment("? ILIKE '%' || ? || '%'", name, ^arg(:query)) or
+                 fragment("? ILIKE '%' || ? || '%'", industry, ^arg(:query)) or
+                 fragment("? ILIKE '%' || ? || '%'", location, ^arg(:query))
+             )
+
+      prepare build(sort: [inserted_at: :desc], limit: 50)
+    end
   end
 
   attributes do

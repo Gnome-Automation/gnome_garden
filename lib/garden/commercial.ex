@@ -119,6 +119,7 @@ defmodule GnomeGarden.Commercial do
         action: :by_website_domain,
         args: [:website_domain]
 
+      define :search_discovery_records, action: :search, args: [:query]
       define :create_discovery_record, action: :create
       define :create_prospect_discovery_record, action: :create_prospect
       define :create_opportunity_discovery_record, action: :create_opportunity

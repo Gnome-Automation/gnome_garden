@@ -361,6 +361,12 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       get_by [:url]
     end
 
+    read :search do
+      argument :query, :string, allow_nil?: false
+      filter expr(fragment("? ILIKE '%' || ? || '%'", name, ^arg(:query)))
+      prepare build(sort: [inserted_at: :desc], limit: 50)
+    end
+
     read :by_organization do
       argument :organization_id, :uuid, allow_nil?: false
       filter expr(organization_id == ^arg(:organization_id))

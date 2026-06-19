@@ -23,6 +23,7 @@ defmodule GnomeGarden.Procurement do
       define :list_console_procurement_sources, action: :console
       define :get_procurement_source, action: :read, get_by: [:id]
       define :get_procurement_source_by_url, action: :by_url, args: [:url]
+      define :search_procurement_sources, action: :search, args: [:query]
       define :create_procurement_source, action: :create
       define :create_procurement_source_for_organization, action: :create_for_organization
       define :import_procurement_source_seed_rows, action: :import_seed_rows, args: [:rows]
@@ -181,6 +182,7 @@ defmodule GnomeGarden.Procurement do
       define :list_bids_for_organization, action: :for_organization, args: [:organization_id]
       define :get_bid, action: :read, get_by: [:id]
       define :get_bid_by_url, action: :by_url, args: [:url]
+      define :search_bids, action: :search, args: [:query]
       define :create_bid, action: :create
       define :update_bid, action: :update
       define :record_bid_document_ingest, action: :record_document_ingest

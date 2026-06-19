@@ -81,6 +81,12 @@ defmodule GnomeGarden.Acquisition.Source do
       get_by [:url]
     end
 
+    read :search do
+      argument :query, :string, allow_nil?: false
+      filter expr(fragment("? ILIKE '%' || ? || '%'", name, ^arg(:query)))
+      prepare build(sort: [inserted_at: :desc], limit: 50)
+    end
+
     read :console do
       prepare build(
                 sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
