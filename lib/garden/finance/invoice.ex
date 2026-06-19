@@ -153,6 +153,28 @@ defmodule GnomeGarden.Finance.Invoice do
       change set_attribute(:paid_on, nil)
     end
 
+    # Email delivery is recorded independently of the invoice's accounting
+    # status (these never transition status or touch the ledger).
+    update :mark_email_sent do
+      accept []
+      change set_attribute(:email_status, :sent)
+      change set_attribute(:email_sent_at, &DateTime.utc_now/0)
+      change set_attribute(:last_email_attempted_at, &DateTime.utc_now/0)
+      change set_attribute(:email_failure_reason, nil)
+    end
+
+    update :mark_email_failed do
+      accept [:email_failure_reason]
+      change set_attribute(:email_status, :failed)
+      change set_attribute(:email_failed_at, &DateTime.utc_now/0)
+      change set_attribute(:last_email_attempted_at, &DateTime.utc_now/0)
+    end
+
+    read :email_failed do
+      filter expr(email_status == :failed)
+      prepare build(sort: [email_failed_at: :desc], load: [:organization])
+    end
+
     read :open do
       filter expr(status in [:issued, :partial])
 
@@ -264,6 +286,21 @@ defmodule GnomeGarden.Finance.Invoice do
     attribute :notes, :string do
       public? true
     end
+
+    # Email delivery state, tracked separately from accounting status: an
+    # invoice can be :issued (posted to the ledger) while its email delivery is
+    # still :pending or :failed. Delivery never gates issuance.
+    attribute :email_status, :atom do
+      allow_nil? false
+      default :pending
+      public? true
+      constraints one_of: [:pending, :sent, :failed]
+    end
+
+    attribute :last_email_attempted_at, :utc_datetime, public?: true
+    attribute :email_sent_at, :utc_datetime, public?: true
+    attribute :email_failed_at, :utc_datetime, public?: true
+    attribute :email_failure_reason, :string, public?: true
 
     timestamps()
   end

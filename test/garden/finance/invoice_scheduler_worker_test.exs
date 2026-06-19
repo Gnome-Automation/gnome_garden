@@ -131,4 +131,62 @@ defmodule GnomeGarden.Finance.InvoiceSchedulerWorkerTest do
     {:ok, updated} = Ash.get(GnomeGarden.Commercial.Agreement, agreement.id, domain: Commercial)
     assert updated.next_billing_date == Date.add(today, 7)
   end
+
+  # The key behavioral rule: a failed email leaves the invoice issued and the
+  # ledger entry intact; issuance is never undone or retried by the email step.
+  test "issues + posts even when the email fails, recording a partial-failure run", %{org: org, team_member: team_member} do
+    today = Date.utc_today()
+    agreement = active_agreement(org, :monthly, today)
+    _entry = approved_time_entry(org, agreement, team_member)
+
+    # No Person with a contact email exists for this org, so email delivery fails.
+    assert :ok = InvoiceSchedulerWorker.perform(%Oban.Job{args: %{}})
+
+    [invoice] =
+      GnomeGarden.Finance.Invoice
+      |> Ash.Query.filter(agreement_id == ^agreement.id)
+      |> Ash.read!(domain: Finance)
+
+    # Invoice remains issued; email delivery is recorded as failed, separately.
+    assert invoice.status == :issued
+    assert invoice.email_status == :failed
+    assert invoice.email_failure_reason =~ "no contact email"
+
+    # The ledger posting survived the email failure.
+    {:ok, entries} = GnomeGarden.Ledger.list_journal_entries_for_reference("invoice", invoice.id)
+    assert Enum.any?(entries, &(&1.entry_type == :invoice_issued))
+
+    # Billing date advanced (issue succeeded).
+    {:ok, updated} = Ash.get(GnomeGarden.Commercial.Agreement, agreement.id, domain: Commercial)
+    assert updated.next_billing_date == Date.shift(today, month: 1)
+
+    # The run records the failure as partial, with a matching per-agreement item.
+    {:ok, [run]} = Finance.list_recent_billing_runs()
+    assert run.status == :partial_failure
+    assert run.scanned_count == 1
+    assert run.issued_count == 1
+    assert run.emailed_count == 0
+    assert run.failed_count == 1
+
+    {:ok, [item]} = Finance.list_billing_run_items_for_run(run.id)
+    assert item.outcome == :issued
+    assert item.email_outcome == :failed
+    assert item.invoice_id == invoice.id
+  end
+
+  test "records a succeeded run that skips agreements with nothing to bill", %{org: org} do
+    agreement = active_agreement(org, :weekly, Date.utc_today())
+
+    assert :ok = InvoiceSchedulerWorker.perform(%Oban.Job{args: %{}})
+
+    {:ok, [run]} = Finance.list_recent_billing_runs()
+    assert run.status == :succeeded
+    assert run.scanned_count == 1
+    assert run.skipped_count == 1
+    assert run.issued_count == 0
+
+    {:ok, [item]} = Finance.list_billing_run_items_for_run(run.id)
+    assert item.outcome == :skipped
+    assert item.agreement_id == agreement.id
+  end
 end

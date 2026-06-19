@@ -62,6 +62,9 @@ defmodule GnomeGarden.Finance do
 
       define :update_invoice, action: :update
       define :issue_invoice, action: :issue
+      define :mark_invoice_email_sent, action: :mark_email_sent
+      define :mark_invoice_email_failed, action: :mark_email_failed
+      define :list_email_failed_invoices, action: :email_failed
       define :pay_invoice, action: :mark_paid
       define :partial_invoice, action: :partial
       define :write_off_invoice, action: :write_off
@@ -100,6 +103,20 @@ defmodule GnomeGarden.Finance do
       define :update_payment_application, action: :update
       define :list_payment_applications_for_invoice, action: :for_invoice, args: [:invoice_id]
       define :list_payment_applications_for_payment, action: :for_payment, args: [:payment_id]
+    end
+
+    resource GnomeGarden.Finance.BillingRun do
+      define :start_billing_run, action: :start
+      define :finish_billing_run_success, action: :finish_success
+      define :finish_billing_run_partial_failure, action: :finish_partial_failure
+      define :finish_billing_run_failure, action: :finish_failure
+      define :list_recent_billing_runs, action: :recent
+      define :get_billing_run, action: :read, get_by: [:id]
+    end
+
+    resource GnomeGarden.Finance.BillingRunItem do
+      define :create_billing_run_item, action: :create
+      define :list_billing_run_items_for_run, action: :for_run, args: [:billing_run_id]
     end
   end
 end
