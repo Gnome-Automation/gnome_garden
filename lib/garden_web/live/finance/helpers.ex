@@ -2,10 +2,11 @@ defmodule GnomeGardenWeb.Finance.Helpers do
   @moduledoc false
 
   def format_atom(nil), do: "-"
+  def format_atom(atom) when is_atom(atom), do: format_atom(Atom.to_string(atom))
 
-  def format_atom(atom) when is_atom(atom) do
-    atom
-    |> to_string()
+  # Some enum-ish values (e.g. BankTransaction.category) are stored as strings.
+  def format_atom(value) when is_binary(value) do
+    value
     |> String.replace("_", " ")
     |> String.split()
     |> Enum.map_join(" ", &String.capitalize/1)

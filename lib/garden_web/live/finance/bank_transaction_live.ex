@@ -528,7 +528,8 @@ defmodule GnomeGardenWeb.Finance.BankTransactionLive do
         |> assign(:events, Enum.reverse(workspace.events))
         |> assign(:created_rule, nil)
         |> assign(:category_form, %{
-          "category" => Atom.to_string(transaction.category || :unknown),
+          # category is a string attribute (nil until categorized)
+          "category" => transaction.category || "unknown",
           "reconciliation_note" => transaction.reconciliation_note || ""
         })
 

@@ -171,4 +171,85 @@ defmodule GnomeGardenWeb.FinanceBankingLiveTest do
     {:ok, [accepted]} = Banking.list_bank_transaction_matches_for_transaction(txn.id)
     assert accepted.status == :accepted
   end
+
+  # Workflow tests for the operator clicks that carry financial meaning — the
+  # exact paths mount-only smoke tests never exercise.
+  describe "bank transaction operator workflows" do
+    test "categorize updates the transaction category", %{conn: conn, txn: txn} do
+      {:ok, view, _html} = live(conn, ~p"/finance/banking/transactions/#{txn.id}")
+
+      render_click(view, "save_category", %{
+        "category" => %{"category" => "customer_payment", "reconciliation_note" => "from QA"}
+      })
+
+      {:ok, updated} = Banking.get_bank_transaction(txn.id)
+      assert updated.category == "customer_payment"
+    end
+
+    test "mark reviewed then reopen moves review_status back to unreviewed", %{conn: conn, txn: txn} do
+      {:ok, view, _html} = live(conn, ~p"/finance/banking/transactions/#{txn.id}")
+
+      render_click(view, "review", %{})
+      {:ok, reviewed} = Banking.get_bank_transaction(txn.id)
+      assert reviewed.review_status == :reviewed
+
+      render_click(view, "reopen", %{})
+      {:ok, reopened} = Banking.get_bank_transaction(txn.id)
+      assert reopened.review_status == :unreviewed
+    end
+
+    test "ignore marks the transaction ignored", %{conn: conn, txn: txn} do
+      {:ok, view, _html} = live(conn, ~p"/finance/banking/transactions/#{txn.id}")
+      render_click(view, "ignore", %{})
+
+      {:ok, updated} = Banking.get_bank_transaction(txn.id)
+      assert updated.review_status == :ignored
+    end
+
+    test "create rule from transaction adds a bank rule", %{conn: conn, txn: txn} do
+      # A rule can only be created from a reviewed, categorized transaction.
+      {:ok, txn} = Banking.categorize_bank_transaction(txn, %{category: "customer_payment"})
+      {:ok, txn} = Banking.mark_bank_transaction_reviewed(txn, %{})
+      {:ok, before} = Banking.list_bank_rules()
+
+      {:ok, view, _html} = live(conn, ~p"/finance/banking/transactions/#{txn.id}")
+      render_click(view, "create_rule", %{})
+
+      {:ok, after_rules} = Banking.list_bank_rules()
+      assert length(after_rules) == length(before) + 1
+    end
+  end
+
+  test "invoice show issues a draft invoice via the transition event", %{conn: conn} do
+    org =
+      GnomeGarden.Operations.Organization
+      |> Ash.Changeset.for_create(:create, %{
+        name: "Inv Org #{System.unique_integer([:positive])}",
+        organization_kind: :business
+      })
+      |> Ash.create!(domain: GnomeGarden.Operations)
+
+    {:ok, invoice} =
+      Finance.create_invoice(%{
+        organization_id: org.id,
+        invoice_number: "INV-#{System.unique_integer([:positive])}",
+        currency_code: "USD",
+        subtotal: Money.new!(:USD, "500"),
+        tax_total: Money.new!(:USD, "0"),
+        total_amount: Money.new!(:USD, "500"),
+        balance_amount: Money.new!(:USD, "500")
+      })
+
+    assert invoice.status == :draft
+
+    {:ok, view, _html} = live(conn, ~p"/finance/invoices/#{invoice.id}")
+    render_click(view, "transition", %{"action" => "issue"})
+
+    {:ok, issued} = Finance.get_invoice(invoice.id)
+    assert issued.status == :issued
+
+    # Issuing posted the GL entry.
+    {:ok, entries} = Ledger.list_journal_entries_for_reference("invoice", invoice.id)
+    assert Enum.any?(entries, &(&1.entry_type == :invoice_issued))
+  end
 end
