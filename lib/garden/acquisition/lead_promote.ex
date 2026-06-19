@@ -82,12 +82,12 @@ defmodule GnomeGarden.Acquisition.LeadPromote do
   defp create_record(candidate, dedupe, opts) do
     actor = Keyword.get(opts, :actor)
     program_id = Keyword.get(opts, :discovery_program_id)
+    name = candidate[:title] || WebIdentity.website_domain(candidate[:url])
 
-    attrs =
+    base =
       %{
-        name: candidate[:title] || WebIdentity.website_domain(candidate[:url]),
+        name: name,
         website: candidate[:url],
-        record_type: :prospect,
         notes: "Promoted from Exa lead preview (#{dedupe.context}). Query: #{candidate[:query]}",
         metadata: %{
           "source_url" => candidate[:url],
@@ -95,12 +95,25 @@ defmodule GnomeGarden.Acquisition.LeadPromote do
           "preview_type" => to_string(candidate[:type])
         }
       }
-      |> maybe_put(:organization_id, organization_id(dedupe))
       |> maybe_put(:discovery_program_id, program_id)
 
-    # Authorization is owned by Commercial.create_discovery_record (no bypass);
-    # a UI caller threads its actor through opts.
-    case Commercial.create_discovery_record(attrs, actor: actor) do
+    # Every promoted lead must carry a company to reach a Pursuit. If we already
+    # matched a known org, link it; otherwise create the prospect org (created
+    # freely — dedup happens separately). Authorization is owned by the
+    # Commercial create action (no bypass); a UI caller threads its actor.
+    result =
+      case organization_id(dedupe) do
+        nil ->
+          Commercial.create_prospect_discovery_record(
+            Map.merge(base, %{organization_name: name, organization_website: candidate[:url]}),
+            actor: actor
+          )
+
+        org_id ->
+          Commercial.create_discovery_record(Map.put(base, :organization_id, org_id), actor: actor)
+      end
+
+    case result do
       {:ok, record} ->
         record_evidence(record, candidate, dedupe, program_id, actor)
         {:promoted, record}
