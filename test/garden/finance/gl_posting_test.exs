@@ -81,6 +81,64 @@ defmodule GnomeGarden.Finance.GLPostingTest do
     assert Money.equal?(invoice.balance_amount, Money.new!(:USD, 0))
   end
 
+  test "applying more than the invoice balance is rejected", %{org: org} do
+    invoice = issued_invoice(org, "500")
+    {:ok, payment} = Finance.create_payment(%{organization_id: org.id, received_on: Date.utc_today(), amount: Money.new!(:USD, "1000")})
+
+    assert {:error, error} =
+             Finance.create_payment_application(%{payment_id: payment.id, invoice_id: invoice.id, amount: Money.new!(:USD, "600"), applied_on: Date.utc_today()})
+
+    assert error_messages(error) =~ "remaining balance"
+
+    # The invoice was not silently overpaid.
+    {:ok, invoice} = Finance.get_invoice(invoice.id)
+    assert Money.equal?(invoice.balance_amount, Money.new!(:USD, "500"))
+  end
+
+  test "applying more than the payment's unapplied amount is rejected", %{org: org} do
+    invoice = issued_invoice(org, "1000")
+    {:ok, payment} = Finance.create_payment(%{organization_id: org.id, received_on: Date.utc_today(), amount: Money.new!(:USD, "300")})
+
+    assert {:error, error} =
+             Finance.create_payment_application(%{payment_id: payment.id, invoice_id: invoice.id, amount: Money.new!(:USD, "500"), applied_on: Date.utc_today()})
+
+    assert error_messages(error) =~ "unapplied amount"
+  end
+
+  test "a zero or negative application amount is rejected", %{org: org} do
+    invoice = issued_invoice(org, "500")
+    {:ok, payment} = Finance.create_payment(%{organization_id: org.id, received_on: Date.utc_today(), amount: Money.new!(:USD, "500")})
+
+    assert {:error, error} =
+             Finance.create_payment_application(%{payment_id: payment.id, invoice_id: invoice.id, amount: Money.new!(:USD, "0"), applied_on: Date.utc_today()})
+
+    assert error_messages(error) =~ "greater than zero"
+  end
+
+  test "applying to a void invoice is rejected", %{org: org} do
+    invoice = issued_invoice(org, "500")
+    {:ok, _} = Finance.void_invoice(invoice)
+    {:ok, payment} = Finance.create_payment(%{organization_id: org.id, received_on: Date.utc_today(), amount: Money.new!(:USD, "500")})
+
+    assert {:error, error} =
+             Finance.create_payment_application(%{payment_id: payment.id, invoice_id: invoice.id, amount: Money.new!(:USD, "500"), applied_on: Date.utc_today()})
+
+    assert error_messages(error) =~ "void invoice"
+  end
+
+  test "applying a reversed payment is rejected", %{org: org} do
+    invoice = issued_invoice(org, "500")
+    {:ok, payment} = Finance.create_payment(%{organization_id: org.id, received_on: Date.utc_today(), amount: Money.new!(:USD, "500")})
+    {:ok, payment} = Finance.reverse_payment(payment)
+
+    assert {:error, error} =
+             Finance.create_payment_application(%{payment_id: payment.id, invoice_id: invoice.id, amount: Money.new!(:USD, "500"), applied_on: Date.utc_today()})
+
+    assert error_messages(error) =~ "reversed payment"
+  end
+
+  defp error_messages(error), do: Exception.message(error)
+
   defp all_payment_entries do
     {:ok, entries} = Ledger.list_posted_journal_entries()
     Enum.filter(entries, &(&1.entry_type == :payment_received))

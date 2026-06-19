@@ -43,6 +43,8 @@ defmodule GnomeGarden.Finance.PaymentApplication do
         :notes
       ]
 
+      validate GnomeGarden.Finance.Validations.ValidateApplicationAmount
+
       change GnomeGarden.Finance.Changes.PostPaymentAppliedToLedger
       change GnomeGarden.Finance.Changes.SyncInvoiceBalanceFromApplications
     end
