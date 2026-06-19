@@ -64,6 +64,21 @@ defmodule GnomeGarden.Banking.ReconciliationTest do
     assert length(matches) == 1
   end
 
+  test "auto_accept_when_exact accepts a single exact match" do
+    {:ok, _rule} =
+      Banking.create_bank_rule(%{name: "Deposits", counterparty_contains: "ACME", direction: :credit,
+        category: :customer_payment, match_behavior: :auto_accept_when_exact, review_status_result: :reviewed})
+
+    account = setup_account()
+    txn = credit_txn(account, "750", "ACME CORP")
+    _entry = posted_entry("750")
+
+    Banking.Reconciliation.reconcile_accounts([account])
+
+    {:ok, [match]} = Banking.list_bank_transaction_matches_for_transaction(txn.id)
+    assert match.status == :accepted
+  end
+
   test "a non-matching amount proposes nothing" do
     account = setup_account()
     txn = credit_txn(account, "999", "Nobody")

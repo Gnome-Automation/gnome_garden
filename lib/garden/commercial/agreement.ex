@@ -457,9 +457,11 @@ defmodule GnomeGarden.Commercial.Agreement do
       filter expr(total_amount[:currency] == "USD")
     end
 
-    sum :received_amount, :payments, :amount do
+    # Cash applied against this agreement's invoices — robust regardless of
+    # whether the payment itself carries agreement_id.
+    sum :received_amount, [:invoices, :payment_applications], :amount do
       public? true
-      filter expr(status in [:received, :deposited] and amount[:currency] == "USD")
+      filter expr(amount[:currency] == "USD")
     end
 
     sum :billable_minutes, :time_entries, :minutes do
