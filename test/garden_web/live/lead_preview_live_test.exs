@@ -33,7 +33,7 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLiveTest do
     # Use a raw term (company intent) so the candidate is promotable, not a signal page.
     html =
       view
-      |> form("form", %{
+      |> form("#lead-preview-form", %{
         "preview" => %{
           "industries" => "",
           "regions" => "",

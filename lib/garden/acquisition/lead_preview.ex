@@ -90,7 +90,8 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         start_published_date: Keyword.get(opts, :start_published_date)
       ]
 
-    %{cost: cost, candidates: raw, executed: executed} = search_all(queries, search_opts, ceiling)
+    %{cost: cost, candidates: raw, executed: executed, errors: errors} =
+      search_all(queries, search_opts, ceiling)
 
     candidates =
       raw
@@ -110,6 +111,8 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
        candidate_count: length(ranked),
        kept_count: Enum.count(ranked, &(not &1.dedupe.suppress?)),
        suppressed_count: Enum.count(ranked, & &1.dedupe.suppress?),
+       failed_queries: length(errors),
+       errors: Enum.reverse(errors),
        candidates: ranked
      }}
   end
@@ -165,7 +168,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   # --- search with caps + spend ceiling ---
 
   defp search_all(queries, search_opts, ceiling) do
-    Enum.reduce_while(queries, %{cost: 0.0, candidates: [], executed: 0}, fn query, acc ->
+    Enum.reduce_while(queries, %{cost: 0.0, candidates: [], executed: 0, errors: []}, fn query, acc ->
       if acc.cost >= ceiling do
         {:halt, acc}
       else
@@ -180,8 +183,9 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
 
             if acc.cost >= ceiling, do: {:halt, acc}, else: {:cont, acc}
 
-          {:error, _reason} ->
-            {:cont, %{acc | executed: acc.executed + 1}}
+          {:error, reason} ->
+            # Don't let a failed query silently look like "no results" — record it.
+            {:cont, %{acc | executed: acc.executed + 1, errors: [reason | acc.errors]}}
         end
       end
     end)

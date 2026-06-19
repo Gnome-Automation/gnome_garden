@@ -22,7 +22,7 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
      socket
      |> assign(:page_title, "Lead Preview")
      |> assign(:form, default_form())
-     |> assign(:programs, programs())
+     |> assign(:programs, programs(socket.assigns.current_user))
      |> assign(:program_id, "")
      |> assign(:preview, nil)
      |> assign(:candidates, [])
@@ -59,31 +59,24 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
      |> assign(:form, params)
      |> assign(:program_id, params["program_id"] || "")
      |> assign(:preview, preview)
-     |> assign(:candidates, candidates)}
+     |> assign(:candidates, candidates)
+     |> maybe_warn_failures(preview)}
   end
 
   @impl true
   def handle_event("promote", %{"index" => index}, socket) do
-    index = String.to_integer(index)
-    candidate = Enum.find(socket.assigns.candidates, &(&1.index == index))
+    with {idx, _} <- Integer.parse(to_string(index)),
+         candidate when not is_nil(candidate) <- Enum.find(socket.assigns.candidates, &(&1.index == idx)) do
+      {status, kind, message} = promote_outcome(candidate, socket)
 
-    outcome =
-      LeadPromote.promote(candidate,
-        actor: socket.assigns.current_user,
-        discovery_program_id: blank_to_nil(socket.assigns.program_id)
-      )
-
-    {status, flash} =
-      case outcome do
-        {:promoted, _record} -> {:promoted, {:info, "Promoted to the review queue."}}
-        {:needs_enrichment, _} -> {:needs_enrichment, {:error, "Needs enrichment — the page domain isn't the prospect."}}
-        {:skipped, %{reason: reason}} -> {:skipped, {:error, "Skipped: #{reason}"}}
-      end
-
-    candidates = update_status(socket.assigns.candidates, index, status)
-    {kind, message} = flash
-
-    {:noreply, socket |> assign(:candidates, candidates) |> put_flash(kind, message)}
+      {:noreply,
+       socket
+       |> assign(:candidates, update_status(socket.assigns.candidates, idx, status))
+       |> put_flash(kind, message)}
+    else
+      _ ->
+        {:noreply, put_flash(socket, :error, "That candidate is no longer available — re-run the preview.")}
+    end
   end
 
   @impl true
@@ -124,7 +117,7 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
       </.page_header>
 
       <.section title="Search" description="Signal-shaped queries are built from these inputs (the word 'automation' is intentionally avoided).">
-        <form phx-submit="run_preview" class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-6">
+        <form id="lead-preview-form" phx-submit="run_preview" class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-6">
           <.preview_input name="industries" label="Industries" value={@form["industries"]} placeholder="food processing, packaging" span="3" />
           <.preview_input name="regions" label="Regions" value={@form["regions"]} placeholder="orange county, southern california" span="3" />
           <.preview_input name="terms" label="Extra terms (optional)" value={@form["terms"]} placeholder="comma-separated" span="6" />
@@ -243,8 +236,26 @@ defmodule GnomeGardenWeb.Acquisition.LeadPreviewLive do
     Enum.map(candidates, fn c -> if c.index == index, do: %{c | status: status}, else: c end)
   end
 
-  defp programs do
-    case Commercial.list_active_discovery_programs() do
+  defp maybe_warn_failures(socket, %{failed_queries: failed}) when failed > 0 do
+    sample = socket.assigns.preview.errors |> List.first() |> inspect()
+    put_flash(socket, :error, "#{failed} search query(ies) failed (e.g. #{sample}) — results may be incomplete.")
+  end
+
+  defp maybe_warn_failures(socket, _preview), do: socket
+
+  defp promote_outcome(candidate, socket) do
+    case LeadPromote.promote(candidate,
+           actor: socket.assigns.current_user,
+           discovery_program_id: blank_to_nil(socket.assigns.program_id)
+         ) do
+      {:promoted, _record} -> {:promoted, :info, "Promoted to the review queue."}
+      {:needs_enrichment, _} -> {:needs_enrichment, :error, "Needs enrichment — the page domain isn't the prospect."}
+      {:skipped, %{reason: reason}} -> {:skipped, :error, "Skipped: #{reason}"}
+    end
+  end
+
+  defp programs(actor) do
+    case Commercial.list_active_discovery_programs(actor: actor) do
       {:ok, programs} -> programs
       _ -> []
     end
