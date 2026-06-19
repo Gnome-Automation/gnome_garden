@@ -61,6 +61,8 @@ defmodule GnomeGarden.Finance.InvoiceLine do
         :line_total,
         :notes
       ]
+
+      validate {GnomeGarden.Validations.SingleCurrency, attributes: [:unit_price, :line_total]}
     end
 
     update :update do

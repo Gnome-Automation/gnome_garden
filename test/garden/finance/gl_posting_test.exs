@@ -137,6 +137,28 @@ defmodule GnomeGarden.Finance.GLPostingTest do
     assert error_messages(error) =~ "reversed payment"
   end
 
+  test "a non-USD invoice is rejected (single-currency enforcement)", %{org: org} do
+    assert {:error, error} =
+             Finance.create_invoice(%{
+               organization_id: org.id,
+               invoice_number: "I-#{System.unique_integer([:positive])}",
+               currency_code: "EUR",
+               subtotal: Money.new!(:EUR, "100"),
+               tax_total: Money.new!(:EUR, "0"),
+               total_amount: Money.new!(:EUR, "100"),
+               balance_amount: Money.new!(:EUR, "100")
+             })
+
+    assert error_messages(error) =~ "multi-currency is not yet supported"
+  end
+
+  test "a non-USD payment is rejected (single-currency enforcement)", %{org: org} do
+    assert {:error, error} =
+             Finance.create_payment(%{organization_id: org.id, received_on: Date.utc_today(), amount: Money.new!(:EUR, "100")})
+
+    assert error_messages(error) =~ "multi-currency is not yet supported"
+  end
+
   defp error_messages(error), do: Exception.message(error)
 
   defp all_payment_entries do

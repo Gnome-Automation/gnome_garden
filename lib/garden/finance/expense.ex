@@ -71,6 +71,8 @@ defmodule GnomeGarden.Finance.Expense do
         :billable,
         :notes
       ]
+
+      validate {GnomeGarden.Validations.SingleCurrency, attributes: [:amount]}
     end
 
     update :update do

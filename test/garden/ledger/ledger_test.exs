@@ -99,6 +99,18 @@ defmodule GnomeGarden.LedgerTest do
       assert {:error, _} =
                Ledger.post_journal_entry(%{date: Date.utc_today(), description: "Empty line", entry_type: :manual, lines: lines})
     end
+
+    test "a non-USD line is rejected (single-currency enforcement)" do
+      lines = [
+        %{account_id: account!("1000").id, debit: Money.new!(:EUR, "100")},
+        %{account_id: account!("1100").id, credit: Money.new!(:EUR, "100")}
+      ]
+
+      assert {:error, error} =
+               Ledger.post_journal_entry(%{date: Date.utc_today(), description: "Euro", entry_type: :manual, lines: lines})
+
+      assert Exception.message(error) =~ "multi-currency is not yet supported"
+    end
   end
 
   describe "immutability of posted entries" do

@@ -60,6 +60,8 @@ defmodule GnomeGarden.Finance.Payment do
         :reference,
         :notes
       ]
+
+      validate {GnomeGarden.Validations.SingleCurrency, attributes: [:amount]}
     end
 
     update :update do

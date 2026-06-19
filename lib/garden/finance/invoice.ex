@@ -74,6 +74,9 @@ defmodule GnomeGarden.Finance.Invoice do
         :due_on,
         :notes
       ]
+
+      validate {GnomeGarden.Validations.SingleCurrency,
+                attributes: [:subtotal, :tax_total, :total_amount, :balance_amount]}
     end
 
     create :create_from_agreement_sources do

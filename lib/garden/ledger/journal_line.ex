@@ -48,6 +48,7 @@ defmodule GnomeGarden.Ledger.JournalLine do
       ]
 
       validate GnomeGarden.Ledger.JournalLine.Validations.OneSidedPositiveLine
+      validate {GnomeGarden.Validations.SingleCurrency, attributes: [:debit, :credit]}
     end
 
     read :for_entry do

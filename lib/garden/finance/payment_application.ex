@@ -43,6 +43,7 @@ defmodule GnomeGarden.Finance.PaymentApplication do
         :notes
       ]
 
+      validate {GnomeGarden.Validations.SingleCurrency, attributes: [:amount]}
       validate GnomeGarden.Finance.Validations.ValidateApplicationAmount
 
       change GnomeGarden.Finance.Changes.PostPaymentAppliedToLedger

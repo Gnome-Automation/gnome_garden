@@ -75,6 +75,8 @@ defmodule GnomeGarden.Finance.TimeEntry do
         :cost_rate,
         :notes
       ]
+
+      validate {GnomeGarden.Validations.SingleCurrency, attributes: [:bill_rate, :cost_rate]}
     end
 
     update :update do
