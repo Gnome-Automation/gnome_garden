@@ -31,6 +31,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     ]
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.ContactEnrichment
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
   alias GnomeGardenWeb.Operations.TaskPubSub
@@ -58,6 +59,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
      socket
      |> assign(:page_title, finding.title)
      |> assign(:action_dialog, nil)
+     |> assign(:enrichment, nil)
      |> assign_finding_context(finding)}
   end
 
@@ -345,6 +347,48 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
     end
   end
 
+  def handle_event("enrich_preview", _params, socket) do
+    case enrich_target(socket.assigns.finding) do
+      {:finding, finding_id} ->
+        result = ContactEnrichment.preview_finding(finding_id, actor: socket.assigns.current_user)
+        {:noreply, assign_enrichment(socket, :preview, result)}
+
+      {:org, target} ->
+        result = ContactEnrichment.preview(target, actor: socket.assigns.current_user)
+        {:noreply, assign_enrichment(socket, :preview, result)}
+
+      :none ->
+        {:noreply, put_flash(socket, :error, "No prospect website or analyzed document to extract contacts from.")}
+    end
+  end
+
+  def handle_event("enrich_confirm", _params, socket) do
+    actor = socket.assigns.current_user
+
+    result =
+      case enrich_target(socket.assigns.finding) do
+        {:finding, finding_id} -> ContactEnrichment.enrich_finding(finding_id, actor: actor)
+        {:org, target} -> ContactEnrichment.enrich(target, actor: actor)
+        :none -> {:error, :no_source}
+      end
+
+    case result do
+      {:ok, enriched} ->
+        {:noreply,
+         socket
+         |> refresh_finding()
+         |> assign(:enrichment, {:done, enriched})
+         |> put_flash(:info, "Saved #{persisted_people_count(enriched)} contact(s).")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Enrichment failed: #{inspect(reason)}")}
+    end
+  end
+
+  def handle_event("enrich_discard", _params, socket) do
+    {:noreply, assign(socket, :enrichment, nil)}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -397,12 +441,109 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Show do
         discovery_evidence={@discovery_evidence}
       />
 
+      <.contact_enrichment_section finding={@finding} enrichment={@enrichment} />
+
       <.review_history_section review_decisions={@review_decisions} />
 
       <.review_dialogs action_dialog={@action_dialog} id_prefix="finding-show" />
     </.page>
     """
   end
+
+  attr :finding, :map, required: true
+  attr :enrichment, :any, default: nil
+
+  defp contact_enrichment_section(assigns) do
+    ~H"""
+    <.section title="Contacts" description={enrichment_hint(@finding)}>
+      <:actions>
+        <.button phx-click="enrich_preview">
+          <.icon name="hero-user-plus" class="size-4" /> Find contacts
+        </.button>
+      </:actions>
+
+      <%= case @enrichment do %>
+        <% {:preview, result} -> %>
+          <div class="space-y-4">
+            <p class="text-sm text-base-content/70">
+              Preview only — nothing saved yet.
+              <span :if={result.cost && result.cost > 0}>Cost: ${result.cost}.</span>
+              <span :if={result.llm.status == :error} class="text-amber-600">
+                Name extraction unavailable ({inspect(result.llm.error)}) — only direct emails/phones below.
+              </span>
+            </p>
+
+            <div :if={result.people == []} class="text-sm text-base-content/60">
+              No named people found on the page (often hidden behind a contact form).
+            </div>
+
+            <div :for={person <- result.people} class="rounded-lg border border-base-content/10 bg-base-200 px-3 py-2 text-sm">
+              <span class="font-medium text-base-content">{person.first_name} {person.last_name}</span>
+              <span :if={person.title} class="text-base-content/60">— {person.title}</span>
+              <span class="ml-2 text-xs text-base-content/50">conf {person.confidence}</span>
+              <div class="text-xs text-base-content/70">
+                <span :if={person.email}>{person.email}</span>
+                <span :if={person.phone} class="ml-2">{person.phone}</span>
+              </div>
+            </div>
+
+            <div :if={result.org_contact.emails != [] or result.org_contact.phones != []} class="text-xs text-base-content/60">
+              Org-level (unattributed): {Enum.join(result.org_contact.emails ++ result.org_contact.phones, ", ")}
+            </div>
+
+            <p :if={result.firmographic} class="text-xs text-base-content/60">
+              {result.firmographic.summary}
+            </p>
+
+            <div class="flex gap-2">
+              <.button phx-click="enrich_confirm" variant="primary">Save contacts</.button>
+              <.button phx-click="enrich_discard">Discard</.button>
+            </div>
+          </div>
+
+        <% {:done, result} -> %>
+          <p class="text-sm text-emerald-600">
+            Saved {persisted_people_count(result)} contact(s) to this finding. They are inactive (unverified) until you confirm them.
+          </p>
+
+        <% _ -> %>
+          <p class="text-sm text-base-content/60">
+            Extract the contact for this {@finding.finding_family_label} lead. {enrichment_cost_note(@finding)}
+          </p>
+      <% end %>
+    </.section>
+    """
+  end
+
+  # A procurement RFP names its buyer in the (already analyzed) solicitation
+  # document; a discovery/web lead's contacts come from the prospect's site.
+  defp enrich_target(%{finding_family: :procurement} = finding), do: {:finding, finding.id}
+
+  defp enrich_target(%{organization: %{website: website} = org})
+       when is_binary(website) and website != "" do
+    {:org, %{organization_id: org.id, url: website, company: org.name}}
+  end
+
+  defp enrich_target(_finding), do: :none
+
+  defp enrichment_hint(%{finding_family: :procurement}),
+    do: "Extract the procurement officer from the RFP documents (parsed at ingest) — free, no fetch."
+
+  defp enrichment_hint(_finding),
+    do: "Extract contacts from the prospect's website via Exa — a small paid fetch."
+
+  defp enrichment_cost_note(%{finding_family: :procurement}), do: "Free — reads the analyzed RFP text."
+  defp enrichment_cost_note(_finding), do: "Costs a small Exa fetch (~$0.006)."
+
+  defp assign_enrichment(socket, :preview, {:ok, result}), do: assign(socket, :enrichment, {:preview, result})
+
+  defp assign_enrichment(socket, :preview, {:error, reason}),
+    do: put_flash(socket, :error, "Could not preview contacts: #{inspect(reason)}")
+
+  defp persisted_people_count(%{persisted: %{people: people}}) when is_list(people),
+    do: Enum.count(people, fn {tag, _} -> tag in [:created, :existing] end)
+
+  defp persisted_people_count(_result), do: 0
 
   defp load_finding!(id, actor) do
     Acquisition.get_finding!(

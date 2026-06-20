@@ -41,6 +41,10 @@ config :gnome_garden, :exa,
   api_key: "test-exa-key",
   req_options: [plug: {Req.Test, GnomeGarden.Search.Exa}]
 
+# Never make a live LLM call from contact extraction in tests; inject :llm_fun
+# explicitly when a test needs the named-people path.
+config :gnome_garden, :contact_extractor, llm_enabled: false
+
 config :gnome_garden, GnomeGarden.Acquisition.Document,
   storage: [service: {AshStorage.Service.Test, []}]
 

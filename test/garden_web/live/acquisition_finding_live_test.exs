@@ -66,6 +66,33 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert path == ~p"/acquisition/findings/#{bid_finding.id}"
   end
 
+  test "find-contacts previews and saves contacts from an RFP finding's text", %{conn: conn} do
+    {:ok, finding} =
+      Acquisition.create_finding(%{
+        external_ref: "rfp-ui-#{System.unique_integer([:positive])}",
+        title: "Control System Integration RFP",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        status: :new,
+        observed_at: DateTime.utc_now(),
+        summary: "Submit questions to pbuyer@city.example.gov or call (562) 555-0100.",
+        work_summary: "SCADA/PLC controls integration."
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
+    assert render(view) =~ "Find contacts"
+
+    # Preview (dry-run) surfaces the regex-captured contact info; the LLM name
+    # step is disabled in test, so it appears as org-level contact info.
+    html = view |> element("button", "Find contacts") |> render_click()
+    assert html =~ "pbuyer@city.example.gov"
+    assert html =~ "Save contacts"
+
+    # Confirm persists (succeeds even with no named person to attach).
+    html = view |> element("button", "Save contacts") |> render_click()
+    assert html =~ "contact(s)"
+  end
+
   test "acquisition queue falls back to review for unsupported queue params", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/acquisition/findings?queue=procurement")
 

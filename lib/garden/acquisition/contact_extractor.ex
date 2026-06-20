@@ -148,12 +148,22 @@ defmodule GnomeGarden.Acquisition.ContactExtractor do
          %{status: :ok, cost: Keyword.get(opts, :structured_cost), error: nil},
          normalize_firmographic(structured)}
 
-      Keyword.get(opts, :use_llm, true) ->
+      # An explicitly injected llm_fun always runs (tests, custom callers).
+      Keyword.has_key?(opts, :llm_fun) ->
+        run_llm(text, opts, company)
+
+      # The default GLM path is gated so it can be disabled (e.g. in tests, or
+      # when no key is configured) without every caller passing :use_llm.
+      Keyword.get(opts, :use_llm, llm_enabled?()) ->
         run_llm(text, opts, company)
 
       true ->
         {[], %{status: :skipped, cost: nil, error: nil}, nil}
     end
+  end
+
+  defp llm_enabled? do
+    Application.get_env(:gnome_garden, :contact_extractor, [])[:llm_enabled] != false
   end
 
   defp run_llm(text, opts, company) do
