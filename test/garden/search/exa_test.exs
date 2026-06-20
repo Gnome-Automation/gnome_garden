@@ -52,4 +52,66 @@ defmodule GnomeGarden.Search.ExaTest do
 
     assert {:error, {:http_error, 429, _body}} = Exa.search("anything")
   end
+
+  describe "contents/2" do
+    test "sends urls, subpages, targets and a summary schema; parses the summary JSON" do
+      test_pid = self()
+
+      Req.Test.stub(Exa, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        send(test_pid, {:contents_body, Jason.decode!(body)})
+
+        Req.Test.json(conn, %{
+          "costDollars" => %{"total" => 0.006},
+          "results" => [
+            %{
+              "url" => "https://acme.example.com",
+              "title" => "Acme",
+              "text" => "Call us at 714-555-1212",
+              "summary" => ~s({"people":[{"name":"Jane Doe","title":"VP Ops"}],"firmographic":{"summary":"A maker."}}),
+              "subpages" => [
+                %{"url" => "https://acme.example.com/contact", "title" => "Contact", "text" => "info@acme.example.com"}
+              ]
+            }
+          ]
+        })
+      end)
+
+      assert {:ok, %{cost: 0.006, results: [result]}} =
+               Exa.contents("https://acme.example.com",
+                 subpages: 4,
+                 subpage_target: ["contact", "about"],
+                 summary_schema: %{"type" => "object"},
+                 summary_query: "find people"
+               )
+
+      assert_received {:contents_body, body}
+      assert body["urls"] == ["https://acme.example.com"]
+      assert body["subpages"] == 4
+      assert body["subpageTarget"] == ["contact", "about"]
+      assert body["summary"]["schema"] == %{"type" => "object"}
+      assert body["summary"]["query"] == "find people"
+
+      # Summary string parsed into a map; subpages normalized recursively.
+      assert result.summary["people"] == [%{"name" => "Jane Doe", "title" => "VP Ops"}]
+      assert [subpage] = result.subpages
+      assert subpage.url == "https://acme.example.com/contact"
+      assert subpage.text == "info@acme.example.com"
+    end
+
+    test "omits text when max_characters is false" do
+      test_pid = self()
+
+      Req.Test.stub(Exa, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        send(test_pid, {:contents_body, Jason.decode!(body)})
+        Req.Test.json(conn, %{"costDollars" => %{"total" => 0.001}, "results" => []})
+      end)
+
+      assert {:ok, %{results: []}} = Exa.contents("https://acme.example.com", max_characters: false)
+
+      assert_received {:contents_body, body}
+      refute Map.has_key?(body, "text")
+    end
+  end
 end

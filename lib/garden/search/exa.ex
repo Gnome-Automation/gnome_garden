@@ -6,10 +6,11 @@ defmodule GnomeGarden.Search.Exa do
   ranked pages (with optional clean contents), which is a much higher
   signal-per-dollar way to find lead candidates than crawling whole sites.
 
-  This module wraps only the cheap `/search` endpoint for now (no `/contents`,
-  no LLM) — the building block for candidate generation feeding the AshLua
-  discovery pipeline. Cost scales sharply once contents + extraction are added,
-  so each response surfaces the real `cost` Exa reports so callers can budget.
+  This module wraps two endpoints: the cheap `/search` (candidate generation for
+  the AshLua discovery pipeline) and the paid `/contents` (selective page
+  enrichment — clean text + subpages for chosen candidates, e.g. pulling a
+  company's contact/about/team pages). Cost scales sharply with `/contents`, so
+  each response surfaces the real `cost` Exa reports so callers can budget.
 
   The API key is read from `config :gnome_garden, :exa, api_key: ...`
   (wired from the `EXA_API_KEY` environment variable in `config/runtime.exs`).
@@ -17,7 +18,8 @@ defmodule GnomeGarden.Search.Exa do
 
   require Logger
 
-  @endpoint "https://api.exa.ai/search"
+  @search_endpoint "https://api.exa.ai/search"
+  @contents_endpoint "https://api.exa.ai/contents"
   @default_num_results 10
   @receive_timeout 40_000
 
@@ -26,10 +28,22 @@ defmodule GnomeGarden.Search.Exa do
           url: String.t(),
           published_date: String.t() | nil,
           author: String.t() | nil,
-          score: float() | nil
+          score: float() | nil,
+          entities: list() | nil,
+          image: String.t() | nil
         }
 
   @type search_response :: %{cost: float() | nil, resolved_type: String.t() | nil, results: [result()]}
+
+  @type content :: %{
+          url: String.t(),
+          title: String.t() | nil,
+          text: String.t() | nil,
+          summary: map() | String.t() | nil,
+          subpages: [content()]
+        }
+
+  @type contents_response :: %{cost: float() | nil, results: [content()]}
 
   @doc """
   Runs an Exa search. Returns `{:ok, %{cost:, resolved_type:, results:}}` or
@@ -51,12 +65,57 @@ defmodule GnomeGarden.Search.Exa do
         [json: body, headers: [{"x-api-key", api_key}], receive_timeout: @receive_timeout]
         |> Keyword.merge(req_options())
 
-      case Req.post(@endpoint, request_options) do
+      case Req.post(@search_endpoint, request_options) do
         {:ok, %Req.Response{status: 200, body: payload}} ->
           {:ok, normalize(payload)}
 
         {:ok, %Req.Response{status: status, body: payload}} ->
           Logger.warning("Exa search failed (#{status}): #{inspect(payload)}")
+          {:error, {:http_error, status, payload}}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  @doc """
+  Fetches clean page contents for one or more URLs via Exa's paid `/contents`
+  endpoint. Returns `{:ok, %{cost:, results:}}` where each result carries the
+  page `text` and any matched `subpages` (e.g. contact/about/team pages).
+
+  This is the selective enrichment step — meaningfully more expensive than
+  `/search` — so callers should scope it to chosen candidates and budget against
+  the returned `cost`.
+
+  Options:
+    * `:max_characters` — cap text per page (default 5000); `false` to omit text
+    * `:subpages` — number of linked subpages to also fetch (default 0)
+    * `:subpage_target` — list of link keywords, e.g. `["contact", "about"]`
+    * `:livecrawl` — `"fallback"` (default), `"always"`, or `"never"`
+    * `:summary_schema` — a JSON-schema map; when given, Exa runs its own LLM to
+      return structured data per page (parsed into `:summary`)
+    * `:summary_query` — guidance string paired with `:summary_schema`
+  """
+  @spec contents([String.t()] | String.t(), keyword()) :: {:ok, contents_response()} | {:error, term()}
+  def contents(urls, opts \\ [])
+
+  def contents(url, opts) when is_binary(url), do: contents([url], opts)
+
+  def contents(urls, opts) when is_list(urls) do
+    with {:ok, api_key} <- api_key() do
+      body = build_contents_body(urls, opts)
+
+      request_options =
+        [json: body, headers: [{"x-api-key", api_key}], receive_timeout: @receive_timeout]
+        |> Keyword.merge(req_options())
+
+      case Req.post(@contents_endpoint, request_options) do
+        {:ok, %Req.Response{status: 200, body: payload}} ->
+          {:ok, normalize_contents(payload)}
+
+        {:ok, %Req.Response{status: status, body: payload}} ->
+          Logger.warning("Exa contents failed (#{status}): #{inspect(payload)}")
           {:error, {:http_error, status, payload}}
 
         {:error, reason} ->
@@ -77,6 +136,35 @@ defmodule GnomeGarden.Search.Exa do
     |> maybe_put("startPublishedDate", Keyword.get(opts, :start_published_date))
   end
 
+  defp build_contents_body(urls, opts) do
+    %{
+      "urls" => urls,
+      "livecrawl" => Keyword.get(opts, :livecrawl, "fallback")
+    }
+    |> maybe_put("text", text_param(Keyword.get(opts, :max_characters, 5000)))
+    |> maybe_put("subpages", positive(Keyword.get(opts, :subpages)))
+    |> maybe_put("subpageTarget", Keyword.get(opts, :subpage_target))
+    |> maybe_put("summary", summary_param(opts))
+  end
+
+  defp text_param(false), do: nil
+  defp text_param(max) when is_integer(max), do: %{"maxCharacters" => max}
+  defp text_param(_), do: %{"maxCharacters" => 5000}
+
+  defp summary_param(opts) do
+    case Keyword.get(opts, :summary_schema) do
+      %{} = schema ->
+        %{"schema" => schema}
+        |> maybe_put("query", Keyword.get(opts, :summary_query))
+
+      _ ->
+        nil
+    end
+  end
+
+  defp positive(n) when is_integer(n) and n > 0, do: n
+  defp positive(_), do: nil
+
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, []), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
@@ -95,9 +183,39 @@ defmodule GnomeGarden.Search.Exa do
       url: result["url"],
       published_date: result["publishedDate"],
       author: result["author"],
-      score: result["score"]
+      score: result["score"],
+      entities: result["entities"],
+      image: result["image"]
     }
   end
+
+  defp normalize_contents(payload) when is_map(payload) do
+    %{
+      cost: get_in(payload, ["costDollars", "total"]),
+      results: payload |> Map.get("results", []) |> Enum.map(&normalize_content/1)
+    }
+  end
+
+  defp normalize_content(result) do
+    %{
+      url: result["url"],
+      title: result["title"],
+      text: result["text"],
+      summary: parse_summary(result["summary"]),
+      subpages: result |> Map.get("subpages", []) |> Enum.map(&normalize_content/1)
+    }
+  end
+
+  # With a schema, Exa returns the summary as a JSON string; without one it may be
+  # plain text. Parse JSON objects into maps, leave plain strings as-is.
+  defp parse_summary(summary) when is_binary(summary) do
+    case Jason.decode(summary) do
+      {:ok, %{} = map} -> map
+      _ -> summary
+    end
+  end
+
+  defp parse_summary(summary), do: summary
 
   defp api_key do
     case exa_config()[:api_key] || System.get_env("EXA_API_KEY") do
