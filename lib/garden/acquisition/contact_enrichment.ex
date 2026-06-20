@@ -25,9 +25,10 @@ defmodule GnomeGarden.Acquisition.ContactEnrichment do
 
   require Logger
 
+  alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.ContactExtractor
   alias GnomeGarden.Operations
   alias GnomeGarden.Search.Exa
-  alias GnomeGarden.Acquisition.ContactExtractor
 
   @subpage_targets ["contact", "about", "team", "leadership"]
   @default_subpages 4
@@ -88,6 +89,22 @@ defmodule GnomeGarden.Acquisition.ContactEnrichment do
     end
   end
 
+  @doc """
+  Preview contacts for a procurement Finding from its already-analyzed RFP
+  documents — no Exa call, no LLM cost beyond the optional GLM name step. The
+  PDF parsing is done by the AshStorage `DocumentCLI` analyzer at ingest; this
+  reads its extracted text. Writes nothing.
+  """
+  def preview_finding(finding_id, opts \\ []), do: run_finding(finding_id, Keyword.put(opts, :dry_run, true))
+
+  @doc """
+  Extract contacts from a Finding's analyzed RFP documents and persist them: the
+  named contact (procurement officer) becomes a `Person(:inactive)` set as the
+  finding's `person_id`; when the finding has an agency organization, the person
+  is also affiliated to it. No auto-pursuit.
+  """
+  def enrich_finding(finding_id, opts \\ []), do: run_finding(finding_id, Keyword.put(opts, :dry_run, false))
+
   # --- core --------------------------------------------------------------------
 
   defp run(%{url: nil}, _opts), do: {:error, :no_url}
@@ -118,6 +135,57 @@ defmodule GnomeGarden.Acquisition.ContactEnrichment do
       end
     end
   end
+
+  defp run_finding(finding_id, opts) do
+    with {:ok, finding} <- Acquisition.get_finding(finding_id),
+         {:ok, finding_docs} <-
+           Acquisition.list_finding_documents_for_finding(finding_id, load: [document: [file: :blob]]) do
+      text = finding_text(finding, finding_docs)
+
+      if String.trim(text) == "" do
+        {:error, :no_analyzed_document_text}
+      else
+        extraction =
+          ContactExtractor.extract(
+            text,
+            [source_url: finding.source_url, company: nil] ++ Keyword.take(opts, [:llm_fun, :use_llm, :model])
+          )
+
+        result =
+          extraction
+          # Parsing was done by the analyzer at ingest; no fetch cost here.
+          |> Map.put(:cost, 0.0)
+          |> Map.put(:source_url, finding.source_url)
+
+        if Keyword.get(opts, :dry_run, false) do
+          {:ok, Map.put(result, :persisted, nil)}
+        else
+          {:ok, Map.put(result, :persisted, persist_finding(finding, result, opts))}
+        end
+      end
+    end
+  end
+
+  # The analyzer stores extracted PDF/DOC text at
+  # blob.metadata["document_analysis"]["text_excerpt"]. Combine every analyzed
+  # document with the finding's own summary text.
+  defp finding_text(finding, finding_docs) do
+    doc_texts = finding_docs |> Enum.map(&analyzer_text/1) |> Enum.reject(&blank?/1)
+
+    [finding.summary, finding.work_summary | doc_texts]
+    |> Enum.reject(&blank?/1)
+    |> Enum.join("\n\n")
+  end
+
+  defp analyzer_text(%{document: %{file: %{blob: %{metadata: metadata}}}}) when is_map(metadata) do
+    get_in(metadata, ["document_analysis", "text_excerpt"])
+  end
+
+  defp analyzer_text(_finding_document), do: nil
+
+  defp blank?(nil), do: true
+  defp blank?(s) when is_binary(s), do: String.trim(s) == ""
+  defp blank?(_), do: false
 
   defp fetch(url, opts) do
     Exa.contents(url,
@@ -166,17 +234,67 @@ defmodule GnomeGarden.Acquisition.ContactEnrichment do
 
   defp persist(_target, _result, _opts), do: %{people: [], organization: :no_organization}
 
+  defp persist_finding(finding, result, opts) do
+    actor = Keyword.get(opts, :actor)
+
+    records =
+      Enum.map(result.people, fn person ->
+        case person_record(person, result.source_url, actor) do
+          {tag, %{} = record} ->
+            # Affiliate to the agency org only when the finding has one.
+            if finding.organization_id, do: ensure_affiliation(finding.organization_id, record, person, actor)
+            {tag, record}
+
+          error ->
+            error
+        end
+      end)
+
+    primary = Enum.find_value(records, fn {_tag, rec} when is_map(rec) -> rec; _ -> nil end)
+
+    %{
+      people: Enum.map(records, &record_id/1),
+      finding: set_finding_person(finding, primary, actor),
+      organization:
+        if(finding.organization_id, do: update_organization(finding.organization_id, result, actor), else: :no_organization)
+    }
+  end
+
+  defp record_id({tag, %{id: id}}), do: {tag, id}
+  defp record_id(other), do: other
+
+  defp set_finding_person(_finding, nil, _actor), do: :no_person
+  defp set_finding_person(%{person_id: pid}, %{id: pid}, _actor), do: :unchanged
+
+  defp set_finding_person(finding, person, actor) do
+    case Acquisition.update_finding(finding, %{person_id: person.id}, actor: actor) do
+      {:ok, _} -> {:updated, person.id}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp upsert_person(org_id, person, source_url, actor) do
+    case person_record(person, source_url, actor) do
+      {tag, %{} = record} ->
+        ensure_affiliation(org_id, record, person, actor)
+        {tag, record.id}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Create or dedup a Person, without touching affiliations (the finding path
+  # may have no org to affiliate to).
+  defp person_record(person, source_url, actor) do
     case find_existing(person) do
       {:ok, existing} ->
-        ensure_affiliation(org_id, existing, person, actor)
-        {:existing, existing.id}
+        {:existing, existing}
 
       :none ->
         case Operations.create_person(person_attrs(person, source_url), actor: actor) do
           {:ok, created} ->
-            ensure_affiliation(org_id, created, person, actor)
-            {:created, created.id}
+            {:created, created}
 
           {:error, reason} ->
             Logger.warning("ContactEnrichment: person create failed: #{inspect(reason)}")

@@ -1,6 +1,7 @@
 defmodule GnomeGarden.Acquisition.ContactEnrichmentTest do
   use GnomeGarden.DataCase, async: true
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.ContactEnrichment
   alias GnomeGarden.Operations
   alias GnomeGarden.Search.Exa
@@ -94,6 +95,67 @@ defmodule GnomeGarden.Acquisition.ContactEnrichmentTest do
 
     {:ok, people} = Operations.list_people_for_organization(org.id)
     assert length(people) == 1
+  end
+
+  describe "enrich_finding (analyzer/RFP text path)" do
+    # The named contact comes from the LLM seam (injected here for offline
+    # testing); regex picks up the officer's email/phone directly.
+    defp officer_llm do
+      fn _text, _opts ->
+        {:ok, %{people: [%{name: "Pat Buyer", title: "Senior Buyer", role: "procurement"}], firmographic: nil, cost: 0.0}}
+      end
+    end
+
+    defp rfp_finding(attrs \\ %{}) do
+      base = %{
+        external_ref: "rfp-#{uniq()}",
+        title: "Control System Integration Services RFP",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        status: :new,
+        observed_at: DateTime.utc_now(),
+        summary: "Questions to Pat Buyer, Senior Buyer, pbuyer@city.example.gov, (562) 555-0100.",
+        work_summary: "SCADA/PLC controls integration scope."
+      }
+
+      {:ok, finding} = Acquisition.create_finding(Map.merge(base, attrs))
+      finding
+    end
+
+    test "extracts the procurement officer and sets the finding's person_id" do
+      finding = rfp_finding()
+
+      assert {:ok, result} = ContactEnrichment.enrich_finding(finding.id, llm_fun: officer_llm())
+
+      assert [{:created, person_id}] = result.persisted.people
+      assert {:updated, ^person_id} = result.persisted.finding
+
+      {:ok, person} = Operations.get_person(person_id)
+      assert person.first_name == "Pat"
+      assert person.last_name == "Buyer"
+      assert person.status == :inactive
+      # The regex-captured email was associated to the named officer (its local
+      # part "pbuyer" matches the surname), not left as a loose org contact.
+      assert to_string(person.email) == "pbuyer@city.example.gov"
+
+      {:ok, reloaded} = Acquisition.get_finding(finding.id)
+      assert reloaded.person_id == person_id
+    end
+
+    test "preview_finding writes nothing" do
+      finding = rfp_finding()
+
+      assert {:ok, result} = ContactEnrichment.preview_finding(finding.id, llm_fun: officer_llm())
+      assert result.persisted == nil
+
+      {:ok, reloaded} = Acquisition.get_finding(finding.id)
+      assert reloaded.person_id == nil
+    end
+
+    test "returns an error when the finding has no analyzed text" do
+      finding = rfp_finding(%{summary: nil, work_summary: nil})
+      assert {:error, :no_analyzed_document_text} = ContactEnrichment.enrich_finding(finding.id)
+    end
   end
 
   test "surfaces an Exa fetch error without persisting" do
