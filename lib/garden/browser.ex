@@ -46,7 +46,7 @@ defmodule GnomeGarden.Browser do
 
   @doc "Evaluate JavaScript in the current browser page and JSON-decode the result when possible."
   def evaluate(js) when is_binary(js) do
-    case System.cmd(binary_path(), ["eval", js], stderr_to_stdout: true) do
+    case cmd(["eval", js]) do
       {output, 0} ->
         case Jason.decode(output) do
           {:ok, data} -> {:ok, data}
@@ -60,7 +60,7 @@ defmodule GnomeGarden.Browser do
 
   @doc "Inject a browser download command for the selector into the target path."
   def download(selector, target_path) when is_binary(selector) and is_binary(target_path) do
-    case System.cmd(binary_path(), ["download", selector, target_path], stderr_to_stdout: true) do
+    case cmd(["download", selector, target_path]) do
       {_output, 0} -> :ok
       {output, _code} -> {:error, {:browser_download_failed, String.trim(output)}}
     end
@@ -71,6 +71,36 @@ defmodule GnomeGarden.Browser do
     Application.get_env(:gnome_garden, :browser_path, default_path())
   end
 
+  # All browser invocations go through here so they share the resolved binary and
+  # a guaranteed-writable runtime dir. agent-browser creates its IPC socket under
+  # XDG_RUNTIME_DIR; in some environments (e.g. WSL2 with no systemd user
+  # session) the inherited value points at a dir that doesn't exist, which fails
+  # with "Failed to create socket directory".
+  defp cmd(args) do
+    System.cmd(binary_path(), args, stderr_to_stdout: true, env: browser_env())
+  end
+
+  defp browser_env do
+    [{"XDG_RUNTIME_DIR", runtime_dir()}]
+  end
+
+  defp runtime_dir do
+    case System.get_env("XDG_RUNTIME_DIR") do
+      dir when is_binary(dir) and dir != "" ->
+        if File.dir?(dir), do: dir, else: fallback_runtime_dir()
+
+      _ ->
+        fallback_runtime_dir()
+    end
+  end
+
+  defp fallback_runtime_dir do
+    dir = Path.join(System.tmp_dir!(), "agent-browser-runtime")
+    File.mkdir_p!(dir)
+    _ = File.chmod(dir, 0o700)
+    dir
+  end
+
   @doc "Default browser launch args. Headless unless headed mode is explicitly configured."
   def default_args do
     browser_mode_args() ++
@@ -79,20 +109,20 @@ defmodule GnomeGarden.Browser do
 
   @doc "Close the browser daemon if it is running."
   def close do
-    System.cmd(binary_path(), ["close"], stderr_to_stdout: true)
+    cmd(["close"])
   end
 
   defp open_url(url, timeout_ms) do
     command = default_args() ++ ["open", url, "--timeout", Integer.to_string(timeout_ms)]
 
-    case System.cmd(binary_path(), command, stderr_to_stdout: true) do
+    case cmd(command) do
       {_output, 0} = result ->
         result
 
       {output, _code} ->
         if restart_required?(output) do
           _ = close()
-          System.cmd(binary_path(), command, stderr_to_stdout: true)
+          cmd(command)
         else
           {output, 1}
         end
@@ -100,11 +130,7 @@ defmodule GnomeGarden.Browser do
   end
 
   defp wait_for_load(timeout_ms) do
-    System.cmd(
-      binary_path(),
-      ["wait", "--load", "networkidle", "--timeout", Integer.to_string(timeout_ms)],
-      stderr_to_stdout: true
-    )
+    cmd(["wait", "--load", "networkidle", "--timeout", Integer.to_string(timeout_ms)])
   end
 
   defp restart_required?(output) when is_binary(output) do
@@ -133,7 +159,16 @@ defmodule GnomeGarden.Browser do
       |> Path.join("../../..")
       |> Path.expand()
 
-    Path.join([build_root, "jido_browser-linux_amd64", "agent-browser-linux-x64"])
+    vendored = Path.join([build_root, "jido_browser-linux_amd64", "agent-browser-linux-x64"])
+
+    # Prefer the vendored binary; otherwise fall back to one installed on PATH
+    # (e.g. via mise/npm). Returns the vendored path as a last resort so errors
+    # name the expected location.
+    cond do
+      File.exists?(vendored) -> vendored
+      path = System.find_executable("agent-browser") -> path
+      true -> vendored
+    end
   end
 
   defp page_snapshot_js(max_links, max_text_chars) do
