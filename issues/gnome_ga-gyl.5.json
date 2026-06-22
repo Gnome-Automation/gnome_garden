@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-22T15:17:44Z",
+  "description": "LATENT BUG: do_planetbids_scan (scan_planetbids.ex hits /portal/{id}/bo/bo-search, Floki-parses) gets WAF-blocked/empty against modern PlanetBids -\u003e 0 bids; only the browser fallback works. PlanetBids is Ember.js: WAF passes with Chrome UA but data loads from a papi API namespace behind OAuth token-exchange (endpoint in a lazy-loaded chunk). Decide: (a) browser (pragmatic, works today), or (b) reverse-engineer papi + OAuth (robust but fragile/high-effort). Either fix or explicitly retire the dead HTTP scanner.",
+  "id": "gnome_ga-gyl.5",
+  "labels": [],
+  "parent": "gnome_ga-gyl",
+  "priority": 2,
+  "status": "open",
+  "title": "PlanetBids coverage: fix dead HTTP path; decide browser vs papi API",
+  "type": "task",
+  "updated_at": "2026-06-22T15:17:44Z"
+}
