@@ -6,6 +6,12 @@
   "description": "ZAI/GLM is the only LLM call site today (ContactExtractor name step) and degrades to regex without it. Keep req_llm in the stack for the ash_ai/AshLua direction (local-doc extraction + reasoning Exa can't do). Action: refresh the expired ZAI_API_KEY, or pick another req_llm provider (Anthropic etc.). Not a blocker -- web contacts use Exa's own LLM; only RFP-text name extraction needs this.",
   "id": "gnome_ga-wib",
   "labels": [],
+  "comments": [
+    {
+      "text": "DECISION: keep req_llm in the stack. Rationale: it's the on-ramp to the ash_ai/AshLua direction (local-document extraction from RFP PDFs + reasoning/classification/drafting that Exa cannot do). Today it's used only by ContactExtractor's name step and degrades to regex without it; web extraction uses Exa's own LLM. 'ZAI' = just the current req_llm provider (swappable for Anthropic/etc.). ACTION (user, when named RFP contacts are wanted): refresh the expired ZAI_API_KEY or set another req_llm provider key. Not a blocker for any current functionality.",
+      "timestamp": "2026-06-22T15:47:26Z"
+    }
+  ],
   "priority": 3,
   "status": "in_progress",
   "title": "Decide/refresh LLM provider (ZAI/req_llm) for ash_ai path",
