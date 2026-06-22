@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "pcurran",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-06-22T15:18:23Z",
@@ -7,8 +7,8 @@
   "id": "gnome_ga-4lg",
   "labels": [],
   "priority": 3,
-  "status": "open",
+  "status": "in_progress",
   "title": "Delete Morinaga junk finding/org (chapelboro.com news artifact)",
   "type": "task",
-  "updated_at": "2026-06-22T15:18:23Z"
+  "updated_at": "2026-06-22T15:47:50Z"
 }
