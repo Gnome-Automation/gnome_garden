@@ -65,6 +65,47 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
     assert {:ok, [_candidate]} = Procurement.list_extraction_candidates_for_run(run.id)
   end
 
+  test "agency sources scan via HTTP+Floki using http_selectors (no browser)" do
+    url = "https://example-water.test/rfps/"
+
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Example Water District",
+        url: url,
+        source_type: :utility,
+        region: :oc,
+        priority: :high,
+        status: :approved,
+        requires_login: false
+      })
+
+    {:ok, source} =
+      Procurement.configure_procurement_source(source, %{
+        scrape_config: %{
+          "listing_url" => url,
+          "http_selectors" => %{
+            "listing_selector" => "tr[data-row_id]",
+            "title_selector" => "td:nth-child(1)",
+            "link_selector" => "td:nth-child(1) a",
+            "date_selector" => "td:nth-child(3)"
+          }
+        }
+      })
+
+    http_get = fn ^url, _opts -> {:ok, %{status: 200, body: http_agency_html()}} end
+
+    assert {:ok, result} = ListingScanner.scan(source.id, %{http_get: http_get})
+
+    # Both rows parsed straight from raw HTML (positional tds), no browser.
+    assert result.extracted == 2
+    # Only the controls/SCADA bid qualifies; the janitorial one is hard-rejected.
+    assert result.saved == 1
+
+    bids = Ash.read!(GnomeGarden.Procurement.Bid)
+    assert Enum.any?(bids, &(&1.title =~ "SCADA"))
+    refute Enum.any?(bids, &(&1.title =~ "Janitorial"))
+  end
+
   test "login-gated PlanetBids sources still require credentials" do
     {:ok, source} =
       Procurement.create_procurement_source(%{
@@ -184,4 +225,25 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
 
   defp restore_env(name, nil), do: System.delete_env(name)
   defp restore_env(name, value), do: System.put_env(name, value)
+
+  # Server-rendered agency listing: positional <td> cells, rows keyed by
+  # data-row_id (no per-column classes — mirrors WordPress Ninja Tables raw HTML).
+  defp http_agency_html do
+    """
+    <html><body>
+    <table class="ninja_footable"><tbody>
+      <tr data-row_id="1">
+        <td><a href="/rfps/scada-integration">SCADA and PLC Control System Integration for Water Treatment Plant</a></td>
+        <td>RFP-26-001</td>
+        <td>12/31/2026 14:00</td>
+      </tr>
+      <tr data-row_id="2">
+        <td><a href="/rfps/janitorial">Janitorial Services for Administration Building</a></td>
+        <td>RFP-26-002</td>
+        <td>12/31/2026 14:00</td>
+      </tr>
+    </tbody></table>
+    </body></html>
+    """
+  end
 end

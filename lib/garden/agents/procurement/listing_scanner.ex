@@ -110,7 +110,20 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
           do_bidnet_scan(source, context)
 
         _other ->
-          do_browser_scan(source, context)
+          # Prefer a cheap HTTP+Floki scan when the source declares
+          # `http_selectors` (server-rendered agency sites); fall back to the
+          # browser for JS/SPA/WAF-walled portals or when HTTP yields nothing.
+          case do_http_scan(source, context) do
+            {:ok, _payload} = ok ->
+              ok
+
+            {:error, http_reason} ->
+              Logger.info(
+                "HTTP scan unavailable for #{source.name} (#{inspect(http_reason)}); using browser scan"
+              )
+
+              do_browser_scan(source, context)
+          end
       end
 
     case result do
@@ -136,6 +149,115 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   end
 
   defp ensure_credentials_if_required(_source), do: :ok
+
+  # User agent that looks like a real browser — many server-rendered portals
+  # (and lenient WAFs) gate on this without requiring JS execution.
+  @http_user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+
+  # Lightweight HTTP+Floki scan for server-rendered listings. Only runs when the
+  # source declares `http_selectors` (raw-HTML selectors, which differ from the
+  # JS-rendered DOM the browser path uses). Returns {:error, _} — so the caller
+  # falls back to the browser — when no http_selectors are set, the fetch is
+  # blocked/non-200, or nothing extracts (JS/SPA/WAF-walled sources).
+  defp do_http_scan(source, context) do
+    config = source.scrape_config || %{}
+    listing_url = config["listing_url"] || config[:listing_url] || source.url
+    http_cfg = config["http_selectors"] || config[:http_selectors]
+
+    cond do
+      not (is_map(http_cfg) and map_size(http_cfg) > 0) ->
+        {:error, :no_http_selectors}
+
+      is_nil(listing_url) ->
+        {:error, :no_listing_url}
+
+      true ->
+        with {:ok, body} <- http_fetch(listing_url, context),
+             [_ | _] = bids <- extract_bids_http(body, listing_url, source, http_cfg) do
+          Logger.info("Scanning #{source.name} via HTTP+Floki at #{listing_url} (#{length(bids)} rows)")
+          profile_context = profile_context_for_source(source)
+          filtered = TargetingFilter.filter_bids(bids, profile_context)
+
+          with {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
+               {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
+            complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: listing_url)
+          end
+        else
+          [] -> {:error, :no_rows_extracted}
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
+  # HTTP getter is injectable via context (`:http_get`) for tests, matching the
+  # PlanetBids scanner; defaults to Req.get.
+  defp http_fetch(url, context) do
+    getter = Map.get(context, :http_get) || Map.get(context, "http_get") || (&Req.get/2)
+
+    case getter.(url,
+           headers: [{"user-agent", @http_user_agent}],
+           redirect: true,
+           retry: false,
+           receive_timeout: 30_000
+         ) do
+      {:ok, %{status: 200, body: body}} when is_binary(body) ->
+        {:ok, body}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http_status, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Extract bids from raw HTML into the canonical bid-map shape the scoring
+  # pipeline consumes (atom keys; `bid_value/2` reads either). Supports
+  # positional selectors (e.g. "tr[data-row_id]" + "td:nth-child(1)").
+  defp extract_bids_http(body, listing_url, source, cfg) do
+    listing_sel = cfg["listing_selector"] || cfg[:listing_selector]
+    title_sel = cfg["title_selector"] || cfg[:title_selector]
+    link_sel = cfg["link_selector"] || cfg[:link_selector]
+    date_sel = cfg["date_selector"] || cfg[:date_selector]
+    desc_sel = cfg["description_selector"] || cfg[:description_selector]
+
+    case Floki.parse_document(body) do
+      {:ok, doc} when is_binary(listing_sel) and is_binary(title_sel) ->
+        doc
+        |> Floki.find(listing_sel)
+        |> Enum.map(fn row ->
+          %{
+            title: floki_cell(row, title_sel),
+            url: row |> Floki.find(link_sel || title_sel) |> Floki.attribute("href") |> List.first() |> absolutize(listing_url),
+            due_date: date_sel && floki_cell(row, date_sel),
+            description: (desc_sel && floki_cell(row, desc_sel)) || "",
+            agency: source.name,
+            source_url: listing_url,
+            source_type: source.source_type,
+            documents: []
+          }
+        end)
+        |> Enum.reject(&(&1.title in [nil, ""]))
+
+      _ ->
+        []
+    end
+  end
+
+  defp floki_cell(row, selector) do
+    row |> Floki.find(selector) |> Floki.text() |> String.trim()
+  end
+
+  defp absolutize(nil, _base), do: nil
+
+  defp absolutize(href, base) do
+    case URI.merge(base, href) do
+      %URI{} = uri -> URI.to_string(uri)
+      _ -> href
+    end
+  rescue
+    _ -> href
+  end
 
   defp do_browser_scan(source, context) do
     config = source.scrape_config
