@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-22T18:29:27Z",
+  "description": "Procurement findings show 'No durable identity yet' because bid_finding_attrs (Projector) never sets finding.organization_id -- it only stores the agency as a metadata string, even though we know the source agency. Fix: resolve-or-create a :government Operations.Organization for the ProcurementSource (by website_domain; name from source), link it back to source.organization_id, and propagate to finding.organization_id at projection. Backfill the OCWD finding. This flips the 'Identity linked' readiness check green.",
+  "id": "gnome_ga-gnv",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Link durable agency Organization to procurement findings from their source",
+  "type": "task",
+  "updated_at": "2026-06-22T18:29:27Z"
+}
