@@ -2,13 +2,15 @@
   "assignee": "pcurran",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-22T17:57:17Z",
+  "close_reason": "enrich_finding now fetches the detail page (source_url) via Req+Floki and persists generic-inbox contacts to finding.metadata.enrichment. Validated live on OCWD (procurement@ocwd.com); test added; suite 524 green. Merged to main.",
   "created": "2026-06-22T17:51:50Z",
   "description": "Gap: ContactEnrichment.enrich_finding only reads analyzed-document text, but HTTP-scanned procurement findings (e.g. OCWD) have no ingested docs -- their contact lives on the bid detail PAGE (finding.source_url). Proven manually: fetching the OCWD Arc Flash RFP detail page yields procurement@ocwd.com + schedule. BUILD: when a finding has a fetchable http(s) source_url and thin/no doc text, fetch the detail page (Req+Floki, http_get injectable for tests) and feed its text to ContactExtractor. Persist org-level contact (generic inbox email/phones) into finding.metadata.enrichment when there's no named Person; keep named-Person + org behavior. Test offline.",
   "id": "gnome_ga-ep2",
   "labels": [],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "enrich_finding: extract contact from server-rendered detail page",
   "type": "task",
-  "updated_at": "2026-06-22T17:51:58Z"
+  "updated_at": "2026-06-22T17:57:17Z"
 }
