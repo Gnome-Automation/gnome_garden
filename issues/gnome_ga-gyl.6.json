@@ -7,6 +7,12 @@
   "id": "gnome_ga-gyl.6",
   "labels": [],
   "parent": "gnome_ga-gyl",
+  "comments": [
+    {
+      "text": "FINDING: the credential WIRING already exists and needs no code. GnomeGarden.Procurement.SourceCredentials supports per-source DB credentials + env fallback for :planetbids (PLANETBIDS_USERNAME/PASSWORD), :opengov, :publicpurchase, :sam_gov (SAM_GOV_API_KEY). ListingScanner.ensure_credentials_if_required gates login-gated scans; planetbids_login_js performs the browser login. ACTIVATION (user operational step, not code): set PLANETBIDS_USERNAME/PASSWORD env vars OR add per-source credentials in the DB for a real PlanetBids account, then a requires_login source will scan via authenticated browser session. Cannot be completed here without a real account secret.",
+      "timestamp": "2026-06-22T15:46:58Z"
+    }
+  ],
   "priority": 3,
   "status": "in_progress",
   "title": "Wire PlanetBids/portal credentials for login-gated document downloads",
