@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-22T15:17:44Z",
+  "description": "Login-gated portals (PlanetBids) need PLANETBIDS_USERNAME/PASSWORD or per-source credentials, else document ingest fails with :login_required (seen in test logs). Required for the RFP-PDF -\u003e analyzer -\u003e contact-extraction chain to actually pull documents from those sources. Wire credential storage/use for at least one real login-gated source.",
+  "id": "gnome_ga-gyl.6",
+  "labels": [],
+  "parent": "gnome_ga-gyl",
+  "priority": 3,
+  "status": "open",
+  "title": "Wire PlanetBids/portal credentials for login-gated document downloads",
+  "type": "task",
+  "updated_at": "2026-06-22T15:17:44Z"
+}
