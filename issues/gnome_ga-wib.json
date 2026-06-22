@@ -2,6 +2,8 @@
   "assignee": "pcurran",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-22T15:47:26Z",
+  "close_reason": "Decided: keep req_llm for the ash_ai path (local-doc extraction + reasoning Exa can't do). Provider is swappable; ZAI key refresh is an optional user action for named RFP contacts.",
   "created": "2026-06-22T15:18:23Z",
   "description": "ZAI/GLM is the only LLM call site today (ContactExtractor name step) and degrades to regex without it. Keep req_llm in the stack for the ash_ai/AshLua direction (local-doc extraction + reasoning Exa can't do). Action: refresh the expired ZAI_API_KEY, or pick another req_llm provider (Anthropic etc.). Not a blocker -- web contacts use Exa's own LLM; only RFP-text name extraction needs this.",
   "id": "gnome_ga-wib",
@@ -13,7 +15,7 @@
     }
   ],
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Decide/refresh LLM provider (ZAI/req_llm) for ash_ai path",
   "type": "task",
   "updated_at": "2026-06-22T15:47:26Z"
