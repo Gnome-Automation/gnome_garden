@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-gyl.3"
+  ],
   "blocks": [],
   "created": "2026-06-22T15:17:44Z",
   "description": "OpenGov (procurement.opengov.com) returns Cloudflare 403 to plain Req even with full Chrome headers. Options: (a) headless browser if it passes Cloudflare (see WAF-verify task), or (b) OpenGov's official Procurement API (needs API key / partner access). Investigate the API + whether creds are obtainable; otherwise rely on browser. Decide and document the per-source approach.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "OpenGov coverage: browser vs official procurement API",
   "type": "task",
-  "updated_at": "2026-06-22T15:17:44Z"
+  "updated_at": "2026-06-22T15:18:23Z"
 }

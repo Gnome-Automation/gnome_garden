@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-gyl.4"
+  ],
   "created": "2026-06-22T15:17:44Z",
   "description": "DECISIVE RISK: the whole SaaS-platform path assumes the headless agent-browser passes Cloudflare (OpenGov) and AWS WAF (PlanetBids). Only verified browser on OCWD/example.com (non-WAF). Test: Browser.inspect_page against a real OpenGov portal and a real PlanetBids bo-search; confirm it renders bid data, not a challenge page. If headless is also blocked, neither HTTP nor browser works -\u003e must use official APIs. Blocks the OpenGov and PlanetBids coverage decisions.",
   "id": "gnome_ga-gyl.3",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Verify headless browser actually passes OpenGov/PlanetBids WAFs",
   "type": "task",
-  "updated_at": "2026-06-22T15:17:44Z"
+  "updated_at": "2026-06-22T15:18:23Z"
 }
