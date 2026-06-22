@@ -10,9 +10,15 @@
   "id": "gnome_ga-gyl.3",
   "labels": [],
   "parent": "gnome_ga-gyl",
+  "comments": [
+    {
+      "text": "FINDING (tested live via GnomeGarden.Browser headless): OpenGov -\u003e browser gets Cloudflare 'Just a moment... security verification' challenge page (title 'Just a moment...'), NOT bid data. PlanetBids -\u003e WAF passes and the Ember shell renders (title 'PlanetBids Vendor Portal') but body innerText stays EMPTY after networkidle + 6s wait, 0 candidate rows, no login prompt -\u003e the papi data fetch does not complete headless (bot-detection or auth). CONCLUSION: the headless browser is NOT a reliable path for these SaaS platforms. Implication: agency-site HTTP (gyl.1) is the viable channel; OpenGov/PlanetBids need official APIs or authenticated sessions (creds), not the headless browser. This reshapes gyl.4 (OpenGov = API/creds only) and gyl.5 (PlanetBids = creds/session or papi API; browser fallback is effectively non-functional).",
+      "timestamp": "2026-06-22T15:34:01Z"
+    }
+  ],
   "priority": 1,
   "status": "in_progress",
   "title": "Verify headless browser actually passes OpenGov/PlanetBids WAFs",
   "type": "task",
-  "updated_at": "2026-06-22T15:31:44Z"
+  "updated_at": "2026-06-22T15:34:01Z"
 }
