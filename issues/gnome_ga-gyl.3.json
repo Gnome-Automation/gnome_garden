@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "pcurran",
   "blocked_by": [],
   "blocks": [
     "gnome_ga-gyl.4",
@@ -11,8 +11,8 @@
   "labels": [],
   "parent": "gnome_ga-gyl",
   "priority": 1,
-  "status": "open",
+  "status": "in_progress",
   "title": "Verify headless browser actually passes OpenGov/PlanetBids WAFs",
   "type": "task",
-  "updated_at": "2026-06-22T15:18:23Z"
+  "updated_at": "2026-06-22T15:31:44Z"
 }
