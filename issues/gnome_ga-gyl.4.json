@@ -9,6 +9,12 @@
   "id": "gnome_ga-gyl.4",
   "labels": [],
   "parent": "gnome_ga-gyl",
+  "comments": [
+    {
+      "text": "DECISION (informed by gyl.3): both plain HTTP (Cloudflare 403, even with Chrome headers) and the headless browser (Cloudflare 'Just a moment' challenge) are blocked. Therefore OpenGov is NOT scannable via scraping. The only viable path is OpenGov's official Procurement API, which requires partner/API credentials. ACTION: pursue OpenGov API access (credentials) when OpenGov coverage is prioritized; until then OpenGov sources are out of scope for the scanner. No code change -- this is a coverage/credentials decision.",
+      "timestamp": "2026-06-22T15:45:50Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "OpenGov coverage: browser vs official procurement API",
