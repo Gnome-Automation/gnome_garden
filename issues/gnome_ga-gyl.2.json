@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-22T15:17:44Z",
+  "description": "Raw server HTML uses POSITIONAL \u003ctd\u003e (rows have data-row_id, no ninja_clmn_nm_* classes -- those are JS-added); rendered DOM has the classes. Make extraction handle both: support positional selectors (tr[data-row_id] + td:nth-child(n)) for the HTTP path and class selectors for the browser path, via scrape_config. For OCWD: title=td1, sol=td2, posted=td4, due=td5. status/days are JS-computed (empty in raw) -\u003e derive open/closed by filtering on due date in code, don't rely on JS.",
+  "id": "gnome_ga-gyl.2",
+  "labels": [],
+  "parent": "gnome_ga-gyl",
+  "priority": 2,
+  "status": "open",
+  "title": "Selector extraction tolerant of raw-HTML vs rendered DOM",
+  "type": "task",
+  "updated_at": "2026-06-22T15:17:44Z"
+}
