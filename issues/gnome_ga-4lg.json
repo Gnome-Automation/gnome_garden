@@ -2,13 +2,15 @@
   "assignee": "pcurran",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-22T15:48:51Z",
+  "close_reason": "Deleted the synthetic Morinaga junk (finding ef3a51f9 + discovery_record ef231ab1 + chapelboro.com org 7b692c36) per explicit user directive. Verified: only the real OCWD Arc Flash lead remains in the review queue.",
   "created": "2026-06-22T15:18:23Z",
   "description": "Leftover fake data from earlier Exa work: a chapelboro.com news headline promoted into a finding + org (name = headline, domain = chapelboro.com). finding ef3a51f9, discovery_record ef231ab1, org 7b692c36. Hard-destroy was blocked by the safeguard pending explicit user OK; alternatively reject/suppress via the review queue. Needs user go-ahead before deleting.",
   "id": "gnome_ga-4lg",
   "labels": [],
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Delete Morinaga junk finding/org (chapelboro.com news artifact)",
   "type": "task",
-  "updated_at": "2026-06-22T15:47:50Z"
+  "updated_at": "2026-06-22T15:48:51Z"
 }
