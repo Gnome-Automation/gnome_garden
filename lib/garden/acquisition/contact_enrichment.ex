@@ -140,7 +140,13 @@ defmodule GnomeGarden.Acquisition.ContactEnrichment do
     with {:ok, finding} <- Acquisition.get_finding(finding_id),
          {:ok, finding_docs} <-
            Acquisition.list_finding_documents_for_finding(finding_id, load: [document: [file: :blob]]) do
-      text = finding_text(finding, finding_docs)
+      # Combine analyzer/doc text with the bid detail page (HTTP-scanned
+      # procurement findings have no ingested docs — their contact is on the
+      # server-rendered detail page at source_url).
+      text =
+        [finding_text(finding, finding_docs), detail_page_text(finding, opts)]
+        |> Enum.reject(&blank?/1)
+        |> Enum.join("\n\n")
 
       if String.trim(text) == "" do
         {:error, :no_analyzed_document_text}
@@ -182,6 +188,42 @@ defmodule GnomeGarden.Acquisition.ContactEnrichment do
   end
 
   defp analyzer_text(_finding_document), do: nil
+
+  @detail_ua "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+
+  # Best-effort fetch of the finding's detail page (server-rendered procurement
+  # pages). http_get is injectable via opts for tests; any failure yields "".
+  defp detail_page_text(%{source_url: url}, opts) when is_binary(url) do
+    if String.starts_with?(url, "http") do
+      getter = Keyword.get(opts, :http_get) || (&Req.get/2)
+
+      case getter.(url, headers: [{"user-agent", @detail_ua}], redirect: true, retry: false, receive_timeout: 30_000) do
+        {:ok, %{status: 200, body: body}} when is_binary(body) -> detail_html_to_text(body)
+        _ -> ""
+      end
+    else
+      ""
+    end
+  end
+
+  defp detail_page_text(_finding, _opts), do: ""
+
+  defp detail_html_to_text(html) do
+    case Floki.parse_document(html) do
+      {:ok, doc} ->
+        doc
+        |> Floki.filter_out("style")
+        |> Floki.filter_out("script")
+        |> Floki.filter_out("noscript")
+        |> Floki.text(sep: " ")
+        |> String.replace(~r/\s+/, " ")
+        |> String.trim()
+        |> String.slice(0, 16_000)
+
+      _ ->
+        ""
+    end
+  end
 
   defp blank?(nil), do: true
   defp blank?(s) when is_binary(s), do: String.trim(s) == ""
@@ -256,9 +298,31 @@ defmodule GnomeGarden.Acquisition.ContactEnrichment do
       people: Enum.map(records, &record_id/1),
       finding: set_finding_person(finding, primary, actor),
       organization:
-        if(finding.organization_id, do: update_organization(finding.organization_id, result, actor), else: :no_organization)
+        if(finding.organization_id, do: update_organization(finding.organization_id, result, actor), else: :no_organization),
+      # Generic-inbox emails/phones (no named person) are real, actionable
+      # contact info — persist them onto the finding as reviewable evidence.
+      contact_info: persist_finding_contact_info(finding, result, actor)
     }
   end
+
+  defp persist_finding_contact_info(finding, %{org_contact: %{emails: emails, phones: phones}} = result, actor)
+       when emails != [] or phones != [] do
+    enrichment =
+      %{
+        "contact_emails" => emails,
+        "contact_phones" => phones,
+        "source_url" => result.source_url
+      }
+
+    new_meta = Map.put(finding.metadata || %{}, "enrichment", enrichment)
+
+    case Acquisition.update_finding(finding, %{metadata: new_meta}, actor: actor) do
+      {:ok, _} -> {:saved, %{emails: emails, phones: phones}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp persist_finding_contact_info(_finding, _result, _actor), do: :none
 
   defp record_id({tag, %{id: id}}), do: {tag, id}
   defp record_id(other), do: other

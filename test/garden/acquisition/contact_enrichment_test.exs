@@ -156,6 +156,28 @@ defmodule GnomeGarden.Acquisition.ContactEnrichmentTest do
       finding = rfp_finding(%{summary: nil, work_summary: nil})
       assert {:error, :no_analyzed_document_text} = ContactEnrichment.enrich_finding(finding.id)
     end
+
+    test "extracts a generic contact from the server-rendered detail page and persists it" do
+      url = "https://agency.example.gov/rfp/controls-25-001/"
+      finding = rfp_finding(%{summary: nil, work_summary: nil, source_url: url})
+
+      html =
+        "<html><body><style>.x{}</style><main>Control System Integration RFP. " <>
+          "For questions contact procurement@agency.example.gov or call (562) 555-0144. " <>
+          "Proposals due 2026-08-01.</main></body></html>"
+
+      http_get = fn ^url, _opts -> {:ok, %{status: 200, body: html}} end
+
+      assert {:ok, result} = ContactEnrichment.enrich_finding(finding.id, http_get: http_get, use_llm: false)
+
+      # Generic inbox email/phone pulled from the detail page (no named person).
+      assert "procurement@agency.example.gov" in result.org_contact.emails
+      assert {:saved, _} = result.persisted.contact_info
+
+      {:ok, reloaded} = Acquisition.get_finding(finding.id)
+      assert reloaded.metadata["enrichment"]["contact_emails"] == ["procurement@agency.example.gov"]
+      assert Enum.any?(reloaded.metadata["enrichment"]["contact_phones"], &(&1 =~ "555-0144"))
+    end
   end
 
   test "surfaces an Exa fetch error without persisting" do
