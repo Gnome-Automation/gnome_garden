@@ -93,6 +93,39 @@ defmodule GnomeGarden.Acquisition.ProjectorTest do
     assert finding.score_note == "Intent 83"
   end
 
+  test "procurement bid projection links a durable agency organization from its source" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Example Water District",
+        url: "https://example-water-district.test/rfps/",
+        source_type: :utility,
+        region: :oc,
+        priority: :high,
+        status: :approved
+      })
+
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        procurement_source_id: source.id,
+        title: "SCADA Control System Integration",
+        url: "https://example-water-district.test/rfps/scada-25-1",
+        external_id: "SCADA-25-1",
+        description: "Controls integration scope.",
+        region: :oc,
+        score_total: 70,
+        score_tier: :warm,
+        score_recommendation: "Promote"
+      })
+
+    assert {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    # Identity is linked durably to the agency that posted the RFP.
+    assert finding.organization_id
+
+    assert {:ok, org} = GnomeGarden.Operations.get_organization(finding.organization_id)
+    assert org.organization_kind == :government
+    assert org.website_domain == "example-water-district.test"
+  end
+
   test "past-due procurement projection closes the acquisition finding as rejected" do
     past_due_at =
       Date.utc_today()

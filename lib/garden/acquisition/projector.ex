@@ -7,9 +7,11 @@ defmodule GnomeGarden.Acquisition.Projector do
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.DiscoveryProgram
   alias GnomeGarden.Commercial.DiscoveryRecord
+  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.Bid
   alias GnomeGarden.Procurement.ProcurementSource
+  alias GnomeGarden.Support.WebIdentity
 
   @finding_upsert_fields [
     :title,
@@ -208,20 +210,61 @@ defmodule GnomeGarden.Acquisition.Projector do
   end
 
   defp do_sync_bid(%Bid{} = bid, actor) do
-    source_id =
-      bid
-      |> procurement_source_for_bid(actor)
-      |> maybe_ensure_source(actor)
+    source = procurement_source_for_bid(bid, actor)
+    source_id = maybe_ensure_source(source, actor)
+
+    # A procurement bid's durable identity is the agency that posted it (its
+    # source). Carry the bid's own org if set; otherwise resolve the source's
+    # agency organization so the finding is identity-linked.
+    organization_id = bid.organization_id || agency_organization_id(source, actor)
 
     existing_finding = existing_finding_for_bid(bid.id, actor)
 
     Acquisition.create_finding(
-      bid_finding_attrs(bid, source_id, existing_finding),
+      bid_finding_attrs(bid, source_id, organization_id, existing_finding),
       actor: actor,
       upsert?: true,
       upsert_identity: :unique_external_ref,
       upsert_fields: @finding_upsert_fields
     )
+  end
+
+  # Resolve (or create) the government/agency Organization for a procurement
+  # source, by website domain. Idempotent (returns the existing org after the
+  # first create); best-effort — any failure leaves the finding unlinked rather
+  # than breaking projection. Does NOT mutate the source (avoids a nested
+  # re-projection during the bid's create transaction).
+  defp agency_organization_id(nil, _actor), do: nil
+
+  defp agency_organization_id(%ProcurementSource{organization_id: org_id}, _actor)
+       when is_binary(org_id),
+       do: org_id
+
+  defp agency_organization_id(%ProcurementSource{} = source, actor) do
+    with domain when is_binary(domain) and domain != "" <- WebIdentity.website_domain(source.url),
+         org_id when is_binary(org_id) <- find_or_create_agency_org(source, domain, actor) do
+      org_id
+    else
+      _ -> nil
+    end
+  end
+
+  # System-internal entity resolution (runs during projection, often with no
+  # user actor), so authorization is bypassed — like other internal lookups.
+  defp find_or_create_agency_org(source, domain, _actor) do
+    case Operations.get_organization_by_website_domain(domain, authorize?: false) do
+      {:ok, %{id: id}} ->
+        id
+
+      _ ->
+        case Operations.create_organization(
+               %{name: source.name, website: source.url, organization_kind: :government},
+               authorize?: false
+             ) do
+          {:ok, %{id: id}} -> id
+          _ -> nil
+        end
+    end
   end
 
   defp load_discovery_record_and_sync(discovery_record_id, actor) do
@@ -373,7 +416,7 @@ defmodule GnomeGarden.Acquisition.Projector do
     end
   end
 
-  defp bid_finding_attrs(%Bid{} = bid, source_id, existing_finding) do
+  defp bid_finding_attrs(%Bid{} = bid, source_id, organization_id, existing_finding) do
     %{
       external_ref: "procurement_bid:#{bid.id}",
       title: bid.title,
@@ -425,7 +468,7 @@ defmodule GnomeGarden.Acquisition.Projector do
         }),
       source_id: source_id,
       agent_run_id: bid_agent_run_id(bid),
-      organization_id: bid.organization_id,
+      organization_id: organization_id,
       signal_id: bid.signal_id,
       source_bid_id: bid.id
     }
