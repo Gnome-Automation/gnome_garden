@@ -2,13 +2,15 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-22T15:48:51Z",
+  "close_reason": "All children closed: HTTP+Floki scan tier built+tested (gyl.1/gyl.2); WAF verification done (gyl.3); OpenGov=API+creds and PlanetBids=auth-browser decisions recorded (gyl.4/gyl.5); credential mechanism confirmed wired (gyl.6).",
   "created": "2026-06-22T15:17:15Z",
   "description": "Make procurement lead-finding robust and cheap by adding an HTTP+Floki fetch tier and resolving how each portal class is reached. Empirically established 2026-06-22: (1) Agency sites (OCWD, server-rendered WP) are fully reachable via plain Req+Floki -- 53 complete rows vs the browser's 20 lossy ones, no agent-browser needed. (2) OpenGov = Cloudflare 403 even with browser headers. (3) PlanetBids = AWS WAF (passes with Chrome UA) but Ember SPA + papi OAuth API. So: HTTP-first for agency sites; browser (or official API) stays essential for SaaS platforms. No crawling framework (Crawly/kreuzcrawl) -- Req+Floki+Oban suffices and frameworks don't beat the WAF/SPA wall. Browser env blocker already fixed (commit 2d3ccc6).",
   "id": "gnome_ga-gyl",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "closed",
   "title": "Lead scanning: HTTP-first scraping tier + SaaS platform coverage",
   "type": "epic",
-  "updated_at": "2026-06-22T15:17:15Z"
+  "updated_at": "2026-06-22T15:48:51Z"
 }
