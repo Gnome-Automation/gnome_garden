@@ -9,6 +9,15 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
   - And 15+ more
 
   Returns structured bid data for scoring and storage.
+
+  NOTE (verified 2026-06-22): modern PlanetBids (vendors.planetbids.com) is an
+  Ember.js SPA behind AWS WAF. This HTTP+Floki scan gets either a WAF block
+  (default UA) or, with a browser-like UA, only the empty SPA shell — bid data
+  loads via the auth-gated `papi` API. So this scanner is effectively a no-op
+  against current PlanetBids; real coverage needs an authenticated browser
+  session (see ProcurementSource credentials / requires_login + the browser
+  login path) or a `papi`/OAuth integration. Kept for legacy/server-rendered
+  portals and as a cheap first attempt.
   """
 
   require Logger
