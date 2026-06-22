@@ -9,6 +9,12 @@
   "id": "gnome_ga-gyl.5",
   "labels": [],
   "parent": "gnome_ga-gyl",
+  "comments": [
+    {
+      "text": "DECISION (informed by gyl.3): modern PlanetBids = AWS WAF + Ember SPA + papi OAuth API. Headless browser passes WAF but the Ember app never renders bid data headless (empty body). Plain HTTP gets the SPA shell only. So: (a) the existing do_planetbids_scan / ScanPlanetBids HTTP path is effectively a no-op against current PlanetBids -- documented as such in the moduledoc (commit just landed), kept for legacy/server-rendered portals + as a cheap first attempt; (b) real PlanetBids coverage needs an AUTHENTICATED BROWSER SESSION (the system already has requires_login + planetbids_login_js + SourceCredentials) -- gated on real creds (see gyl.6); (c) papi/OAuth reverse-engineering deferred as high-effort/fragile.",
+      "timestamp": "2026-06-22T15:46:22Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "PlanetBids coverage: fix dead HTTP path; decide browser vs papi API",
