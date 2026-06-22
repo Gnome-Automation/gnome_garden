@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "pcurran",
   "blocked_by": [
     "gnome_ga-gyl.3"
   ],
@@ -10,8 +10,8 @@
   "labels": [],
   "parent": "gnome_ga-gyl",
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "PlanetBids coverage: fix dead HTTP path; decide browser vs papi API",
   "type": "task",
-  "updated_at": "2026-06-22T15:18:23Z"
+  "updated_at": "2026-06-22T15:46:22Z"
 }
