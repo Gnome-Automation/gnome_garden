@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-06-22T15:17:44Z",
+  "description": "In ListingScanner, add an HTTP fetch path tried BEFORE the browser for generic/_other sources: Req.get(listing_url) with a Chrome-ish UA -\u003e Floki extract via configured selectors. Fall back to do_browser_scan when HTTP returns empty/0 rows or is blocked (non-200, WAF, tiny SPA shell). Proven win: OCWD yields 53 complete rows via Req+Floki vs 20 lossy via browser, and needs no agent-browser. Keep browser fallback intact for SaaS/JS sources.",
+  "id": "gnome_ga-gyl.1",
+  "labels": [],
+  "parent": "gnome_ga-gyl",
+  "priority": 1,
+  "status": "open",
+  "title": "Add do_http_scan tier (Req+Floki first, browser fallback)",
+  "type": "task",
+  "updated_at": "2026-06-22T15:17:44Z"
+}
