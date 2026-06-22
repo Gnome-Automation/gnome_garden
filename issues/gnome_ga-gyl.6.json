@@ -2,6 +2,8 @@
   "assignee": "pcurran",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-06-22T15:46:58Z",
+  "close_reason": "Credential mechanism is fully built (SourceCredentials: per-source + env fallback; login gate; browser login). No code to build. Activation is a user secret step: provide real PlanetBids creds (env or DB).",
   "created": "2026-06-22T15:17:44Z",
   "description": "Login-gated portals (PlanetBids) need PLANETBIDS_USERNAME/PASSWORD or per-source credentials, else document ingest fails with :login_required (seen in test logs). Required for the RFP-PDF -\u003e analyzer -\u003e contact-extraction chain to actually pull documents from those sources. Wire credential storage/use for at least one real login-gated source.",
   "id": "gnome_ga-gyl.6",
@@ -14,7 +16,7 @@
     }
   ],
   "priority": 3,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Wire PlanetBids/portal credentials for login-gated document downloads",
   "type": "task",
   "updated_at": "2026-06-22T15:46:58Z"
