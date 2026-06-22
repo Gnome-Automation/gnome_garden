@@ -5,6 +5,8 @@
     "gnome_ga-gyl.4",
     "gnome_ga-gyl.5"
   ],
+  "closed_at": "2026-06-22T15:34:01Z",
+  "close_reason": "Verified: headless browser does NOT reliably reach OpenGov (Cloudflare challenge) or PlanetBids (Ember/papi data never renders headless). Agency-site HTTP is the viable channel; SaaS needs APIs/creds.",
   "created": "2026-06-22T15:17:44Z",
   "description": "DECISIVE RISK: the whole SaaS-platform path assumes the headless agent-browser passes Cloudflare (OpenGov) and AWS WAF (PlanetBids). Only verified browser on OCWD/example.com (non-WAF). Test: Browser.inspect_page against a real OpenGov portal and a real PlanetBids bo-search; confirm it renders bid data, not a challenge page. If headless is also blocked, neither HTTP nor browser works -\u003e must use official APIs. Blocks the OpenGov and PlanetBids coverage decisions.",
   "id": "gnome_ga-gyl.3",
@@ -17,7 +19,7 @@
     }
   ],
   "priority": 1,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Verify headless browser actually passes OpenGov/PlanetBids WAFs",
   "type": "task",
   "updated_at": "2026-06-22T15:34:01Z"
