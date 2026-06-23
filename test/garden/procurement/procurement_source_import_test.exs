@@ -29,6 +29,14 @@ defmodule GnomeGarden.Procurement.ProcurementSourceImportTest do
     assert sam_gov.metadata["seed_import"]["source_category"] == "Gov"
     assert sam_gov.metadata["seed_import"]["import_batch"] == "lead_sources_2026_06_12"
 
+    assert {:ok, cal_eprocure} =
+             Procurement.get_procurement_source_by_url("https://caleprocure.ca.gov")
+
+    assert cal_eprocure.requires_login == true
+
+    assert cal_eprocure.notes =~
+             "https://caleprocure.ca.gov/pages/BidderRegistration-BS3/bidder-registration-complete.aspx"
+
     assert {:ok, gsa_ebuy} = Procurement.get_procurement_source_by_url("https://www.ebuy.gsa.gov")
     assert gsa_ebuy.requires_login == true
     assert gsa_ebuy.config_status == :manual
