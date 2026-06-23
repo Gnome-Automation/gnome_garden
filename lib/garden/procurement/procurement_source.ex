@@ -170,8 +170,12 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       accept [
         :name,
         :url,
+        :source_type,
+        :portal_id,
+        :region,
         :organization_id,
         :priority,
+        :api_available,
         :enabled,
         :requires_login,
         :scan_frequency_hours,
@@ -179,6 +183,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :scrape_config,
         :metadata,
         :last_scanned_at,
+        :notes,
         :status
       ]
 

@@ -6,7 +6,7 @@ DIBBS,https://www.dibbs.bsm.dla.mil,custom,,national,low,false,false,72,true,app
 Army ASFI,https://acquisition.army.mil/asfi/,custom,,national,low,false,false,72,true,approved,manual,Army contracts,Gov,Federal,Free,No,lead_sources_2026_06_12
 Navy NECO,https://www.neco.navy.mil,custom,,national,low,false,false,72,true,approved,manual,Navy contracts,Gov,Federal,Free,No,lead_sources_2026_06_12
 DOE STRIPES,https://strfrnt.powerappsportals.us,custom,,national,low,false,false,72,true,approved,manual,DOE small business,Gov,Federal,Free,No,lead_sources_2026_06_12
-Cal eProcure,https://caleprocure.ca.gov,cal_eprocure,,ca,low,true,false,72,true,approved,configured,State of CA contracts,Gov,State,Free,Yes,lead_sources_2026_06_12
+Cal eProcure,https://caleprocure.ca.gov,cal_eprocure,,ca,low,true,true,72,true,approved,configured,State of CA contracts; login/registration: https://caleprocure.ca.gov/pages/BidderRegistration-BS3/bidder-registration-complete.aspx,Gov,State,Free,Yes,lead_sources_2026_06_12
 California DGS,https://www.dgs.ca.gov/PD/About/Page-Content/PD-Branch-Intro-702-702,cal_eprocure,,ca,low,false,false,72,true,approved,manual,State agency master contracts,Gov,State,Free,No,lead_sources_2026_06_12
 CalTrans,https://dot.ca.gov/programs/procurement-and-contracts,cal_eprocure,,ca,low,false,false,72,true,approved,manual,"Infrastructure, need DBE",Gov,State,Free,No,lead_sources_2026_06_12
 CA Water Boards,https://www.waterboards.ca.gov/resources/contracts/,cal_eprocure,,ca,low,false,false,72,true,approved,manual,Water/wastewater projects,Gov,State,Free,No,lead_sources_2026_06_12
