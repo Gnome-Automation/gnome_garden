@@ -1,15 +1,21 @@
 defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
+
+  import Cinder.Refresh
 
   import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.Source
   alias GnomeGarden.Acquisition.SourceLaunchBatch
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.SourceCredential
   alias GnomeGarden.Procurement.SourceCredentials
   alias GnomeGarden.Procurement.SourcePipeline
   alias GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog
+
+  require Ash.Query
 
   @buckets [:needs_configuration, :ready, :credentials_needed, :attention, :all]
   @configuration_batch_limit 10
@@ -44,12 +50,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   end
 
   @impl true
-  def handle_params(params, _uri, socket) do
+  def handle_params(params, uri, socket) do
     bucket = parse_bucket(Map.get(params, "bucket"))
     sources = list_sources(socket.assigns.current_user)
 
     {:noreply,
-     socket
+     params
+     |> Cinder.UrlSync.handle_params(uri, socket)
      |> assign(:selected_bucket, bucket)
      |> assign_sources(sources)}
   end
@@ -337,6 +344,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
           <.button navigate={~p"/acquisition/findings"}>
             Queue
           </.button>
+          <.button navigate={~p"/acquisition/sources/new"} variant="primary">
+            <.icon name="hero-plus" class="size-4" /> Add Source
+          </.button>
         </:actions>
       </.page_header>
 
@@ -418,26 +428,143 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
               </div>
             </div>
 
-            <div
-              :if={@sources != []}
-              id="acquisition-source-cards"
-              class="divide-y divide-zinc-200 bg-base-100 dark:divide-white/10"
-            >
-              <.source_card
-                :for={source <- @sources}
-                source={source}
-                source_credentials_index={@source_credentials_index}
-                configuring_source_ids={@configuring_source_ids}
-                launching_source_ids={@launching_source_ids}
-              />
-            </div>
+            <div class="bg-base-100">
+              <div class="md:hidden">
+                <Cinder.collection
+                  id="acquisition-sources-mobile"
+                  layout={:list}
+                  query={source_query(@selected_bucket)}
+                  actor={@current_user}
+                  url_state={@url_state}
+                  theme={GnomeGardenWeb.CinderTheme}
+                  page_size={10}
+                  show_sort={false}
+                  search={[
+                    label: "Search sources",
+                    placeholder: "Search name, URL, or description"
+                  ]}
+                  empty_message="No sources in this queue."
+                >
+                  <:col field="name" search sort label="Source" />
+                  <:col field="url" search label="URL" />
+                  <:col field="description" search label="Description" />
+                  <:col field="source_family" sort label="Family" />
+                  <:col field="source_kind" sort label="Kind" />
+                  <:col field="status" sort label="Status" />
 
-            <div :if={@sources == []} class="p-4">
-              <.empty_state
-                icon="hero-globe-alt"
-                title="No sources in this queue"
-                description="Change the source queue filter or import/configure more sources."
-              />
+                  <:item :let={source}>
+                    <.source_card
+                      source={source}
+                      source_credentials_index={@source_credentials_index}
+                      configuring_source_ids={@configuring_source_ids}
+                      launching_source_ids={@launching_source_ids}
+                    />
+                  </:item>
+
+                  <:empty>
+                    <.empty_state
+                      icon="hero-globe-alt"
+                      title="No sources in this queue"
+                      description="Change the source queue filter or import/configure more sources."
+                    />
+                  </:empty>
+                </Cinder.collection>
+              </div>
+
+              <div class="hidden md:block">
+                <Cinder.collection
+                  id="acquisition-sources"
+                  query={source_query(@selected_bucket)}
+                  actor={@current_user}
+                  url_state={@url_state}
+                  theme={GnomeGardenWeb.CinderTheme}
+                  page_size={25}
+                  search={[
+                    label: "Search sources",
+                    placeholder: "Search name, URL, or description"
+                  ]}
+                  empty_message="No sources in this queue."
+                >
+                  <:col :let={source} label="Actions" class="w-16 min-w-16">
+                    <.source_actions
+                      source={source}
+                      source_credentials_index={@source_credentials_index}
+                      configuring_source_ids={@configuring_source_ids}
+                      launching_source_ids={@launching_source_ids}
+                    />
+                  </:col>
+
+                  <:col :let={source} field="name" search sort label="Source">
+                    <div class="min-w-0 space-y-1">
+                      <p class="truncate font-medium text-base-content">{source.name}</p>
+                      <.link
+                        :if={source.url}
+                        href={source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="block max-w-[28rem] truncate text-xs text-primary hover:text-primary-focus hover:underline"
+                      >
+                        {source.url}
+                      </.link>
+                    </div>
+                  </:col>
+
+                  <:col :let={source} field="source_family" sort label="Type">
+                    <div class="flex flex-wrap gap-1.5">
+                      <span class="badge badge-info badge-sm">{source.source_family_label}</span>
+                      <span class="badge badge-outline badge-sm">{source.source_kind_label}</span>
+                      <span class="badge badge-ghost badge-sm">{source.scan_strategy_label}</span>
+                    </div>
+                  </:col>
+
+                  <:col :let={source} field="status" sort label="Status">
+                    <div class="flex flex-wrap gap-1.5">
+                      <.status_badge status={source.status_variant}>
+                        {source.status_label}
+                      </.status_badge>
+                      <.status_badge status={source.health_variant}>
+                        {source.health_label}
+                      </.status_badge>
+                      <.status_badge :if={run_state_label(source)} status={run_state_variant(source)}>
+                        {run_state_label(source)}
+                      </.status_badge>
+                    </div>
+                  </:col>
+
+                  <:col :let={source} field="last_run_at" sort label="Last Run">
+                    <div class="min-w-0 space-y-1 text-sm">
+                      <p>{format_datetime(source.last_run_at)}</p>
+                      <p class="max-w-[20rem] truncate text-xs text-base-content/55">
+                        {source.health_note}
+                      </p>
+                    </div>
+                  </:col>
+
+                  <:col :let={source} label="Findings" class="min-w-36">
+                    <div class="grid min-w-32 grid-cols-1 gap-1 text-xs tabular-nums text-base-content/60 xl:grid-cols-2">
+                      <span>{source.finding_count} total</span>
+                      <span>{source.review_finding_count} review</span>
+                      <span>{source.accepted_finding_count} accepted</span>
+                      <span>{source.promoted_finding_count} promoted</span>
+                    </div>
+                  </:col>
+
+                  <:col :let={source} label="Credentials" class="min-w-32">
+                    <.credential_state
+                      source={source}
+                      source_credentials_index={@source_credentials_index}
+                    />
+                  </:col>
+
+                  <:empty>
+                    <.empty_state
+                      icon="hero-globe-alt"
+                      title="No sources in this queue"
+                      description="Change the source queue filter or import/configure more sources."
+                    />
+                  </:empty>
+                </Cinder.collection>
+              </div>
             </div>
           </div>
         </div>
@@ -691,6 +818,139 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     """
   end
 
+  attr :source, :map, required: true
+  attr :source_credentials_index, :map, required: true
+  attr :configuring_source_ids, :any, required: true
+  attr :launching_source_ids, :any, required: true
+
+  defp source_actions(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        :source_credential,
+        credential_for_source(assigns.source, assigns.source_credentials_index)
+      )
+      |> assign(:procurement_source_id, procurement_source_id(assigns.source))
+
+    ~H"""
+    <div class="dropdown dropdown-end">
+      <button
+        type="button"
+        tabindex="0"
+        class="btn btn-ghost btn-xs btn-square"
+        aria-label={"Actions for #{@source.name}"}
+      >
+        <.icon name="hero-ellipsis-horizontal" class="size-4" />
+      </button>
+      <ul
+        tabindex="0"
+        class="menu dropdown-content z-30 mt-1 w-44 rounded-box border border-base-content/10 bg-base-100 p-1 text-sm shadow-lg"
+      >
+        <li :if={@procurement_source_id}>
+          <.link navigate={~p"/acquisition/sources/#{@procurement_source_id}/edit"}>
+            <.icon name="hero-pencil-square" class="size-4" /> Edit
+          </.link>
+        </li>
+        <li :if={credential_action_available?(@source)}>
+          <button
+            type="button"
+            id={"add-credentials-table-#{@source.id}"}
+            phx-click="open_credential_form"
+            phx-value-id={@source.id}
+          >
+            <.icon name="hero-key" class="size-4" /> Credentials
+          </button>
+        </li>
+        <li :if={@source_credential}>
+          <button
+            type="button"
+            id={"test-credentials-table-#{@source.id}"}
+            phx-click="test_credentials"
+            phx-value-id={@source.id}
+            disabled={credential_test_running?(@source_credential)}
+          >
+            <.icon name="hero-shield-check" class="size-4" />
+            {credential_test_action_label(@source_credential)}
+          </button>
+        </li>
+        <li :if={auto_configurable?(@source)}>
+          <button
+            type="button"
+            id={"configure-source-table-#{@source.id}"}
+            phx-click="configure_source"
+            phx-value-id={@source.id}
+            disabled={configuring_source?(@configuring_source_ids, @source.id)}
+          >
+            <.icon name="hero-wrench-screwdriver" class="size-4" />
+            {if configuring_source?(@configuring_source_ids, @source.id),
+              do: "Configuring...",
+              else: "Configure"}
+          </button>
+        </li>
+        <li :if={manual_config_available?(@source)}>
+          <.link navigate={~p"/acquisition/sources/#{@source.id}/configure"}>
+            <.icon name="hero-adjustments-horizontal" class="size-4" /> Manual
+          </.link>
+        </li>
+        <li :if={configured_source?(@source)}>
+          <.link navigate={~p"/acquisition/sources/#{@source.id}/configure"}>
+            <.icon name="hero-cog-6-tooth" class="size-4" /> Config
+          </.link>
+        </li>
+        <li :if={scan_ready?(@source)}>
+          <button
+            type="button"
+            id={"launch-source-table-#{@source.id}"}
+            phx-click="launch_run"
+            phx-value-id={@source.id}
+            disabled={launching_source?(@launching_source_ids, @source.id)}
+          >
+            <.icon name="hero-play" class="size-4" />
+            {if launching_source?(@launching_source_ids, @source.id),
+              do: "Launching...",
+              else: "Launch"}
+          </button>
+        </li>
+        <li>
+          <.link navigate={
+            ~p"/acquisition/findings?family=#{@source.source_family}&source_id=#{@source.id}"
+          }>
+            <.icon name="hero-queue-list" class="size-4" /> Queue
+          </.link>
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
+  attr :source, :map, required: true
+  attr :source_credentials_index, :map, required: true
+
+  defp credential_state(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :source_credential,
+        credential_for_source(assigns.source, assigns.source_credentials_index)
+      )
+
+    ~H"""
+    <div class="min-w-[8rem] text-xs">
+      <div :if={@source_credential} class="space-y-1">
+        <.status_badge status={credential_test_variant(@source_credential)}>
+          {credential_test_label(@source_credential)}
+        </.status_badge>
+        <p :if={@source_credential.last_failure_reason} class="line-clamp-2 text-error">
+          {@source_credential.last_failure_reason}
+        </p>
+      </div>
+      <span :if={!@source_credential} class="text-base-content/45">
+        {if credential_action_available?(@source), do: "Needed", else: "Not required"}
+      </span>
+    </div>
+    """
+  end
+
   attr :label, :string, required: true
   attr :value, :string, required: true
 
@@ -719,8 +979,64 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp refresh_sources(socket) do
     sources = list_sources(socket.assigns.current_user)
 
-    assign_sources(socket, sources)
+    socket
+    |> assign_sources(sources)
+    |> refresh_tables(["acquisition-sources-mobile", "acquisition-sources"])
   end
+
+  defp source_query(bucket) do
+    Source
+    |> Ash.Query.for_read(:console)
+    |> filter_source_query(bucket)
+  end
+
+  defp filter_source_query(query, :needs_configuration) do
+    Ash.Query.filter(
+      query,
+      procurement_source.config_status in [:found, :pending, :config_failed, :manual]
+    )
+  end
+
+  defp filter_source_query(query, :ready) do
+    Ash.Query.filter(
+      query,
+      enabled == true and status == :active and
+        (procurement_source.config_status in [:configured, :scan_failed] or
+           (is_nil(procurement_source_id) and scan_strategy in [:agentic, :deterministic]))
+    )
+  end
+
+  defp filter_source_query(query, :credentials_needed) do
+    Ash.Query.filter(
+      query,
+      procurement_source.requires_login == true
+    )
+  end
+
+  defp filter_source_query(query, :attention) do
+    Ash.Query.filter(
+      query,
+      status == :blocked or
+        procurement_source.config_status in [:config_failed, :scan_failed] or
+        fragment("? ->> 'last_agent_run_state' in ('failed', 'cancelled')", metadata) or
+        fragment("? -> 'packet' ->> 'status' = 'download_failed'", metadata) or
+        fragment(
+          "? -> 'last_scan_summary' ->> 'diagnosis' in ('selector_failed', 'listing_selector_matched_no_rows', 'title_selector_matched_no_titles', 'scanner_not_implemented', 'scan_failed', 'all_candidates_filtered_before_scoring', 'no_candidates_extracted')",
+          metadata
+        ) or
+        fragment(
+          "nullif(? -> 'last_scan_summary' ->> 'extracted', '')::integer = 0",
+          metadata
+        ) or
+        fragment(
+          "nullif(? -> 'last_scan_summary' ->> 'extracted', '')::integer > 0 and coalesce(nullif(? -> 'last_scan_summary' ->> 'saved', '')::integer, 0) = 0",
+          metadata,
+          metadata
+        )
+    )
+  end
+
+  defp filter_source_query(query, :all), do: query
 
   defp assign_sources(socket, sources) do
     socket
@@ -1228,11 +1544,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   defp credentialed_procurement_source?(%{procurement_source: %{source_type: :sam_gov}}), do: true
 
-  defp credentialed_procurement_source?(%{
-         procurement_source: %{requires_login: true, source_type: source_type}
-       })
-       when source_type in [:planetbids, :publicpurchase],
-       do: true
+  defp credentialed_procurement_source?(%{procurement_source: %{requires_login: true}}), do: true
 
   defp credentialed_procurement_source?(_source), do: false
 
@@ -1276,6 +1588,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
        do: source_id
 
   defp credential_procurement_source_id(_source), do: nil
+
+  defp procurement_source_id(%{procurement_source: %{id: source_id}}) when is_binary(source_id),
+    do: source_id
+
+  defp procurement_source_id(%{procurement_source_id: source_id}) when is_binary(source_id),
+    do: source_id
+
+  defp procurement_source_id(_source), do: nil
 
   defp credential_test_label(%{test_status: :queued}), do: "Test queued"
   defp credential_test_label(%{test_status: :testing}), do: "Testing"

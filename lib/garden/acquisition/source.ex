@@ -88,6 +88,8 @@ defmodule GnomeGarden.Acquisition.Source do
     end
 
     read :console do
+      pagination offset?: true, countable: true, required?: false
+
       prepare build(
                 sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
                 load: [

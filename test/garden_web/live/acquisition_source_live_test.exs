@@ -115,7 +115,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
         name: "Manual directory intake updated"
       })
 
-    assert render(view) =~ "Manual directory intake updated"
+    assert_eventually(fn -> render(view) =~ "Manual directory intake updated" end)
   end
 
   test "source registry separates review outcome counts", %{conn: conn} do
@@ -727,4 +727,17 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert kept_filter.metadata["operator_recommendation"] == "keep_searching"
     assert render(view) =~ "Search filter kept for the next run."
   end
+
+  defp assert_eventually(fun, attempts \\ 10)
+
+  defp assert_eventually(fun, attempts) when attempts > 0 do
+    if fun.() do
+      assert true
+    else
+      Process.sleep(50)
+      assert_eventually(fun, attempts - 1)
+    end
+  end
+
+  defp assert_eventually(fun, 0), do: assert(fun.())
 end
