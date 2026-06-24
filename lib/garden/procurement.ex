@@ -11,6 +11,7 @@ defmodule GnomeGarden.Procurement do
     extensions: [AshAdmin.Domain, AshLua.Domain]
 
   alias GnomeGarden.Procurement.ScanRunner
+  alias GnomeGarden.Procurement.BidNetSessionRefresh
   alias GnomeGarden.Procurement.SourcePipeline
 
   admin do
@@ -231,6 +232,10 @@ defmodule GnomeGarden.Procurement do
 
   def launch_procurement_source_scan(source_or_id, opts \\ []) do
     ScanRunner.launch_source_scan(source_or_id, opts)
+  end
+
+  def refresh_bidnet_source_session(source_or_id, opts \\ []) do
+    BidNetSessionRefresh.refresh(source_or_id, opts)
   end
 
   def save_source_config(attrs, opts \\ []) when is_map(attrs) do

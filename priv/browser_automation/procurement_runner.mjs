@@ -19,6 +19,8 @@ try {
 
 async function run(payload) {
   switch (payload.action) {
+    case 'bidnet_login':
+      return await bidnetLogin(payload);
     case 'probe':
       return await probe(payload);
     default:
@@ -26,6 +28,125 @@ async function run(payload) {
         code: 'unsupported_action'
       });
   }
+}
+
+async function bidnetLogin(payload) {
+  requireString(payload.url, 'url');
+  requireString(payload.username, 'username');
+  requireString(payload.password, 'password');
+
+  const timeoutMs = positiveInteger(payload.timeoutMs ?? payload.timeout_ms, 60000);
+  const headed = payload.headed === true;
+  const browser = await chromium.launch({
+    headless: !headed,
+    args: ['--no-sandbox']
+  });
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const tracePath = stringOrNull(payload.tracePath ?? payload.trace_path);
+  const screenshotPath = stringOrNull(payload.screenshotPath ?? payload.screenshot_path);
+  const storageStatePath = stringOrNull(payload.storageStatePath ?? payload.storage_state_path);
+
+  try {
+    if (tracePath) {
+      await ensureParentDir(tracePath);
+      await context.tracing.start({ screenshots: true, snapshots: true });
+    }
+
+    await page.goto(payload.url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+    await openLoginSurface(page, timeoutMs);
+
+    const usernameInput = page
+      .locator('input[type="email"], input[name*="email" i], input[id*="email" i], input[name*="user" i], input[id*="user" i], input[type="text"]')
+      .first();
+    await usernameInput.waitFor({ state: 'visible', timeout: timeoutMs });
+    await usernameInput.fill(payload.username);
+
+    const nextButton = page
+      .getByRole('button', { name: /next|continue|sign in|log in/i })
+      .or(page.locator('input[type="submit"], button[type="submit"]').first())
+      .first();
+    await nextButton.click({ timeout: timeoutMs }).catch(() => {});
+
+    const passwordInput = page.locator('input[type="password"]').first();
+    await passwordInput.waitFor({ state: 'visible', timeout: timeoutMs });
+    await passwordInput.fill(payload.password);
+
+    const submitButton = page
+      .getByRole('button', { name: /sign in|log in|login|submit|continue/i })
+      .or(page.locator('input[type="submit"], button[type="submit"]').first())
+      .first();
+    await submitButton.click({ timeout: timeoutMs });
+
+    await page.waitForLoadState('domcontentloaded', { timeout: timeoutMs }).catch(() => {});
+    await page
+      .waitForFunction(
+        () => /logout|log out|sign out|my account|dashboard|profile/i.test(document.body?.innerText || ''),
+        null,
+        { timeout: timeoutMs }
+      )
+      .catch(() => {});
+
+    const bodyText = await page.locator('body').innerText({ timeout: 5000 }).catch(() => '');
+    if (/invalid|incorrect|wrong password|login failed|unable to log/i.test(bodyText)) {
+      throw Object.assign(new Error('BidNet rejected these credentials.'), {
+        code: 'invalid_credentials'
+      });
+    }
+
+    if (storageStatePath) {
+      await ensureParentDir(storageStatePath);
+      await context.storageState({ path: storageStatePath });
+    }
+
+    if (screenshotPath) {
+      await ensureParentDir(screenshotPath);
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+    }
+
+    if (tracePath) {
+      await context.tracing.stop({ path: tracePath });
+    }
+
+    return {
+      action: 'bidnet_login',
+      finalUrl: page.url(),
+      title: await page.title(),
+      status: null,
+      storageStatePath,
+      tracePath,
+      screenshotPath
+    };
+  } catch (error) {
+    if (screenshotPath) {
+      await ensureParentDir(screenshotPath);
+      await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
+    }
+
+    if (tracePath) {
+      await context.tracing.stop({ path: tracePath }).catch(() => {});
+    }
+
+    throw error;
+  } finally {
+    await browser.close();
+  }
+}
+
+async function openLoginSurface(page, timeoutMs) {
+  if (await page.locator('input[type="password"]').first().isVisible().catch(() => false)) {
+    return;
+  }
+
+  const loginUrl = new URL('/public/authentication/login', page.url()).toString();
+  await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs }).catch(async () => {
+    const login = page
+      .getByRole('link', { name: /sign in|log in|login/i })
+      .or(page.getByRole('button', { name: /sign in|log in|login/i }))
+      .first();
+    await login.click({ timeout: timeoutMs });
+  });
 }
 
 async function probe(payload) {
