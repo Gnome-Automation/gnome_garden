@@ -52,10 +52,10 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     end
   end
 
-  defmodule BrowserNoLoginForm do
-    def navigate(url, _opts), do: {:ok, %{url: url, title: "BidNet", status: :ok}}
+  defmodule BrowserShouldNotRun do
+    def navigate(_url, _opts), do: raise("BidNet must not use the generic browser verifier")
 
-    def evaluate(_js), do: {:ok, %{"submitted" => false, "reason" => "no_login_form"}}
+    def evaluate(_js), do: raise("BidNet must not use the generic browser verifier")
   end
 
   setup do
@@ -137,8 +137,8 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     assert invalid.last_failure_reason == "The portal rejected these credentials."
   end
 
-  test "worker leaves BidNet credentials active when generic browser verification is unsupported" do
-    Application.put_env(:gnome_garden, :source_credential_browser, BrowserNoLoginForm)
+  test "worker leaves BidNet credentials active and skips generic browser verification" do
+    Application.put_env(:gnome_garden, :source_credential_browser, BrowserShouldNotRun)
 
     source = bidnet_source()
     credential = bidnet_credential(source)
@@ -158,7 +158,9 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     assert manual_required.test_status == :manual_required
     assert manual_required.last_test_started_at
     assert manual_required.last_test_completed_at
-    assert manual_required.last_failure_reason == "no_login_form"
+
+    assert manual_required.last_failure_reason ==
+             "Use BidNet browser session refresh to verify browser access."
   end
 
   test "BidNet manual verification status still resolves saved credentials" do
@@ -167,7 +169,7 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
 
     assert {:ok, _credential} =
              Procurement.mark_source_credential_manual_verification_required(credential, %{
-               last_failure_reason: "no_login_form"
+               last_failure_reason: "Use BidNet browser session refresh to verify browser access."
              })
 
     assert GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source)

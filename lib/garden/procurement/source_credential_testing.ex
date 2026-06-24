@@ -1,6 +1,9 @@
 defmodule GnomeGarden.Procurement.SourceCredentialTesting do
   @moduledoc """
   Queues and executes credential verification probes for procurement sources.
+
+  BidNet credentials are not verified with the generic form-login probe. BidNet
+  access is validated by refreshing a persisted Playwright browser session.
   """
 
   alias GnomeGarden.Agents.Tools.Procurement.QuerySamGov
@@ -10,6 +13,7 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
   alias GnomeGarden.Procurement.SourceCredentialCrypto
 
   @browser_wait_ms 3_500
+  @bidnet_session_refresh_reason "Use BidNet browser session refresh to verify browser access."
 
   def enqueue(credential_or_id, opts \\ [])
 
@@ -45,19 +49,9 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
   end
 
   def test_credential(%SourceCredential{provider: :bidnet} = credential, opts) do
-    with {:ok, source} <- source_for_test(credential, opts),
-         {:ok, credentials} <- username_password_from_credential(credential) do
-      case browser_login_probe(source.url, credentials, opts) do
-        {:ok, result} ->
-          {:ok, Map.merge(result, %{provider: credential.provider, verified?: true})}
-
-        {:error, reason} ->
-          if rejected_credentials?(reason) do
-            {:error, reason}
-          else
-            {:error, {:manual_verification_required, reason}}
-          end
-      end
+    with {:ok, _source} <- source_for_test(credential, opts),
+         {:ok, _credentials} <- username_password_from_credential(credential) do
+      {:error, {:manual_verification_required, @bidnet_session_refresh_reason}}
     end
   end
 
@@ -172,12 +166,6 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
     do: {:error, reason}
 
   defp interpret_login_result(_result), do: {:error, "Could not verify login success."}
-
-  defp rejected_credentials?(reason) when is_binary(reason) do
-    String.match?(reason, ~r/rejected|invalid|incorrect|wrong password|login failed/i)
-  end
-
-  defp rejected_credentials?(_reason), do: false
 
   defp browser do
     Application.get_env(:gnome_garden, :source_credential_browser, GnomeGarden.Browser)
