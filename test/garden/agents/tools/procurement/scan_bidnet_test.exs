@@ -39,6 +39,79 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanBidNetTest do
              "Seeking qualified firms to provide on-call SCADA integration services for water infrastructure."
   end
 
+  test "adds storageState cookies to BidNet requests when a browser session is available" do
+    storage_state_path =
+      Path.join(
+        System.tmp_dir!(),
+        "bidnet-storage-state-#{System.unique_integer([:positive])}.json"
+      )
+
+    File.write!(
+      storage_state_path,
+      Jason.encode!(%{
+        cookies: [
+          %{name: "BIDNETSESSION", value: "abc123", domain: ".bidnetdirect.com", path: "/"},
+          %{name: "OTHER", value: "ignored", domain: ".example.com", path: "/"}
+        ]
+      })
+    )
+
+    on_exit(fn -> File.rm(storage_state_path) end)
+
+    parent = self()
+
+    http_get = fn
+      @listing_url, opts ->
+        send(parent, {:request_options, opts})
+        {:ok, %{status: 200, body: listing_html()}}
+
+      @detail_url, opts ->
+        send(parent, {:request_options, opts})
+        {:ok, %{status: 200, body: detail_html()}}
+    end
+
+    assert {:ok, result} =
+             ScanBidNet.run(
+               %{url: @listing_url, source_name: "California BidNet Direct - SCADA"},
+               %{http_get: http_get, bidnet_storage_state_path: storage_state_path}
+             )
+
+    assert result.bids_found == 1
+
+    assert_receive {:request_options, listing_opts}
+    assert_receive {:request_options, detail_opts}
+
+    assert {"cookie", "BIDNETSESSION=abc123"} in Keyword.fetch!(listing_opts, :headers)
+    assert {"cookie", "BIDNETSESSION=abc123"} in Keyword.fetch!(detail_opts, :headers)
+  end
+
+  test "keeps public BidNet requests cookie-free when no session is supplied" do
+    parent = self()
+
+    http_get = fn
+      @listing_url, opts ->
+        send(parent, {:request_options, opts})
+        {:ok, %{status: 200, body: listing_html()}}
+
+      @detail_url, _opts ->
+        {:ok, %{status: 200, body: detail_html()}}
+    end
+
+    assert {:ok, result} =
+             ScanBidNet.run(
+               %{url: @listing_url, source_name: "California BidNet Direct - SCADA"},
+               %{http_get: http_get}
+             )
+
+    assert result.bids_found == 1
+
+    assert_receive {:request_options, listing_opts}
+
+    refute Enum.any?(Keyword.fetch!(listing_opts, :headers), fn {key, _value} ->
+             key == "cookie"
+           end)
+  end
+
   defp listing_html do
     """
     <table>

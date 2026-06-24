@@ -405,6 +405,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   defp do_bidnet_scan(source, context) do
     Logger.info("Scanning #{source.name} via BidNet HTML scanner")
     profile_context = profile_context_for_source(source)
+    context = put_bidnet_session_context(source, context)
 
     with {:ok, %{bids: bids}} <-
            ScanBidNet.run(
@@ -420,6 +421,25 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
+    end
+  end
+
+  defp put_bidnet_session_context(source, context) do
+    case valid_bidnet_session(source) do
+      nil ->
+        context
+
+      session ->
+        context
+        |> Map.put(:bidnet_session_id, session.id)
+        |> Map.put(:bidnet_storage_state_path, session.storage_state_path)
+    end
+  end
+
+  defp valid_bidnet_session(source) do
+    case Procurement.list_valid_source_browser_sessions_for_source(source.id, authorize?: false) do
+      {:ok, [session | _]} when is_binary(session.storage_state_path) -> session
+      _ -> nil
     end
   end
 

@@ -48,7 +48,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanBidNet do
   defp fetch_html(url, context) do
     request = Map.get(context, :http_get, &Req.get/2)
 
-    case request.(url, request_options(url)) do
+    case request.(url, request_options(url, context)) do
       {:ok, %{status: 200, body: body}} ->
         {:ok, IO.iodata_to_binary(body)}
 
@@ -60,9 +60,47 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanBidNet do
     end
   end
 
-  defp request_options(url) do
-    [redirect: true, headers: @request_headers, base_url: base_url_for(url)]
+  defp request_options(url, context) do
+    [redirect: true, headers: request_headers(url, context), base_url: base_url_for(url)]
   end
+
+  defp request_headers(url, context) do
+    case bidnet_cookie_header(url, context) do
+      nil -> @request_headers
+      cookie -> [{"cookie", cookie} | @request_headers]
+    end
+  end
+
+  defp bidnet_cookie_header(url, context) do
+    with path when is_binary(path) <- Map.get(context, :bidnet_storage_state_path),
+         {:ok, body} <- File.read(path),
+         {:ok, %{"cookies" => cookies}} <- Jason.decode(body),
+         [_ | _] = matching <- matching_cookies(cookies, URI.parse(url).host) do
+      matching
+      |> Enum.map(fn %{"name" => name, "value" => value} -> "#{name}=#{value}" end)
+      |> Enum.join("; ")
+    else
+      _ -> nil
+    end
+  end
+
+  defp matching_cookies(cookies, host) when is_list(cookies) and is_binary(host) do
+    Enum.filter(cookies, fn
+      %{"name" => name, "value" => value, "domain" => domain}
+      when is_binary(name) and is_binary(value) and is_binary(domain) ->
+        cookie_domain_matches?(host, domain)
+
+      _ ->
+        false
+    end)
+  end
+
+  defp matching_cookies(_cookies, _host), do: []
+
+  defp cookie_domain_matches?(host, "." <> domain),
+    do: host == domain or String.ends_with?(host, ".#{domain}")
+
+  defp cookie_domain_matches?(host, domain), do: host == domain
 
   defp base_url_for(url) do
     uri = URI.parse(url)
