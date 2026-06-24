@@ -521,7 +521,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
   defp restore_env(name, nil), do: System.delete_env(name)
   defp restore_env(name, value), do: System.put_env(name, value)
 
-  test "source configuration saves selectors through procurement action", %{conn: conn} do
+  test "source refinement hides selector editing and saves search intent filters", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{
         name: "Configured County Portal",
@@ -539,28 +539,32 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
 
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
 
-    assert render(view) =~ "System configuration runs first."
-    assert render(view) =~ "Known portals like PlanetBids and BidNet"
-    assert render(view) =~ "The repeated wrapper for one bid or opportunity row."
+    html = render(view)
+
+    assert html =~ "Refine Source"
+    assert html =~ "Refinement changes operator intent"
+    assert html =~ "Scanner Diagnostics"
+    refute html =~ "source-config-form"
+    refute html =~ "The repeated wrapper for one bid or opportunity row."
 
     view
-    |> form("#source-config-form",
-      config: %{
-        listing_url: "https://example.com/configured-county/bids",
-        listing_selector: ".bid-row",
-        title_selector: ".bid-title",
-        link_selector: "a",
-        pagination_type: "none"
+    |> form("#source-search-filter-form",
+      search_filter: %{
+        filter_type: "keyword",
+        value: "scada controls",
+        label: "Controls work",
+        per_run_limit: "5"
       }
     )
     |> render_submit()
 
-    assert_redirect(view, ~p"/acquisition/sources")
+    assert render(view) =~ "Search filter added."
 
-    {:ok, updated_source} = Procurement.get_procurement_source(source.id)
+    assert {:ok, [filter]} = Procurement.list_source_search_filters(source.id)
 
-    assert updated_source.config_status == :configured
-    assert Map.get(updated_source.scrape_config, "listing_selector") == ".bid-row"
+    assert filter.filter_type == :keyword
+    assert filter.value == "scada controls"
+    assert filter.label == "Controls work"
   end
 
   test "source configuration shows discovery running status for pending sources", %{conn: conn} do
@@ -684,8 +688,8 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
 
     assert html =~ "Browser discovery could not get clear data from this source."
     assert html =~ "No repeated listing rows were found."
-    assert html =~ "manual fallback fields now shown below"
-    assert html =~ "Save Configuration"
+    assert html =~ "developer tooling to inspect scanner configuration"
+    refute html =~ "Save Configuration"
   end
 
   test "source configuration shows SAM filter performance recommendations", %{conn: conn} do
@@ -742,11 +746,11 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     {:ok, view, _html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
 
     html = render(view)
-    assert html =~ "SAM.gov Search"
+    assert html =~ "Search Intent"
     assert html =~ "541330"
     assert html =~ "Disable noisy filter"
     assert html =~ "12 returned in the last run. 1 rejected and 0 suppressed from review."
-    assert html =~ "Add Related NAICS Code"
+    assert html =~ "Filter Type"
     assert html =~ "accepted"
     assert html =~ "rejected"
 

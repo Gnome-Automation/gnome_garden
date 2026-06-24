@@ -26,45 +26,17 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       {:ok, source} ->
         {:ok,
          socket
-         |> assign(:page_title, "Configure Source")
+         |> assign(:page_title, "Refine Source")
          |> assign(:source, source)
          |> assign_search_filters()
          |> assign_crawl_evidence()
-         |> assign_search_filter_form(%{})
-         |> assign_form(config_params(source))}
+         |> assign_search_filter_form(%{})}
 
       {:error, error} ->
         {:ok,
          socket
          |> put_flash(:error, "Could not load source: #{inspect(error)}")
          |> push_navigate(to: ~p"/acquisition/sources")}
-    end
-  end
-
-  @impl true
-  def handle_event("validate", %{"config" => params}, socket) do
-    {:noreply, assign_form(socket, params)}
-  end
-
-  @impl true
-  def handle_event("save", %{"config" => params}, socket) do
-    params =
-      params
-      |> Map.put("procurement_source_id", socket.assigns.source.procurement_source_id)
-      |> compact_config_params()
-
-    case Procurement.save_source_config(params, actor: socket.assigns.current_user) do
-      {:ok, _source} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Source configuration saved.")
-         |> push_navigate(to: ~p"/acquisition/sources")}
-
-      {:error, error} ->
-        {:noreply,
-         socket
-         |> assign_form(params)
-         |> put_flash(:error, "Could not save source configuration: #{inspect(error)}")}
     end
   end
 
@@ -234,9 +206,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
     ~H"""
     <.page class="pb-8">
       <.page_header>
-        Configure Source
+        Refine Source
         <:subtitle>
-          System setup is the default. Manual selectors are only a fallback when browser discovery cannot identify clear listing data.
+          Adjust search intent, credentials, and run controls. Scanner internals are shown as diagnostics instead of editable fields.
         </:subtitle>
         <:actions>
           <.button navigate={~p"/acquisition/sources"}>
@@ -252,14 +224,12 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
           <div class="mb-4 rounded-lg border border-info/20 bg-info/10 p-3 text-sm text-base-content">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div class="space-y-1">
-                <p class="font-semibold">System configuration runs first.</p>
+                <p class="font-semibold">
+                  Refinement changes operator intent, not scanner internals.
+                </p>
                 <p class="leading-5 text-base-content/70">
-                  Known portals like PlanetBids and BidNet are configured immediately. Unknown portals
-                  are sent to browser discovery. Use manual selectors only after setup fails:
-                  <code class="rounded bg-base-100 px-1 py-0.5 text-xs">.bid-row</code>
-                  could mean one listing, and
-                  <code class="rounded bg-base-100 px-1 py-0.5 text-xs">.bid-title</code>
-                  could mean the title inside it.
+                  Use search filters and run actions for normal operations. Automatic setup and scanner
+                  jobs own selector discovery and source-specific scrape details.
                 </p>
               </div>
               <div class="flex shrink-0 flex-wrap gap-2">
@@ -286,108 +256,34 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
             </div>
           </div>
 
-          <div
-            :if={!manual_config_available?(@source)}
-            class="rounded-lg border border-dashed border-base-content/20 bg-base-200/40 p-4 text-sm leading-6 text-base-content/65"
-          >
-            Manual selector fields are hidden until the automatic setup path fails or a source is marked for manual configuration.
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <.source_fact
+              label="Portal Type"
+              value={format_atom(@source.procurement_source.source_type)}
+            />
+            <.source_fact label="Region" value={format_atom(@source.procurement_source.region)} />
+            <.source_fact label="Priority" value={format_atom(@source.procurement_source.priority)} />
+            <.source_fact
+              label="Credentials"
+              value={credential_status_label(@source.procurement_source)}
+            />
           </div>
 
-          <.form
-            :if={manual_config_available?(@source)}
-            for={@form}
-            id="source-config-form"
-            phx-change="validate"
-            phx-submit="save"
-          >
-            <div class="grid gap-4 md:grid-cols-2">
-              <.config_input
-                field={@form[:listing_url]}
-                type="url"
-                label="Listing URL"
-                hint="The exact page where bid listings appear. This can be different from the portal home page."
-                required
-              />
-              <.config_input
-                field={@form[:listing_selector]}
-                type="text"
-                label="Listing Selector"
-                hint="The repeated wrapper for one bid or opportunity row. Example: .bid-row, tr.notice, .solicitation-card."
-                required
-              />
-              <.config_input
-                field={@form[:title_selector]}
-                type="text"
-                label="Title Selector"
-                hint="Inside each listing, the element containing the bid title. Example: .title, h3 a, td:nth-child(2)."
-                required
-              />
-              <.config_input
-                field={@form[:link_selector]}
-                type="text"
-                label="Link Selector"
-                hint="Inside each listing, the link to the bid detail page. Often just a or .title a."
-              />
-              <.config_input
-                field={@form[:date_selector]}
-                type="text"
-                label="Date Selector"
-                hint="Optional due-date or posted-date element inside the listing row."
-              />
-              <.config_input
-                field={@form[:agency_selector]}
-                type="text"
-                label="Agency Selector"
-                hint="Optional agency or buyer name inside the listing row."
-              />
-              <.config_input
-                field={@form[:description_selector]}
-                type="text"
-                label="Description Selector"
-                hint="Optional short description or scope text inside the listing row."
-              />
-              <.config_input
-                field={@form[:search_selector]}
-                type="text"
-                label="Search Selector"
-                hint="Optional search box selector if this source needs a keyword search before listings appear."
-              />
-              <.input
-                field={@form[:pagination_type]}
-                type="select"
-                label="Pagination Type"
-                options={[
-                  {"None", "none"},
-                  {"Numbered", "numbered"},
-                  {"Load More", "load_more"},
-                  {"Infinite", "infinite"}
-                ]}
-              />
-              <.input
-                field={@form[:pagination_selector]}
-                type="text"
-                label="Pagination Selector"
-                placeholder=".next, button.load-more"
-              />
-              <div class="md:col-span-2">
-                <.config_input
-                  field={@form[:notes]}
-                  type="textarea"
-                  label="Notes"
-                  hint="Capture what you learned about the source, why selectors were chosen, or why discovery is needed."
-                />
+          <div class="mt-4 rounded-lg border border-base-content/10 bg-base-100/70 p-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 class="font-semibold text-base-content">Scanner Diagnostics</h3>
+                <p class="mt-1 text-sm leading-6 text-base-content/65">
+                  Current scrape configuration is read-only here. Change scanner behavior through
+                  automatic setup, source refinement, or developer tooling.
+                </p>
               </div>
+              <.status_badge status={config_status_variant(@source.procurement_source.config_status)}>
+                {format_atom(@source.procurement_source.config_status)}
+              </.status_badge>
             </div>
-
-            <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-              <.button type="button" navigate={~p"/acquisition/sources"}>
-                Cancel
-              </.button>
-              <.button type="submit" variant="primary" phx-disable-with="Saving...">
-                Save Configuration
-              </.button>
-            </div>
-          </.form>
+            <pre class="mt-3 max-h-72 overflow-auto rounded-md border border-base-content/10 bg-base-200/70 p-3 text-xs leading-5 text-base-content/80"><code>{pretty_json(@source.procurement_source.scrape_config || %{})}</code></pre>
+          </div>
         </.section>
 
         <div class="space-y-4">
@@ -478,16 +374,15 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
           </.section>
 
           <.section
-            :if={sam_gov_source?(@source.procurement_source)}
-            title="SAM.gov Search"
-            description="NAICS filters control which federal opportunity searches run. Keep the useful ones enabled and remove noise."
+            title="Search Intent"
+            description={search_intent_description(@source.procurement_source)}
           >
             <div class="space-y-4">
               <div
                 :if={@search_filters == []}
                 class="rounded-lg border border-dashed border-base-content/20 bg-base-200/50 p-3 text-sm text-base-content/65"
               >
-                No saved filters yet. The scanner will use the default profile NAICS codes until you add filters here.
+                No saved filters yet. Add keywords, NAICS codes, or state filters to refine future scans.
               </div>
 
               <div :if={@search_filters != []} class="space-y-2">
@@ -591,15 +486,25 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
               <.form
                 for={@search_filter_form}
-                id="sam-search-filter-form"
+                id="source-search-filter-form"
                 phx-submit="add_search_filter"
                 class="space-y-3 rounded-lg border border-base-content/10 bg-base-100/70 p-3"
               >
                 <.input
+                  field={@search_filter_form[:filter_type]}
+                  type="select"
+                  label="Filter Type"
+                  options={[
+                    {"Keyword", "keyword"},
+                    {"NAICS", "naics"},
+                    {"State", "state"}
+                  ]}
+                />
+                <.input
                   field={@search_filter_form[:value]}
                   type="text"
-                  label="Add Related NAICS Code"
-                  placeholder="541330"
+                  label="Value"
+                  placeholder={search_filter_placeholder(@source.procurement_source)}
                   required
                 />
                 <.input
@@ -673,7 +578,6 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
         |> assign(:source, source)
         |> assign_search_filters()
         |> assign_crawl_evidence()
-        |> assign_form(config_params(source))
 
       {:error, _error} ->
         socket
@@ -699,15 +603,16 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   defp assign_search_filter_form(socket, params) do
     params =
       Map.merge(
-        %{"value" => "", "label" => "", "per_run_limit" => "5"},
+        %{
+          "filter_type" => default_filter_type(socket.assigns.source),
+          "value" => "",
+          "label" => "",
+          "per_run_limit" => "5"
+        },
         stringify_keys(params)
       )
 
     assign(socket, :search_filter_form, to_form(params, as: :search_filter))
-  end
-
-  defp assign_form(socket, params) do
-    assign(socket, :form, to_form(params, as: :config))
   end
 
   defp assign_crawl_evidence(socket) do
@@ -726,44 +631,16 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
     assign(socket, :latest_crawl_run, latest)
   end
 
-  defp config_params(%{procurement_source: %{scrape_config: config, url: url}})
-       when is_map(config) do
-    pagination = value(config, "pagination") || %{}
-
-    %{
-      "listing_url" => value(config, "listing_url") || url,
-      "listing_selector" => value(config, "listing_selector"),
-      "title_selector" => value(config, "title_selector"),
-      "date_selector" => value(config, "date_selector"),
-      "link_selector" => value(config, "link_selector"),
-      "description_selector" => value(config, "description_selector"),
-      "agency_selector" => value(config, "agency_selector"),
-      "pagination_type" => value(pagination, "type") || "none",
-      "pagination_selector" => value(pagination, "selector"),
-      "search_selector" => value(config, "search_selector"),
-      "notes" => value(config, "notes")
-    }
-  end
-
-  defp config_params(%{url: url}), do: %{"listing_url" => url, "pagination_type" => "none"}
-
-  defp compact_config_params(params) do
-    Map.new(params, fn {key, value} ->
-      value =
-        case value do
-          "" -> nil
-          value -> value
-        end
-
-      {key, value}
-    end)
-  end
-
   defp search_filter_attrs(source, params) do
     value =
       params
       |> Map.get("value", "")
       |> String.trim()
+
+    filter_type =
+      params
+      |> Map.get("filter_type", "keyword")
+      |> filter_type_atom()
 
     per_run_limit =
       params
@@ -772,7 +649,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
     %{
       procurement_source_id: source.id,
-      filter_type: :naics,
+      filter_type: filter_type,
       value: value,
       label: blank_to_nil(Map.get(params, "label")),
       per_run_limit: per_run_limit,
@@ -804,24 +681,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
   defp blank_to_nil(value), do: value
 
-  defp value(map, key), do: Map.get(map, key) || Map.get(map, config_key_atom(key))
-
-  attr :field, Phoenix.HTML.FormField, required: true
-  attr :type, :string, default: "text"
   attr :label, :string, required: true
-  attr :hint, :string, required: true
+  attr :value, :string, required: true
 
-  attr :rest, :global,
-    include: ~w(autocomplete cols disabled form list max maxlength min minlength pattern
-                placeholder readonly required rows size step)
-
-  defp config_input(assigns) do
+  defp source_fact(assigns) do
     ~H"""
-    <div>
-      <.input field={@field} type={@type} label={@label} {@rest} />
-      <p class="mt-1.5 text-xs leading-5 text-base-content/55">
-        {@hint}
-      </p>
+    <div class="rounded-md border border-base-content/10 bg-base-200/50 p-3">
+      <p class="text-xs uppercase tracking-[0.14em] text-base-content/45">{@label}</p>
+      <p class="mt-1 truncate text-sm font-semibold text-base-content">{@value}</p>
     </div>
     """
   end
@@ -837,6 +704,32 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
     </div>
     """
   end
+
+  defp filter_type_atom("naics"), do: :naics
+  defp filter_type_atom("state"), do: :state
+  defp filter_type_atom(_type), do: :keyword
+
+  defp default_filter_type(%{procurement_source: %{source_type: :sam_gov}}), do: "naics"
+  defp default_filter_type(_source), do: "keyword"
+
+  defp search_filter_placeholder(%{source_type: :sam_gov}), do: "541330"
+  defp search_filter_placeholder(_source), do: "scada, pump, controls"
+
+  defp search_intent_description(%{source_type: :sam_gov}) do
+    "NAICS filters control federal opportunity searches. Keep useful filters enabled and remove noise."
+  end
+
+  defp search_intent_description(_source) do
+    "Filters refine future scans and help separate useful opportunities from recurring noise."
+  end
+
+  defp credential_status_label(source) do
+    source
+    |> GnomeGarden.Procurement.SourceCredentials.credential_status()
+    |> format_atom()
+  end
+
+  defp pretty_json(value), do: Jason.encode!(value, pretty: true)
 
   defp config_key_atom("listing_url"), do: :listing_url
   defp config_key_atom("listing_selector"), do: :listing_selector
@@ -856,12 +749,6 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
        do: true
 
   defp discoverable?(_source), do: false
-
-  defp manual_config_available?(%{procurement_source: %{config_status: status}})
-       when status in [:config_failed, :manual],
-       do: true
-
-  defp manual_config_available?(_source), do: false
 
   defp discovery_running?(%{procurement_source: %{config_status: :pending}}), do: true
   defp discovery_running?(_source), do: false
@@ -1004,13 +891,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
 
   defp discovery_next_step(%{procurement_source: %{config_status: :config_failed}}),
     do:
-      "Retry Configure after checking the portal page, or use the manual fallback fields now shown below."
+      "Retry Configure after checking the portal page. If this keeps failing, refine filters or use developer tooling to inspect scanner configuration."
 
   defp discovery_next_step(%{procurement_source: %{config_status: :scan_failed}}),
-    do: "Edit the selectors or launch a retry scan from the source registry."
+    do: "Review diagnostics and launch a retry scan from the source registry."
 
   defp discovery_next_step(%{procurement_source: %{config_status: :manual}}),
-    do: "Fill in the scanner selectors manually and save configuration."
+    do: "Review diagnostics and decide whether this source belongs in automated scanning."
 
   defp discovery_next_step(_source), do: "Review the current source state."
 
@@ -1038,9 +925,6 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
   defp metadata_key_atom("last_config_error"), do: :last_config_error
   defp metadata_key_atom("last_config_error_at"), do: :last_config_error_at
   defp metadata_key_atom(key), do: config_key_atom(key)
-
-  defp sam_gov_source?(%{source_type: :sam_gov}), do: true
-  defp sam_gov_source?(_source), do: false
 
   defp show_disable_noisy_action?(%{
          enabled: true,
