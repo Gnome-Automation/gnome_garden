@@ -524,6 +524,12 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       public? true
       description "Durable traversal and scan evidence for this source"
     end
+
+    has_many :browser_sessions, GnomeGarden.Procurement.SourceBrowserSession do
+      destination_attribute :procurement_source_id
+      public? true
+      description "Authenticated browser sessions available to source scanners"
+    end
   end
 
   calculations do

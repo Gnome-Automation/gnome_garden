@@ -151,6 +151,28 @@ defmodule GnomeGarden.Procurement do
       define :delete_source_credential, action: :destroy
     end
 
+    resource GnomeGarden.Procurement.SourceBrowserSession do
+      define :list_source_browser_sessions, action: :read
+      define :get_source_browser_session, action: :read, get_by: [:id]
+
+      define :list_source_browser_sessions_for_source,
+        action: :for_source,
+        args: [:procurement_source_id]
+
+      define :list_valid_source_browser_sessions_for_source,
+        action: :valid_for_source,
+        args: [:procurement_source_id]
+
+      define :create_source_browser_session, action: :create
+      define :update_source_browser_session, action: :update
+      define :mark_source_browser_session_refreshing, action: :mark_refreshing
+      define :mark_source_browser_session_valid, action: :mark_valid
+      define :mark_source_browser_session_failed, action: :mark_failed
+      define :expire_source_browser_session, action: :expire
+      define :disable_source_browser_session, action: :disable
+      define :delete_source_browser_session, action: :destroy
+    end
+
     resource GnomeGarden.Procurement.SourceSearchFilter do
       define :list_source_search_filters, action: :for_source, args: [:procurement_source_id]
       define :get_source_search_filter, action: :read, get_by: [:id]

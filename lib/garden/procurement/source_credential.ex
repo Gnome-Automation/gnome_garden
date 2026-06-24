@@ -358,5 +358,10 @@ defmodule GnomeGarden.Procurement.SourceCredential do
     belongs_to :procurement_source, GnomeGarden.Procurement.ProcurementSource do
       public? true
     end
+
+    has_many :browser_sessions, GnomeGarden.Procurement.SourceBrowserSession do
+      destination_attribute :source_credential_id
+      public? true
+    end
   end
 end
