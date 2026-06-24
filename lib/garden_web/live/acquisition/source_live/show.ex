@@ -33,6 +33,11 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
+    if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_browser_session:created")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_browser_session:updated")
+    end
+
     case load_source(id, socket.assigns.current_user) do
       {:ok, source} ->
         {:ok,
@@ -40,6 +45,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
          |> assign(:source, source)
          |> assign(:page_title, source.name)
          |> assign(:source_credential, credential_for_source(source))
+         |> assign(:browser_session, browser_session_for_source(source))
          |> assign(:credential_dialog, nil)
          |> assign(:credential_form, nil)}
 
@@ -211,6 +217,55 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
             </button>
           </.section>
 
+          <.section :if={bidnet_source?(@source)} title="Browser Session" body_class="px-4 py-5">
+            <div :if={@browser_session} class="space-y-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <.status_badge status={browser_session_variant(@browser_session.status)}>
+                  {format_atom(@browser_session.status)}
+                </.status_badge>
+                <span class="text-sm font-medium text-base-content">
+                  {@browser_session.session_family}
+                </span>
+              </div>
+              <dl class="space-y-2 text-sm">
+                <.compact_detail
+                  label="Verified"
+                  value={format_datetime(@browser_session.verified_at)}
+                />
+                <.compact_detail label="Expires" value={format_datetime(@browser_session.expires_at)} />
+                <.compact_detail
+                  label="Credential"
+                  value={session_credential_label(@browser_session, @source_credential)}
+                />
+                <.compact_detail
+                  :if={@browser_session.trace_path}
+                  label="Trace"
+                  value={Path.basename(@browser_session.trace_path)}
+                />
+                <.compact_detail
+                  :if={@browser_session.screenshot_path}
+                  label="Screenshot"
+                  value={Path.basename(@browser_session.screenshot_path)}
+                />
+              </dl>
+              <p :if={@browser_session.last_failure_reason} class="text-sm text-error">
+                {@browser_session.last_failure_reason}
+              </p>
+            </div>
+            <p :if={!@browser_session} class="text-sm text-base-content/60">
+              No authenticated browser session has been saved for this source.
+            </p>
+            <button
+              type="button"
+              phx-click="refresh_bidnet_session"
+              class="btn btn-sm btn-primary mt-4 w-full"
+              disabled={is_nil(@source_credential)}
+              phx-disable-with="Refreshing..."
+            >
+              <.icon name="hero-arrow-path" class="size-4" /> Refresh Session
+            </button>
+          </.section>
+
           <.section title="Queue" body_class="px-4 py-5">
             <div class="grid grid-cols-2 gap-2">
               <.metric label="Total" value={@source.finding_count} />
@@ -280,6 +335,36 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
     end
   end
 
+  @impl true
+  def handle_event("refresh_bidnet_session", _params, socket) do
+    case Procurement.refresh_bidnet_source_session(socket.assigns.source.procurement_source,
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, _session} ->
+        {:noreply,
+         socket
+         |> reload_source()
+         |> put_flash(:info, "BidNet browser session refreshed.")}
+
+      {:error, %{reason: reason}} ->
+        {:noreply,
+         socket
+         |> reload_source()
+         |> put_flash(:error, "Could not refresh BidNet session: #{reason}")}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> reload_source()
+         |> put_flash(:error, "Could not refresh BidNet session: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_info(%{topic: "procurement_source_browser_session:" <> _event}, socket) do
+    {:noreply, reload_source(socket)}
+  end
+
   attr :label, :string, required: true
   slot :inner_block, required: true
 
@@ -328,6 +413,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
         socket
         |> assign(:source, source)
         |> assign(:source_credential, credential_for_source(source))
+        |> assign(:browser_session, browser_session_for_source(source))
 
       {:error, _error} ->
         socket
@@ -408,6 +494,16 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
     end
   end
 
+  defp browser_session_for_source(source) do
+    with source_id when is_binary(source_id) <- procurement_source_id(source),
+         {:ok, [session | _]} <-
+           Procurement.list_source_browser_sessions_for_source(source_id, authorize?: false) do
+      session
+    else
+      _ -> nil
+    end
+  end
+
   defp credential_action_available?(source) do
     credentials_needed?(source) or credentialed_procurement_source?(source)
   end
@@ -422,6 +518,26 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   defp credentialed_procurement_source?(%{procurement_source: %{source_type: :bidnet}}), do: true
   defp credentialed_procurement_source?(%{procurement_source: %{requires_login: true}}), do: true
   defp credentialed_procurement_source?(_source), do: false
+
+  defp bidnet_source?(%{procurement_source: %{source_type: :bidnet}}), do: true
+  defp bidnet_source?(_source), do: false
+
+  defp browser_session_variant(:valid), do: :success
+  defp browser_session_variant(:refreshing), do: :info
+  defp browser_session_variant(:invalid), do: :error
+  defp browser_session_variant(:expired), do: :warning
+  defp browser_session_variant(:disabled), do: :default
+  defp browser_session_variant(_status), do: :warning
+
+  defp session_credential_label(%{source_credential_id: credential_id}, %{id: credential_id})
+       when is_binary(credential_id),
+       do: "Current"
+
+  defp session_credential_label(%{source_credential_id: credential_id}, _credential)
+       when is_binary(credential_id),
+       do: String.slice(credential_id, 0, 8)
+
+  defp session_credential_label(_session, _credential), do: "Not linked"
 
   defp credential_family_for_source(%{procurement_source: procurement_source})
        when is_map(procurement_source) do

@@ -68,7 +68,13 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefresh do
 
   defp run_refresh(session, source, credentials, opts) do
     paths = session_paths(session)
-    runner = Keyword.get(opts, :runner, PlaywrightRunner)
+
+    runner =
+      Keyword.get(
+        opts,
+        :runner,
+        Application.get_env(:gnome_garden, :bidnet_session_runner, PlaywrightRunner)
+      )
 
     payload = %{
       url: source.url,

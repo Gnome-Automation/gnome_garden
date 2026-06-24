@@ -10,6 +10,27 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.Workers.TestSourceCredential
 
+  defmodule SuccessfulBidNetSessionRunner do
+    def run(action, payload, opts) do
+      send(Application.fetch_env!(:gnome_garden, :bidnet_session_test_pid), {
+        :bidnet_session_runner,
+        action,
+        payload,
+        opts
+      })
+
+      {:ok,
+       %{
+         "finalUrl" => "https://www.bidnetdirect.com/private",
+         "title" => "BidNet Direct",
+         "status" => 200,
+         "storageStatePath" => payload.storage_state_path,
+         "tracePath" => payload.trace_path,
+         "screenshotPath" => payload.screenshot_path
+       }}
+    end
+  end
+
   test "source registry renders synced procurement sources with finding counts", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{
@@ -356,6 +377,79 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert html =~ "Portal rejected these credentials."
   end
 
+  test "source show refreshes BidNet browser sessions with stored credentials", %{conn: conn} do
+    original_runner = Application.get_env(:gnome_garden, :bidnet_session_runner)
+    original_pid = Application.get_env(:gnome_garden, :bidnet_session_test_pid)
+
+    Application.put_env(
+      :gnome_garden,
+      :bidnet_session_runner,
+      SuccessfulBidNetSessionRunner
+    )
+
+    Application.put_env(:gnome_garden, :bidnet_session_test_pid, self())
+
+    on_exit(fn ->
+      restore_app_env(:bidnet_session_runner, original_runner)
+      restore_app_env(:bidnet_session_test_pid, original_pid)
+    end)
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "BidNet Session Controls",
+        url: "https://www.bidnetdirect.com/california/solicitations/open-bids",
+        source_type: :bidnet,
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        scope: :source,
+        procurement_source_id: procurement_source.id,
+        label: "BidNet source",
+        username: "operator@example.com",
+        password: "source-secret"
+      })
+
+    {:ok, _credential} =
+      Procurement.mark_source_credential_manual_verification_required(credential, %{
+        last_failure_reason: "Use BidNet browser session refresh."
+      })
+
+    {:ok, view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}")
+
+    assert html =~ "Browser Session"
+    assert html =~ "No authenticated browser session"
+    assert has_element?(view, "button", "Refresh Session")
+
+    view
+    |> element("button", "Refresh Session")
+    |> render_click()
+
+    assert_receive {:bidnet_session_runner, :bidnet_login, payload, _opts}
+    assert payload.url == procurement_source.url
+    assert payload.username == "operator@example.com"
+    assert payload.password == "source-secret"
+
+    assert {:ok, [session]} =
+             Procurement.list_valid_source_browser_sessions_for_source(procurement_source.id)
+
+    assert payload.storage_state_path =~ session.id
+    assert session.source_credential_id == credential.id
+
+    html = render(view)
+    assert html =~ "BidNet browser session refreshed."
+    assert html =~ "Valid"
+  end
+
   test "source registry requeues tests for stored credentials", %{conn: conn} do
     original_username = System.get_env("PLANETBIDS_USERNAME")
     original_password = System.get_env("PLANETBIDS_PASSWORD")
@@ -521,6 +615,9 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
   defp restore_env(name, nil), do: System.delete_env(name)
   defp restore_env(name, value), do: System.put_env(name, value)
 
+  defp restore_app_env(key, nil), do: Application.delete_env(:gnome_garden, key)
+  defp restore_app_env(key, value), do: Application.put_env(:gnome_garden, key, value)
+
   test "source refinement hides selector editing and saves search intent filters", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{
@@ -588,6 +685,40 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert html =~ "Discovery running"
     assert html =~ "Browser discovery has been queued or is running."
     assert html =~ "Discovery Running"
+  end
+
+  test "source refinement shows current browser session status", %{conn: conn} do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "BidNet Refinement Session",
+        url: "https://www.bidnetdirect.com/california/solicitations/open-bids",
+        source_type: :bidnet,
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
+
+    {:ok, session} =
+      Procurement.create_source_browser_session(%{
+        procurement_source_id: source.id,
+        provider: :bidnet,
+        session_family: "bidnet"
+      })
+
+    {:ok, _session} =
+      Procurement.mark_source_browser_session_valid(session, %{
+        storage_state_path: "/tmp/gnome-garden/browser-sessions/bidnet/storage-state.json",
+        expires_at: DateTime.add(DateTime.utc_now(), 86_400, :second)
+      })
+
+    {:ok, _view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}/configure")
+
+    assert html =~ "Session"
+    assert html =~ "Valid"
   end
 
   test "source configuration shows latest traversal evidence", %{conn: conn} do

@@ -20,6 +20,8 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       GnomeGardenWeb.Endpoint.subscribe("procurement_crawl_run:started")
       GnomeGardenWeb.Endpoint.subscribe("procurement_crawl_run:completed")
       GnomeGardenWeb.Endpoint.subscribe("procurement_crawl_run:failed")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_browser_session:created")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_browser_session:updated")
     end
 
     case load_source(id, socket.assigns.current_user) do
@@ -28,6 +30,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
          socket
          |> assign(:page_title, "Refine Source")
          |> assign(:source, source)
+         |> assign_browser_session()
          |> assign_search_filters()
          |> assign_crawl_evidence()
          |> assign_search_filter_form(%{})}
@@ -201,6 +204,10 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
     {:noreply, assign_crawl_evidence(socket)}
   end
 
+  def handle_info(%{topic: "procurement_source_browser_session:" <> _event}, socket) do
+    {:noreply, assign_browser_session(socket)}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -267,6 +274,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
               label="Credentials"
               value={credential_status_label(@source.procurement_source)}
             />
+            <.source_fact label="Session" value={browser_session_status_label(@browser_session)} />
           </div>
 
           <div class="mt-4 rounded-lg border border-base-content/10 bg-base-100/70 p-4">
@@ -576,6 +584,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       {:ok, source} ->
         socket
         |> assign(:source, source)
+        |> assign_browser_session()
         |> assign_search_filters()
         |> assign_crawl_evidence()
 
@@ -598,6 +607,22 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
       end
 
     assign(socket, :search_filters, filters)
+  end
+
+  defp assign_browser_session(socket) do
+    session =
+      case socket.assigns.source.procurement_source do
+        %{id: id} ->
+          case Procurement.list_source_browser_sessions_for_source(id, authorize?: false) do
+            {:ok, [session | _]} -> session
+            _ -> nil
+          end
+
+        _ ->
+          nil
+      end
+
+    assign(socket, :browser_session, session)
   end
 
   defp assign_search_filter_form(socket, params) do
@@ -728,6 +753,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Configure do
     |> GnomeGarden.Procurement.SourceCredentials.credential_status()
     |> format_atom()
   end
+
+  defp browser_session_status_label(nil), do: "None"
+  defp browser_session_status_label(%{status: status}), do: format_atom(status)
 
   defp pretty_json(value), do: Jason.encode!(value, pretty: true)
 
