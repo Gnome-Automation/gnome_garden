@@ -312,6 +312,50 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert html =~ "Test queued"
   end
 
+  test "source show renders stored credential test timestamps", %{conn: conn} do
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "BidNet Direct",
+        url: "https://www.bidnetdirect.com/california/",
+        source_type: :bidnet,
+        region: :ca,
+        priority: :medium,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        label: "BidNet default",
+        username: "operator",
+        password: "source-secret"
+      })
+
+    {:ok, credential} =
+      Procurement.mark_source_credential_test_queued(credential, %{
+        last_test_procurement_source_id: procurement_source.id
+      })
+
+    {:ok, credential} = Procurement.mark_source_credential_test_running(credential, %{})
+
+    {:ok, _credential} =
+      Procurement.mark_source_credential_failed(credential, %{
+        last_failure_reason: "Portal rejected these credentials."
+      })
+
+    {:ok, _view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}")
+
+    assert html =~ "Credentials"
+    assert html =~ "BidNet"
+    assert html =~ "Last Tested"
+    assert html =~ "Portal rejected these credentials."
+  end
+
   test "source registry requeues tests for stored credentials", %{conn: conn} do
     original_username = System.get_env("PLANETBIDS_USERNAME")
     original_password = System.get_env("PLANETBIDS_PASSWORD")

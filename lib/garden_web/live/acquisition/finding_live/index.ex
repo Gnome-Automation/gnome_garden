@@ -1,5 +1,8 @@
 defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   use GnomeGardenWeb, :live_view
+  use Cinder.UrlSync
+
+  import Cinder.Refresh
 
   import GnomeGardenWeb.Components.AcquisitionUI,
     only: [
@@ -11,11 +14,11 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   import GnomeGardenWeb.Components.Acquisition.FindingCard, only: [finding_card: 1]
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.Finding
   alias GnomeGarden.Procurement.TargetingFeedback
 
   @queues [:review, :promoted, :rejected, :suppressed, :parked]
   @families [:all, :procurement, :discovery]
-  @finding_limit 50
 
   @impl true
   def mount(_params, _session, socket) do
@@ -35,31 +38,25 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
      |> assign(:selected_program, nil)
      |> assign(:selected_run_id, nil)
      |> assign(:action_dialog, nil)
-     |> assign(:queue_counts, queue_counts())
-     |> assign(:findings, [])
-     |> assign(:findings_page, nil)}
+     |> assign(:queue_counts, queue_counts())}
   end
 
   @impl true
-  def handle_params(params, _uri, socket) do
+  def handle_params(params, uri, socket) do
     queue = parse_queue(Map.get(params, "queue"))
     family = parse_family(Map.get(params, "family"))
     source = load_source_filter(Map.get(params, "source_id"), socket.assigns.current_user)
     program = load_program_filter(Map.get(params, "program_id"), socket.assigns.current_user)
     run_id = blank_to_nil(Map.get(params, "run_id"))
 
-    findings_page =
-      list_findings_page(queue, family, source, program, run_id, socket.assigns.current_user)
-
     {:noreply,
-     socket
+     params
+     |> Cinder.UrlSync.handle_params(uri, socket)
      |> assign(:selected_queue, queue)
      |> assign(:selected_family, family)
      |> assign(:selected_source, source)
      |> assign(:selected_program, program)
      |> assign(:selected_run_id, run_id)
-     |> assign(:findings_page, findings_page)
-     |> assign(:findings, page_results(findings_page))
      |> assign(
        :queue_counts,
        queue_counts(family, source, program, run_id, socket.assigns.current_user)
@@ -287,7 +284,7 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
                   {status_label(@selected_queue)} · {family_filter_label(@selected_family)}
                 </p>
                 <p class="mt-0.5 text-xs text-base-content/50">
-                  Showing {length(@findings)} of {page_count(@findings_page)} findings
+                  {Map.fetch!(@queue_counts, @selected_queue)} findings in this filtered queue
                 </p>
               </div>
               <div class="grid grid-cols-3 gap-2 sm:w-[22rem]">
@@ -297,21 +294,57 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
               </div>
             </div>
 
-            <div
-              :if={@findings != []}
-              id="acquisition-finding-cards"
-              class="divide-y divide-zinc-200 bg-base-100 dark:divide-white/10"
+            <Cinder.collection
+              id="acquisition-findings"
+              layout={:list}
+              query={
+                finding_query(
+                  @selected_queue,
+                  @selected_family,
+                  @selected_source,
+                  @selected_program,
+                  @selected_run_id
+                )
+              }
+              actor={@current_user}
+              url_state={@url_state}
+              theme={GnomeGardenWeb.CinderTheme}
+              page_size={25}
+              show_sort={false}
+              search={[
+                label: "Search findings",
+                placeholder: "Search title, URL, source, location, work, org, or ref"
+              ]}
+              empty_message={"No #{queue_label(@selected_queue)} findings"}
             >
-              <.finding_card :for={finding <- @findings} finding={finding} />
-            </div>
+              <:col field="title" search sort label="Title" />
+              <:col field="summary" search label="Summary" />
+              <:col field="source_url" search label="Source URL" />
+              <:col field="external_ref" search label="External Ref" />
+              <:col field="location" search sort label="Location" />
+              <:col field="work_summary" search label="Work" />
+              <:col field="source.name" search label="Source" />
+              <:col field="organization.name" search label="Organization" />
+              <:col field="finding_family" sort label="Family" />
+              <:col field="finding_type" sort label="Type" />
+              <:col field="status" sort label="Status" />
+              <:col field="due_at" sort label="Due" />
+              <:col field="observed_at" sort label="Observed" />
 
-            <div :if={@findings == []} class="p-4">
-              <.empty_state
-                icon="hero-inbox-stack"
-                title={"No #{queue_label(@selected_queue)} findings"}
-                description={empty_description(@selected_queue)}
-              />
-            </div>
+              <:item :let={finding}>
+                <.finding_card finding={finding} />
+              </:item>
+
+              <:empty>
+                <div class="p-4">
+                  <.empty_state
+                    icon="hero-inbox-stack"
+                    title={"No #{queue_label(@selected_queue)} findings"}
+                    description={empty_description(@selected_queue)}
+                  />
+                </div>
+              </:empty>
+            </Cinder.collection>
           </div>
         </div>
       </.section>
@@ -440,33 +473,18 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
         socket.assigns.current_user
       )
     )
-    |> assign(
-      :findings_page,
-      list_findings_page(
-        socket.assigns.selected_queue,
-        socket.assigns.selected_family,
-        socket.assigns.selected_source,
-        socket.assigns.selected_program,
-        socket.assigns.selected_run_id,
-        socket.assigns.current_user
-      )
-    )
-    |> then(&assign(&1, :findings, page_results(&1.assigns.findings_page)))
+    |> refresh_table("acquisition-findings")
   end
 
-  defp list_findings_page(queue, family, source, program, run_id, actor) do
-    case Acquisition.list_findings_queue(
-           queue,
-           family,
-           filter_id(source),
-           filter_id(program),
-           run_id,
-           actor: actor,
-           page: [limit: @finding_limit, count: true]
-         ) do
-      {:ok, page} -> page
-      {:error, _error} -> empty_page()
-    end
+  defp finding_query(queue, family, source, program, run_id) do
+    Finding
+    |> Ash.Query.for_read(:queue, %{
+      queue: queue,
+      family: family,
+      source_id: filter_id(source),
+      program_id: filter_id(program),
+      agent_run_id: run_id
+    })
   end
 
   defp count_findings(queue, family, source, program, run_id, actor) do
@@ -493,12 +511,12 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   defp filter_id(%{id: id}), do: id
   defp filter_id(_filter), do: nil
 
+  defp page_count(%{count: count}) when is_integer(count), do: count
+  defp page_count(page), do: length(page_results(page))
+
   defp page_results(%{results: results}), do: results
   defp page_results(results) when is_list(results), do: results
   defp page_results(_page), do: []
-
-  defp page_count(%{count: count}) when is_integer(count), do: count
-  defp page_count(page), do: length(page_results(page))
 
   defp empty_page, do: %{results: [], count: 0}
 

@@ -44,12 +44,41 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
     end
   end
 
+  def test_credential(%SourceCredential{provider: :bidnet} = credential, opts) do
+    with {:ok, source} <- source_for_test(credential, opts),
+         {:ok, credentials} <- username_password_from_credential(credential) do
+      case browser_login_probe(source.url, credentials, opts) do
+        {:ok, result} ->
+          {:ok, Map.merge(result, %{provider: credential.provider, verified?: true})}
+
+        {:error, reason} ->
+          if rejected_credentials?(reason) do
+            {:error, reason}
+          else
+            {:error, {:manual_verification_required, reason}}
+          end
+      end
+    end
+  end
+
   def test_credential(%SourceCredential{} = credential, opts) do
     with {:ok, source} <- source_for_test(credential, opts),
          {:ok, credentials} <- username_password_from_credential(credential),
          {:ok, result} <- browser_login_probe(source.url, credentials, opts) do
       {:ok, Map.merge(result, %{provider: credential.provider, verified?: true})}
     end
+  end
+
+  def manual_verification_required?({:manual_verification_required, _reason}), do: true
+  def manual_verification_required?(_reason), do: false
+
+  def manual_verification_reason({:manual_verification_required, reason}),
+    do: format_reason(reason)
+
+  def manual_verification_reason(reason), do: format_reason(reason)
+
+  def format_reason({:manual_verification_required, reason}) do
+    "Manual verification required: #{format_reason(reason)}"
   end
 
   def format_reason(reason) when is_binary(reason), do: reason
@@ -143,6 +172,12 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
     do: {:error, reason}
 
   defp interpret_login_result(_result), do: {:error, "Could not verify login success."}
+
+  defp rejected_credentials?(reason) when is_binary(reason) do
+    String.match?(reason, ~r/rejected|invalid|incorrect|wrong password|login failed/i)
+  end
+
+  defp rejected_credentials?(_reason), do: false
 
   defp browser do
     Application.get_env(:gnome_garden, :source_credential_browser, GnomeGarden.Browser)

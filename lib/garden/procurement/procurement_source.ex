@@ -133,6 +133,14 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :status
       ]
 
+      change fn changeset, _context ->
+        if Ash.Changeset.get_attribute(changeset, :source_type) == :bidnet do
+          Ash.Changeset.change_attribute(changeset, :requires_login, true)
+        else
+          changeset
+        end
+      end
+
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
@@ -158,12 +166,6 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
-    action :import_seed_rows, :map do
-      description "Import procurement source seed rows parsed from CSV or JSON"
-      argument :rows, {:array, :map}, allow_nil?: false
-      run GnomeGarden.Procurement.Actions.ImportProcurementSources
-    end
-
     update :update do
       require_atomic? false
 
@@ -186,6 +188,14 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :notes,
         :status
       ]
+
+      change fn changeset, _context ->
+        if Ash.Changeset.get_attribute(changeset, :source_type) == :bidnet do
+          Ash.Changeset.change_attribute(changeset, :requires_login, true)
+        else
+          changeset
+        end
+      end
 
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end

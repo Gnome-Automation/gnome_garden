@@ -14,6 +14,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   alias GnomeGarden.Procurement.SourceCredentials
   alias GnomeGarden.Procurement.SourcePipeline
   alias GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog
+  alias Phoenix.LiveView.JS
 
   require Ash.Query
 
@@ -441,7 +442,8 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                   show_sort={false}
                   search={[
                     label: "Search sources",
-                    placeholder: "Search name, URL, or description"
+                    placeholder: "Search name, URL, source type, portal ID, or description",
+                    fn: &cinder_source_search/3
                   ]}
                   empty_message="No sources in this queue."
                 >
@@ -479,9 +481,11 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                   url_state={@url_state}
                   theme={GnomeGardenWeb.CinderTheme}
                   page_size={25}
+                  click={fn source -> JS.navigate(~p"/acquisition/sources/#{source.id}") end}
                   search={[
                     label: "Search sources",
-                    placeholder: "Search name, URL, or description"
+                    placeholder: "Search name, URL, source type, portal ID, or description",
+                    fn: &cinder_source_search/3
                   ]}
                   empty_message="No sources in this queue."
                 >
@@ -502,6 +506,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                         href={source.url}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onclick="event.stopPropagation()"
                         class="block max-w-[28rem] truncate text-xs text-primary hover:text-primary-focus hover:underline"
                       >
                         {source.url}
@@ -833,92 +838,108 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
       |> assign(:procurement_source_id, procurement_source_id(assigns.source))
 
     ~H"""
-    <div class="dropdown dropdown-end">
+    <div class="flex items-center gap-1" onclick="event.stopPropagation()">
       <button
+        :if={credential_action_available?(@source)}
         type="button"
-        tabindex="0"
+        id={"add-credentials-table-inline-#{@source.id}"}
+        phx-click="open_credential_form"
+        phx-value-id={@source.id}
         class="btn btn-ghost btn-xs btn-square"
-        aria-label={"Actions for #{@source.name}"}
+        aria-label={"Credentials for #{@source.name}"}
       >
-        <.icon name="hero-ellipsis-horizontal" class="size-4" />
+        <.icon name="hero-key" class="size-4" />
       </button>
-      <ul
-        tabindex="0"
-        class="menu dropdown-content z-30 mt-1 w-44 rounded-box border border-base-content/10 bg-base-100 p-1 text-sm shadow-lg"
-      >
-        <li :if={@procurement_source_id}>
-          <.link navigate={~p"/acquisition/sources/#{@procurement_source_id}/edit"}>
-            <.icon name="hero-pencil-square" class="size-4" /> Edit
-          </.link>
-        </li>
-        <li :if={credential_action_available?(@source)}>
-          <button
-            type="button"
-            id={"add-credentials-table-#{@source.id}"}
-            phx-click="open_credential_form"
-            phx-value-id={@source.id}
-          >
-            <.icon name="hero-key" class="size-4" /> Credentials
-          </button>
-        </li>
-        <li :if={@source_credential}>
-          <button
-            type="button"
-            id={"test-credentials-table-#{@source.id}"}
-            phx-click="test_credentials"
-            phx-value-id={@source.id}
-            disabled={credential_test_running?(@source_credential)}
-          >
-            <.icon name="hero-shield-check" class="size-4" />
-            {credential_test_action_label(@source_credential)}
-          </button>
-        </li>
-        <li :if={auto_configurable?(@source)}>
-          <button
-            type="button"
-            id={"configure-source-table-#{@source.id}"}
-            phx-click="configure_source"
-            phx-value-id={@source.id}
-            disabled={configuring_source?(@configuring_source_ids, @source.id)}
-          >
-            <.icon name="hero-wrench-screwdriver" class="size-4" />
-            {if configuring_source?(@configuring_source_ids, @source.id),
-              do: "Configuring...",
-              else: "Configure"}
-          </button>
-        </li>
-        <li :if={manual_config_available?(@source)}>
-          <.link navigate={~p"/acquisition/sources/#{@source.id}/configure"}>
-            <.icon name="hero-adjustments-horizontal" class="size-4" /> Manual
-          </.link>
-        </li>
-        <li :if={configured_source?(@source)}>
-          <.link navigate={~p"/acquisition/sources/#{@source.id}/configure"}>
-            <.icon name="hero-cog-6-tooth" class="size-4" /> Config
-          </.link>
-        </li>
-        <li :if={scan_ready?(@source)}>
-          <button
-            type="button"
-            id={"launch-source-table-#{@source.id}"}
-            phx-click="launch_run"
-            phx-value-id={@source.id}
-            disabled={launching_source?(@launching_source_ids, @source.id)}
-          >
-            <.icon name="hero-play" class="size-4" />
-            {if launching_source?(@launching_source_ids, @source.id),
-              do: "Launching...",
-              else: "Launch"}
-          </button>
-        </li>
-        <li>
-          <.link navigate={
-            ~p"/acquisition/findings?family=#{@source.source_family}&source_id=#{@source.id}"
-          }>
-            <.icon name="hero-queue-list" class="size-4" /> Queue
-          </.link>
-        </li>
-      </ul>
+      <div class="relative z-[70]">
+        <button
+          type="button"
+          popovertarget={"source-actions-popover-#{@source.id}"}
+          style={"anchor-name: --source-actions-#{@source.id}"}
+          class="btn btn-ghost btn-xs btn-square"
+          aria-label={"Actions for #{@source.name}"}
+        >
+          <.icon name="hero-ellipsis-horizontal" class="size-4" />
+        </button>
+        <ul
+          id={"source-actions-popover-#{@source.id}"}
+          popover="auto"
+          style={"position-anchor: --source-actions-#{@source.id}; inset: auto auto auto auto; top: anchor(bottom); left: anchor(left);"}
+          class="dropdown menu z-[100] mt-1 w-44 rounded-box border border-base-content/10 bg-base-100 p-1 text-sm shadow-xl"
+        >
+          <li :if={@procurement_source_id}>
+            <.link navigate={~p"/acquisition/sources/#{@procurement_source_id}/edit"}>
+              <.icon name="hero-pencil-square" class="size-4" /> Edit
+            </.link>
+          </li>
+          <li :if={credential_action_available?(@source)}>
+            <button
+              type="button"
+              id={"add-credentials-table-#{@source.id}"}
+              phx-click="open_credential_form"
+              phx-value-id={@source.id}
+            >
+              <.icon name="hero-key" class="size-4" /> Credentials
+            </button>
+          </li>
+          <li :if={@source_credential}>
+            <button
+              type="button"
+              id={"test-credentials-table-#{@source.id}"}
+              phx-click="test_credentials"
+              phx-value-id={@source.id}
+              disabled={credential_test_running?(@source_credential)}
+            >
+              <.icon name="hero-shield-check" class="size-4" />
+              {credential_test_action_label(@source_credential)}
+            </button>
+          </li>
+          <li :if={auto_configurable?(@source)}>
+            <button
+              type="button"
+              id={"configure-source-table-#{@source.id}"}
+              phx-click="configure_source"
+              phx-value-id={@source.id}
+              disabled={configuring_source?(@configuring_source_ids, @source.id)}
+            >
+              <.icon name="hero-wrench-screwdriver" class="size-4" />
+              {if configuring_source?(@configuring_source_ids, @source.id),
+                do: "Configuring...",
+                else: "Configure"}
+            </button>
+          </li>
+          <li :if={manual_config_available?(@source)}>
+            <.link navigate={~p"/acquisition/sources/#{@source.id}/configure"}>
+              <.icon name="hero-adjustments-horizontal" class="size-4" /> Manual
+            </.link>
+          </li>
+          <li :if={configured_source?(@source)}>
+            <.link navigate={~p"/acquisition/sources/#{@source.id}/configure"}>
+              <.icon name="hero-cog-6-tooth" class="size-4" /> Config
+            </.link>
+          </li>
+          <li :if={scan_ready?(@source)}>
+            <button
+              type="button"
+              id={"launch-source-table-#{@source.id}"}
+              phx-click="launch_run"
+              phx-value-id={@source.id}
+              disabled={launching_source?(@launching_source_ids, @source.id)}
+            >
+              <.icon name="hero-play" class="size-4" />
+              {if launching_source?(@launching_source_ids, @source.id),
+                do: "Launching...",
+                else: "Launch"}
+            </button>
+          </li>
+          <li>
+            <.link navigate={
+              ~p"/acquisition/findings?family=#{@source.source_family}&source_id=#{@source.id}"
+            }>
+              <.icon name="hero-queue-list" class="size-4" /> Queue
+            </.link>
+          </li>
+        </ul>
+      </div>
     </div>
     """
   end
@@ -990,6 +1011,25 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     |> filter_source_query(bucket)
   end
 
+  defp cinder_source_search(query, _searchable_columns, term) do
+    term = "%#{String.trim(term)}%"
+
+    Ash.Query.filter(
+      query,
+      fragment("? ILIKE ?", name, ^term) or
+        fragment("? ILIKE ?", url, ^term) or
+        fragment("? ILIKE ?", description, ^term) or
+        fragment("? ILIKE ?", external_ref, ^term) or
+        fragment("?::text ILIKE ?", source_family, ^term) or
+        fragment("?::text ILIKE ?", source_kind, ^term) or
+        fragment("?::text ILIKE ?", scan_strategy, ^term) or
+        fragment("? ILIKE ?", procurement_source.name, ^term) or
+        fragment("? ILIKE ?", procurement_source.url, ^term) or
+        fragment("? ILIKE ?", procurement_source.portal_id, ^term) or
+        fragment("?::text ILIKE ?", procurement_source.source_type, ^term)
+    )
+  end
+
   defp filter_source_query(query, :needs_configuration) do
     Ash.Query.filter(
       query,
@@ -1009,7 +1049,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp filter_source_query(query, :credentials_needed) do
     Ash.Query.filter(
       query,
-      procurement_source.requires_login == true
+      procurement_source.requires_login == true or procurement_source.source_type == :bidnet
     )
   end
 
@@ -1543,6 +1583,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   end
 
   defp credentialed_procurement_source?(%{procurement_source: %{source_type: :sam_gov}}), do: true
+  defp credentialed_procurement_source?(%{procurement_source: %{source_type: :bidnet}}), do: true
 
   defp credentialed_procurement_source?(%{procurement_source: %{requires_login: true}}), do: true
 
@@ -1559,8 +1600,9 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp credential_family_string(family) when is_binary(family), do: family
   defp credential_family_string(_family), do: "custom"
 
-  defp credential_provider(family) when family in ["planetbids", "publicpurchase", "sam_gov"],
-    do: family
+  defp credential_provider(family)
+       when family in ["planetbids", "publicpurchase", "sam_gov", "bidnet"],
+       do: family
 
   defp credential_provider(_family), do: "custom"
 
@@ -1601,12 +1643,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   defp credential_test_label(%{test_status: :testing}), do: "Testing"
   defp credential_test_label(%{test_status: :verified}), do: "Verified"
   defp credential_test_label(%{test_status: :invalid}), do: "Invalid"
+  defp credential_test_label(%{test_status: :manual_required}), do: "Manual verification"
   defp credential_test_label(_credential), do: "Untested"
 
   defp credential_test_variant(%{test_status: :queued}), do: :info
   defp credential_test_variant(%{test_status: :testing}), do: :info
   defp credential_test_variant(%{test_status: :verified}), do: :success
   defp credential_test_variant(%{test_status: :invalid}), do: :error
+  defp credential_test_variant(%{test_status: :manual_required}), do: :warning
   defp credential_test_variant(_credential), do: :default
 
   defp credential_test_action_label(%{test_status: :queued}), do: "Test Queued"
@@ -1639,6 +1683,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
 
   defp credential_family_label("planetbids"), do: "PlanetBids"
   defp credential_family_label("publicpurchase"), do: "PublicPurchase"
+  defp credential_family_label("bidnet"), do: "BidNet"
   defp credential_family_label("sam_gov"), do: "SAM.gov"
 
   defp credential_family_label(family) when is_atom(family),

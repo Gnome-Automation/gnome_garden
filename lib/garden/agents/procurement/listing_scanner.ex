@@ -137,7 +137,15 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     end
   end
 
-  defp ensure_credentials_if_required(%{requires_login: true} = source) do
+  defp ensure_credentials_if_required(source) do
+    if source_requires_credentials?(source), do: ensure_credentials(source), else: :ok
+  end
+
+  defp source_requires_credentials?(%{source_type: :bidnet}), do: true
+  defp source_requires_credentials?(%{requires_login: true}), do: true
+  defp source_requires_credentials?(_source), do: false
+
+  defp ensure_credentials(source) do
     if GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source) do
       :ok
     else
@@ -147,8 +155,6 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
        |> GnomeGarden.Procurement.SourceCredentials.missing_credentials_message()}
     end
   end
-
-  defp ensure_credentials_if_required(_source), do: :ok
 
   # User agent that looks like a real browser — many server-rendered portals
   # (and lenient WAFs) gate on this without requiring JS execution.
@@ -174,13 +180,18 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       true ->
         with {:ok, body} <- http_fetch(listing_url, context),
              [_ | _] = bids <- extract_bids_http(body, listing_url, source, http_cfg) do
-          Logger.info("Scanning #{source.name} via HTTP+Floki at #{listing_url} (#{length(bids)} rows)")
+          Logger.info(
+            "Scanning #{source.name} via HTTP+Floki at #{listing_url} (#{length(bids)} rows)"
+          )
+
           profile_context = profile_context_for_source(source)
           filtered = TargetingFilter.filter_bids(bids, profile_context)
 
           with {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
                {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
-            complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: listing_url)
+            complete_scan(source, bids, filtered.excluded, scored, saved, 0,
+              listing_url: listing_url
+            )
           end
         else
           [] -> {:error, :no_rows_extracted}
@@ -228,7 +239,12 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         |> Enum.map(fn row ->
           %{
             title: floki_cell(row, title_sel),
-            url: row |> Floki.find(link_sel || title_sel) |> Floki.attribute("href") |> List.first() |> absolutize(listing_url),
+            url:
+              row
+              |> Floki.find(link_sel || title_sel)
+              |> Floki.attribute("href")
+              |> List.first()
+              |> absolutize(listing_url),
             due_date: date_sel && floki_cell(row, date_sel),
             description: (desc_sel && floki_cell(row, desc_sel)) || "",
             agency: source.name,

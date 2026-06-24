@@ -39,17 +39,33 @@ defmodule GnomeGarden.Procurement.Workers.TestSourceCredential do
         {:error, reason} ->
           formatted_reason = SourceCredentialTesting.format_reason(reason)
 
-          Logger.warning("Source credential verification failed",
-            credential_id: credential_id,
-            provider: testing_credential.provider,
-            reason: formatted_reason
-          )
+          if SourceCredentialTesting.manual_verification_required?(reason) do
+            manual_reason = SourceCredentialTesting.manual_verification_reason(reason)
 
-          Procurement.mark_source_credential_failed(
-            testing_credential,
-            %{last_failure_reason: formatted_reason},
-            authorize?: false
-          )
+            Logger.info("Source credential requires manual verification",
+              credential_id: credential_id,
+              provider: testing_credential.provider,
+              reason: manual_reason
+            )
+
+            Procurement.mark_source_credential_manual_verification_required(
+              testing_credential,
+              %{last_failure_reason: manual_reason},
+              authorize?: false
+            )
+          else
+            Logger.warning("Source credential verification failed",
+              credential_id: credential_id,
+              provider: testing_credential.provider,
+              reason: formatted_reason
+            )
+
+            Procurement.mark_source_credential_failed(
+              testing_credential,
+              %{last_failure_reason: formatted_reason},
+              authorize?: false
+            )
+          end
 
           :ok
       end

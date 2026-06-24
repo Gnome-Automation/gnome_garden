@@ -7,7 +7,7 @@ defmodule GnomeGardenWeb.CinderTheme do
 
   # Container
   set :container_class, "rounded-xl border border-base-content/10 bg-base-200"
-  set :table_wrapper_class, "overflow-x-auto"
+  set :table_wrapper_class, "overflow-x-auto overflow-y-visible"
 
   # Table
   set :table_class, "w-full text-left whitespace-nowrap"

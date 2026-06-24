@@ -12,9 +12,7 @@ defmodule GnomeGarden.Release do
   alias GnomeGarden.Accounts
   alias GnomeGarden.Company
   alias GnomeGarden.Company.DefaultProfiles
-  alias GnomeGarden.Imports
   alias GnomeGarden.Operations
-  alias GnomeGarden.Procurement
 
   @spec migrate() :: :ok
   def migrate do
@@ -213,54 +211,6 @@ defmodule GnomeGarden.Release do
           raise "Failed to load admin team member for #{user.email}: #{Exception.message(error)}"
         end
     end
-  end
-
-  @doc """
-  Imports procurement sources from a JSON export.
-
-  The importer uses the Procurement Ash code interface so source upserts also
-  rebuild linked acquisition sources through the resource change.
-  """
-  @spec import_procurement_sources!(Path.t()) :: :ok
-  def import_procurement_sources!(path) do
-    rows = path |> File.read!() |> Jason.decode!()
-    import_procurement_source_rows_from_release!(rows)
-  end
-
-  @doc """
-  Imports procurement sources from a CSV seed file.
-
-      bin/gnome_garden eval "GnomeGarden.Release.import_procurement_sources_csv!(\\"/var/lib/gnome/priv/imports/procurement_sources_import_2026-06-12.csv\\")"
-  """
-  @spec import_procurement_sources_csv!(Path.t()) :: :ok
-  def import_procurement_sources_csv!(path) do
-    path
-    |> Imports.Csv.read!()
-    |> import_procurement_source_rows_from_release!()
-  end
-
-  defp import_procurement_source_rows_from_release!(rows) when is_list(rows) do
-    [repo | _repos] = repos()
-
-    {:ok, _result, _apps} =
-      Ecto.Migrator.with_repo(repo, fn _repo ->
-        {:ok, result} = Procurement.import_procurement_source_seed_rows(rows, authorize?: false)
-
-        IO.puts("""
-        Imported procurement sources.
-        Imported: #{result["imported_count"]}
-        Created: #{result["created_count"]}
-        Updated: #{result["updated_count"]}
-        Configured: #{result["configured_count"]}
-        Manual: #{result["manual_count"]}
-        """)
-      end)
-
-    :ok
-  end
-
-  defp import_procurement_source_rows_from_release!(_rows) do
-    raise "Procurement source import must be a JSON array"
   end
 
   defp audit_admin!(env_prefix, default_display_name) do

@@ -325,7 +325,7 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp credentialed_source?(metadata, source_type, requires_login) do
     requires_login == true or
       metadata_value(metadata, "procurement_requires_login") in [true, "true"] or
-      normalize_source_type(source_type) == :sam_gov
+      normalize_source_type(source_type) in [:sam_gov, :bidnet]
   end
 
   defp missing_credentials_note(source) do

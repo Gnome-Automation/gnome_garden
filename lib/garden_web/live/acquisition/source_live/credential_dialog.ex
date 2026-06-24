@@ -43,7 +43,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog do
         <div :if={@dialog.secret_kind == :username_password} class="grid gap-4 sm:grid-cols-2">
           <.input
             field={@form[:username]}
-            type="email"
+            type="text"
             label="Username"
             autocomplete="username"
             required

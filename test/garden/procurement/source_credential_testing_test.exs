@@ -52,6 +52,12 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     end
   end
 
+  defmodule BrowserNoLoginForm do
+    def navigate(url, _opts), do: {:ok, %{url: url, title: "BidNet", status: :ok}}
+
+    def evaluate(_js), do: {:ok, %{"submitted" => false, "reason" => "no_login_form"}}
+  end
+
   setup do
     original_browser = Application.get_env(:gnome_garden, :source_credential_browser)
     original_wait = Application.get_env(:gnome_garden, :source_credential_login_wait_ms)
@@ -131,6 +137,45 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     assert invalid.last_failure_reason == "The portal rejected these credentials."
   end
 
+  test "worker leaves BidNet credentials active when generic browser verification is unsupported" do
+    Application.put_env(:gnome_garden, :source_credential_browser, BrowserNoLoginForm)
+
+    source = bidnet_source()
+    credential = bidnet_credential(source)
+
+    assert :ok =
+             TestSourceCredential.perform(%Oban.Job{
+               args: %{
+                 "source_credential_id" => credential.id,
+                 "procurement_source_id" => source.id
+               }
+             })
+
+    assert {:ok, manual_required} =
+             Procurement.get_source_credential(credential.id, authorize?: false)
+
+    assert manual_required.status == :active
+    assert manual_required.test_status == :manual_required
+    assert manual_required.last_test_started_at
+    assert manual_required.last_test_completed_at
+    assert manual_required.last_failure_reason == "no_login_form"
+  end
+
+  test "BidNet manual verification status still resolves saved credentials" do
+    source = bidnet_source()
+    credential = bidnet_credential(source)
+
+    assert {:ok, _credential} =
+             Procurement.mark_source_credential_manual_verification_required(credential, %{
+               last_failure_reason: "no_login_form"
+             })
+
+    assert GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source)
+
+    assert {:ok, %{username: "bidnet@example.com", password: "source-secret"}} =
+             GnomeGarden.Procurement.SourceCredentials.credentials_for(source)
+  end
+
   test "SAM.gov credentials are verified through the SAM API client" do
     {:ok, credential} =
       Procurement.create_source_credential(%{
@@ -167,6 +212,35 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
         provider: :planetbids,
         credential_family: "planetbids",
         username: "operator@example.com",
+        password: "source-secret"
+      })
+
+    credential
+  end
+
+  defp bidnet_source do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "BidNet Test Portal #{System.unique_integer([:positive])}",
+        url: "https://www.bidnetdirect.com/california/solicitations/open-bids",
+        source_type: :bidnet,
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    source
+  end
+
+  defp bidnet_credential(source) do
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        scope: :source,
+        procurement_source_id: source.id,
+        username: "bidnet@example.com",
         password: "source-secret"
       })
 

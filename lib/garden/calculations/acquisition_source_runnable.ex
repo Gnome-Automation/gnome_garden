@@ -55,6 +55,9 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
       source_type == :sam_gov ->
         GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source_type)
 
+      source_type == :bidnet ->
+        GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source)
+
       requires_login == true ->
         GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source)
 

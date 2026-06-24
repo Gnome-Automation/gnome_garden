@@ -45,6 +45,10 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
     "OpenGov credentials are missing. Add source credentials in the database."
   end
 
+  def missing_credentials_message("bidnet") do
+    "BidNet credentials are missing. Add source credentials in the database."
+  end
+
   def missing_credentials_message("sam_gov") do
     "SAM.gov API key is missing. Add a source credential in the database, or set #{Enum.join(GnomeGarden.Procurement.SourceCredentials.sam_gov_env_names(), " and ")} as a fallback."
   end
@@ -54,6 +58,7 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
   def credential_family_label("planetbids"), do: "PlanetBids"
   def credential_family_label("publicpurchase"), do: "PublicPurchase"
   def credential_family_label("opengov"), do: "OpenGov"
+  def credential_family_label("bidnet"), do: "BidNet"
   def credential_family_label("sam_gov"), do: "SAM.gov"
   def credential_family_label(_family), do: "Source"
 
@@ -118,11 +123,12 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
        when test_status in [:queued, :testing, :untested],
        do: :pending
 
-  defp stored_status(%{test_status: :verified, encrypted_api_key: payload}) when is_map(payload),
-    do: decryptable_status(payload)
+  defp stored_status(%{test_status: test_status, encrypted_api_key: payload})
+       when test_status in [:verified, :manual_required] and is_map(payload),
+       do: decryptable_status(payload)
 
-  defp stored_status(%{test_status: :verified, encrypted_password: payload, username: username})
-       when is_map(payload) do
+  defp stored_status(%{test_status: test_status, encrypted_password: payload, username: username})
+       when test_status in [:verified, :manual_required] and is_map(payload) do
     if present?(username), do: decryptable_status(payload), else: :pending
   end
 

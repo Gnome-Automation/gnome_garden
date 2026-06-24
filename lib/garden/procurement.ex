@@ -26,7 +26,6 @@ defmodule GnomeGarden.Procurement do
       define :search_procurement_sources, action: :search, args: [:query]
       define :create_procurement_source, action: :create
       define :create_procurement_source_for_organization, action: :create_for_organization
-      define :import_procurement_source_seed_rows, action: :import_seed_rows, args: [:rows]
       define :update_procurement_source, action: :update
       define :approve_procurement_source, action: :approve
       define :ignore_procurement_source, action: :ignore
@@ -144,6 +143,10 @@ defmodule GnomeGarden.Procurement do
 
       define :mark_source_credential_verified, action: :mark_verified
       define :mark_source_credential_failed, action: :mark_failed
+
+      define :mark_source_credential_manual_verification_required,
+        action: :mark_manual_verification_required
+
       define :disable_source_credential, action: :disable
       define :delete_source_credential, action: :destroy
     end

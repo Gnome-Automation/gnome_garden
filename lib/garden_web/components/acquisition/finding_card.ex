@@ -95,14 +95,34 @@ defmodule GnomeGardenWeb.Components.Acquisition.FindingCard do
             <p class="mt-0.5 truncate text-xs text-base-content/55">
               {run_provenance_label(@finding)}
             </p>
+            <.link
+              :if={source_link_url(@finding)}
+              href={source_link_url(@finding)}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-1 block truncate text-xs font-medium text-primary hover:text-primary-focus hover:underline"
+            >
+              {source_link_url(@finding)}
+            </.link>
           </div>
-          <.link
-            :if={@finding.agent_run_id}
-            navigate={~p"/console/agents/runs/#{@finding.agent_run_id}"}
-            class="btn btn-xs btn-ghost shrink-0"
-          >
-            Open Run
-          </.link>
+          <div class="flex shrink-0 flex-wrap gap-1.5">
+            <.link
+              :if={source_link_url(@finding)}
+              href={source_link_url(@finding)}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-xs btn-ghost"
+            >
+              Source
+            </.link>
+            <.link
+              :if={@finding.agent_run_id}
+              navigate={~p"/console/agents/runs/#{@finding.agent_run_id}"}
+              class="btn btn-xs btn-ghost"
+            >
+              Open Run
+            </.link>
+          </div>
         </div>
 
         <div class="grid gap-2 text-xs leading-5 text-base-content/55 md:grid-cols-2">
@@ -260,6 +280,10 @@ defmodule GnomeGardenWeb.Components.Acquisition.FindingCard do
     do: "Run #{String.slice(run_id, 0, 8)}"
 
   defp run_provenance_label(_finding), do: "No linked agent run"
+
+  defp source_link_url(%{source_url: url}) when is_binary(url) and url != "", do: url
+  defp source_link_url(%{source: %{url: url}}) when is_binary(url) and url != "", do: url
+  defp source_link_url(_finding), do: nil
 
   defp organization_name(%{organization: %{name: name}}) when is_binary(name), do: name
   defp organization_name(_finding), do: nil

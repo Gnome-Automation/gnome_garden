@@ -16,6 +16,9 @@ priming often conflicts with in-progress changes.
 Committing, closing issues, and syncing are part of completing a task — not
 separate actions requiring additional permission.
 
+Keep Beadwork local by default in this repo; do not run `bw sync` unless the
+user explicitly asks.
+
 ## Critical: Documentation Lookup
 
 **Always search docs before implementing.** Use these mix tasks:
@@ -94,6 +97,12 @@ interfaces when a higher-level workflow module owns the business process. For
 example, acquisition finding review transitions stay behind
 `GnomeGarden.Acquisition.Review` and its public workflow functions instead of
 raw `accept_finding` / `reject_finding` interfaces.
+
+Do not create importer code for one-off data cleanup, refinement, backfills, or
+operator-entered corrections. Use AI-assisted analysis plus Tidewave/project
+evaluation to update the database directly through Ash domain code interfaces or
+resource actions. Importers are only appropriate when the product needs a
+repeatable ingestion feature for an ongoing external data source.
 
 When cleanup reveals a durable architectural rule or correction, add it to this
 file in the same pass so future agents do not have to rediscover it from chat.

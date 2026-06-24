@@ -103,6 +103,9 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
   def credentials_configured?(source_type) when source_type in [:opengov, "opengov"],
     do: credential_status(source_type) in [:verified, :env_configured]
 
+  def credentials_configured?(source_type) when source_type in [:bidnet, "bidnet"],
+    do: credential_status(source_type) in [:verified, :env_configured]
+
   def credentials_configured?(source_type) when source_type in [:sam_gov, "sam_gov"],
     do: credential_status(source_type) in [:verified, :env_configured]
 
@@ -145,6 +148,12 @@ defmodule GnomeGarden.Procurement.SourceCredentials do
   end
 
   def missing_credentials_message("opengov"), do: missing_credentials_message(:opengov)
+
+  def missing_credentials_message(:bidnet) do
+    SourceCredentialResolution.missing_credentials_message("bidnet")
+  end
+
+  def missing_credentials_message("bidnet"), do: missing_credentials_message(:bidnet)
 
   def missing_credentials_message(:sam_gov) do
     SourceCredentialResolution.missing_credentials_message("sam_gov")
