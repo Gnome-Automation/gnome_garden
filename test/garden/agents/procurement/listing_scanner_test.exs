@@ -65,6 +65,46 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
     assert {:ok, [_candidate]} = Procurement.list_extraction_candidates_for_run(run.id)
   end
 
+  test "empty PlanetBids HTTP shells are not treated as successful scans" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Empty PlanetBids Scanner Source",
+        url: @source_url <> "?empty=1",
+        source_type: :planetbids,
+        portal_id: "23458",
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: false
+      })
+
+    {:ok, source} =
+      Procurement.configure_procurement_source(source, %{
+        scrape_config: %{
+          listing_url: source.url,
+          listing_selector: "table tbody tr",
+          title_selector: "td:nth-child(2)"
+        }
+      })
+
+    http_get = fn _url, _opts ->
+      {:ok, %{status: 200, body: empty_spa_html()}}
+    end
+
+    assert {:error, :no_rows_extracted} =
+             ListingScanner.scan(source.id, %{
+               http_get: http_get,
+               disable_browser_fallback?: true
+             })
+
+    assert {:ok, source} = Procurement.get_procurement_source(source.id)
+    assert source.config_status == :scan_failed
+    assert source.metadata["last_scan_summary"]["diagnosis"] == "scan_failed"
+    assert source.metadata["last_scan_summary"]["reason"] == ":no_rows_extracted"
+
+    assert {:ok, []} = Procurement.list_crawl_runs_for_source(source.id)
+  end
+
   test "agency sources scan via HTTP+Floki using http_selectors (no browser)" do
     url = "https://example-water.test/rfps/"
 
@@ -220,6 +260,18 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
         </tr>
       </tbody>
     </table>
+    """
+  end
+
+  defp empty_spa_html do
+    """
+    <html>
+      <head><title>PlanetBids</title></head>
+      <body>
+        <div id="ember-app"></div>
+        <script src="/assets/vendor.js"></script>
+      </body>
+    </html>
     """
   end
 

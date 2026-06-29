@@ -101,7 +101,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
                     "HTTP PlanetBids scan failed for #{source.name}, falling back to browser scan: #{inspect(http_reason)}"
                   )
 
-                  do_browser_scan(source, context)
+                  planetbids_browser_fallback(source, context, http_reason)
               end
             end
           end
@@ -132,7 +132,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
       {:error, reason} ->
         Logger.error("Scan failed for #{source.name}: #{inspect(reason)}")
-        Procurement.scan_fail_procurement_source(source, %{})
+        Procurement.scan_fail_procurement_source(source, %{metadata: scan_failure_metadata(source, reason)})
         {:error, reason}
     end
   end
@@ -300,6 +300,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
              :ok
            ),
          {:ok, bids, extraction} <- extract_bids(config),
+         [_ | _] <- bids,
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, prepared} <-
            prepare_bids_for_final_scoring(filtered.kept, source, listing_url, profile_context),
@@ -309,6 +310,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         extraction: extraction,
         listing_url: listing_url
       )
+    else
+      [] -> {:error, :no_rows_extracted}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -394,13 +398,30 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
              },
              context
            ),
+         [_ | _] <- bids,
          filtered = TargetingFilter.filter_bids(bids, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
       # Skip detail-page browser enrichment for the HTTP path.
       complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
+    else
+      [] -> {:error, :no_rows_extracted}
+      {:error, reason} -> {:error, reason}
     end
   end
+
+  defp planetbids_browser_fallback(source, context, http_reason) do
+    if truthy?(
+         Map.get(context, :disable_browser_fallback?) ||
+           Map.get(context, "disable_browser_fallback?")
+       ) do
+      {:error, http_reason}
+    else
+      do_browser_scan(source, context)
+    end
+  end
+
+  defp truthy?(value), do: value in [true, "true", 1, "1"]
 
   defp do_bidnet_scan(source, context) do
     Logger.info("Scanning #{source.name} via BidNet HTML scanner")
@@ -534,6 +555,21 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         |> Enum.take(3)
         |> Enum.map(&bid_value(&1, :title))
         |> Enum.reject(&is_nil/1),
+      "recorded_at" => DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+    }
+
+    (source.metadata || %{})
+    |> Map.put("last_scan_summary", summary)
+  end
+
+  defp scan_failure_metadata(source, reason) do
+    summary = %{
+      "extracted" => 0,
+      "excluded" => 0,
+      "scored" => 0,
+      "saved" => 0,
+      "diagnosis" => "scan_failed",
+      "reason" => inspect(reason),
       "recorded_at" => DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
     }
 
