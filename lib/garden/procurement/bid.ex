@@ -281,6 +281,12 @@ defmodule GnomeGarden.Procurement.Bid do
       get_by [:url]
     end
 
+    read :by_external_id do
+      argument :external_id, :string, allow_nil?: false
+      filter expr(external_id == ^arg(:external_id))
+      prepare build(sort: [updated_at: :desc, inserted_at: :desc])
+    end
+
     read :search do
       argument :query, :string, allow_nil?: false
 

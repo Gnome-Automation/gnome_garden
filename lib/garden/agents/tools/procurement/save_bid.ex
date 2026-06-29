@@ -31,13 +31,35 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
     end
   end
 
-  defp find_existing(%{url: url}) do
+  defp find_existing(params) do
+    case find_existing_by_external_id(Map.get(params, :external_id)) do
+      {:ok, existing} ->
+        {:ok, existing}
+
+      :not_found ->
+        find_existing_by_url(Map.get(params, :url))
+    end
+  end
+
+  defp find_existing_by_external_id(external_id) when is_binary(external_id) do
+    case Procurement.list_bids_by_external_id(external_id) do
+      {:ok, [existing | _duplicates]} -> {:ok, existing}
+      {:ok, []} -> :not_found
+      {:error, _error} -> :not_found
+    end
+  end
+
+  defp find_existing_by_external_id(_external_id), do: :not_found
+
+  defp find_existing_by_url(url) when is_binary(url) do
     case Procurement.get_bid_by_url(url) do
       {:ok, existing} -> {:ok, existing}
       {:error, %Ash.Error.Query.NotFound{}} -> :not_found
       {:error, _error} -> :not_found
     end
   end
+
+  defp find_existing_by_url(_url), do: :not_found
 
   defp create_bid(params, context) do
     attrs =

@@ -208,6 +208,7 @@ defmodule GnomeGarden.Procurement do
       define :list_bids_for_organization, action: :for_organization, args: [:organization_id]
       define :get_bid, action: :read, get_by: [:id]
       define :get_bid_by_url, action: :by_url, args: [:url]
+      define :list_bids_by_external_id, action: :by_external_id, args: [:external_id]
       define :search_bids, action: :search, args: [:query]
       define :create_bid, action: :create
       define :update_bid, action: :update
