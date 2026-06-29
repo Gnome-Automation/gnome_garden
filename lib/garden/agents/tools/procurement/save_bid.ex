@@ -149,22 +149,33 @@ defmodule GnomeGarden.Agents.Tools.Procurement.SaveBid do
   defp put_incoming_agent_run_id(metadata, agent_run_id) do
     source =
       metadata
-      |> Map.get(:source, Map.get(metadata, "source", %{}))
+      |> Map.get("source", %{})
       |> case do
         source when is_map(source) -> source
         _ -> %{}
       end
-      |> Map.put(:agent_run_id, agent_run_id)
+      |> Map.put("agent_run_id", agent_run_id)
 
-    Map.put(metadata, :source, source)
+    Map.put(metadata, "source", source)
   end
 
   defp metadata_param(params) do
     case Map.get(params, :metadata) do
-      metadata when is_map(metadata) -> metadata
+      metadata when is_map(metadata) -> stringify_metadata_keys(metadata)
       _ -> %{}
     end
   end
+
+  defp stringify_metadata_keys(metadata) when is_map(metadata) do
+    Map.new(metadata, fn {key, value} ->
+      {to_string(key), stringify_metadata_keys(value)}
+    end)
+  end
+
+  defp stringify_metadata_keys(values) when is_list(values),
+    do: Enum.map(values, &stringify_metadata_keys/1)
+
+  defp stringify_metadata_keys(value), do: value
 
   defp parse_datetime(nil), do: nil
   defp parse_datetime(%DateTime{} = dt), do: dt

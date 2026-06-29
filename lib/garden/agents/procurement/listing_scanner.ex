@@ -132,7 +132,11 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
       {:error, reason} ->
         Logger.error("Scan failed for #{source.name}: #{inspect(reason)}")
-        Procurement.scan_fail_procurement_source(source, %{metadata: scan_failure_metadata(source, reason)})
+
+        Procurement.scan_fail_procurement_source(source, %{
+          metadata: scan_failure_metadata(source, reason)
+        })
+
         {:error, reason}
     end
   end
@@ -1459,14 +1463,25 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       |> Map.take([
         "url",
         "filename",
+        "title",
         "document_type",
         "source_type",
         "requires_login",
-        "captured_from"
+        "captured_from",
+        "downloadable_file_id",
+        "file_size",
+        "uploaded_date",
+        "publicly_visible"
       ])
     end)
     |> Enum.filter(&(is_binary(&1["url"]) and &1["url"] != ""))
-    |> Enum.uniq_by(& &1["url"])
+    |> Enum.uniq_by(fn document ->
+      {
+        document["url"],
+        document["filename"] || document["title"],
+        document["downloadable_file_id"]
+      }
+    end)
   end
 
   defp normalize_documents(_documents), do: []

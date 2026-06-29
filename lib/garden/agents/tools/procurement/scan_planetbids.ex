@@ -326,11 +326,13 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
         url: bid_url,
         filename: filename,
         title: attrs["fileTitle"],
+        downloadable_file_id: attrs["downloadableFileId"],
+        file_size: attrs["fileSize"],
+        uploaded_date: attrs["uploadedDate"],
         document_type: document_type("#{attrs["fileTitle"]} #{filename}", filename),
         source_type: "planetbids",
         requires_login: true,
-        publicly_visible: attrs["publiclyVisible"] == true,
-        raw: attrs
+        publicly_visible: attrs["publiclyVisible"] == true
       }
     end
   end

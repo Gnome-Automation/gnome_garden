@@ -106,6 +106,72 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
     assert {:ok, []} = Procurement.list_crawl_runs_for_source(source.id)
   end
 
+  test "PlanetBids API scan preserves multiple login-gated packet documents" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "PlanetBids API Packet Source",
+        url: @source_url,
+        source_type: :planetbids,
+        portal_id: "23456",
+        region: :oc,
+        priority: :high,
+        status: :approved,
+        requires_login: false
+      })
+
+    {:ok, source} =
+      Procurement.configure_procurement_source(source, %{
+        scrape_config: %{
+          listing_url: @source_url,
+          listing_selector: "table tbody tr",
+          title_selector: "td:nth-child(2)"
+        }
+      })
+
+    http_get = fn
+      "https://api-external.prod.planetbids.com/papi/version?new_session=true", _opts ->
+        {:ok, %{status: 200, body: planetbids_version_json()}}
+
+      "https://api-external.prod.planetbids.com/papi/bid-details/987654", _opts ->
+        {:ok, %{status: 200, body: planetbids_detail_json()}}
+
+      "https://api-external.prod.planetbids.com/papi/bid-downloadable-files?bid_id=987654",
+      _opts ->
+        {:ok, %{status: 200, body: planetbids_documents_json()}}
+
+      url, _opts ->
+        assert String.starts_with?(url, "https://api-external.prod.planetbids.com/papi/bids?")
+        {:ok, %{status: 200, body: planetbids_bids_json()}}
+    end
+
+    assert {:ok, result} = ListingScanner.scan(source.id, %{http_get: http_get})
+
+    assert result.extracted == 1
+    assert result.saved == 1
+    assert result.diagnostics["extraction"]["document_count"] == 2
+
+    bid =
+      GnomeGarden.Procurement.Bid
+      |> Ash.read!()
+      |> Enum.find(&(&1.external_id == "pb-23456-987654"))
+
+    assert bid
+    assert get_in(bid.metadata, ["packet", "status"]) == "requires_login"
+
+    assert [
+             %{
+               "filename" => "scada-project-manual.pdf",
+               "title" => "Project Manual",
+               "downloadable_file_id" => 111
+             },
+             %{
+               "filename" => "scada-control-drawings.pdf",
+               "title" => "Control Drawings",
+               "downloadable_file_id" => 222
+             }
+           ] = bid.metadata["documents"]
+  end
+
   test "agency sources scan via HTTP+Floki using http_selectors (no browser)" do
     url = "https://example-water.test/rfps/"
 
@@ -273,6 +339,88 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
         <script src="/assets/vendor.js"></script>
       </body>
     </html>
+    """
+  end
+
+  defp planetbids_version_json do
+    """
+    {
+      "data": {
+        "attributes": {
+          "visitId": 123456
+        }
+      }
+    }
+    """
+  end
+
+  defp planetbids_bids_json do
+    """
+    {
+      "data": [
+        {
+          "type": "bids",
+          "id": "987654",
+          "attributes": {
+            "bidId": 987654,
+            "title": "SCADA Controls Upgrade",
+            "deptName": "Public Works",
+            "bidDueDate": "2026-12-30 14:00:00.000",
+            "stageId": 3
+          }
+        }
+      ]
+    }
+    """
+  end
+
+  defp planetbids_detail_json do
+    """
+    {
+      "data": {
+        "type": "bid-details",
+        "id": "987654",
+        "attributes": {
+          "deptName": "Public Works",
+          "stateName": "California",
+          "details": "SCADA PLC controls upgrade with controller integration and telemetry software.",
+          "notes": "Review control drawings and technical specifications."
+        }
+      }
+    }
+    """
+  end
+
+  defp planetbids_documents_json do
+    """
+    {
+      "data": [
+        {
+          "type": "bid-downloadable-files",
+          "id": "111",
+          "attributes": {
+            "downloadableFileId": 111,
+            "fileTitle": "Project Manual",
+            "filename": "scada-project-manual.pdf",
+            "fileSize": 1000,
+            "uploadedDate": "2026-06-20 12:00:00.000",
+            "publiclyVisible": false
+          }
+        },
+        {
+          "type": "bid-downloadable-files",
+          "id": "222",
+          "attributes": {
+            "downloadableFileId": 222,
+            "fileTitle": "Control Drawings",
+            "filename": "scada-control-drawings.pdf",
+            "fileSize": 2000,
+            "uploadedDate": "2026-06-21 12:00:00.000",
+            "publiclyVisible": false
+          }
+        }
+      ]
+    }
     """
   end
 
