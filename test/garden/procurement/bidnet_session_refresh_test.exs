@@ -67,6 +67,58 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
     assert session.metadata["final_url"] == "https://www.bidnetdirect.com/private"
   end
 
+  test "refreshes a BidNet session using Bitwarden-backed credentials" do
+    original_cli = System.get_env("GARDEN_BITWARDEN_CLI")
+    original_runner = Application.get_env(:gnome_garden, :bitwarden_command_runner)
+    original_session = Application.get_env(:gnome_garden, :bitwarden_session)
+
+    System.put_env("GARDEN_BITWARDEN_CLI", "/usr/local/bin/bitwarden")
+    Application.put_env(:gnome_garden, :bitwarden_session, "test-session")
+
+    Application.put_env(:gnome_garden, :bitwarden_command_runner, fn _command, _args, _opts ->
+      item = %{
+        "login" => %{
+          "username" => "operator@example.com",
+          "password" => "bitwarden-secret"
+        }
+      }
+
+      {Jason.encode!(item), 0}
+    end)
+
+    on_exit(fn ->
+      restore_env("GARDEN_BITWARDEN_CLI", original_cli)
+      restore_app_env(:bitwarden_command_runner, original_runner)
+      restore_app_env(:bitwarden_session, original_session)
+    end)
+
+    source = bidnet_source()
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        scope: :source,
+        procurement_source_id: source.id,
+        credential_storage: :bitwarden,
+        username: "operator@example.com",
+        bitwarden_item_name: "BidNet"
+      })
+
+    assert {:ok, _credential} =
+             Procurement.mark_source_credential_manual_verification_required(credential, %{
+               last_failure_reason: "Generic browser verifier cannot validate BidNet."
+             })
+
+    assert {:ok, session} =
+             Procurement.refresh_bidnet_source_session(source, runner: SuccessfulRunner)
+
+    assert_receive {:runner, :bidnet_login, payload, _runner_opts}
+    assert payload.username == "operator@example.com"
+    assert payload.password == "bitwarden-secret"
+    assert session.source_credential_id == credential.id
+  end
+
   test "records a failed BidNet session refresh without invalidating credentials" do
     source = bidnet_source()
     credential = bidnet_credential(source)
@@ -135,4 +187,10 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
 
     credential
   end
+
+  defp restore_app_env(key, nil), do: Application.delete_env(:gnome_garden, key)
+  defp restore_app_env(key, value), do: Application.put_env(:gnome_garden, key, value)
+
+  defp restore_env(name, nil), do: System.delete_env(name)
+  defp restore_env(name, value), do: System.put_env(name, value)
 end

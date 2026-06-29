@@ -175,6 +175,70 @@ defmodule GnomeGarden.Procurement.SourceCredentialsTest do
     refute SourceCredentials.credentials_configured?(:bidnet)
   end
 
+  test "resolves verified Bitwarden item references through the CLI runner" do
+    original_cli = System.get_env("GARDEN_BITWARDEN_CLI")
+    original_runner = Application.get_env(:gnome_garden, :bitwarden_command_runner)
+    original_session = Application.get_env(:gnome_garden, :bitwarden_session)
+
+    System.put_env("GARDEN_BITWARDEN_CLI", "/usr/local/bin/bitwarden")
+    Application.put_env(:gnome_garden, :bitwarden_session, "test-session")
+
+    Application.put_env(:gnome_garden, :bitwarden_command_runner, fn command, args, opts ->
+      send(self(), {:bitwarden_cli, command, args, opts})
+
+      item = %{
+        "id" => "item-id",
+        "name" => "BidNet",
+        "login" => %{
+          "username" => "from-vault@example.com",
+          "password" => "vault-secret"
+        }
+      }
+
+      {Jason.encode!(item), 0}
+    end)
+
+    on_exit(fn ->
+      restore_env("GARDEN_BITWARDEN_CLI", original_cli)
+      restore_app_env(:bitwarden_command_runner, original_runner)
+      restore_app_env(:bitwarden_session, original_session)
+    end)
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        credential_storage: :bitwarden,
+        username: "fallback@example.com",
+        bitwarden_item_id: "item-id",
+        bitwarden_item_name: "BidNet"
+      })
+
+    {:ok, _credential} = Procurement.mark_source_credential_verified(credential, %{})
+
+    assert SourceCredentials.credentials_configured?(:bidnet)
+
+    assert {:ok,
+            %{
+              username: "from-vault@example.com",
+              password: "vault-secret",
+              credential_id: credential_id
+            }} = SourceCredentials.credentials_for(:bidnet)
+
+    assert credential_id == credential.id
+
+    assert_received {:bitwarden_cli, "/usr/local/bin/bitwarden",
+                     ["get", "item", "item-id", "--session", "test-session"], opts}
+
+    assert Keyword.get(opts, :stderr_to_stdout)
+    assert {"BW_SESSION", "test-session"} in Keyword.fetch!(opts, :env)
+
+    assert {:ok, [used_credential]} =
+             Procurement.list_active_source_credentials_for_family("bidnet")
+
+    assert used_credential.last_used_at
+  end
+
   test "store in Bitwarden action clears existing local secrets" do
     {:ok, credential} =
       Procurement.create_source_credential(%{
@@ -229,4 +293,10 @@ defmodule GnomeGarden.Procurement.SourceCredentialsTest do
     refute SourceCredentials.credentials_configured?(:planetbids)
     assert SourceCredentials.credential_status(:planetbids) == :invalid
   end
+
+  defp restore_app_env(key, nil), do: Application.delete_env(:gnome_garden, key)
+  defp restore_app_env(key, value), do: Application.put_env(:gnome_garden, key, value)
+
+  defp restore_env(name, nil), do: System.delete_env(name)
+  defp restore_env(name, value), do: System.put_env(name, value)
 end

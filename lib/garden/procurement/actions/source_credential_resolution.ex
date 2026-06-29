@@ -2,15 +2,16 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
   @moduledoc false
 
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.BitwardenCredentialResolver
   alias GnomeGarden.Procurement.SourceCredentialCrypto
 
   def username_password(family, procurement_source_id) do
     with {:ok, family} <- require_family(family),
          {:ok, credential} <- resolve_credential(family, procurement_source_id),
          :ok <- ensure_username_password_verified(credential, family),
-         {:ok, password} <- decrypt_secret(credential.encrypted_password),
+         {:ok, credentials} <- resolve_username_password(credential),
          :ok <- mark_used(credential) do
-      {:ok, %{username: credential.username, password: password}}
+      {:ok, credentials}
     end
   end
 
@@ -85,7 +86,7 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
   defp ensure_username_password_verified(credential, family) do
     case stored_status(credential) do
       :verified ->
-        if present?(credential.username) and is_map(credential.encrypted_password) do
+        if username_password_reference_present?(credential) do
           :ok
         else
           {:error, "#{credential_family_label(family)} credentials are incomplete."}
@@ -123,6 +124,16 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
        when test_status in [:queued, :testing, :untested],
        do: :pending
 
+  defp stored_status(%{
+         credential_storage: :bitwarden,
+         test_status: test_status,
+         bitwarden_item_id: item_id,
+         bitwarden_item_name: item_name
+       })
+       when test_status in [:verified, :manual_required] do
+    if present?(item_id) or present?(item_name), do: :verified, else: :pending
+  end
+
   defp stored_status(%{test_status: test_status, encrypted_api_key: payload})
        when test_status in [:verified, :manual_required] and is_map(payload),
        do: decryptable_status(payload)
@@ -145,6 +156,28 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
     {:ok, SourceCredentialCrypto.decrypt_secret!(payload)}
   rescue
     error -> {:error, Exception.message(error)}
+  end
+
+  defp resolve_username_password(%{credential_storage: :bitwarden} = credential) do
+    BitwardenCredentialResolver.username_password(credential)
+  end
+
+  defp resolve_username_password(%{username: username, encrypted_password: payload} = credential)
+       when is_binary(username) and is_map(payload) do
+    with {:ok, password} <- decrypt_secret(payload) do
+      {:ok, %{username: username, password: password, credential_id: credential.id}}
+    end
+  end
+
+  defp resolve_username_password(_credential),
+    do: {:error, "Username and password are required."}
+
+  defp username_password_reference_present?(%{credential_storage: :bitwarden} = credential) do
+    present?(credential.bitwarden_item_id) or present?(credential.bitwarden_item_name)
+  end
+
+  defp username_password_reference_present?(credential) do
+    present?(credential.username) and is_map(credential.encrypted_password)
   end
 
   defp mark_used(credential) do

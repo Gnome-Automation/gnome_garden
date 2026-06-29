@@ -143,10 +143,15 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefresh do
     end
   end
 
+  defp credential_matches?(%{id: id}, %{credential_id: id}) when is_binary(id), do: true
+
   defp credential_matches?(credential, credentials) do
-    credential.status == :active and credential.password_present and
+    credential.status == :active and credential_has_runtime_secret?(credential) and
       credential.username == credentials.username
   end
+
+  defp credential_has_runtime_secret?(%{credential_storage: :bitwarden}), do: true
+  defp credential_has_runtime_secret?(credential), do: credential.password_present
 
   defp source_credentials(source_id) do
     case Procurement.list_source_credentials_for_source(source_id, authorize?: false) do
