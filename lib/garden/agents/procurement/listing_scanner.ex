@@ -388,7 +388,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     Logger.info("Scanning #{source.name} via PlanetBids HTTP scanner")
     profile_context = profile_context_for_source(source)
 
-    with {:ok, %{bids: bids}} <-
+    with {:ok, %{bids: bids} = scan} <-
            ScanPlanetBids.run(
              %{
                portal_id: planetbids_portal_id(source),
@@ -403,7 +403,10 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
       # Skip detail-page browser enrichment for the HTTP path.
-      complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
+      complete_scan(source, bids, filtered.excluded, scored, saved, 0,
+        extraction: Map.get(scan, :extraction, %{}),
+        listing_url: source.url
+      )
     else
       [] -> {:error, :no_rows_extracted}
       {:error, reason} -> {:error, reason}

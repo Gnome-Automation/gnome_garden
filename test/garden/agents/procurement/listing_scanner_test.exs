@@ -43,8 +43,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
         }
       })
 
-    http_get = fn @source_url, _opts ->
-      {:ok, %{status: 200, body: listing_html()}}
+    http_get = fn
+      @source_url, _opts -> {:ok, %{status: 200, body: listing_html()}}
+      _url, _opts -> {:error, :not_stubbed}
     end
 
     assert {:ok, result} = ListingScanner.scan(source.id, %{http_get: http_get})

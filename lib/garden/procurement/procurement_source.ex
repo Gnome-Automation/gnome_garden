@@ -97,6 +97,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       transition :config_fail, from: [:found, :pending], to: :config_failed
       transition :scan, from: [:configured, :scan_failed], to: :configured
       transition :scan_fail, from: [:configured, :scan_failed], to: :scan_failed
+      transition :mark_scanned, from: [:configured, :scan_failed], to: :configured
       transition :retry_config, from: [:config_failed], to: :pending
       transition :retry_scan, from: [:scan_failed], to: :configured
       transition :set_manual, from: [:found, :pending, :config_failed], to: :manual
@@ -332,6 +333,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
     update :mark_scanned do
       require_atomic? false
       accept [:metadata]
+      change transition_state(:configured)
       change set_attribute(:last_scanned_at, &DateTime.utc_now/0)
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end

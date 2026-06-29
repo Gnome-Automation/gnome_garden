@@ -10,20 +10,21 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
 
   Returns structured bid data for scoring and storage.
 
-  NOTE (verified 2026-06-22): modern PlanetBids (vendors.planetbids.com) is an
-  Ember.js SPA behind AWS WAF. This HTTP+Floki scan gets either a WAF block
-  (default UA) or, with a browser-like UA, only the empty SPA shell — bid data
-  loads via the auth-gated `papi` API. So this scanner is effectively a no-op
-  against current PlanetBids; real coverage needs an authenticated browser
-  session (see ProcurementSource credentials / requires_login + the browser
-  login path) or a `papi`/OAuth integration. Kept for legacy/server-rendered
-  portals and as a cheap first attempt.
+  NOTE (verified 2026-06-29): modern PlanetBids (vendors.planetbids.com) is an
+  Ember.js SPA behind AWS WAF. Bid search rows load through PlanetBids'
+  JSON:API under `https://api-external.prod.planetbids.com/papi/bids`. The API
+  is public for bid-search rows when called with the same anonymous session
+  headers and search params the Ember app sends. Legacy/server-rendered parsing
+  is retained as a fallback.
   """
 
   require Logger
 
   @planetbids_base "https://vendors.planetbids.com/portal"
   @pbsystem_base "https://pbsystem.planetbids.com/portal"
+  @api_base "https://api-external.prod.planetbids.com/papi"
+  @em_version "11050"
+  @browser_user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
   def run(%{portal_id: portal_id} = params, context) do
     portal_name = Map.get(params, :portal_name, "Portal #{portal_id}")
@@ -40,7 +41,35 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
       |> Enum.filter(&is_binary/1)
       |> Enum.uniq()
 
-    case fetch_and_parse(urls, portal_id, http_get(params, context)) do
+    http_get = http_get(params, context)
+
+    case fetch_api_bids(portal_id, Map.get(params, :source_url), http_get) do
+      {:ok, [_ | _] = bids} ->
+        results = Enum.take(bids, max_results)
+        Logger.info("[ScanPlanetBids] Found #{length(results)} API bids from #{portal_name}")
+
+        {:ok,
+         %{
+           portal_id: portal_id,
+           portal_name: portal_name,
+           source_type: :planetbids,
+           bids_found: length(results),
+           extraction: %{
+             "source" => "planetbids_api",
+             "row_count" => length(results),
+             "title_count" => length(results),
+             "stage_id" => 3
+           },
+           bids: results
+         }}
+
+      _api_empty_or_error ->
+        fetch_legacy_html(urls, portal_id, portal_name, max_results, http_get)
+    end
+  end
+
+  defp fetch_legacy_html(urls, portal_id, portal_name, max_results, http_get) do
+    case fetch_and_parse(urls, portal_id, http_get) do
       {:ok, bids} ->
         results = Enum.take(bids, max_results)
         Logger.info("[ScanPlanetBids] Found #{length(results)} bids from #{portal_name}")
@@ -51,6 +80,11 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
            portal_name: portal_name,
            source_type: :planetbids,
            bids_found: length(results),
+           extraction: %{
+             "source" => "planetbids_legacy_html",
+             "row_count" => length(results),
+             "title_count" => length(results)
+           },
            bids: results
          }}
 
@@ -59,6 +93,133 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
         {:error, "Failed to scan #{portal_name}: #{inspect(reason)}"}
     end
   end
+
+  defp fetch_api_bids(portal_id, source_url, http_get) do
+    with {:ok, visit_id} <- fetch_visit_id(portal_id, source_url, http_get),
+         {:ok, bids} <- fetch_api_bids_for_stage(portal_id, source_url, visit_id, 3, http_get) do
+      {:ok, bids}
+    end
+  end
+
+  defp fetch_visit_id(portal_id, source_url, http_get) do
+    url = "#{@api_base}/version?new_session=true"
+
+    case http_get.(url, headers: api_headers(portal_id, source_url, nil)) do
+      {:ok, %{status: 200, body: body}} when is_binary(body) ->
+        case Jason.decode(body) do
+          {:ok, %{"data" => %{"attributes" => %{"visitId" => visit_id}}}} -> {:ok, visit_id}
+          _ -> {:error, :missing_visit_id}
+        end
+
+      {:ok, %{status: 200, body: %{"data" => %{"attributes" => %{"visitId" => visit_id}}}}} ->
+        {:ok, visit_id}
+
+      {:ok, %{status: status}} ->
+        {:error, {:version_status, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp fetch_api_bids_for_stage(portal_id, source_url, visit_id, stage_id, http_get) do
+    url = "#{@api_base}/bids?#{URI.encode_query(api_bid_query(portal_id, stage_id))}"
+
+    case http_get.(url, headers: api_headers(portal_id, source_url, visit_id)) do
+      {:ok, %{status: 200, body: body}} when is_binary(body) ->
+        {:ok, parse_api_bids(body, portal_id, source_url)}
+
+      {:ok, %{status: 200, body: body}} when is_map(body) ->
+        {:ok, parse_api_bids(body, portal_id, source_url)}
+
+      {:ok, %{status: status}} ->
+        {:error, {:bids_status, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp api_bid_query(portal_id, stage_id) do
+    %{
+      "keyword" => "",
+      "bid_type_id" => 0,
+      "stage_id" => stage_id,
+      "dept_id" => 0,
+      "due_date_from" => "",
+      "due_date_to" => "",
+      "cid" => portal_id,
+      "sort_order" => -1,
+      "sort_by" => "",
+      "per_page" => 30,
+      "page" => 1,
+      "totalPagesParam" => "meta.totalPages",
+      "countParam" => "meta.pages"
+    }
+  end
+
+  defp api_headers(portal_id, _source_url, visit_id) do
+    [
+      {"accept", "application/vnd.api+json, application/json"},
+      {"user-agent", @browser_user_agent},
+      {"origin", "https://vendors.planetbids.com"},
+      {"referer", "#{@planetbids_base}/#{portal_id}/bo/bo-search"},
+      {"em-version", @em_version},
+      {"company-id", to_string(portal_id)},
+      {"timezone-name", "America/Los_Angeles"},
+      {"vendor-id", ""},
+      {"vendor-login-id", ""}
+    ]
+    |> maybe_put_visit_id(visit_id)
+  end
+
+  defp maybe_put_visit_id(headers, nil), do: headers
+  defp maybe_put_visit_id(headers, visit_id), do: [{"visit-id", to_string(visit_id)} | headers]
+
+  defp parse_api_bids(body, portal_id, source_url) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, %{"data" => rows}} when is_list(rows) ->
+        rows
+        |> Enum.map(&parse_api_bid(&1, portal_id, source_url))
+        |> Enum.reject(&is_nil/1)
+        |> Enum.uniq_by(&(&1.external_id))
+
+      _ ->
+        []
+    end
+  end
+
+  defp parse_api_bids(%{"data" => rows}, portal_id, source_url) when is_list(rows) do
+    rows
+    |> Enum.map(&parse_api_bid(&1, portal_id, source_url))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq_by(&(&1.external_id))
+  end
+
+  defp parse_api_bids(_body, _portal_id, _source_url), do: []
+
+  defp parse_api_bid(%{"attributes" => attrs}, portal_id, source_url) when is_map(attrs) do
+    bid_id = attrs["bidId"]
+    title = attrs["title"]
+
+    if is_nil(bid_id) or title in [nil, ""] do
+      nil
+    else
+      %{
+        external_id: "pb-#{portal_id}-#{bid_id}",
+        title: title,
+        agency: attrs["deptName"],
+        due_date: parse_date(attrs["bidDueDate"]),
+        url: build_bid_url("/portal/#{portal_id}/bo/bo-detail/#{bid_id}", source_url),
+        source_url: source_url || "#{@planetbids_base}/#{portal_id}/bo/bo-search",
+        source_type: :planetbids,
+        documents: [],
+        raw: attrs
+      }
+    end
+  end
+
+  defp parse_api_bid(_row, _portal_id, _source_url), do: nil
 
   defp fetch_and_parse([], _portal_id, _http_get), do: {:error, :all_urls_failed}
 
@@ -410,6 +571,15 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
     date_str = String.trim(date_str)
 
     cond do
+      Regex.match?(~r/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/, date_str) ->
+        date_str
+        |> String.replace(" ", "T", global: false)
+        |> NaiveDateTime.from_iso8601()
+        |> case do
+          {:ok, naive} -> DateTime.from_naive!(naive, "Etc/UTC")
+          _ -> nil
+        end
+
       Regex.match?(~r/^\d{4}-\d{2}-\d{2}/, date_str) ->
         case DateTime.from_iso8601(date_str <> "T23:59:59Z") do
           {:ok, dt, _} -> dt
