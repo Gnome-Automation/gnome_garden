@@ -306,6 +306,63 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     assert has_element?(view, "#finding-card-#{finding.id}", "Stale")
   end
 
+  test "acquisition queue closes stale findings from the review toolbar", %{conn: conn} do
+    cutoff = DateTime.add(DateTime.utc_now(), -30, :day) |> DateTime.truncate(:second)
+
+    {:ok, stale_finding} =
+      Acquisition.create_finding(%{
+        title: "Toolbar stale controls finding",
+        summary: "Old procurement finding that should leave the review queue.",
+        external_ref: "test:toolbar-stale-controls-#{System.unique_integer([:positive])}",
+        source_url: "https://example.com/toolbar-stale-controls",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        fit_score: 61,
+        confidence: :medium,
+        observed_at: DateTime.add(cutoff, -1, :day)
+      })
+
+    {:ok, fresh_finding} =
+      Acquisition.create_finding(%{
+        title: "Toolbar fresh controls finding",
+        summary: "Fresh procurement finding that should stay in the review queue.",
+        external_ref: "test:toolbar-fresh-controls-#{System.unique_integer([:positive])}",
+        source_url: "https://example.com/toolbar-fresh-controls",
+        finding_family: :procurement,
+        finding_type: :bid_notice,
+        fit_score: 76,
+        confidence: :medium,
+        observed_at: DateTime.add(cutoff, 1, :day)
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings?family=procurement")
+
+    assert has_element?(view, "#close-stale-findings", "Close stale")
+    assert render(view) =~ stale_finding.title
+    assert render(view) =~ fresh_finding.title
+
+    view
+    |> element("#close-stale-findings")
+    |> render_click()
+
+    {:ok, stale_finding} =
+      Acquisition.get_finding(stale_finding.id,
+        load: [:latest_review_reason_code, :latest_review_reason]
+      )
+
+    assert stale_finding.status == :rejected
+    assert stale_finding.latest_review_reason_code == "stale"
+    assert stale_finding.latest_review_reason == "Closed because this finding is stale."
+
+    {:ok, fresh_finding} = Acquisition.get_finding(fresh_finding.id)
+    assert fresh_finding.status == :new
+
+    html = render(view)
+    assert html =~ "Closed 1 stale finding"
+    refute html =~ stale_finding.title
+    assert html =~ fresh_finding.title
+  end
+
   test "promoting a procurement finding opens the commercial signal" do
     {:ok, bid} =
       Procurement.create_bid(%{

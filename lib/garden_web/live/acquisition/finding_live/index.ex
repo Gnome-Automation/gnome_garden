@@ -209,6 +209,33 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
     end
   end
 
+  def handle_event("close_stale_findings", _params, socket) do
+    case Acquisition.close_stale_findings(
+           family: socket.assigns.selected_family,
+           limit: 25,
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, %{closed: closed, skipped: []}} ->
+        {:noreply,
+         socket
+         |> refresh_queue()
+         |> put_flash(:info, "Closed #{length(closed)} stale finding(s).")}
+
+      {:ok, %{closed: closed, skipped: skipped}} ->
+        {:noreply,
+         socket
+         |> refresh_queue()
+         |> put_flash(
+           :info,
+           "Closed #{length(closed)} stale finding(s); skipped #{length(skipped)}."
+         )}
+
+      {:error, error} ->
+        {:noreply,
+         put_flash(socket, :error, "Could not close stale findings: #{format_error(error)}")}
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -287,10 +314,25 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
                   {Map.fetch!(@queue_counts, @selected_queue)} findings in this filtered queue
                 </p>
               </div>
-              <div class="grid grid-cols-3 gap-2 sm:w-[22rem]">
-                <.queue_count label="Review" value={@queue_counts.review} />
-                <.queue_count label="Promoted" value={@queue_counts.promoted} />
-                <.queue_count label="Noise" value={@queue_counts.rejected + @queue_counts.suppressed} />
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  :if={stale_closeout_available?(@selected_queue)}
+                  type="button"
+                  id="close-stale-findings"
+                  phx-click="close_stale_findings"
+                  class="btn btn-sm btn-outline"
+                  phx-disable-with="Closing..."
+                >
+                  <.icon name="hero-archive-box-x-mark" class="size-4" /> Close stale
+                </button>
+                <div class="grid grid-cols-3 gap-2 sm:w-[22rem]">
+                  <.queue_count label="Review" value={@queue_counts.review} />
+                  <.queue_count label="Promoted" value={@queue_counts.promoted} />
+                  <.queue_count
+                    label="Noise"
+                    value={@queue_counts.rejected + @queue_counts.suppressed}
+                  />
+                </div>
               </div>
             </div>
 
@@ -555,6 +597,9 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   defp queue_label(:rejected), do: "rejected"
   defp queue_label(:suppressed), do: "suppressed"
   defp queue_label(:parked), do: "parked"
+
+  defp stale_closeout_available?(:review), do: true
+  defp stale_closeout_available?(_queue), do: false
 
   defp empty_description(:review),
     do: "Procurement bids, discovery records, and future research findings will appear here."
