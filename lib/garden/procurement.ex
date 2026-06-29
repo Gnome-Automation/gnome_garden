@@ -128,6 +128,7 @@ defmodule GnomeGarden.Procurement do
       define :create_source_credential, action: :create
       define :update_source_credential, action: :update
       define :rotate_source_credential, action: :rotate_secret
+      define :store_source_credential_in_bitwarden, action: :store_in_bitwarden
       define :mark_source_credential_test_queued, action: :queue_test
       define :mark_source_credential_test_running, action: :mark_test_running
       define :mark_source_credential_used, action: :mark_used

@@ -32,28 +32,78 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog do
         </div>
 
         <.input
-          :if={@dialog.secret_kind == :api_key}
+          field={@form[:credential_storage]}
+          type="select"
+          label="Storage"
+          options={[
+            {"Encrypted in Gnome Garden", "local_encrypted"},
+            {"Bitwarden item reference", "bitwarden"}
+          ]}
+        />
+
+        <.input
+          :if={local_storage?(@form) and @dialog.secret_kind == :api_key}
           field={@form[:api_key]}
           type="password"
           label="API Key"
           autocomplete="new-password"
-          required
         />
 
-        <div :if={@dialog.secret_kind == :username_password} class="grid gap-4 sm:grid-cols-2">
+        <div
+          :if={local_storage?(@form) and @dialog.secret_kind == :username_password}
+          class="grid gap-4 sm:grid-cols-2"
+        >
           <.input
             field={@form[:username]}
             type="text"
             label="Username"
             autocomplete="username"
-            required
           />
           <.input
             field={@form[:password]}
             type="password"
             label="Password"
             autocomplete="new-password"
-            required
+          />
+        </div>
+
+        <div
+          :if={bitwarden_storage?(@form)}
+          class="rounded-md border border-base-content/10 bg-base-100 p-3"
+        >
+          <p class="text-sm font-semibold text-base-content">Bitwarden Reference</p>
+          <div class="mt-3 grid gap-4 sm:grid-cols-2">
+            <.input
+              field={@form[:bitwarden_server_url]}
+              type="text"
+              label="Server URL"
+              placeholder="https://garden.tail6f3b43.ts.net"
+            />
+            <.input
+              field={@form[:bitwarden_organization]}
+              type="text"
+              label="Organization"
+              placeholder="Gnome Garden"
+            />
+            <.input
+              field={@form[:bitwarden_collection]}
+              type="text"
+              label="Collection"
+              placeholder="Procurement Sources"
+            />
+            <.input
+              field={@form[:bitwarden_item_name]}
+              type="text"
+              label="Item Name"
+              placeholder={@dialog.family_label}
+            />
+            <.input field={@form[:bitwarden_item_id]} type="text" label="Item ID" />
+          </div>
+          <.input
+            field={@form[:bitwarden_notes]}
+            type="textarea"
+            label="Reference Notes"
+            rows="2"
           />
         </div>
 
@@ -77,5 +127,11 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog do
       </.form>
     </.modal>
     """
+  end
+
+  defp local_storage?(form), do: not bitwarden_storage?(form)
+
+  defp bitwarden_storage?(form) do
+    Phoenix.HTML.Form.input_value(form, :credential_storage) in [:bitwarden, "bitwarden"]
   end
 end

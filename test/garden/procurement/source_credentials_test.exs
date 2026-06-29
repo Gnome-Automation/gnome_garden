@@ -153,6 +153,57 @@ defmodule GnomeGarden.Procurement.SourceCredentialsTest do
     assert {:ok, "sam-secret"} = SourceCredentials.sam_gov_api_key()
   end
 
+  test "stores Bitwarden item references without local secret material" do
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        credential_storage: :bitwarden,
+        username: "pc@gnomeautomation.com",
+        bitwarden_server_url: "https://garden.tail6f3b43.ts.net",
+        bitwarden_organization: "Gnome Garden",
+        bitwarden_collection: "Procurement Sources",
+        bitwarden_item_name: "BidNet"
+      })
+
+    assert credential.credential_storage == :bitwarden
+    assert credential.bitwarden_item_name == "BidNet"
+    refute credential.password_present
+    refute credential.api_key_present
+    assert is_nil(credential.encrypted_password)
+    assert is_nil(credential.encrypted_api_key)
+    refute SourceCredentials.credentials_configured?(:bidnet)
+  end
+
+  test "store in Bitwarden action clears existing local secrets" do
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        username: "pc@gnomeautomation.com",
+        password: "local-secret"
+      })
+
+    assert credential.password_present
+    assert is_map(credential.encrypted_password)
+
+    {:ok, credential} =
+      Procurement.store_source_credential_in_bitwarden(credential, %{
+        bitwarden_server_url: "https://garden.tail6f3b43.ts.net",
+        bitwarden_organization: "Gnome Garden",
+        bitwarden_collection: "Procurement Sources",
+        bitwarden_item_name: "BidNet"
+      })
+
+    assert credential.credential_storage == :bitwarden
+    assert credential.bitwarden_item_name == "BidNet"
+    refute credential.password_present
+    refute credential.api_key_present
+    assert is_nil(credential.encrypted_password)
+    assert is_nil(credential.encrypted_api_key)
+    assert credential.test_status == :untested
+  end
+
   test "invalid database credentials block env fallback until they are repaired" do
     System.put_env("PLANETBIDS_USERNAME", "env@example.com")
     System.put_env("PLANETBIDS_PASSWORD", "env-secret")

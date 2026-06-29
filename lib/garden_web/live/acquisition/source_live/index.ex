@@ -1156,6 +1156,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
       "scope" => "family",
       "label" => "#{credential_family_label(family)} default",
       "username" => existing_credential_username(family),
+      "credential_storage" => "local_encrypted",
+      "bitwarden_server_url" => "https://garden.tail6f3b43.ts.net",
+      "bitwarden_organization" => "Gnome Garden",
+      "bitwarden_collection" => "Procurement Sources",
+      "bitwarden_item_name" => credential_family_label(family),
+      "bitwarden_item_id" => "",
+      "bitwarden_notes" => "",
       "notes" => "Saved from #{source.name}",
       "api_key" => if(secret_kind == :api_key, do: "", else: nil),
       "password" => if(secret_kind == :username_password, do: "", else: nil)

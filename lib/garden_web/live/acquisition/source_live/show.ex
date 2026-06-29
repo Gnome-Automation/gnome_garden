@@ -190,7 +190,21 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
                 </span>
               </div>
               <dl class="space-y-2 text-sm">
+                <.compact_detail
+                  label="Storage"
+                  value={credential_storage_label(@source_credential)}
+                />
                 <.compact_detail label="Username" value={@source_credential.username || "Not set"} />
+                <.compact_detail
+                  :if={@source_credential.credential_storage == :bitwarden}
+                  label="Bitwarden Item"
+                  value={bitwarden_item_label(@source_credential)}
+                />
+                <.compact_detail
+                  :if={@source_credential.credential_storage == :bitwarden}
+                  label="Collection"
+                  value={@source_credential.bitwarden_collection || "Not set"}
+                />
                 <.compact_detail label="Scope" value={format_atom(@source_credential.scope)} />
                 <.compact_detail label="Provider" value={@source_credential.provider} />
                 <.compact_detail
@@ -458,6 +472,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
       "scope" => "family",
       "label" => "#{credential_family_label(family)} default",
       "username" => existing_credential_username(family),
+      "credential_storage" => "local_encrypted",
+      "bitwarden_server_url" => "https://garden.tail6f3b43.ts.net",
+      "bitwarden_organization" => "Gnome Garden",
+      "bitwarden_collection" => "Procurement Sources",
+      "bitwarden_item_name" => credential_family_label(family),
+      "bitwarden_item_id" => "",
+      "bitwarden_notes" => "",
       "notes" => "Saved from #{source.name}",
       "api_key" => if(secret_kind == :api_key, do: "", else: nil),
       "password" => if(secret_kind == :username_password, do: "", else: nil)
@@ -538,6 +559,17 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
        do: String.slice(credential_id, 0, 8)
 
   defp session_credential_label(_session, _credential), do: "Not linked"
+
+  defp credential_storage_label(%{credential_storage: :bitwarden}), do: "Bitwarden"
+  defp credential_storage_label(_credential), do: "Gnome Garden encrypted"
+
+  defp bitwarden_item_label(%{bitwarden_item_name: name}) when is_binary(name) and name != "",
+    do: name
+
+  defp bitwarden_item_label(%{bitwarden_item_id: id}) when is_binary(id) and id != "",
+    do: String.slice(id, 0, 12)
+
+  defp bitwarden_item_label(_credential), do: "Not set"
 
   defp credential_family_for_source(%{procurement_source: procurement_source})
        when is_map(procurement_source) do

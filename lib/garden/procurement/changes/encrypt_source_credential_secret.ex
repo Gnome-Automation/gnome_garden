@@ -46,11 +46,15 @@ defmodule GnomeGarden.Procurement.Changes.EncryptSourceCredentialSecret do
   end
 
   defp validate_secret_present(changeset) do
+    credential_storage = Ash.Changeset.get_attribute(changeset, :credential_storage)
     provider = Ash.Changeset.get_attribute(changeset, :provider)
     password = Ash.Changeset.get_argument(changeset, :password)
     api_key = Ash.Changeset.get_argument(changeset, :api_key)
 
     cond do
+      credential_storage == :bitwarden ->
+        validate_bitwarden_reference_present(changeset)
+
       provider == :sam_gov and blank?(api_key) ->
         Ash.Changeset.add_error(changeset, field: :api_key, message: "is required")
 
@@ -59,6 +63,20 @@ defmodule GnomeGarden.Procurement.Changes.EncryptSourceCredentialSecret do
 
       true ->
         changeset
+    end
+  end
+
+  defp validate_bitwarden_reference_present(changeset) do
+    item_id = Ash.Changeset.get_attribute(changeset, :bitwarden_item_id)
+    item_name = Ash.Changeset.get_attribute(changeset, :bitwarden_item_name)
+
+    if blank?(item_id) and blank?(item_name) do
+      Ash.Changeset.add_error(changeset,
+        field: :bitwarden_item_name,
+        message: "or item ID is required"
+      )
+    else
+      changeset
     end
   end
 

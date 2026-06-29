@@ -53,6 +53,13 @@ defmodule GnomeGarden.Procurement.SourceCredential do
         :label,
         :username,
         :procurement_source_id,
+        :credential_storage,
+        :bitwarden_server_url,
+        :bitwarden_organization,
+        :bitwarden_collection,
+        :bitwarden_item_id,
+        :bitwarden_item_name,
+        :bitwarden_notes,
         :status,
         :notes,
         :metadata
@@ -72,6 +79,13 @@ defmodule GnomeGarden.Procurement.SourceCredential do
         :label,
         :username,
         :procurement_source_id,
+        :credential_storage,
+        :bitwarden_server_url,
+        :bitwarden_organization,
+        :bitwarden_collection,
+        :bitwarden_item_id,
+        :bitwarden_item_name,
+        :bitwarden_notes,
         :status,
         :notes,
         :metadata
@@ -87,6 +101,30 @@ defmodule GnomeGarden.Procurement.SourceCredential do
 
       change GnomeGarden.Procurement.Changes.EncryptSourceCredentialSecret
       change set_attribute(:status, :active)
+      change set_attribute(:test_status, :untested)
+      change set_attribute(:last_failure_reason, nil)
+    end
+
+    update :store_in_bitwarden do
+      accept [
+        :username,
+        :bitwarden_server_url,
+        :bitwarden_organization,
+        :bitwarden_collection,
+        :bitwarden_item_id,
+        :bitwarden_item_name,
+        :bitwarden_notes,
+        :notes,
+        :metadata
+      ]
+
+      change set_attribute(:credential_storage, :bitwarden)
+      change set_attribute(:encrypted_password, nil)
+      change set_attribute(:password_fingerprint, nil)
+      change set_attribute(:password_present, false)
+      change set_attribute(:encrypted_api_key, nil)
+      change set_attribute(:api_key_fingerprint, nil)
+      change set_attribute(:api_key_present, false)
       change set_attribute(:test_status, :untested)
       change set_attribute(:last_failure_reason, nil)
     end
@@ -224,6 +262,7 @@ defmodule GnomeGarden.Procurement.SourceCredential do
     publish :create, "created"
     publish :update, "updated"
     publish :rotate_secret, "updated"
+    publish :store_in_bitwarden, "updated"
     publish :queue_test, "updated"
     publish :mark_test_running, "updated"
     publish :mark_used, "updated"
@@ -265,6 +304,38 @@ defmodule GnomeGarden.Procurement.SourceCredential do
     attribute :username, :string do
       public? true
       sensitive? true
+    end
+
+    attribute :credential_storage, :atom do
+      allow_nil? false
+      default :local_encrypted
+      public? true
+      constraints one_of: [:local_encrypted, :bitwarden]
+    end
+
+    attribute :bitwarden_server_url, :string do
+      public? true
+    end
+
+    attribute :bitwarden_organization, :string do
+      public? true
+    end
+
+    attribute :bitwarden_collection, :string do
+      public? true
+    end
+
+    attribute :bitwarden_item_id, :string do
+      public? true
+      sensitive? true
+    end
+
+    attribute :bitwarden_item_name, :string do
+      public? true
+    end
+
+    attribute :bitwarden_notes, :string do
+      public? true
     end
 
     attribute :encrypted_password, :map do
