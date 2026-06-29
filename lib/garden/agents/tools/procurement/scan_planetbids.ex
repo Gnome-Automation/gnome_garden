@@ -43,8 +43,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
 
     http_get = http_get(params, context)
 
-    case fetch_api_bids(portal_id, Map.get(params, :source_url), http_get) do
-      {:ok, [_ | _] = bids} ->
+    case fetch_api_bids(portal_id, Map.get(params, :source_url), max_results, http_get) do
+      {:ok, [_ | _] = bids, api_summary} ->
         results = Enum.take(bids, max_results)
         Logger.info("[ScanPlanetBids] Found #{length(results)} API bids from #{portal_name}")
 
@@ -58,7 +58,9 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
              "source" => "planetbids_api",
              "row_count" => length(results),
              "title_count" => length(results),
-             "stage_id" => 3
+             "stage_id" => 3,
+             "detail_count" => api_summary.detail_count,
+             "document_count" => api_summary.document_count
            },
            bids: results
          }}
@@ -94,10 +96,12 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
     end
   end
 
-  defp fetch_api_bids(portal_id, source_url, http_get) do
+  defp fetch_api_bids(portal_id, source_url, max_results, http_get) do
     with {:ok, visit_id} <- fetch_visit_id(portal_id, source_url, http_get),
          {:ok, bids} <- fetch_api_bids_for_stage(portal_id, source_url, visit_id, 3, http_get) do
-      {:ok, bids}
+      bids
+      |> Enum.take(max_results)
+      |> enrich_api_bids(portal_id, source_url, visit_id, http_get)
     end
   end
 
@@ -182,7 +186,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
         rows
         |> Enum.map(&parse_api_bid(&1, portal_id, source_url))
         |> Enum.reject(&is_nil/1)
-        |> Enum.uniq_by(&(&1.external_id))
+        |> Enum.uniq_by(& &1.external_id)
 
       _ ->
         []
@@ -193,7 +197,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
     rows
     |> Enum.map(&parse_api_bid(&1, portal_id, source_url))
     |> Enum.reject(&is_nil/1)
-    |> Enum.uniq_by(&(&1.external_id))
+    |> Enum.uniq_by(& &1.external_id)
   end
 
   defp parse_api_bids(_body, _portal_id, _source_url), do: []
@@ -213,6 +217,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
         url: build_bid_url("/portal/#{portal_id}/bo/bo-detail/#{bid_id}", source_url),
         source_url: source_url || "#{@planetbids_base}/#{portal_id}/bo/bo-search",
         source_type: :planetbids,
+        bid_id: bid_id,
         documents: [],
         raw: attrs
       }
@@ -220,6 +225,159 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
   end
 
   defp parse_api_bid(_row, _portal_id, _source_url), do: nil
+
+  defp enrich_api_bids(bids, portal_id, source_url, visit_id, http_get) do
+    {enriched_bids, summary} =
+      Enum.map_reduce(bids, %{detail_count: 0, document_count: 0}, fn bid, acc ->
+        case enrich_api_bid(bid, portal_id, source_url, visit_id, http_get) do
+          {:ok, enriched_bid, document_count} ->
+            {enriched_bid,
+             %{
+               detail_count: acc.detail_count + 1,
+               document_count: acc.document_count + document_count
+             }}
+
+          :error ->
+            {bid, acc}
+        end
+      end)
+
+    {:ok, enriched_bids, summary}
+  end
+
+  defp enrich_api_bid(%{bid_id: bid_id} = bid, portal_id, source_url, visit_id, http_get)
+       when not is_nil(bid_id) do
+    detail = fetch_api_bid_detail(portal_id, source_url, visit_id, bid_id, http_get)
+
+    documents =
+      fetch_api_bid_documents(portal_id, source_url, visit_id, bid_id, bid.url, http_get)
+
+    case {detail, documents} do
+      {{:ok, detail_attrs}, {:ok, documents}} ->
+        {:ok, merge_api_detail(bid, detail_attrs, documents), length(documents)}
+
+      {{:ok, detail_attrs}, _} ->
+        {:ok, merge_api_detail(bid, detail_attrs, []), 0}
+
+      {_, {:ok, [_ | _] = documents}} ->
+        {:ok, merge_api_detail(bid, %{}, documents), length(documents)}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp enrich_api_bid(bid, _portal_id, _source_url, _visit_id, _http_get), do: {:ok, bid, 0}
+
+  defp fetch_api_bid_detail(portal_id, source_url, visit_id, bid_id, http_get) do
+    url = "#{@api_base}/bid-details/#{bid_id}"
+
+    case http_get.(url, headers: api_headers(portal_id, source_url, visit_id)) do
+      {:ok, %{status: 200, body: body}} -> parse_api_detail(body)
+      _ -> {:error, :detail_unavailable}
+    end
+  end
+
+  defp parse_api_detail(body) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, decoded} -> parse_api_detail(decoded)
+      _ -> {:error, :invalid_detail_json}
+    end
+  end
+
+  defp parse_api_detail(%{"data" => %{"attributes" => attrs}}) when is_map(attrs),
+    do: {:ok, attrs}
+
+  defp parse_api_detail(_body), do: {:error, :missing_detail_attrs}
+
+  defp fetch_api_bid_documents(portal_id, source_url, visit_id, bid_id, bid_url, http_get) do
+    url = "#{@api_base}/bid-downloadable-files?bid_id=#{bid_id}"
+
+    case http_get.(url, headers: api_headers(portal_id, source_url, visit_id)) do
+      {:ok, %{status: 200, body: body}} -> parse_api_documents(body, bid_url)
+      _ -> {:error, :documents_unavailable}
+    end
+  end
+
+  defp parse_api_documents(body, bid_url) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, decoded} -> parse_api_documents(decoded, bid_url)
+      _ -> {:error, :invalid_documents_json}
+    end
+  end
+
+  defp parse_api_documents(%{"data" => rows}, bid_url) when is_list(rows) do
+    documents =
+      rows
+      |> Enum.map(&parse_api_document(&1, bid_url))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq_by(&{&1.filename, &1.document_type})
+
+    {:ok, documents}
+  end
+
+  defp parse_api_documents(_body, _bid_url), do: {:error, :missing_document_rows}
+
+  defp parse_api_document(%{"attributes" => attrs}, bid_url) when is_map(attrs) do
+    filename = attrs["filename"] || attrs["fileTitle"]
+
+    if is_binary(filename) and String.trim(filename) != "" do
+      %{
+        url: bid_url,
+        filename: filename,
+        title: attrs["fileTitle"],
+        document_type: document_type("#{attrs["fileTitle"]} #{filename}", filename),
+        source_type: "planetbids",
+        requires_login: true,
+        publicly_visible: attrs["publiclyVisible"] == true,
+        raw: attrs
+      }
+    end
+  end
+
+  defp parse_api_document(_row, _bid_url), do: nil
+
+  defp merge_api_detail(bid, detail_attrs, documents) do
+    description =
+      [
+        detail_attrs["description"],
+        detail_attrs["details"],
+        detail_attrs["notes"],
+        document_description(documents)
+      ]
+      |> Enum.reject(&(is_nil(&1) or String.trim(to_string(&1)) == ""))
+      |> Enum.map(&clean_text(to_string(&1)))
+      |> Enum.uniq()
+      |> Enum.join("\n\n")
+
+    bid
+    |> maybe_put(:agency, detail_attrs["deptName"])
+    |> maybe_put(:description, description)
+    |> maybe_put(:location, detail_attrs["stateName"])
+    |> Map.put(:documents, documents)
+    |> Map.put(:packet_status, packet_status_from_api_documents(documents))
+    |> Map.put(:raw_detail, detail_attrs)
+  end
+
+  defp document_description([]), do: nil
+
+  defp document_description(documents) do
+    documents
+    |> Enum.map(&(&1.title || &1.filename))
+    |> Enum.reject(&(is_nil(&1) or String.trim(to_string(&1)) == ""))
+    |> Enum.join("; ")
+    |> case do
+      "" -> nil
+      titles -> "Documents: #{titles}"
+    end
+  end
+
+  defp packet_status_from_api_documents([_ | _]), do: "requires_login"
+  defp packet_status_from_api_documents(_documents), do: "missing"
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _key, ""), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp fetch_and_parse([], _portal_id, _http_get), do: {:error, :all_urls_failed}
 
