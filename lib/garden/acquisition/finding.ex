@@ -263,6 +263,35 @@ defmodule GnomeGarden.Acquisition.Finding do
               )
     end
 
+    read :stale_closeout_candidates do
+      argument :observed_before, :utc_datetime do
+        allow_nil? false
+      end
+
+      argument :family, :atom do
+        allow_nil? false
+        default :all
+        constraints one_of: [:all, :procurement, :discovery]
+      end
+
+      filter expr(
+               status in [:new, :reviewing] and not is_nil(observed_at) and
+                 observed_at <= ^arg(:observed_before) and
+                 (^arg(:family) == :all or finding_family == ^arg(:family))
+             )
+
+      prepare build(
+                sort: [
+                  observed_at: :asc,
+                  inserted_at: :asc
+                ],
+                load: [
+                  :source_bid,
+                  :source_discovery_record
+                ]
+              )
+    end
+
     read :for_program do
       argument :program_id, :uuid, allow_nil?: false
       filter expr(program_id == ^arg(:program_id))

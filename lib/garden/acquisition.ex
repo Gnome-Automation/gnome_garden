@@ -74,6 +74,11 @@ defmodule GnomeGarden.Acquisition do
         args: [:queue, :family, :source_id, :program_id, :agent_run_id]
 
       define :list_review_findings, action: :review_queue
+
+      define :list_stale_closeout_candidates,
+        action: :stale_closeout_candidates,
+        args: [:observed_before, :family]
+
       define :list_promoted_findings, action: :promoted
       define :list_rejected_findings, action: :rejected
       define :list_suppressed_findings, action: :suppressed
@@ -166,4 +171,6 @@ defmodule GnomeGarden.Acquisition do
 
   def promote_finding_to_signal(finding_or_id, opts \\ []),
     do: Review.promote_to_signal(finding_or_id, opts)
+
+  def close_stale_findings(opts \\ []), do: Review.close_stale(opts)
 end

@@ -16,6 +16,85 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
     refute function_exported?(Acquisition, :promote_finding, 2)
   end
 
+  test "close_stale_findings rejects only stale open queue findings with rationale" do
+    cutoff = DateTime.add(DateTime.utc_now(), -30, :day) |> DateTime.truncate(:second)
+    stale_observed_at = DateTime.add(cutoff, -1, :day)
+    fresh_observed_at = DateTime.add(cutoff, 1, :day)
+
+    {:ok, stale_new} =
+      create_review_finding(%{
+        title: "Stale new discovery",
+        external_ref: "test:stale-new-#{System.unique_integer([:positive])}",
+        observed_at: stale_observed_at,
+        finding_family: :discovery,
+        finding_type: :company_signal
+      })
+
+    {:ok, stale_reviewing} =
+      create_review_finding(%{
+        title: "Stale reviewing procurement",
+        external_ref: "test:stale-reviewing-#{System.unique_integer([:positive])}",
+        observed_at: stale_observed_at,
+        finding_family: :procurement,
+        finding_type: :bid_notice
+      })
+
+    {:ok, fresh_new} =
+      create_review_finding(%{
+        title: "Fresh new discovery",
+        external_ref: "test:fresh-new-#{System.unique_integer([:positive])}",
+        observed_at: fresh_observed_at,
+        finding_family: :discovery,
+        finding_type: :company_signal
+      })
+
+    {:ok, accepted} =
+      create_review_finding(%{
+        title: "Accepted stale discovery",
+        external_ref: "test:accepted-stale-#{System.unique_integer([:positive])}",
+        observed_at: stale_observed_at,
+        finding_family: :discovery,
+        finding_type: :company_signal,
+        status: :accepted
+      })
+
+    assert {:ok, _finding} = Acquisition.start_review_for_finding(stale_reviewing.id)
+
+    assert {:ok, result} =
+             Acquisition.close_stale_findings(
+               observed_before: cutoff,
+               reason: "Older than the active acquisition window."
+             )
+
+    assert Enum.map(result.closed, & &1.id) |> Enum.sort() ==
+             [stale_new.id, stale_reviewing.id] |> Enum.sort()
+
+    assert result.skipped == []
+
+    assert {:ok, stale_new} =
+             Acquisition.get_finding(stale_new.id,
+               load: [:latest_review_reason_code, :latest_review_reason]
+             )
+
+    assert stale_new.status == :rejected
+    assert stale_new.latest_review_reason_code == "stale"
+    assert stale_new.latest_review_reason == "Older than the active acquisition window."
+
+    assert {:ok, stale_reviewing} =
+             Acquisition.get_finding(stale_reviewing.id,
+               load: [:latest_review_reason_code, :latest_review_reason]
+             )
+
+    assert stale_reviewing.status == :rejected
+    assert stale_reviewing.latest_review_reason_code == "stale"
+
+    assert {:ok, fresh_new} = Acquisition.get_finding(fresh_new.id)
+    assert fresh_new.status == :new
+
+    assert {:ok, accepted} = Acquisition.get_finding(accepted.id)
+    assert accepted.status == :accepted
+  end
+
   test "finding must be in review before it can be accepted" do
     {:ok, bid} =
       Procurement.create_bid(%{
@@ -415,5 +494,25 @@ defmodule GnomeGarden.Acquisition.ReviewTest do
       filename: "procurement-packet.pdf",
       content_type: "application/pdf"
     }
+  end
+
+  defp create_review_finding(attrs) do
+    defaults = %{
+      title: "Review finding",
+      summary: "Finding created for review workflow tests.",
+      external_ref: "test:review-finding-#{System.unique_integer([:positive])}",
+      source_url: "https://example.com/review-finding",
+      finding_family: :discovery,
+      finding_type: :company_signal,
+      status: :new,
+      observed_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      confidence: :medium,
+      fit_score: 50,
+      intent_score: 50
+    }
+
+    defaults
+    |> Map.merge(attrs)
+    |> Acquisition.create_finding()
   end
 end

@@ -141,6 +141,35 @@ defmodule GnomeGarden.Acquisition.Review do
     end
   end
 
+  def close_stale(opts \\ []) do
+    actor = Keyword.get(opts, :actor)
+    family = Keyword.get(opts, :family, :all)
+    limit = opts |> Keyword.get(:limit, 50) |> normalize_limit()
+    observed_before = Keyword.get_lazy(opts, :observed_before, &default_stale_observed_before/0)
+
+    feedback = %{
+      reason_code: "stale",
+      reason: Keyword.get(opts, :reason, "Closed because this finding is stale."),
+      feedback_scope: Keyword.get(opts, :feedback_scope, "source")
+    }
+
+    with {:ok, candidates} <-
+           Acquisition.list_stale_closeout_candidates(observed_before, family,
+             actor: actor,
+             query: [limit: limit]
+           ) do
+      results = Enum.map(candidates, &close_stale_candidate(&1, feedback, actor))
+
+      {:ok,
+       %{
+         observed_before: observed_before,
+         family: family,
+         closed: closed_results(results),
+         skipped: skipped_results(results)
+       }}
+    end
+  end
+
   defp load_finding(%Finding{id: id}, actor), do: load_finding(id, actor)
 
   defp load_finding(id, actor) when is_binary(id) do
@@ -488,6 +517,50 @@ defmodule GnomeGarden.Acquisition.Review do
 
   defp transition_finding(%Finding{} = finding, action, actor, params \\ %{}) do
     Ash.update(finding, params, action: action, actor: actor, domain: Acquisition)
+  end
+
+  defp close_stale_candidate(%Finding{} = finding, feedback, actor) do
+    result =
+      case finding.status do
+        :new ->
+          with {:ok, reviewing_finding} <- start_review(finding.id, actor: actor) do
+            reject(reviewing_finding.id, feedback, actor: actor)
+          end
+
+        :reviewing ->
+          reject(finding.id, feedback, actor: actor)
+
+        status ->
+          {:error, "Only new or reviewing findings can be closed as stale; got #{status}."}
+      end
+
+    case result do
+      {:ok, closed_finding} -> {:closed, closed_finding}
+      {:error, reason} -> {:skipped, finding, reason}
+    end
+  end
+
+  defp closed_results(results) do
+    results
+    |> Enum.filter(&match?({:closed, _finding}, &1))
+    |> Enum.map(fn {:closed, finding} -> finding end)
+  end
+
+  defp skipped_results(results) do
+    results
+    |> Enum.filter(&match?({:skipped, _finding, _reason}, &1))
+    |> Enum.map(fn {:skipped, finding, reason} ->
+      %{finding: finding, reason: reason}
+    end)
+  end
+
+  defp normalize_limit(limit) when is_integer(limit) and limit > 0, do: limit
+  defp normalize_limit(_limit), do: 50
+
+  defp default_stale_observed_before do
+    DateTime.utc_now()
+    |> DateTime.add(-30, :day)
+    |> DateTime.truncate(:second)
   end
 
   defp ensure_status(%Finding{status: status}, allowed, message) do
