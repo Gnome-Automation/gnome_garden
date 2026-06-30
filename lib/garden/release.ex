@@ -139,7 +139,7 @@ defmodule GnomeGarden.Release do
   end
 
   defp seed_data do
-    company_profile = DefaultProfiles.ensure_default(notify?: false)
+    company_profile = DefaultProfiles.ensure_default(return_notifications?: true)
     deployments = DefaultDeployments.ensure_defaults()
 
     IO.puts("""
