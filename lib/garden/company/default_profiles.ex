@@ -212,8 +212,10 @@ defmodule GnomeGarden.Company.DefaultProfiles do
 
   @type sync_result :: %{created?: boolean(), profile: GnomeGarden.Company.Profile.t()}
 
-  @spec ensure_default() :: sync_result()
-  def ensure_default do
+  @spec ensure_default(keyword()) :: sync_result()
+  def ensure_default(opts \\ []) do
+    action_opts = Keyword.take(opts, [:authorize?, :notify?])
+
     case Company.get_primary_company_profile() do
       {:ok, profile} ->
         metadata = deep_merge(@primary_profile.metadata, profile.metadata || %{})
@@ -222,14 +224,16 @@ defmodule GnomeGarden.Company.DefaultProfiles do
           if metadata == (profile.metadata || %{}) do
             profile
           else
-            {:ok, profile} = Company.update_company_profile(profile, %{metadata: metadata})
+            {:ok, profile} =
+              Company.update_company_profile(profile, %{metadata: metadata}, action_opts)
+
             profile
           end
 
         %{created?: false, profile: profile}
 
       {:error, _reason} ->
-        {:ok, profile} = Company.create_company_profile(@primary_profile)
+        {:ok, profile} = Company.create_company_profile(@primary_profile, action_opts)
         %{created?: true, profile: profile}
     end
   end
