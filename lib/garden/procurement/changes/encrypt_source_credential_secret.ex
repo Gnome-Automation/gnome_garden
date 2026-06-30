@@ -46,7 +46,7 @@ defmodule GnomeGarden.Procurement.Changes.EncryptSourceCredentialSecret do
   end
 
   defp validate_secret_present(changeset) do
-    credential_storage = Ash.Changeset.get_attribute(changeset, :credential_storage)
+    credential_storage = attribute_value(changeset, :credential_storage)
     provider = Ash.Changeset.get_attribute(changeset, :provider)
     password = Ash.Changeset.get_argument(changeset, :password)
     api_key = Ash.Changeset.get_argument(changeset, :api_key)
@@ -67,8 +67,8 @@ defmodule GnomeGarden.Procurement.Changes.EncryptSourceCredentialSecret do
   end
 
   defp validate_bitwarden_reference_present(changeset) do
-    item_id = Ash.Changeset.get_attribute(changeset, :bitwarden_item_id)
-    item_name = Ash.Changeset.get_attribute(changeset, :bitwarden_item_name)
+    item_id = attribute_value(changeset, :bitwarden_item_id)
+    item_name = attribute_value(changeset, :bitwarden_item_name)
 
     if blank?(item_id) and blank?(item_name) do
       Ash.Changeset.add_error(changeset,
@@ -78,6 +78,12 @@ defmodule GnomeGarden.Procurement.Changes.EncryptSourceCredentialSecret do
     else
       changeset
     end
+  end
+
+  defp attribute_value(changeset, attribute) do
+    Map.get(changeset.params, attribute) ||
+      Map.get(changeset.params, Atom.to_string(attribute)) ||
+      Ash.Changeset.get_attribute(changeset, attribute)
   end
 
   defp blank?(value) when is_binary(value), do: String.trim(value) == ""
