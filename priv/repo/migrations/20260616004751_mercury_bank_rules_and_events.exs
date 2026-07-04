@@ -72,7 +72,8 @@ defmodule GnomeGarden.Repo.Migrations.MercuryBankRulesAndEvents do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
   end
 

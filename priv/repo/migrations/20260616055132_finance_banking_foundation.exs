@@ -105,7 +105,8 @@ defmodule GnomeGarden.Repo.Migrations.FinanceBankingFoundation do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create table(:finance_bank_accounts, primary_key: false) do
@@ -157,7 +158,8 @@ defmodule GnomeGarden.Repo.Migrations.FinanceBankingFoundation do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create unique_index(:finance_bank_accounts, [:provider, :provider_account_id],
@@ -213,7 +215,8 @@ defmodule GnomeGarden.Repo.Migrations.FinanceBankingFoundation do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create table(:finance_bank_counterparty_aliases, primary_key: false) do
@@ -269,7 +272,8 @@ defmodule GnomeGarden.Repo.Migrations.FinanceBankingFoundation do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :payment_id,
           references(:finance_payments,
@@ -278,7 +282,8 @@ defmodule GnomeGarden.Repo.Migrations.FinanceBankingFoundation do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :invoice_id,
           references(:finance_invoices,
@@ -390,7 +395,9 @@ defmodule GnomeGarden.Repo.Migrations.FinanceBankingFoundation do
 
     drop_if_exists unique_index(
                      :finance_bank_transaction_matches,
-                     [:bank_transaction_id, :payment_id], name: "finance_bank_txn_payment_uidx")
+                     [:bank_transaction_id, :payment_id],
+                     name: "finance_bank_txn_payment_uidx"
+                   )
 
     drop table(:finance_bank_transaction_matches)
 
