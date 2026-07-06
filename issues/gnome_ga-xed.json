@@ -2,6 +2,7 @@
   "assignee": "Codex",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-07-06T16:34:55Z",
   "created": "2026-07-06T05:25:21Z",
   "description": "Follow-up from 2026-07-06 scan work. Public/HTTP bid scans ran, but protected portal scans cannot log in yet. Current state: GARDEN_BITWARDEN_CLI and GARDEN_BITWARDEN_CONFIG_DIR are configured; Vaultwarden service is running at https://garden.tail6f3b43.ts.net; the gnome_garden CLI profile is not logged in/unlocked; GARDEN_BITWARDEN_SESSION is empty/missing; SourceCredential resolution reports missing credentials for planetbids, bidnet, publicpurchase, opengov, and sam_gov. Work needed: log in/unlock the gnome_garden Bitwarden CLI profile, store a valid session in the service env and local ignored .env as appropriate, create or verify SourceCredential rows pointing at the correct Bitwarden item IDs/names, test credential resolution without printing secrets, then rerun a protected source scan. Also note related browser fallback issue from scan work: deployed release is missing agent-browser at /opt/gnome-garden/jido_browser-linux_amd64/agent-browser-linux-x64, causing :enoent on browser fallback scans.",
   "id": "gnome_ga-xed",
@@ -25,8 +26,8 @@
     }
   ],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Enable Bitwarden-backed authenticated procurement scans",
   "type": "task",
-  "updated_at": "2026-07-06T16:34:51Z"
+  "updated_at": "2026-07-06T16:34:55Z"
 }
