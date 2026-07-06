@@ -141,11 +141,121 @@ defmodule GnomeGarden.Acquisition.PilotSeeds do
         notes: "Prefer API-backed scanning when SAM credentials are available."
       },
       search_filters: [
+        %{
+          filter_type: :keyword,
+          value: "SCADA",
+          label: "SCADA title matches",
+          priority: :high,
+          per_run_limit: 10
+        },
+        %{
+          filter_type: :keyword,
+          value: "PLC",
+          label: "PLC title matches",
+          priority: :high,
+          per_run_limit: 10
+        },
+        %{
+          filter_type: :keyword,
+          value: "control system",
+          label: "Control system title matches",
+          priority: :high,
+          per_run_limit: 10
+        },
+        %{
+          filter_type: :keyword,
+          value: "instrumentation",
+          label: "Instrumentation title matches",
+          priority: :medium,
+          per_run_limit: 8
+        },
+        %{
+          filter_type: :keyword,
+          value: "telemetry",
+          label: "Telemetry title matches",
+          priority: :medium,
+          per_run_limit: 8
+        },
         %{value: "541330", label: "Engineering services"},
         %{value: "238210", label: "Electrical contractors and wiring"},
         %{value: "541512", label: "Computer systems design"},
         %{value: "541519", label: "Other computer related services"},
         %{value: "541511", label: "Custom computer programming"}
+      ]
+    },
+    %{
+      name: "SAM.gov Software Development Opportunities",
+      url: "https://sam.gov/search/?index=opp&keywords=software%20development",
+      source_type: :sam_gov,
+      region: :national,
+      priority: :high,
+      api_available: true,
+      requires_login: false,
+      notes:
+        "Federal opportunity feed for custom software, web applications, workflow systems, dashboards, and API integration work.",
+      metadata: %{
+        "company_profile_key" => "primary",
+        "company_profile_mode" => "broad_software",
+        "focus" => "software_development"
+      },
+      config: %{
+        listing_url: "https://sam.gov/opportunities",
+        listing_selector: "[data-testid='search-results'], .usa-card, table",
+        title_selector: "a, h3, h2",
+        link_selector: "a",
+        description_selector: "p, td",
+        keywords: "custom software web application workflow dashboard api integration",
+        naics_codes: ["541511", "541512", "541519"],
+        limit: 10,
+        notes:
+          "Broad-software SAM.gov source. Keep separate from controls-heavy federal scanning."
+      },
+      search_filters: [
+        %{
+          filter_type: :keyword,
+          value: "software development",
+          label: "Software development title matches",
+          priority: :high,
+          per_run_limit: 10
+        },
+        %{
+          filter_type: :keyword,
+          value: "custom software",
+          label: "Custom software title matches",
+          priority: :high,
+          per_run_limit: 10
+        },
+        %{
+          filter_type: :keyword,
+          value: "web application",
+          label: "Web application title matches",
+          priority: :high,
+          per_run_limit: 10
+        },
+        %{
+          filter_type: :keyword,
+          value: "workflow software",
+          label: "Workflow software title matches",
+          priority: :medium,
+          per_run_limit: 8
+        },
+        %{
+          filter_type: :keyword,
+          value: "API integration",
+          label: "API integration title matches",
+          priority: :medium,
+          per_run_limit: 8
+        },
+        %{
+          filter_type: :keyword,
+          value: "dashboard",
+          label: "Dashboard title matches",
+          priority: :medium,
+          per_run_limit: 8
+        },
+        %{value: "541511", label: "Custom computer programming"},
+        %{value: "541512", label: "Computer systems design"},
+        %{value: "541519", label: "Other computer related services"}
       ]
     },
     %{
@@ -335,10 +445,12 @@ defmodule GnomeGarden.Acquisition.PilotSeeds do
       added_by: :manual,
       status: :approved,
       notes: attrs.notes,
-      metadata: %{
-        "pilot" => "seven_day_lead_discovery",
-        "seeded_by" => "acquisition_pilot_seeds"
-      }
+      metadata:
+        %{
+          "pilot" => "seven_day_lead_discovery",
+          "seeded_by" => "acquisition_pilot_seeds"
+        }
+        |> Map.merge(Map.get(attrs, :metadata, %{}))
     }
   end
 
