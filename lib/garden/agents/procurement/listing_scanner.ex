@@ -28,6 +28,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   alias GnomeGarden.Procurement.TargetingFilter
   alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
   alias GnomeGarden.Browser
+  alias GnomeGarden.Agents.Procurement.PublicSourceResolver
   alias GnomeGarden.Agents.Tools.Procurement.{SaveBid, ScoreBid, ScanBidNet, ScanPlanetBids}
 
   require Logger
@@ -446,7 +447,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
              context
            ),
          filtered = TargetingFilter.filter_bids(bids, profile_context),
-         {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
+         {:ok, resolved} <- PublicSourceResolver.resolve_bids(filtered.kept, source, context),
+         {:ok, scored} <- score_bids(resolved, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
     end
@@ -694,14 +696,16 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     do: "all_candidates_filtered_before_scoring"
 
   defp scan_diagnosis(scored, _saved, _excluded, top_unsaved, extraction) do
+    extraction_present? = map_size(extraction) > 0
+
     cond do
       login_required_extraction?(extraction) ->
         "login_required"
 
-      extraction_count(extraction, "row_count") == 0 ->
+      extraction_present? and extraction_count(extraction, "row_count") == 0 ->
         "listing_selector_matched_no_rows"
 
-      extraction_count(extraction, "row_count") > 0 and
+      extraction_present? and extraction_count(extraction, "row_count") > 0 and
           extraction_count(extraction, "title_count") == 0 ->
         "title_selector_matched_no_titles"
 
@@ -813,8 +817,6 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     end
   end
 
-  defp login_required_extraction?(_extraction), do: false
-
   defp escape_js(nil), do: ""
   defp escape_js(str), do: String.replace(str, "'", "\\'")
 
@@ -828,9 +830,13 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
           agency: bid_value(bid, :agency) || source.name,
           location: bid_value(bid, :location) || region_to_location(source.region),
           region: source.region,
-          source_type: source.source_type,
+          source_type: bid_value(bid, :source_type) || source.source_type,
           source_name: source.name,
-          source_url: source.url,
+          source_url: bid_value(bid, :url) || bid_value(bid, :source_url) || source.url,
+          notice_type: bid_value(bid, :notice_type),
+          bid_type: bid_value(bid, :bid_type),
+          set_aside: bid_value(bid, :set_aside),
+          keywords: score_keywords(bid),
           company_profile_key: profile_context.company_profile_key,
           company_profile_mode: profile_context.company_profile_mode
         }
@@ -899,27 +905,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
           score_source_confidence: Map.get(score, :source_confidence),
           keywords_matched: score.keywords_matched,
           keywords_rejected: score.keywords_rejected,
-          metadata: %{
-            source: %{
-              procurement_source_id: source.id,
-              source_type: source.source_type,
-              source_name: source.name,
-              listing_url: listing_url,
-              source_url: source.url,
-              agent_run_id: agent_run_id_from_context(context)
-            },
-            documents: documents_for_bid(bid),
-            packet: packet_metadata_for_bid(bid),
-            scoring: %{
-              recommendation: score.recommendation,
-              company_profile_key: Map.get(score, :company_profile_key),
-              company_profile_mode: Map.get(score, :company_profile_mode),
-              icp_matches: Map.get(score, :icp_matches, []),
-              risk_flags: Map.get(score, :risk_flags, []),
-              source_confidence: Map.get(score, :source_confidence),
-              save_candidate?: Map.get(score, :save_candidate?, false)
-            }
-          },
+          metadata: bid_save_metadata(bid, source, listing_url, context, score),
           procurement_source_id: source.id
         }
 
@@ -951,6 +937,61 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp resolve_bid_url("http" <> _ = absolute, _source_url), do: absolute
   defp resolve_bid_url(_other, source_url), do: source_url
+
+  defp bid_save_metadata(bid, source, listing_url, context, score) do
+    bid
+    |> bid_value(:metadata)
+    |> case do
+      metadata when is_map(metadata) -> metadata
+      _ -> %{}
+    end
+    |> deep_merge(%{
+      source: %{
+        procurement_source_id: source.id,
+        source_type: source.source_type,
+        source_name: source.name,
+        listing_url: listing_url,
+        source_url: source.url,
+        agent_run_id: agent_run_id_from_context(context)
+      },
+      documents: documents_for_bid(bid),
+      packet: packet_metadata_for_bid(bid),
+      scoring: %{
+        recommendation: score.recommendation,
+        company_profile_key: Map.get(score, :company_profile_key),
+        company_profile_mode: Map.get(score, :company_profile_mode),
+        icp_matches: Map.get(score, :icp_matches, []),
+        risk_flags: Map.get(score, :risk_flags, []),
+        source_confidence: Map.get(score, :source_confidence),
+        save_candidate?: Map.get(score, :save_candidate?, false)
+      }
+    })
+  end
+
+  defp score_keywords(bid) do
+    metadata = bid_value(bid, :metadata) || %{}
+    canonical_source = metadata_value(metadata, "canonical_source") || %{}
+    sam_gov = metadata_value(metadata, "sam_gov") || %{}
+
+    [
+      bid_value(bid, :notice_type),
+      bid_value(bid, :solicitation_type),
+      bid_value(bid, :set_aside),
+      metadata_value(canonical_source, "notice_type"),
+      metadata_value(sam_gov, "notice_type"),
+      metadata_value(sam_gov, "set_aside")
+    ]
+    |> Enum.reject(&blank?/1)
+    |> Enum.join(" ")
+  end
+
+  defp metadata_value(metadata, key) when is_map(metadata) do
+    Map.get(metadata, key) || Map.get(metadata, String.to_atom(key))
+  rescue
+    ArgumentError -> nil
+  end
+
+  defp metadata_value(_metadata, _key), do: nil
 
   defp blank?(value), do: value in [nil, ""]
 

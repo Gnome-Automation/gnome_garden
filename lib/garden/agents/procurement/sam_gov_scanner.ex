@@ -136,6 +136,9 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
           source_type: source.source_type,
           source_name: source.name,
           source_url: source.url,
+          notice_type: bid_value(bid, :notice_type),
+          set_aside: bid_value(bid, :set_aside),
+          keywords: score_keywords(bid),
           company_profile_key: profile_context.company_profile_key,
           company_profile_mode: profile_context.company_profile_mode
         }
@@ -242,6 +245,15 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
       |> Enum.reject(&is_nil/1)
 
     {:ok, saved}
+  end
+
+  defp score_keywords(bid) do
+    [
+      bid_value(bid, :notice_type),
+      bid_value(bid, :set_aside)
+    ]
+    |> Enum.reject(&blank?/1)
+    |> Enum.join(" ")
   end
 
   defp complete_scan(source, bids, excluded, scored, saved, query_result) do

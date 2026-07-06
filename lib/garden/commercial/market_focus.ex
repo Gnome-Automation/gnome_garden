@@ -317,6 +317,24 @@ defmodule GnomeGarden.Commercial.MarketFocus do
     "validation"
   ]
 
+  @vendor_directed_notice_terms [
+    "sole source",
+    "single source",
+    "intent to sole source",
+    "notice of intent to sole source",
+    "notice of intent to award sole source",
+    "intent to award sole source",
+    "only one responsible source",
+    "brand name only",
+    "authorized reseller",
+    "authorized distributor",
+    "authorized dealer",
+    "directed to the incumbent",
+    "not seeking competitive proposals",
+    "not requesting competitive proposals",
+    "incumbent contractor"
+  ]
+
   @active_buying_terms [
     "rfp",
     "rfq",
@@ -429,6 +447,7 @@ defmodule GnomeGarden.Commercial.MarketFocus do
     enterprise_it_matches = keyword_matches(text, @enterprise_it_terms)
     design_only_matches = keyword_matches(text, @design_only_terms)
     compliance_matches = keyword_matches(text, @compliance_signal_terms)
+    vendor_directed_matches = keyword_matches(text, @vendor_directed_notice_terms)
     profile_include_matches = keyword_matches(text, profile_context.include_keywords)
     profile_exclude_matches = keyword_matches(text, profile_context.exclude_keywords)
 
@@ -494,12 +513,14 @@ defmodule GnomeGarden.Commercial.MarketFocus do
       |> add_flag(weak_technical_specificity?, "weak technical specificity")
       |> add_flag(ambiguous_software_scope?, "ambiguous software scope")
       |> add_flag(public_sector_admin_scope?, "public agency admin software scope")
+      |> add_flag(vendor_directed_matches != [], "sole-source / vendor-directed notice")
       |> add_flag(profile_exclude_matches != [], "profile-mode excluded keywords")
       |> add_flag(source_confidence == :aggregated, "aggregator source")
       |> add_flag(source_confidence == :unknown, "low source confidence")
 
     rejected? =
       cancelled? or
+        vendor_directed_matches != [] or
         staff_aug_matches != [] or
         profile_exclude_matches != [] or
         generic_web_only? or
@@ -599,6 +620,7 @@ defmodule GnomeGarden.Commercial.MarketFocus do
       keywords_rejected:
         Enum.uniq(
           reject_matches ++
+            vendor_directed_matches ++
             staff_aug_matches ++
             marketing_matches ++
             enterprise_it_matches ++
@@ -735,8 +757,9 @@ defmodule GnomeGarden.Commercial.MarketFocus do
     }
   end
 
-  def source_confidence(source_type) when source_type in [:utility, :school, :port, :custom],
-    do: :direct
+  def source_confidence(source_type)
+      when source_type in [:utility, :school, :port, :custom, :sam_gov],
+      do: :direct
 
   def source_confidence(source_type)
       when source_type in [:planetbids, :opengov, :bidnet, :cal_eprocure],
@@ -752,6 +775,10 @@ defmodule GnomeGarden.Commercial.MarketFocus do
       attrs[:location],
       attrs[:source_name],
       attrs[:source_url],
+      attrs[:notice_type],
+      attrs[:solicitation_type],
+      attrs[:bid_type],
+      attrs[:set_aside],
       attrs[:keywords]
     ])
   end

@@ -160,11 +160,14 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
       estimated_value: extract_value(opp),
       naics_code: opp["naicsCode"] || List.first(opp["naicsCodes"] || []),
       set_aside: opp["typeOfSetAsideDescription"],
-      notice_type: opp["type"] || opp["noticeType"],
+      notice_type:
+        opp["type"] || opp["noticeType"] || opp["typeOfNotice"] || opp["solicitationType"],
       metadata: %{
         solicitationNumber: opp["solicitationNumber"],
         classificationCode: opp["classificationCode"],
-        organizationType: opp["organizationType"]
+        organizationType: opp["organizationType"],
+        solicitationType: opp["solicitationType"],
+        noticeType: opp["noticeType"] || opp["typeOfNotice"] || opp["type"]
       }
     }
   end

@@ -5,6 +5,11 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
   alias GnomeGarden.Procurement
 
   @source_url "https://vendors.planetbids.com/portal/23456/bo/bo-search"
+  @sam_api_url "https://api.sam.gov/opportunities/v2/search"
+  @iccp_title "ICCP SOFTWARE UPGRADE BASE + 2 OYs"
+  @bidnet_url "https://www.bidnetdirect.com/private/supplier/solicitations/search?keywords=scada"
+  @bidnet_detail_path "/private/supplier/solicitations/statewide/2704242407/abstract?purchasingGroupId=88020151&origin=1"
+  @bidnet_detail_url "https://www.bidnetdirect.com#{@bidnet_detail_path}"
 
   setup do
     original_username = System.get_env("PLANETBIDS_USERNAME")
@@ -311,6 +316,72 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
     assert scan_run.status == :completed
   end
 
+  test "BidNet scans resolve matching SAM.gov notices and reject sole-source opportunities" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "BidNet Direct ICCP Source",
+        url: @bidnet_url,
+        source_type: :bidnet,
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: false
+      })
+
+    {:ok, source} =
+      Procurement.configure_procurement_source(source, %{
+        scrape_config: %{listing_url: @bidnet_url}
+      })
+
+    http_get = fn
+      @bidnet_url, _opts ->
+        {:ok, %{status: 200, body: bidnet_listing_html()}}
+
+      @bidnet_detail_url, _opts ->
+        {:ok, %{status: 200, body: bidnet_detail_html()}}
+
+      @sam_api_url, opts ->
+        assert opts[:params][:api_key] == "test-key"
+        assert opts[:params][:title] == @iccp_title
+
+        {:ok,
+         %{
+           status: 200,
+           body: %{
+             "opportunitiesData" => [
+               %{
+                 "noticeId" => "bc2133dc96114c4490a721bdbac20adc",
+                 "title" => @iccp_title,
+                 "description" =>
+                   "The Government intends to solicit and negotiate on a sole source basis with Triangle MicroWorks for ICCP/SCADA Data Gateway maintenance, OPC UA connectivity, and support.",
+                 "fullParentPathName" => "U.S. Department of the Interior",
+                 "uiLink" => "https://sam.gov/opp/bc2133dc96114c4490a721bdbac20adc/view",
+                 "postedDate" => "2026-06-30",
+                 "responseDeadLine" => "2026-07-10T17:00:00-07:00",
+                 "naicsCode" => "513210",
+                 "solicitationNumber" => "140R2026Q0104",
+                 "solicitationType" => "Sole Source"
+               }
+             ]
+           }
+         }}
+    end
+
+    assert {:ok, result} =
+             ListingScanner.scan(source.id, %{sam_gov_api_key: "test-key", http_get: http_get})
+
+    assert result.extracted == 1
+    assert result.saved == 0
+    assert result.diagnostics["diagnosis"] == "candidates_rejected_by_scoring"
+
+    [top_unsaved] = result.diagnostics["top_unsaved"]
+    assert top_unsaved["title"] == @iccp_title
+    assert top_unsaved["url"] == "https://sam.gov/opp/bc2133dc96114c4490a721bdbac20adc/view"
+    assert "sole-source / vendor-directed notice" in top_unsaved["risk_flags"]
+
+    assert {:ok, []} = Procurement.list_bids_by_external_id("bc2133dc96114c4490a721bdbac20adc")
+  end
+
   defp listing_html do
     """
     <table>
@@ -327,6 +398,72 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
         </tr>
       </tbody>
     </table>
+    """
+  end
+
+  defp bidnet_listing_html do
+    """
+    <table>
+      <tbody>
+        <tr data-index="0" class="mets-table-row odd">
+          <td class="mainCol">
+            <div class="sol-info-container">
+              <div class="sol-info-col">
+                <div class="sol-title">
+                  <a href="#{@bidnet_detail_path}" class="solicitation-link mets-command-link">
+                    #{@iccp_title}
+                  </a>
+                </div>
+                <div class="sol-region">
+                  <span class="sol-region-item">California</span>
+                </div>
+              </div>
+              <span class="dates-col">
+                <span class="dates-col-content">
+                  <span class="sol-publication-date">
+                    <span class="date-label">Published</span>
+                    06/30/2026 02:35 PM EDT
+                  </span>
+                  <span class="sol-closing-date open">
+                    <span class="date-label">Closing</span>
+                    07/10/2026 05:00 PM EDT
+                  </span>
+                </span>
+              </span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    """
+  end
+
+  defp bidnet_detail_html do
+    """
+    <div id="ai-public-overview-content" class="mets-field-body">
+      ICCP/SCADA Data Gateway software upgrade with OPC UA support and annual maintenance.
+    </div>
+    <div class="mets-field mets-field-view">
+      <span class="mets-field-label">
+        Location</span>
+      <div class="mets-field-body ">
+        California
+      </div>
+    </div>
+    <div class="mets-field mets-field-view">
+      <span class="mets-field-label">
+        Publication Date</span>
+      <div class="mets-field-body ">
+        06/30/2026 02:35 PM EDT
+      </div>
+    </div>
+    <div class="mets-field mets-field-view">
+      <span class="mets-field-label">
+        Closing Date</span>
+      <div class="mets-field-body ">
+        07/10/2026 05:00 PM EDT
+      </div>
+    </div>
     """
   end
 

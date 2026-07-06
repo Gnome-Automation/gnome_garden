@@ -66,6 +66,28 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScoreBidTest do
     assert "website redesign" in score.keywords_rejected
   end
 
+  test "rejects sole-source and vendor-directed notices even with strong controls terms" do
+    assert {:ok, score} =
+             ScoreBid.run(
+               %{
+                 title: "ICCP SOFTWARE UPGRADE BASE + 2 OYs",
+                 description:
+                   "Sole source notice for ICCP/SCADA Data Gateway software, OPC UA connectivity, and support directed to the incumbent vendor.",
+                 agency: "U.S. Department of the Interior",
+                 location: "California",
+                 source_type: :sam_gov,
+                 notice_type: "Sole Source"
+               },
+               %{}
+             )
+
+    assert score.score_tier == :rejected
+    refute score.save_candidate?
+    assert score.source_confidence == :direct
+    assert "sole-source / vendor-directed notice" in score.risk_flags
+    assert "sole source" in score.keywords_rejected
+  end
+
   test "rejects commodity civil engineering scope even when utility language appears" do
     assert {:ok, score} =
              ScoreBid.run(
