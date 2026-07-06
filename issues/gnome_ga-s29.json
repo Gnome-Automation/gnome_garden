@@ -8,9 +8,15 @@
   "description": "Add a usable SAM.gov API key for acquisition scans, either as SAM_GOV_API_KEY in the service/runtime environment or as a verified sam_gov source credential in Bitwarden/local encrypted storage. Current dev Bitwarden org Gnome Automation has bidnetdirect.com and SDCOC APEX eCenterDirect, but no SAM.gov API key item.",
   "id": "gnome_ga-s29",
   "labels": [],
+  "comments": [
+    {
+      "text": "Environment check: Bitwarden CLI is unlocked for pc when BITWARDENCLI_APPDATA_DIR=/opt/gnome-garden-shared/.config/bitwarden-cli is set, and user pc now has ACL write access to that config dir. The current sam_gov source credential is invalid because item name SAM.gov is not present in the Gnome Automation org vault. Org currently lists bidnetdirect.com and SDCOC APEX eCenterDirect only. Add a SAM.gov API key item or update the credential to the correct item ID/name, then mark/test it verified.",
+      "timestamp": "2026-07-06T20:16:03Z"
+    }
+  ],
   "priority": 2,
   "status": "open",
   "title": "Add verified SAM.gov API credential",
   "type": "task",
-  "updated_at": "2026-07-06T20:14:38Z"
+  "updated_at": "2026-07-06T20:16:03Z"
 }
