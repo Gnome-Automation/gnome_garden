@@ -18,11 +18,15 @@
     {
       "text": "Committed fd1bc94 to treat the dev-shell PGPORT edit as part of this Garden work. flake.nix now defaults local Postgres to 5433 while preserving .env/environment PGPORT overrides; verified nix develop reports the configured project PGPORT=5434 and git diff --check is clean.",
       "timestamp": "2026-07-06T15:19:35Z"
+    },
+    {
+      "text": "Completed protected BidNet path in production. Commits since last breadcrumb: efd2a99 verifies Bitwarden-backed source credentials directly, 73ab216/2ed6d91/5c3f819 make the Playwright runner work from releases without shell/stdin option issues, 1449a73 packages Playwright runtime deps into the release, 2360e20 uses a browser-like Playwright context for BidNet, and e15c0a7 uses browser headers for BidNet HTTP scans. Operational changes: service env has BW_SESSION/GARDEN_BITWARDEN_SESSION, /opt/gnome-garden-shared is writable by the service via NixOS ReadWritePaths, team-vault Bitwarden refs are configured for BidNet and eCenterDirect, and BidNet/eCenterDirect sources were created. Production verification on 2026-07-06: BidNet SCADA session refresh succeeded with valid session e76f3d58-fd84-4117-b486-5148bb2bb25e and storage state; direct ListingScanner scan for source 33f27b0c-2ab5-443d-bac4-a1cf56eba66f extracted 9, scored 9, saved 9 with diagnosis saved_qualified_leads. Service is active. Follow-up remains for additional provider-specific adapters/credentials beyond the two team-vault items.",
+      "timestamp": "2026-07-06T16:34:51Z"
     }
   ],
   "priority": 2,
   "status": "in_progress",
   "title": "Enable Bitwarden-backed authenticated procurement scans",
   "type": "task",
-  "updated_at": "2026-07-06T15:19:35Z"
+  "updated_at": "2026-07-06T16:34:51Z"
 }
