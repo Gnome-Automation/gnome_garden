@@ -6,9 +6,15 @@
   "description": "Follow-up from 2026-07-06 scan work. Public/HTTP bid scans ran, but protected portal scans cannot log in yet. Current state: GARDEN_BITWARDEN_CLI and GARDEN_BITWARDEN_CONFIG_DIR are configured; Vaultwarden service is running at https://garden.tail6f3b43.ts.net; the gnome_garden CLI profile is not logged in/unlocked; GARDEN_BITWARDEN_SESSION is empty/missing; SourceCredential resolution reports missing credentials for planetbids, bidnet, publicpurchase, opengov, and sam_gov. Work needed: log in/unlock the gnome_garden Bitwarden CLI profile, store a valid session in the service env and local ignored .env as appropriate, create or verify SourceCredential rows pointing at the correct Bitwarden item IDs/names, test credential resolution without printing secrets, then rerun a protected source scan. Also note related browser fallback issue from scan work: deployed release is missing agent-browser at /opt/gnome-garden/jido_browser-linux_amd64/agent-browser-linux-x64, causing :enoent on browser fallback scans.",
   "id": "gnome_ga-xed",
   "labels": [],
+  "comments": [
+    {
+      "text": "Committed code-side support in 5d38b38. Changes: release/deploy now installs and copies the jido_browser agent-browser bundle; Garden.Browser searches configured, release, build, and cwd binary roots before falling back; Bitwarden credential resolution now supports SAM.gov API keys from custom fields or login password; queued SAM.gov credential verification can resolve Bitwarden-backed credentials without persisting secrets; added focused tests for release browser lookup and Bitwarden-backed SAM.gov resolution/verification. Verification: PHX_SERVER=false PORT=4102 mix compile --warnings-as-errors passed; focused tests for browser/procurement credentials passed (25 tests). Remaining blocker: the gnome_garden Bitwarden CLI profile is still unauthenticated/locked and SourceCredential rows are missing locally, so protected portal scans still need operator credential setup with real Bitwarden item IDs/names before the issue can be closed.",
+      "timestamp": "2026-07-06T15:06:14Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Enable Bitwarden-backed authenticated procurement scans",
   "type": "task",
-  "updated_at": "2026-07-06T14:47:05Z"
+  "updated_at": "2026-07-06T15:06:14Z"
 }
