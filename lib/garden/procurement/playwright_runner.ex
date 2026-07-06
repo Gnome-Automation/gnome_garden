@@ -14,8 +14,9 @@ defmodule GnomeGarden.Procurement.PlaywrightRunner do
   @doc """
   Run a Playwright action through the Node runner.
 
-  `input` is JSON-encoded and passed on stdin. The runner must write a single
-  JSON object to stdout. Tests can inject `:command_runner`.
+  `input` is JSON-encoded and passed to the runner without adding secrets to
+  command arguments. The runner must write a single JSON object to stdout. Tests
+  can inject `:command_runner`.
   """
   @spec run(String.t() | atom(), map(), keyword()) :: result()
   def run(action, input, opts \\ []) when is_map(input) do
@@ -78,20 +79,19 @@ defmodule GnomeGarden.Procurement.PlaywrightRunner do
     File.write!(input_path, input)
 
     try do
-      System.cmd(
-        "sh",
-        [
-          "-c",
-          "input=$1; shift; cat \"$input\" | exec \"$@\"",
-          "garden-playwright",
-          input_path,
-          command | args
-        ],
-        opts
-      )
+      System.cmd(command, args, payload_path_env(input_path, opts))
     after
       File.rm_rf(temp_dir)
     end
+  end
+
+  defp payload_path_env(input_path, opts) do
+    Keyword.update(
+      opts,
+      :env,
+      [{"GARDEN_PROCUREMENT_RUNNER_PAYLOAD_PATH", input_path}],
+      fn env -> [{"GARDEN_PROCUREMENT_RUNNER_PAYLOAD_PATH", input_path} | env] end
+    )
   end
 
   defp decode_success(output) do

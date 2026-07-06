@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
-const input = await readJsonStdin();
+const input = await readJsonInput();
 
 try {
   const result = await run(input);
@@ -235,6 +235,17 @@ async function ensureParentDir(filePath) {
   await fs.mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
 }
 
+async function readJsonInput() {
+  const payloadPath = process.env.GARDEN_PROCUREMENT_RUNNER_PAYLOAD_PATH;
+
+  if (payloadPath) {
+    const raw = await fs.readFile(payloadPath, 'utf8');
+    return parseJsonPayload(raw);
+  }
+
+  return await readJsonStdin();
+}
+
 async function readJsonStdin() {
   const chunks = [];
 
@@ -243,6 +254,10 @@ async function readJsonStdin() {
   }
 
   const raw = Buffer.concat(chunks).toString('utf8');
+  return parseJsonPayload(raw);
+}
+
+function parseJsonPayload(raw) {
   return raw.trim() === '' ? {} : JSON.parse(raw);
 }
 
