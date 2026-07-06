@@ -56,7 +56,7 @@ defmodule GnomeGarden.Procurement.PlaywrightRunner do
     Application.get_env(
       :gnome_garden,
       :procurement_playwright_runner_path,
-      Path.expand("../../../priv/browser_automation/procurement_runner.mjs", __DIR__)
+      Application.app_dir(:gnome_garden, "priv/browser_automation/procurement_runner.mjs")
     )
   end
 
