@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-06T05:31:34Z",
+  "description": "Improve the lead system after the first Exa preview run on 2026-07-06. Current behavior: LeadPreview performs Exa company searches, persists preview telemetry/candidates, dedupes/classifies candidates, and requires manual promotion. First run produced 32 candidates, 31 promotable, 1 needs enrichment, cost /run/current-system/sw/bin/bash.042. Goal: inspect current implementation and make a small, high-leverage refinement that improves candidate quality/review usefulness without auto-promoting leads or creating a parallel non-Ash path.",
+  "id": "gnome_ga-nh9",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Refine Exa lead preview and review loop",
+  "type": "task",
+  "updated_at": "2026-07-06T05:31:34Z"
+}
