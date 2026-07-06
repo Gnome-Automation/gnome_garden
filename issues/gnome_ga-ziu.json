@@ -2,6 +2,7 @@
   "assignee": "Codex",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-07-06T18:10:46Z",
   "created": "2026-07-06T17:55:04Z",
   "description": "Improve procurement lead quality by resolving paywalled or aggregator-discovered bids to canonical public sources such as SAM.gov when possible, preserving alternate URLs, and downranking/rejecting poor-fit notices like sole-source or vendor-directed renewals.",
   "id": "gnome_ga-ziu",
@@ -13,8 +14,8 @@
     }
   ],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Resolve procurement leads to canonical public sources",
   "type": "task",
-  "updated_at": "2026-07-06T18:10:27Z"
+  "updated_at": "2026-07-06T18:10:46Z"
 }
