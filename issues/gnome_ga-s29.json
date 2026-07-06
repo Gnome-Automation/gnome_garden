@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-06T20:14:33Z",
+  "description": "Add a usable SAM.gov API key for acquisition scans, either as SAM_GOV_API_KEY in the service/runtime environment or as a verified sam_gov source credential in Bitwarden/local encrypted storage. Current dev Bitwarden org Gnome Automation has bidnetdirect.com and SDCOC APEX eCenterDirect, but no SAM.gov API key item.",
+  "id": "gnome_ga-s29",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Add verified SAM.gov API credential",
+  "type": "task",
+  "updated_at": "2026-07-06T20:14:33Z"
+}
