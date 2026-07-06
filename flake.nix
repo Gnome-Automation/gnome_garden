@@ -65,10 +65,10 @@
 
             export PATH="$MIX_HOME/bin:$HEX_HOME/bin:${pkgs.lib.makeBinPath devTools}:$PATH"
 
-            # Local Postgres — uses port 5433 to match dev/test defaults
+            # Local Postgres — default to 5433 while allowing .env overrides
             export PGDATA="$PWD/.pgdata"
             export PGHOST="$PWD/.pgdata"
-            export PGPORT="5433"
+            export PGPORT="''${PGPORT:-5433}"
 
             if [ ! -d "$PGDATA" ]; then
               echo "Initializing local PostgreSQL 18..."
