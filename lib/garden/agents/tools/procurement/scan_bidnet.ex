@@ -10,7 +10,12 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanBidNet do
   require Logger
 
   @base_url "https://www.bidnetdirect.com"
-  @request_headers [{"user-agent", "GnomeGarden BidScanner/1.0"}]
+  @browser_user_agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+  @request_headers [
+    {"user-agent", @browser_user_agent},
+    {"accept-language", "en-US,en;q=0.9"},
+    {"accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
+  ]
   @entity_replacements %{
     "&amp;" => "&",
     "&quot;" => "\"",
