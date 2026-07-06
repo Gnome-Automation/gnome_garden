@@ -4,6 +4,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
+const defaultUserAgent =
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36';
+
 const input = await readJsonInput();
 
 try {
@@ -40,7 +43,7 @@ async function bidnetLogin(payload) {
   const headed = payload.headed === true;
   const browser = await chromium.launch(await chromiumLaunchOptions(headed));
 
-  const context = await browser.newContext();
+  const context = await browser.newContext(browserContextOptions());
   const page = await context.newPage();
   const tracePath = stringOrNull(payload.tracePath ?? payload.trace_path);
   const screenshotPath = stringOrNull(payload.screenshotPath ?? payload.screenshot_path);
@@ -52,7 +55,8 @@ async function bidnetLogin(payload) {
       await context.tracing.start({ screenshots: true, snapshots: true });
     }
 
-    await page.goto(payload.url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+    const response = await page.goto(payload.url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+    ensureAllowedResponse(response, payload.url);
     await openLoginSurface(page, timeoutMs);
 
     const usernameInput = page
@@ -110,7 +114,7 @@ async function bidnetLogin(payload) {
     return {
       action: 'bidnet_login',
       finalUrl: page.url(),
-      title: await page.title(),
+      title: await safeTitle(page),
       status: null,
       storageStatePath,
       tracePath,
@@ -138,13 +142,17 @@ async function openLoginSurface(page, timeoutMs) {
   }
 
   const loginUrl = new URL('/public/authentication/login', page.url()).toString();
-  await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs }).catch(async () => {
+  const response = await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs }).catch(async () => {
     const login = page
       .getByRole('link', { name: /sign in|log in|login/i })
       .or(page.getByRole('button', { name: /sign in|log in|login/i }))
       .first();
     await login.click({ timeout: timeoutMs });
+
+    return null;
   });
+
+  ensureAllowedResponse(response, loginUrl);
 }
 
 async function probe(payload) {
@@ -154,7 +162,7 @@ async function probe(payload) {
   const headed = payload.headed === true;
   const browser = await chromium.launch(await chromiumLaunchOptions(headed));
 
-  const context = await browser.newContext();
+  const context = await browser.newContext(browserContextOptions());
   const page = await context.newPage();
   const tracePath = stringOrNull(payload.tracePath ?? payload.trace_path);
   const screenshotPath = stringOrNull(payload.screenshotPath ?? payload.screenshot_path);
@@ -189,7 +197,7 @@ async function probe(payload) {
       action: 'probe',
       url: payload.url,
       finalUrl: page.url(),
-      title: await page.title(),
+      title: await safeTitle(page),
       status: response ? response.status() : null,
       storageStatePath,
       tracePath,
@@ -234,6 +242,29 @@ async function chromiumLaunchOptions(headed) {
     args: ['--no-sandbox'],
     ...(executablePath ? { executablePath } : {})
   };
+}
+
+function browserContextOptions() {
+  return {
+    userAgent: process.env.GARDEN_PLAYWRIGHT_USER_AGENT || defaultUserAgent,
+    locale: 'en-US',
+    viewport: { width: 1280, height: 720 },
+    extraHTTPHeaders: {
+      'Accept-Language': 'en-US,en;q=0.9'
+    }
+  };
+}
+
+function ensureAllowedResponse(response, url) {
+  if (response && response.status() === 403) {
+    throw Object.assign(new Error(`BidNet returned HTTP 403 before login for ${new URL(url).origin}.`), {
+      code: 'bidnet_forbidden'
+    });
+  }
+}
+
+async function safeTitle(page) {
+  return await page.title().catch(() => null);
 }
 
 async function chromiumExecutablePath() {
