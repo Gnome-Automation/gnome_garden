@@ -8,7 +8,6 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
 
   alias GnomeGarden.Agents.Tools.Procurement.QuerySamGov
   alias GnomeGarden.Procurement
-  alias GnomeGarden.Procurement.Actions.SourceCredentialResolution
   alias GnomeGarden.Procurement.BitwardenCredentialResolver
   alias GnomeGarden.Procurement.ProcurementSource
   alias GnomeGarden.Procurement.SourceCredential
@@ -93,10 +92,7 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
   defp api_key_from_credential(_credential), do: {:error, "API key is missing."}
 
   defp username_password_from_credential(%{credential_storage: :bitwarden} = credential) do
-    SourceCredentialResolution.username_password(
-      credential.credential_family,
-      credential.procurement_source_id
-    )
+    BitwardenCredentialResolver.username_password(credential)
   end
 
   defp username_password_from_credential(%{username: username, encrypted_password: payload})

@@ -163,6 +163,68 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
              "Use BidNet browser session refresh to verify browser access."
   end
 
+  test "worker verifies untested BidNet Bitwarden credentials from the vault reference" do
+    original_cli = System.get_env("GARDEN_BITWARDEN_CLI")
+    original_runner = Application.get_env(:gnome_garden, :bitwarden_command_runner)
+    original_session = Application.get_env(:gnome_garden, :bitwarden_session)
+
+    System.put_env("GARDEN_BITWARDEN_CLI", "/usr/local/bin/bitwarden")
+    Application.put_env(:gnome_garden, :bitwarden_session, "test-session")
+    Application.put_env(:gnome_garden, :source_credential_browser, BrowserShouldNotRun)
+
+    Application.put_env(:gnome_garden, :bitwarden_command_runner, fn command, args, opts ->
+      send(self(), {:bitwarden_cli, command, args, opts})
+
+      item = %{
+        "login" => %{
+          "username" => "bidnet-vault@example.com",
+          "password" => "vault-secret"
+        }
+      }
+
+      {Jason.encode!(item), 0}
+    end)
+
+    on_exit(fn ->
+      restore_env("GARDEN_BITWARDEN_CLI", original_cli)
+      restore_app_env(:bitwarden_command_runner, original_runner)
+      restore_app_env(:bitwarden_session, original_session)
+    end)
+
+    source = bidnet_source()
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        procurement_source_id: source.id,
+        credential_storage: :bitwarden,
+        bitwarden_item_id: "bidnet-item-id"
+      })
+
+    assert :ok =
+             TestSourceCredential.perform(%Oban.Job{
+               args: %{
+                 "source_credential_id" => credential.id,
+                 "procurement_source_id" => source.id
+               }
+             })
+
+    assert_received {:bitwarden_cli, "/usr/local/bin/bitwarden",
+                     ["get", "item", "bidnet-item-id", "--session", "test-session"], opts}
+
+    assert {"BW_SESSION", "test-session"} in Keyword.fetch!(opts, :env)
+
+    assert {:ok, manual_required} =
+             Procurement.get_source_credential(credential.id, authorize?: false)
+
+    assert manual_required.status == :active
+    assert manual_required.test_status == :manual_required
+
+    assert manual_required.last_failure_reason ==
+             "Use BidNet browser session refresh to verify browser access."
+  end
+
   test "BidNet manual verification status still resolves saved credentials" do
     source = bidnet_source()
     credential = bidnet_credential(source)
