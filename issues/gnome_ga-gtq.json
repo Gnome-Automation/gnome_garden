@@ -6,9 +6,15 @@
   "description": "Diagnose and improve the SAM.gov-first acquisition lead loop so configured controls and software-development sources produce visible actionable leads. Treat BidNet/BidBanana as resolver-only discovery unless they resolve to public canonical notices.",
   "id": "gnome_ga-gtq",
   "labels": [],
+  "comments": [
+    {
+      "text": "Implemented scanner credential resolution fix: QuerySamGov now falls back to SourceCredentials.sam_gov_api_key/0 when no explicit run-context key is passed. Verified focused tests pass. Live SAM scans remain blocked because dev has no SAM.gov API key in env or Bitwarden; existing sam_gov Bitwarden credential points to item name SAM.gov but the Gnome Automation org currently only has bidnetdirect.com and SDCOC APEX eCenterDirect. Also fixed /opt/gnome-garden-shared/.config/bitwarden-cli ACL for user pc so the dev service can create Bitwarden CLI lock files.",
+      "timestamp": "2026-07-06T20:14:24Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Make SAM-first lead ingestion visible",
   "type": "task",
-  "updated_at": "2026-07-06T20:04:58Z"
+  "updated_at": "2026-07-06T20:14:24Z"
 }
