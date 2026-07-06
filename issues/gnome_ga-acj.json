@@ -6,9 +6,15 @@
   "description": "Make free/canonical SAM.gov discovery useful by ensuring a configured SAM.gov procurement source exists with focused persisted filters for industrial automation/control leads, then run/verify the scan path and capture any next code gaps.",
   "id": "gnome_ga-acj",
   "labels": [],
+  "comments": [
+    {
+      "text": "Updated pilot SAM.gov defaults to include focused industrial keyword filters and a separate broad-software SAM.gov source for software-development leads. Applied PilotSeeds.ensure_defaults to the dev DB; both SAM.gov sources and filters are present. Could not verify/run live SAM scans because Bitwarden-backed SAM.gov credential is pending and this shell has no BW_SESSION/GARDEN_BITWARDEN_SESSION; current shared Bitwarden CLI config dir is owned by the service user.",
+      "timestamp": "2026-07-06T18:28:36Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Seed free SAM.gov procurement source filters",
   "type": "task",
-  "updated_at": "2026-07-06T18:21:44Z"
+  "updated_at": "2026-07-06T18:28:36Z"
 }
