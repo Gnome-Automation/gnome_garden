@@ -14,11 +14,15 @@
     {
       "text": "Operational follow-up: created local non-secret family-level SourceCredential rows for planetbids, publicpurchase, opengov, bidnet, and sam_gov using the UI default Bitwarden item names (PlanetBids, PublicPurchase, OpenGov, BidNet, SAM.gov). Verified app status after creation: each family reports app_status=pending and configured?=false, so scans are not falsely unblocked. Remaining blocker is still Bitwarden CLI authentication/session plus verification against real vault items.",
       "timestamp": "2026-07-06T15:08:44Z"
+    },
+    {
+      "text": "Committed fd1bc94 to treat the dev-shell PGPORT edit as part of this Garden work. flake.nix now defaults local Postgres to 5433 while preserving .env/environment PGPORT overrides; verified nix develop reports the configured project PGPORT=5434 and git diff --check is clean.",
+      "timestamp": "2026-07-06T15:19:35Z"
     }
   ],
   "priority": 2,
   "status": "in_progress",
   "title": "Enable Bitwarden-backed authenticated procurement scans",
   "type": "task",
-  "updated_at": "2026-07-06T15:08:44Z"
+  "updated_at": "2026-07-06T15:19:35Z"
 }
