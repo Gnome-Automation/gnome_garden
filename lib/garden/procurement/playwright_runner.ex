@@ -61,7 +61,37 @@ defmodule GnomeGarden.Procurement.PlaywrightRunner do
   end
 
   defp default_command_runner(command, args, opts) do
-    System.cmd(command, args, opts)
+    case Keyword.pop(opts, :input) do
+      {nil, opts} -> System.cmd(command, args, opts)
+      {input, opts} -> run_with_stdin(command, args, input, opts)
+    end
+  end
+
+  defp run_with_stdin(command, args, input, opts) do
+    temp_dir =
+      Path.join(System.tmp_dir!(), "garden-playwright-#{System.unique_integer([:positive])}")
+
+    input_path = Path.join(temp_dir, "payload.json")
+
+    File.mkdir!(temp_dir)
+    File.chmod!(temp_dir, 0o700)
+    File.write!(input_path, input)
+
+    try do
+      System.cmd(
+        "sh",
+        [
+          "-c",
+          "input=$1; shift; cat \"$input\" | exec \"$@\"",
+          "garden-playwright",
+          input_path,
+          command | args
+        ],
+        opts
+      )
+    after
+      File.rm_rf(temp_dir)
+    end
   end
 
   defp decode_success(output) do

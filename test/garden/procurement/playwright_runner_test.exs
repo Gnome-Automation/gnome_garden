@@ -58,6 +58,33 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
     refute inspect(error) =~ "super-secret"
   end
 
+  test "default runner writes payload to stdin" do
+    original_node_path = Application.get_env(:gnome_garden, :playwright_node_path)
+    original_runner_path = Application.get_env(:gnome_garden, :procurement_playwright_runner_path)
+    script_path = Path.join(System.tmp_dir!(), "garden-cat-#{System.unique_integer([:positive])}")
+
+    File.write!(script_path, "#!/bin/sh\ncat\n")
+    File.chmod!(script_path, 0o755)
+
+    Application.put_env(:gnome_garden, :playwright_node_path, script_path)
+    Application.put_env(:gnome_garden, :procurement_playwright_runner_path, "ignored-runner")
+
+    on_exit(fn ->
+      File.rm(script_path)
+      restore_app_env(:playwright_node_path, original_node_path)
+      restore_app_env(:procurement_playwright_runner_path, original_runner_path)
+    end)
+
+    assert {:ok, result} =
+             PlaywrightRunner.run(:probe, %{
+               url: "https://www.bidnetdirect.com",
+               password: "super-secret"
+             })
+
+    assert result["action"] == "probe"
+    assert result["password"] == "super-secret"
+  end
+
   test "returns bounded error for invalid runner output" do
     command_runner = fn _command, _args, _opts -> {"not-json", 1} end
 
@@ -66,4 +93,7 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
                command_runner: command_runner
              )
   end
+
+  defp restore_app_env(key, nil), do: Application.delete_env(:gnome_garden, key)
+  defp restore_app_env(key, value), do: Application.put_env(:gnome_garden, key, value)
 end
