@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-06T14:44:06Z",
+  "description": "Capture and implement a repeatable workflow for running Codex on a VM inside tmux so SSH disconnects do not stop interactive Codex sessions. Include basic commands for starting, detaching, reattaching, listing, and killing sessions, plus guidance on when to use codex resume, codex exec, or Codex Cloud instead.",
+  "id": "gnome_ga-hhn",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Set up tmux workflow for long-running Codex on VM",
+  "type": "task",
+  "updated_at": "2026-07-06T14:44:06Z"
+}
