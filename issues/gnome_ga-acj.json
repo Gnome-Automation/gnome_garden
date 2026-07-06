@@ -2,6 +2,7 @@
   "assignee": "Codex",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-07-06T18:28:57Z",
   "created": "2026-07-06T18:21:15Z",
   "description": "Make free/canonical SAM.gov discovery useful by ensuring a configured SAM.gov procurement source exists with focused persisted filters for industrial automation/control leads, then run/verify the scan path and capture any next code gaps.",
   "id": "gnome_ga-acj",
@@ -13,8 +14,8 @@
     }
   ],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Seed free SAM.gov procurement source filters",
   "type": "task",
-  "updated_at": "2026-07-06T18:28:36Z"
+  "updated_at": "2026-07-06T18:28:57Z"
 }
