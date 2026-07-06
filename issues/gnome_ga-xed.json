@@ -10,11 +10,15 @@
     {
       "text": "Committed code-side support in 5d38b38. Changes: release/deploy now installs and copies the jido_browser agent-browser bundle; Garden.Browser searches configured, release, build, and cwd binary roots before falling back; Bitwarden credential resolution now supports SAM.gov API keys from custom fields or login password; queued SAM.gov credential verification can resolve Bitwarden-backed credentials without persisting secrets; added focused tests for release browser lookup and Bitwarden-backed SAM.gov resolution/verification. Verification: PHX_SERVER=false PORT=4102 mix compile --warnings-as-errors passed; focused tests for browser/procurement credentials passed (25 tests). Remaining blocker: the gnome_garden Bitwarden CLI profile is still unauthenticated/locked and SourceCredential rows are missing locally, so protected portal scans still need operator credential setup with real Bitwarden item IDs/names before the issue can be closed.",
       "timestamp": "2026-07-06T15:06:14Z"
+    },
+    {
+      "text": "Operational follow-up: created local non-secret family-level SourceCredential rows for planetbids, publicpurchase, opengov, bidnet, and sam_gov using the UI default Bitwarden item names (PlanetBids, PublicPurchase, OpenGov, BidNet, SAM.gov). Verified app status after creation: each family reports app_status=pending and configured?=false, so scans are not falsely unblocked. Remaining blocker is still Bitwarden CLI authentication/session plus verification against real vault items.",
+      "timestamp": "2026-07-06T15:08:44Z"
     }
   ],
   "priority": 2,
   "status": "in_progress",
   "title": "Enable Bitwarden-backed authenticated procurement scans",
   "type": "task",
-  "updated_at": "2026-07-06T15:06:14Z"
+  "updated_at": "2026-07-06T15:08:44Z"
 }
