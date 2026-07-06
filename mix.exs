@@ -12,7 +12,8 @@ defmodule GnomeGarden.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      consolidate_protocols: Mix.env() != :dev
+      consolidate_protocols: Mix.env() != :dev,
+      releases: releases()
     ]
   end
 
@@ -143,5 +144,29 @@ defmodule GnomeGarden.MixProject do
         "reach.check --arch --smells"
       ]
     ]
+  end
+
+  defp releases do
+    [
+      gnome_garden: [
+        steps: [:assemble, &copy_runtime_node_modules/1]
+      ]
+    ]
+  end
+
+  defp copy_runtime_node_modules(%Mix.Release{path: release_path} = release) do
+    source = Path.expand("node_modules")
+    destination = Path.join(release_path, "node_modules")
+
+    if File.dir?(source) do
+      File.rm_rf!(destination)
+      File.cp_r!(source, destination)
+      release
+    else
+      Mix.raise(
+        "node_modules is required for the Playwright procurement runner. " <>
+          "Run `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --omit=dev --omit=optional` before `mix release`."
+      )
+    end
   end
 end

@@ -27,5 +27,8 @@
   "homepage": "https://github.com/Gnome-Automation/gnome_garden#readme",
   "devDependencies": {
     "@playwright/test": "^1.58.2"
+  },
+  "dependencies": {
+    "playwright": "^1.58.2"
   }
 }

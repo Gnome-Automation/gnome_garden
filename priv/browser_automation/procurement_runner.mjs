@@ -1,4 +1,5 @@
-import { chromium } from '@playwright/test';
+import { chromium } from 'playwright';
+import { constants as fsConstants } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -37,10 +38,7 @@ async function bidnetLogin(payload) {
 
   const timeoutMs = positiveInteger(payload.timeoutMs ?? payload.timeout_ms, 60000);
   const headed = payload.headed === true;
-  const browser = await chromium.launch({
-    headless: !headed,
-    args: ['--no-sandbox']
-  });
+  const browser = await chromium.launch(await chromiumLaunchOptions(headed));
 
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -154,10 +152,7 @@ async function probe(payload) {
 
   const timeoutMs = positiveInteger(payload.timeoutMs ?? payload.timeout_ms, 60000);
   const headed = payload.headed === true;
-  const browser = await chromium.launch({
-    headless: !headed,
-    args: ['--no-sandbox']
-  });
+  const browser = await chromium.launch(await chromiumLaunchOptions(headed));
 
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -229,6 +224,50 @@ function stringOrNull(value) {
 function positiveInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+async function chromiumLaunchOptions(headed) {
+  const executablePath = await chromiumExecutablePath();
+
+  return {
+    headless: !headed,
+    args: ['--no-sandbox'],
+    ...(executablePath ? { executablePath } : {})
+  };
+}
+
+async function chromiumExecutablePath() {
+  const configured = stringOrNull(
+    process.env.GARDEN_PLAYWRIGHT_CHROMIUM_PATH || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+  );
+
+  if (configured) {
+    return configured;
+  }
+
+  const pathDirs = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
+  const binaries = ['chromium', 'chromium-browser', 'google-chrome', 'chrome'];
+
+  for (const dir of pathDirs) {
+    for (const binary of binaries) {
+      const candidate = path.join(dir, binary);
+
+      if (await executableExists(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function executableExists(candidate) {
+  try {
+    await fs.access(candidate, fsConstants.X_OK);
+    return true;
+  } catch (_error) {
+    return false;
+  }
 }
 
 async function ensureParentDir(filePath) {

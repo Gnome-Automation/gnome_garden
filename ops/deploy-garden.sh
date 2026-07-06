@@ -48,9 +48,11 @@ export MIX_HOME="$CHECKOUT/.nix-mix"
 export HEX_HOME="$CHECKOUT/.nix-hex"
 export LANG=en_US.UTF-8
 export MIX_ENV=prod
+export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 mix deps.get --only prod
 mix jido_browser.install --if-missing agent_browser
+npm ci --omit=dev --omit=optional
 mix assets.deploy
 mix release --overwrite
 BUILD
