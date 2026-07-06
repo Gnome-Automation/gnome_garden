@@ -15,59 +15,63 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   """
 
   alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
+  alias GnomeGarden.Procurement.SourceCredentials
 
   require Logger
 
   @sam_api_base "https://api.sam.gov/opportunities/v2/search"
 
   def run(params, context) do
-    api_key = get_api_key(context)
+    case get_api_key(context) do
+      {:ok, api_key} ->
+        query_params = build_query_params(params, context, api_key)
 
-    if is_nil(api_key) do
-      {:error, "SAM.gov API key not configured. Set SAM_GOV_API_KEY environment variable."}
-    else
-      query_params = build_query_params(params, context, api_key)
+        Logger.info(
+          "[QuerySamGov] Searching with params: #{inspect(Map.delete(query_params, :api_key))}"
+        )
 
-      Logger.info(
-        "[QuerySamGov] Searching with params: #{inspect(Map.delete(query_params, :api_key))}"
-      )
+        request = context_value(context, [:http_get]) || (&Req.get/2)
 
-      request = context_value(context, [:http_get]) || (&Req.get/2)
+        case request.(@sam_api_base, sam_request_options(query_params)) do
+          {:ok, %{status: 200, body: body}} ->
+            opportunities = parse_response(body)
+            Logger.info("[QuerySamGov] Found #{length(opportunities)} opportunities")
 
-      case request.(@sam_api_base, sam_request_options(query_params)) do
-        {:ok, %{status: 200, body: body}} ->
-          opportunities = parse_response(body)
-          Logger.info("[QuerySamGov] Found #{length(opportunities)} opportunities")
+            {:ok,
+             %{
+               source_type: :sam_gov,
+               query: Map.get(params, :keywords),
+               bids_found: length(opportunities),
+               bids: opportunities
+             }}
 
-          {:ok,
-           %{
-             source_type: :sam_gov,
-             query: Map.get(params, :keywords),
-             bids_found: length(opportunities),
-             bids: opportunities
-           }}
+          {:ok, %{status: 429}} ->
+            {:error, "SAM.gov rate limit exceeded (1000/day)"}
 
-        {:ok, %{status: 429}} ->
-          {:error, "SAM.gov rate limit exceeded (1000/day)"}
+          {:ok, %{status: 401}} ->
+            {:error,
+             "SAM.gov API key was rejected. Generate a public API key in SAM.gov and update SAM_GOV_API_KEY."}
 
-        {:ok, %{status: 401}} ->
-          {:error,
-           "SAM.gov API key was rejected. Generate a public API key in SAM.gov and update SAM_GOV_API_KEY."}
+          {:ok, %{status: status, body: body}} ->
+            Logger.warning("[QuerySamGov] API returned status #{status}: #{inspect(body)}")
+            {:error, "SAM.gov API error: status #{status}"}
 
-        {:ok, %{status: status, body: body}} ->
-          Logger.warning("[QuerySamGov] API returned status #{status}: #{inspect(body)}")
-          {:error, "SAM.gov API error: status #{status}"}
+          {:error, reason} ->
+            {:error, "SAM.gov request failed: #{inspect(reason)}"}
+        end
 
-        {:error, reason} ->
-          {:error, "SAM.gov request failed: #{inspect(reason)}"}
-      end
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   defp get_api_key(context) do
-    # Check context first (injected by agent), then environment
-    context_value(context, [:sam_gov_api_key]) ||
-      System.get_env("SAM_GOV_API_KEY")
+    # Explicit run context wins; otherwise use the same DB/Bitwarden/env
+    # resolver that source health and credential checks rely on.
+    case context_value(context, [:sam_gov_api_key]) do
+      value when is_binary(value) and value != "" -> {:ok, value}
+      _ -> SourceCredentials.sam_gov_api_key()
+    end
   end
 
   defp build_query_params(params, context, api_key) do

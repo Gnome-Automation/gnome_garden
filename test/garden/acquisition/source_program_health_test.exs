@@ -347,6 +347,91 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     assert acquisition_source.health_note =~ "Last successful scan"
   end
 
+  test "sam.gov source scans resolve stored credentials when run context omits API key" do
+    previous_sam_key = System.get_env("SAM_GOV_API_KEY")
+    System.delete_env("SAM_GOV_API_KEY")
+
+    on_exit(fn ->
+      restore_env("SAM_GOV_API_KEY", previous_sam_key)
+    end)
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :sam_gov,
+        credential_family: "sam_gov",
+        api_key: "stored-sam-key"
+      })
+
+    {:ok, _credential} = Procurement.mark_source_credential_verified(credential, %{})
+
+    run_id = Ecto.UUID.generate()
+
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Stored Credential SAM Source",
+        url: "https://sam.gov/opportunities/stored-credential",
+        source_type: :sam_gov,
+        portal_id: "sam-stored-credential",
+        region: :national,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          keywords: "software development dashboard API integration",
+          naics_codes: ["541511"],
+          limit: 10
+        }
+      })
+
+    http_get = fn _url, opts ->
+      assert opts[:params][:api_key] == "stored-sam-key"
+      assert opts[:params][:title] == "software development dashboard API integration"
+      assert opts[:params][:ncode] == "541511"
+
+      {:ok,
+       %{
+         status: 200,
+         body: %{
+           "opportunitiesData" => [
+             %{
+               "noticeId" => "SAM-SOFTWARE-1",
+               "title" => "Custom software development dashboard and API integration",
+               "description" =>
+                 "Custom software development for a workflow dashboard, API integration, reporting, and operations automation.",
+               "fullParentPathName" => "Department of Commerce",
+               "uiLink" => "https://sam.gov/opp/SAM-SOFTWARE-1/view",
+               "postedDate" => "2026-06-01",
+               "responseDeadLine" => "2026-12-15T17:00:00-05:00",
+               "naicsCode" => "541511",
+               "placeOfPerformance" => %{
+                 "city" => %{"name" => "Washington"},
+                 "state" => %{"code" => "DC", "name" => "District of Columbia"}
+               }
+             }
+           ]
+         }
+       }}
+    end
+
+    assert {:ok, result} =
+             SourceScan.execute_run(%{
+               run: %{id: run_id, metadata: %{procurement_source_id: procurement_source.id}},
+               deployment: %{},
+               tool_context: %{agent_run_id: run_id, http_get: http_get}
+             })
+
+    assert result.metadata.saved == 1
+    assert result.text =~ "Scanned Stored Credential SAM Source: 1 saved"
+
+    assert {:ok, bid} =
+             Procurement.get_bid_by_url("https://sam.gov/opp/SAM-SOFTWARE-1/view")
+
+    assert bid.procurement_source_id == procurement_source.id
+  end
+
   test "sam.gov source scans use enabled persisted search filters and record counts" do
     previous_sam_key = System.get_env("SAM_GOV_API_KEY")
     System.put_env("SAM_GOV_API_KEY", "test-sam-key")
@@ -731,7 +816,7 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
       Procurement.create_procurement_source(%{
         name: "Noisy Bid Source",
         url: "https://example.com/procurement/noisy-bid-source",
-        source_type: :bidnet,
+        source_type: :custom,
         portal_id: "noisy-bid-source",
         region: :oc,
         priority: :medium,
