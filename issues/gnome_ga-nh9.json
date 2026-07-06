@@ -6,9 +6,15 @@
   "description": "Improve the lead system after the first Exa preview run on 2026-07-06. Current behavior: LeadPreview performs Exa company searches, persists preview telemetry/candidates, dedupes/classifies candidates, and requires manual promotion. First run produced 32 candidates, 31 promotable, 1 needs enrichment, cost $0.042. Goal: inspect current implementation and make a small, high-leverage refinement that improves candidate quality/review usefulness without auto-promoting leads or creating a parallel non-Ash path.",
   "id": "gnome_ga-nh9",
   "labels": [],
+  "comments": [
+    {
+      "text": "Refined lead preview classification/review: added source_kind metadata, treated link-in-bio/social profile hosts as third-party signals needing enrichment, removed visible bulk-promote action, and added focused ExUnit/LiveView coverage. Focused tests pass (11/11). usage_rules docs lookup was attempted but hung without output after warm compile.",
+      "timestamp": "2026-07-06T06:02:20Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Refine Exa lead preview and review loop",
   "type": "task",
-  "updated_at": "2026-07-06T05:31:49Z"
+  "updated_at": "2026-07-06T06:02:20Z"
 }
