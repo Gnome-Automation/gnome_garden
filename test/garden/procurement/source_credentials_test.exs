@@ -153,6 +153,54 @@ defmodule GnomeGarden.Procurement.SourceCredentialsTest do
     assert {:ok, "sam-secret"} = SourceCredentials.sam_gov_api_key()
   end
 
+  test "resolves verified SAM.gov API keys from Bitwarden item references" do
+    original_cli = System.get_env("GARDEN_BITWARDEN_CLI")
+    original_runner = Application.get_env(:gnome_garden, :bitwarden_command_runner)
+    original_session = Application.get_env(:gnome_garden, :bitwarden_session)
+
+    System.put_env("GARDEN_BITWARDEN_CLI", "/usr/local/bin/bitwarden")
+    Application.put_env(:gnome_garden, :bitwarden_session, "test-session")
+
+    Application.put_env(:gnome_garden, :bitwarden_command_runner, fn command, args, opts ->
+      send(self(), {:bitwarden_cli, command, args, opts})
+
+      item = %{
+        "id" => "sam-item-id",
+        "name" => "SAM.gov",
+        "fields" => [
+          %{"name" => "SAM.gov API Key", "value" => "vault-sam-secret"}
+        ]
+      }
+
+      {Jason.encode!(item), 0}
+    end)
+
+    on_exit(fn ->
+      restore_env("GARDEN_BITWARDEN_CLI", original_cli)
+      restore_app_env(:bitwarden_command_runner, original_runner)
+      restore_app_env(:bitwarden_session, original_session)
+    end)
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :sam_gov,
+        credential_family: "sam_gov",
+        credential_storage: :bitwarden,
+        bitwarden_item_id: "sam-item-id",
+        bitwarden_item_name: "SAM.gov"
+      })
+
+    {:ok, _credential} = Procurement.mark_source_credential_verified(credential, %{})
+
+    assert SourceCredentials.sam_gov_configured?()
+    assert {:ok, "vault-sam-secret"} = SourceCredentials.sam_gov_api_key()
+
+    assert_received {:bitwarden_cli, "/usr/local/bin/bitwarden",
+                     ["get", "item", "sam-item-id", "--session", "test-session"], opts}
+
+    assert {"BW_SESSION", "test-session"} in Keyword.fetch!(opts, :env)
+  end
+
   test "stores Bitwarden item references without local secret material" do
     {:ok, credential} =
       Procurement.create_source_credential(%{

@@ -50,6 +50,7 @@ export LANG=en_US.UTF-8
 export MIX_ENV=prod
 
 mix deps.get --only prod
+mix jido_browser.install --if-missing agent_browser
 mix assets.deploy
 mix release --overwrite
 BUILD
@@ -65,6 +66,14 @@ echo "Installing release..."
 systemctl stop "$SERVICE"
 mv "$RELEASE_DIR" "$previous"
 cp -a "$CHECKOUT/_build/prod/rel/gnome_garden" "$RELEASE_DIR"
+
+browser_dir="$(find "$CHECKOUT/_build" -maxdepth 1 -type d -name 'jido_browser-*' -print -quit)"
+if [ -z "$browser_dir" ]; then
+  echo "Browser binary directory was not found under $CHECKOUT/_build." >&2
+  exit 1
+fi
+
+cp -a "$browser_dir" "$RELEASE_DIR/"
 chown -R gnome_garden:gnome_garden "$RELEASE_DIR"
 
 echo "Running release setup..."

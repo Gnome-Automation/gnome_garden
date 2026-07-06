@@ -192,6 +192,54 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
              SourceCredentialTesting.test_credential(credential, http_get: http_get)
   end
 
+  test "SAM.gov Bitwarden credentials are verified through the SAM API client" do
+    original_cli = System.get_env("GARDEN_BITWARDEN_CLI")
+    original_runner = Application.get_env(:gnome_garden, :bitwarden_command_runner)
+    original_session = Application.get_env(:gnome_garden, :bitwarden_session)
+
+    System.put_env("GARDEN_BITWARDEN_CLI", "/usr/local/bin/bitwarden")
+    Application.put_env(:gnome_garden, :bitwarden_session, "test-session")
+
+    Application.put_env(:gnome_garden, :bitwarden_command_runner, fn command, args, opts ->
+      send(self(), {:bitwarden_cli, command, args, opts})
+
+      item = %{
+        "fields" => [
+          %{"name" => "SAM_GOV_API_KEY", "value" => "vault-sam-secret"}
+        ]
+      }
+
+      {Jason.encode!(item), 0}
+    end)
+
+    on_exit(fn ->
+      restore_env("GARDEN_BITWARDEN_CLI", original_cli)
+      restore_app_env(:bitwarden_command_runner, original_runner)
+      restore_app_env(:bitwarden_session, original_session)
+    end)
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :sam_gov,
+        credential_family: "sam_gov",
+        credential_storage: :bitwarden,
+        bitwarden_item_name: "SAM.gov"
+      })
+
+    http_get = fn _url, opts ->
+      assert Keyword.fetch!(opts, :params).api_key == "vault-sam-secret"
+      {:ok, %{status: 200, body: %{"opportunitiesData" => []}}}
+    end
+
+    assert {:ok, %{provider: :sam_gov, verified?: true}} =
+             SourceCredentialTesting.test_credential(credential, http_get: http_get)
+
+    assert_received {:bitwarden_cli, "/usr/local/bin/bitwarden",
+                     ["get", "item", "SAM.gov", "--session", "test-session"], opts}
+
+    assert {"BW_SESSION", "test-session"} in Keyword.fetch!(opts, :env)
+  end
+
   defp procurement_source do
     {:ok, source} =
       Procurement.create_procurement_source(%{
@@ -251,4 +299,7 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
 
   defp restore_app_env(key, nil), do: Application.delete_env(:gnome_garden, key)
   defp restore_app_env(key, value), do: Application.put_env(:gnome_garden, key, value)
+
+  defp restore_env(name, nil), do: System.delete_env(name)
+  defp restore_env(name, value), do: System.put_env(name, value)
 end

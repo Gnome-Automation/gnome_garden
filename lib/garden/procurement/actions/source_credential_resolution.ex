@@ -19,7 +19,7 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
     with {:ok, family} <- require_family(family),
          {:ok, credential} <- resolve_family_credential(family),
          :ok <- ensure_api_key_verified(credential, family),
-         {:ok, api_key} <- decrypt_secret(credential.encrypted_api_key),
+         {:ok, api_key} <- resolve_api_key(credential),
          :ok <- mark_used(credential) do
       {:ok, api_key}
     end
@@ -103,7 +103,7 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
   defp ensure_api_key_verified(credential, family) do
     case stored_status(credential) do
       :verified ->
-        if is_map(credential.encrypted_api_key) do
+        if api_key_reference_present?(credential) do
           :ok
         else
           {:error, "#{credential_family_label(family)} API key is incomplete."}
@@ -171,6 +171,22 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
 
   defp resolve_username_password(_credential),
     do: {:error, "Username and password are required."}
+
+  defp resolve_api_key(%{credential_storage: :bitwarden} = credential) do
+    BitwardenCredentialResolver.api_key(credential)
+  end
+
+  defp resolve_api_key(%{encrypted_api_key: payload}) when is_map(payload) do
+    decrypt_secret(payload)
+  end
+
+  defp resolve_api_key(_credential), do: {:error, "API key is required."}
+
+  defp api_key_reference_present?(%{credential_storage: :bitwarden} = credential) do
+    present?(credential.bitwarden_item_id) or present?(credential.bitwarden_item_name)
+  end
+
+  defp api_key_reference_present?(credential), do: is_map(credential.encrypted_api_key)
 
   defp username_password_reference_present?(%{credential_storage: :bitwarden} = credential) do
     present?(credential.bitwarden_item_id) or present?(credential.bitwarden_item_name)

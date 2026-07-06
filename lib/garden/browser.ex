@@ -154,21 +154,44 @@ defmodule GnomeGarden.Browser do
   end
 
   defp default_path do
-    build_root =
-      Application.app_dir(:gnome_garden)
-      |> Path.join("../../..")
-      |> Path.expand()
+    candidates = vendored_binary_paths()
 
-    vendored = Path.join([build_root, "jido_browser-linux_amd64", "agent-browser-linux-x64"])
+    # Prefer the vendored release/build binary; otherwise fall back to one
+    # installed on PATH. Return the first vendored candidate as a last resort so
+    # errors name the expected location.
+    Enum.find(candidates, &File.exists?/1) ||
+      System.find_executable("agent-browser") ||
+      List.first(candidates)
+  end
 
-    # Prefer the vendored binary; otherwise fall back to one installed on PATH
-    # (e.g. via mise/npm). Returns the vendored path as a last resort so errors
-    # name the expected location.
-    cond do
-      File.exists?(vendored) -> vendored
-      path = System.find_executable("agent-browser") -> path
-      true -> vendored
-    end
+  defp vendored_binary_paths do
+    Enum.map(
+      binary_roots(),
+      &Path.join([&1, "jido_browser-linux_amd64", "agent-browser-linux-x64"])
+    )
+  end
+
+  defp binary_roots do
+    app_dir = Application.app_dir(:gnome_garden)
+
+    (configured_binary_roots() ++
+       [
+         # Release root, e.g. /opt/gnome-garden from
+         # /opt/gnome-garden/lib/gnome_garden-0.1.0.
+         Path.expand(Path.join(app_dir, "../..")),
+         # Mix build root, e.g. _build from _build/test/lib/gnome_garden.
+         Path.expand(Path.join(app_dir, "../../..")),
+         File.cwd!()
+       ])
+    |> Enum.uniq()
+  end
+
+  defp configured_binary_roots do
+    :gnome_garden
+    |> Application.get_env(:browser_binary_roots, [])
+    |> List.wrap()
+    |> Enum.filter(&is_binary/1)
+    |> Enum.map(&Path.expand/1)
   end
 
   defp page_snapshot_js(max_links, max_text_chars) do

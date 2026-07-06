@@ -26,6 +26,17 @@ defmodule GnomeGarden.Procurement.BitwardenCredentialResolver do
 
   def username_password(_credential), do: {:error, "Bitwarden credential reference is invalid."}
 
+  @spec api_key(SourceCredential.t()) :: {:ok, String.t()} | {:error, String.t()}
+  def api_key(%SourceCredential{} = credential) do
+    with {:ok, query} <- item_query(credential),
+         {:ok, item} <- get_item(query),
+         {:ok, api_key} <- api_key_value(item) do
+      {:ok, api_key}
+    end
+  end
+
+  def api_key(_credential), do: {:error, "Bitwarden credential reference is invalid."}
+
   defp get_item(query) do
     with {:ok, command} <- cli_command(),
          {output, 0} <- command_runner().(command, item_args(query), command_opts()),
@@ -94,6 +105,39 @@ defmodule GnomeGarden.Procurement.BitwardenCredentialResolver do
 
   defp login_credentials(_item, _credential) do
     {:error, "Bitwarden item is not a login item with a password."}
+  end
+
+  defp api_key_value(%{"fields" => fields} = item) when is_list(fields) do
+    case Enum.find_value(fields, &api_key_field_value/1) do
+      value when is_binary(value) -> {:ok, value}
+      _ -> api_key_value_from_login_password(item)
+    end
+  end
+
+  defp api_key_value(item), do: api_key_value_from_login_password(item)
+
+  defp api_key_field_value(%{"name" => name, "value" => value}) when is_binary(value) do
+    if api_key_field_name?(name) and present?(value), do: value
+  end
+
+  defp api_key_field_value(_field), do: nil
+
+  defp api_key_field_name?(name) when is_binary(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9]/, "")
+    |> then(&(&1 in ["apikey", "samgovapikey", "samgovapitoken"]))
+  end
+
+  defp api_key_field_name?(_name), do: false
+
+  defp api_key_value_from_login_password(%{"login" => %{"password" => password}})
+       when is_binary(password) and password != "" do
+    {:ok, password}
+  end
+
+  defp api_key_value_from_login_password(_item) do
+    {:error, "Bitwarden item is missing an API key field or login password."}
   end
 
   defp item_query(%{bitwarden_item_id: item_id}) when is_binary(item_id) and item_id != "",
