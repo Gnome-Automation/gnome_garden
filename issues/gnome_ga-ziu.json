@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "Codex",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-07-06T17:55:04Z",
@@ -7,8 +7,8 @@
   "id": "gnome_ga-ziu",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Resolve procurement leads to canonical public sources",
   "type": "task",
-  "updated_at": "2026-07-06T17:55:04Z"
+  "updated_at": "2026-07-06T17:55:11Z"
 }
