@@ -5,8 +5,7 @@
     "gnome_ga-fx2.5"
   ],
   "blocks": [
-    "gnome_ga-fx2.15",
-    "gnome_ga-fx2.25"
+    "gnome_ga-fx2.15"
   ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Replace generic selector scraping for OpenGov with a provider adapter that prefers public/network APIs and uses Playwright only when necessary. Capture provider diagnostics and canonical opportunity fields. Acceptance: current OpenGov sources no longer fail as generic selector_failed and have fixture-backed extraction tests.",
@@ -17,5 +16,5 @@
   "status": "open",
   "title": "Build a provider-specific OpenGov source adapter",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:40Z"
+  "updated_at": "2026-07-11T19:25:11Z"
 }
