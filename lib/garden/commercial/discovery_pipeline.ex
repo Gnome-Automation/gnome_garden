@@ -41,6 +41,17 @@ defmodule GnomeGarden.Commercial.DiscoveryPipeline do
 
   @type pipeline_result :: {:ok, map()} | {:error, term()}
 
+  @doc "Describes the candidate source used by scheduled discovery execution."
+  @spec execution_profile() :: map()
+  def execution_profile do
+    %{
+      mode: :seed_candidates_only,
+      live_search?: false,
+      candidate_source: :program_metadata,
+      metadata_key: "seed_candidates"
+    }
+  end
+
   @spec run_program(DiscoveryProgram.t() | Ecto.UUID.t(), keyword()) :: pipeline_result
   def run_program(program_or_id, opts \\ []) do
     actor = Keyword.get(opts, :actor)

@@ -33,6 +33,10 @@ defmodule GnomeGarden.Acquisition.Program do
   actions do
     defaults [:read, :destroy]
 
+    action :baseline, :map do
+      run GnomeGarden.Acquisition.Actions.BuildBaseline
+    end
+
     create :create do
       primary? true
 
