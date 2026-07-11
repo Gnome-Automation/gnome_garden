@@ -7,7 +7,7 @@
     "gnome_ga-fx2.18"
   ],
   "created": "2026-07-11T18:36:15Z",
-  "description": "Implement a non-writing Pyex workflow that plans bounded Exa queries, dedupes candidates, ranks them against the company profile, and selects enrichment targets. Inject only frozen inputs and narrow read capabilities; enforce hard BEAM process limits. Acceptance: compare determinism, precision, latency, and maintainability against the existing Elixir baseline using the evaluation corpus.",
+  "description": "Implement a non-writing Pyex workflow that plans bounded Exa queries, dedupes candidates, ranks them against the company profile, and selects enrichment targets. Inject only frozen inputs and narrow read capabilities; enforce hard BEAM process limits. Carry docs/code-mode-workflow-runtime-notes.md into this implementation as the reviewed runtime-boundary guidance, update it for any decisions proven by the pilot, and keep its status explicit until implementation exists. Acceptance: compare determinism, precision, latency, and maintainability against the existing Elixir baseline using the evaluation corpus; documentation matches the implemented capability, durability, process-isolation, and PLC artifact boundaries.",
   "id": "gnome_ga-fx2.17",
   "labels": [],
   "parent": "gnome_ga-fx2",
@@ -15,5 +15,5 @@
   "status": "open",
   "title": "Pilot Pyex for acquisition query planning and ranking",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:16Z"
+  "updated_at": "2026-07-11T19:31:15Z"
 }
