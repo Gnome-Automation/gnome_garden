@@ -6,7 +6,8 @@
     "gnome_ga-fx2.24"
   ],
   "blocks": [
-    "gnome_ga-fx2.15"
+    "gnome_ga-fx2.15",
+    "gnome_ga-fx2.27"
   ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Treat SAM.gov as an API source with explicit daily request budget, query dedupe, backoff, reset timing, and filter-level yield metrics. Avoid burning quota on duplicate keyword/NAICS combinations. Acceptance: rate limits become scheduled/deferred work rather than repeated generic failures, and operators can see remaining budget and next eligible run.",
