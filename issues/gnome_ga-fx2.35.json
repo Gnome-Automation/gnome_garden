@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:42:55Z",
+  "description": "After canary acceptance, remove seed_candidates as a production execution path, direct LiveView service orchestration, obsolete Exa Mix-task paths used for production, raw agent-browser CLI coupling, and stale metadata contracts. Preserve explicitly named developer diagnostics where useful. Acceptance: one supported Ash/Oban path remains for scheduled and manual production runs, dead configuration is migrated, and regression tests reject legacy entry points.",
+  "id": "gnome_ga-fx2.35",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 2,
+  "status": "open",
+  "title": "Retire legacy seed and direct execution paths",
+  "type": "task",
+  "updated_at": "2026-07-11T18:42:55Z"
+}
