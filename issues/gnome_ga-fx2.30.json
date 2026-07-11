@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.10"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:42:54Z",
   "description": "If the Websets evaluation adopts monitors or webhooks, implement callback authentication, timestamp tolerance, replay protection, payload size limits, schema validation, event idempotency, and durable dead-letter handling before enabling production callbacks. Acceptance: forged, stale, replayed, oversized, malformed, duplicate, and valid callbacks are tested. Close as not applicable with the adoption decision if callbacks are deferred.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Secure Exa Websets callback ingestion",
   "type": "task",
-  "updated_at": "2026-07-11T18:42:54Z"
+  "updated_at": "2026-07-11T18:43:41Z"
 }
