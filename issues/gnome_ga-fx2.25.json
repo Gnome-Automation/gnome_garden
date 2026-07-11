@@ -17,7 +17,8 @@
     "gnome_ga-fx2.9"
   ],
   "blocks": [
-    "gnome_ga-fx2.16"
+    "gnome_ga-fx2.16",
+    "gnome_ga-fx2.26"
   ],
   "created": "2026-07-11T18:42:54Z",
   "description": "Review the implemented acquisition slice before E2E rollout. Verify persisted behavior lives in Ash actions/resources, callers use domain code interfaces, workflow transitions remain behind intent-named facades, LiveViews do not build business queries, AshOban owns durable work, AshLua transactions protect composed writes, and no new Jido agent runtime exists. Acceptance: violations are fixed or split into blocking beads; compile warnings, focused tests, format, generated resource map, and architecture-smell checks pass.",
@@ -28,5 +29,5 @@
   "status": "open",
   "title": "Run mid-epic Ash architecture quality gate",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:40Z"
+  "updated_at": "2026-07-11T18:43:41Z"
 }
