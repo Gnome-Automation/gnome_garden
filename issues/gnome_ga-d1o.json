@@ -6,9 +6,15 @@
   "description": "Review stale or non-priority procurement opportunities discovered during Orange County and related source triage. Identify agency contacts or durable procurement/contact paths worth cold outreach for Gnome automation/software/controls work, then capture concrete contacts/signals locally without treating stale bids as active opportunities.",
   "id": "gnome_ga-d1o",
   "labels": [],
+  "comments": [
+    {
+      "text": "Captured cold-call contact targets from stale/non-priority procurement signals. Verified hot discovery findings: Mesa Water District record 99d98b40-0ca3-4f43-aef4-07e1623457fb / finding 3d5dfe35-e214-416a-99fb-dbb2b8cad964, contact Andrew D. Wiesner plus Calvin Hsu and Denise Khalifa; South Coast Water District record 8bf16eb1-9a80-484b-a9e0-f1935dd41c2e / finding 1ed9f7c7-39bc-4d8f-a2e9-cb5956eeacb1, purchasing@scwd.org; City of Orange record 680aa67f-8883-4c34-8e7f-b58239944202 / finding 7d310058-70f1-4e62-adb2-92681e99d448, Sonny Tran; OCWD record 78b41a90-9997-49dd-bf83-9b9e38c7cca7 / finding 4db85660-2a45-4f35-9707-0fa59ccc889e, Melody Yap plus Ryan Bouley; Moulton Niguel Water District record d4c3d04f-f383-40e5-988c-4d27d4231731 / finding 1993c46a-c68e-464e-87ec-a6202e642138, purchasing@mnwd.com. Existing CSC record remains record d866120f-4d79-4577-885f-fc7f414ffc22 / finding 83d49bd8-cd34-43c4-a49a-278503cfe58f, Erica Guzman. Sources were official agency pages or public bid/board records; stale bids were marked as contact evidence, not active opportunities.",
+      "timestamp": "2026-07-11T17:34:10Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Capture cold-call contacts from stale procurement signals",
   "type": "task",
-  "updated_at": "2026-07-11T17:29:35Z"
+  "updated_at": "2026-07-11T17:34:10Z"
 }
