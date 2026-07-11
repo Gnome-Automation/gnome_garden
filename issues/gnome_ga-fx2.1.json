@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:36:15Z",
+  "description": "Create a reproducible read-only audit of source counts, health states, scan outcomes, findings, promotions, rejection reasons, Exa spend, and stage failures. Define canonical failure categories for API, HTTP, selectors, credentials, browser runtime, extraction, scoring, dedupe, and promotion. Acceptance: baseline metrics and queries are documented and can be rerun without raw Repo access.",
+  "id": "gnome_ga-fx2.1",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 1,
+  "status": "open",
+  "title": "Baseline acquisition yield and failure taxonomy",
+  "type": "task",
+  "updated_at": "2026-07-11T18:36:15Z"
+}
