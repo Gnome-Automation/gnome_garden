@@ -7,6 +7,7 @@
     "gnome_ga-fx2.21",
     "gnome_ga-fx2.6"
   ],
+  "closed_at": "2026-07-11T19:55:20Z",
   "created": "2026-07-11T18:36:15Z",
   "description": "Create a reproducible read-only audit that explicitly separates two maturity levels: procurement already performs live API/browser-backed source scans, while scheduled commercial discovery currently replays static seed_candidates and performs zero live Exa search. Measure source counts, health, scan outcomes, findings, promotions, rejection reasons, Exa operator-preview spend, scheduled commercial run yield, and stage failures. Define canonical failure categories for API, HTTP, selectors, credentials, browser runtime, extraction, scoring, dedupe, and promotion. Acceptance: rerunnable Ash-interface metrics prove the procurement baseline and demonstrate the scheduled commercial no-live-search gap without raw Repo access.",
   "id": "gnome_ga-fx2.1",
@@ -19,7 +20,7 @@
     }
   ],
   "priority": 0,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Baseline acquisition yield and failure taxonomy",
   "type": "task",
   "updated_at": "2026-07-11T19:55:20Z"
