@@ -52,6 +52,7 @@ defmodule GnomeGarden.Acquisition do
     end
 
     resource GnomeGarden.Acquisition.Program do
+      define :build_baseline, action: :baseline
       define :list_programs, action: :read
       define :list_console_programs, action: :console
       define :get_program, action: :read, get_by: [:id]
@@ -122,6 +123,7 @@ defmodule GnomeGarden.Acquisition do
     resource GnomeGarden.Acquisition.LeadPreviewRun do
       define :create_lead_preview_run, action: :create
       define :get_lead_preview_run, action: :read, get_by: [:id]
+      define :list_lead_preview_runs, action: :read
       define :list_recent_lead_preview_runs, action: :recent
     end
 
