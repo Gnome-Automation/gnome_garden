@@ -3,7 +3,7 @@
   "blocked_by": [],
   "blocks": [],
   "created": "2026-07-11T18:36:15Z",
-  "description": "Replace seed-only commercial discovery with an Exa-first, evidence-driven acquisition system while keeping API-first procurement, Jido Browser as the bounded browser engine, provider-specific Playwright where needed, and a later governed Pyex workflow-harvesting lane. Preserve Ash as the business boundary, Oban durability, operator review, and source-level outcome measurement.",
+  "description": "Rebuild acquisition discovery and source execution as a measured production system: Exa-first commercial discovery, API-first procurement, bounded Jido Browser and provider-specific Playwright fallback, durable Ash/Oban run state, governed feedback, and a later Pyex workflow-harvesting lane. Preserve Ash as the business boundary, operator review before promotion, explicit budgets/capabilities, provider compliance, observable failure recovery, offline contract/E2E proof, canary rollout, and evidence-based adoption.",
   "id": "gnome_ga-fx2",
   "labels": [],
   "comments": [
@@ -16,5 +16,5 @@
   "status": "open",
   "title": "Rebuild acquisition discovery and source execution",
   "type": "epic",
-  "updated_at": "2026-07-11T18:36:30Z"
+  "updated_at": "2026-07-11T18:44:16Z"
 }
