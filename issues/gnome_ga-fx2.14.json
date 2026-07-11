@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:36:15Z",
+  "description": "Consume the nearby free procurement portal inventory, classify each portal by provider family and retrieval method, dedupe overlapping coverage, and onboard only sources with a supported adapter and measurable value. Acceptance: each candidate portal has adopt/defer/reject status, expected coverage, adapter owner, and launch prerequisites.",
+  "id": "gnome_ga-fx2.14",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 2,
+  "status": "open",
+  "title": "Turn free portal inventory into a governed source portfolio",
+  "type": "task",
+  "updated_at": "2026-07-11T18:36:15Z"
+}
