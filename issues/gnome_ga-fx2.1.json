@@ -12,9 +12,15 @@
   "id": "gnome_ga-fx2.1",
   "labels": [],
   "parent": "gnome_ga-fx2",
+  "comments": [
+    {
+      "text": "Implemented and merged in PR #43. Evidence: warning-free MIX_ENV=test compile, formatter check, 32 focused acquisition/discovery tests passed, CLI baseline JSON smoke passed, and the Ash resource map was updated surgically for the new action/interfaces.",
+      "timestamp": "2026-07-11T19:55:20Z"
+    }
+  ],
   "priority": 0,
   "status": "in_progress",
   "title": "Baseline acquisition yield and failure taxonomy",
   "type": "task",
-  "updated_at": "2026-07-11T19:32:04Z"
+  "updated_at": "2026-07-11T19:55:20Z"
 }
