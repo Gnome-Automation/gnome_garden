@@ -1,7 +1,8 @@
 {
   "assignee": "",
   "blocked_by": [
-    "gnome_ga-fx2.1"
+    "gnome_ga-fx2.1",
+    "gnome_ga-fx2.21"
   ],
   "blocks": [
     "gnome_ga-fx2.15"
@@ -15,5 +16,5 @@
   "status": "open",
   "title": "Add SAM query budgeting and rate-limit scheduling",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:16Z"
+  "updated_at": "2026-07-11T18:43:40Z"
 }
