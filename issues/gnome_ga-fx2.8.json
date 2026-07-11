@@ -1,6 +1,7 @@
 {
   "assignee": "",
   "blocked_by": [
+    "gnome_ga-fx2.21",
     "gnome_ga-fx2.7"
   ],
   "blocks": [
@@ -15,5 +16,5 @@
   "status": "open",
   "title": "Add budgeted candidate verification and enrichment",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T18:43:40Z"
 }
