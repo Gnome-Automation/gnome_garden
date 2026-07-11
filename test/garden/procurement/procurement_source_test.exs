@@ -106,6 +106,32 @@ defmodule GnomeGarden.Procurement.ProcurementSourceTest do
     assert fetched.id == cypress.id
   end
 
+  test "supports PublicPurchase agency sub-sources as persisted portal records" do
+    {:ok, parent} =
+      Procurement.create_procurement_source(%{
+        name: "PublicPurchase Agency Portals",
+        url: "https://www.publicpurchase.example",
+        source_type: :directory,
+        enabled: false,
+        status: :approved
+      })
+
+    assert {:ok, source} =
+             Procurement.create_procurement_source(%{
+               name: "City of Del Mar PublicPurchase",
+               url: "https://www.publicpurchase.example/gems/delmar",
+               source_type: :publicpurchase,
+               portal_id: "delmar,ca",
+               parent_source_id: parent.id,
+               requires_login: true,
+               status: :approved
+             })
+
+    assert source.source_type == :publicpurchase
+    assert source.portal_id == "delmar,ca"
+    assert source.parent_source_id == parent.id
+  end
+
   test "auto configure failure marks source config failed and records diagnostics" do
     original_browser_path = Application.get_env(:gnome_garden, :browser_path)
     browser_path = fake_browser_path("Navigation failed: net::ERR_NAME_NOT_RESOLVED")

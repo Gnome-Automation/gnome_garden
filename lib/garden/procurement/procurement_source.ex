@@ -448,6 +448,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         one_of: [
           :planetbids,
           :opengov,
+          :publicpurchase,
           :bidnet,
           :sam_gov,
           :cal_eprocure,
@@ -609,7 +610,17 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
   def scanner_strategy(source_type) when is_atom(source_type) do
     case source_type do
       t
-      when t in [:planetbids, :opengov, :bidnet, :cal_eprocure, :utility, :school, :port, :custom] ->
+      when t in [
+             :planetbids,
+             :opengov,
+             :publicpurchase,
+             :bidnet,
+             :cal_eprocure,
+             :utility,
+             :school,
+             :port,
+             :custom
+           ] ->
         :deterministic
 
       :company_site ->

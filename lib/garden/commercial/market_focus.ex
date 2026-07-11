@@ -762,7 +762,7 @@ defmodule GnomeGarden.Commercial.MarketFocus do
       do: :direct
 
   def source_confidence(source_type)
-      when source_type in [:planetbids, :opengov, :bidnet, :cal_eprocure],
+      when source_type in [:planetbids, :opengov, :publicpurchase, :bidnet, :cal_eprocure],
       do: :aggregated
 
   def source_confidence(_source_type), do: :unknown
