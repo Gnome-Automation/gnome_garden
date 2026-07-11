@@ -8,8 +8,7 @@
     "gnome_ga-fx2.9"
   ],
   "blocks": [
-    "gnome_ga-fx2.16",
-    "gnome_ga-fx2.25"
+    "gnome_ga-fx2.16"
   ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Use source performance and failure taxonomy to pause persistently broken or noisy sources, lower cadence for low-yield sources, route recoverable failures to credential/configuration queues, and prioritize healthy high-yield channels. All transitions must be Ash actions with operator-visible rationale. Acceptance: source health changes execution policy without silent deletion or hidden metadata rules.",
@@ -20,5 +19,5 @@
   "status": "open",
   "title": "Add source portfolio routing and automatic health actions",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:40Z"
+  "updated_at": "2026-07-11T19:25:11Z"
 }
