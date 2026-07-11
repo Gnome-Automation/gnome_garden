@@ -3,7 +3,9 @@
   "blocked_by": [
     "gnome_ga-fx2.6"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.8"
+  ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Connect due DiscoveryProgram execution to an idempotent Oban worker. Persist run status, query provenance, cost, partial failures, candidate counts, and source/program linkage. Recover abandoned work and avoid duplicate candidate promotion on retry. Acceptance: scheduled and manual runs share one Ash interface and are visible in the existing run/attention surfaces.",
   "id": "gnome_ga-fx2.7",
