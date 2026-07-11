@@ -1,12 +1,12 @@
 defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
   use GnomeGarden.DataCase, async: true
 
-  alias GnomeGarden.Agents
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Commercial.DiscoveryRunWorker
   alias GnomeGarden.Search.Exa
 
-  test "launch_discovery_program searches Exa and persists preview telemetry only" do
+  test "launch_discovery_program enqueues one durable worker that persists preview telemetry only" do
     Req.Test.stub(Exa, fn conn ->
       Req.Test.json(conn, %{
         "costDollars" => %{"total" => 0.012},
@@ -30,20 +30,26 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         watch_channels: ["company_site"]
       })
 
-    assert {:ok, result} = Commercial.launch_discovery_program(discovery_program)
-    assert result.mode == :live_exa_preview
-    assert result.candidate_count == 1
-    assert result.queries_run == 5
-    assert result.total_cost == 0.06
-    assert is_binary(result.run_id)
+    assert {:ok, %{run: queued, job: job}} =
+             Commercial.launch_discovery_program(discovery_program)
+
+    assert queued.status == :queued
+    assert job.worker == inspect(DiscoveryRunWorker)
+    assert :ok = DiscoveryRunWorker.perform(%Oban.Job{args: %{"run_id" => queued.id}, attempt: 1})
+
+    assert {:ok, run} = Commercial.get_discovery_run(queued.id)
+    assert run.status == :completed
+    assert run.candidate_count == 1
+    assert run.query_count == 5
+    assert Decimal.equal?(run.actual_cost, Decimal.new("0.06"))
+    assert is_binary(run.lead_preview_run_id)
 
     assert {:ok, [candidate]} =
-             Acquisition.list_lead_preview_candidates_for_run(result.run_id)
+             Acquisition.list_lead_preview_candidates_for_run(run.lead_preview_run_id)
 
-    assert {:ok, run} = Acquisition.get_lead_preview_run(result.run_id)
+    assert {:ok, preview_run} = Acquisition.get_lead_preview_run(run.lead_preview_run_id)
     assert candidate.url == "https://acme-packaging.example"
-    refute inspect(result) =~ "test-exa-key"
-    refute inspect(run) =~ "test-exa-key"
+    refute inspect(preview_run) =~ "test-exa-key"
     refute inspect(candidate) =~ "test-exa-key"
     assert {:ok, []} = Acquisition.list_findings()
     assert {:ok, []} = Commercial.list_discovery_records()
@@ -67,9 +73,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
              )
   end
 
-  test "launch_discovery_program refuses to overlap an active program run" do
-    _ = Agents.TemplateCatalog.sync_templates()
-
+  test "launch_discovery_program reuses the same durable run idempotency key" do
     {:ok, discovery_program} =
       Commercial.create_discovery_program(%{
         name: "Overlap Guard #{System.unique_integer([:positive])}",
@@ -77,37 +81,12 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         target_industries: ["food_bev"]
       })
 
-    {:ok, discovery_program} = Commercial.activate_discovery_program(discovery_program)
-    {:ok, template} = Agents.get_agent_template_by_name("procurement_source_scan")
+    assert {:ok, %{run: first}} =
+             Commercial.launch_discovery_program(discovery_program, idempotency_key: "same-run")
 
-    {:ok, deployment} =
-      Agents.create_agent_deployment(%{
-        name: "Discovery Overlap Guard #{System.unique_integer([:positive])}",
-        agent_id: template.id,
-        enabled: true
-      })
+    assert {:ok, %{run: second}} =
+             Commercial.launch_discovery_program(discovery_program, idempotency_key: "same-run")
 
-    {:ok, run} =
-      Agents.create_agent_run(%{
-        agent_id: template.id,
-        deployment_id: deployment.id,
-        task: "Discovery overlap guard",
-        run_kind: :manual
-      })
-
-    {:ok, running_run} =
-      Agents.start_agent_run(run, %{runtime_instance_id: Ecto.UUID.generate()})
-
-    {:ok, discovery_program} =
-      Commercial.update_discovery_program(discovery_program, %{
-        metadata: %{"last_agent_run_id" => running_run.id}
-      })
-
-    assert {:error, :active_run_exists} =
-             Commercial.launch_discovery_program(discovery_program,
-               launch_fun: fn _deployment_id, _opts ->
-                 flunk("launch_fun should not be called while a run is active")
-               end
-             )
+    assert first.id == second.id
   end
 end

@@ -62,6 +62,8 @@ defmodule GnomeGarden.Commercial.DiscoveryPipeline do
              program,
              actor: actor,
              discovery_program_id: program.id,
+             budget_idempotency_key:
+               Keyword.get_lazy(opts, :budget_idempotency_key, &Ecto.UUID.generate/0),
              persist: true
            ),
          {:ok, _program} <- Commercial.mark_discovery_program_ran(program, actor: actor) do

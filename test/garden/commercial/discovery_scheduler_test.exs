@@ -1,5 +1,6 @@
 defmodule GnomeGarden.Commercial.DiscoverySchedulerTest do
   use GnomeGarden.DataCase, async: true
+  use Oban.Testing, repo: GnomeGarden.Repo
 
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.DiscoveryScheduler
@@ -49,7 +50,7 @@ defmodule GnomeGarden.Commercial.DiscoverySchedulerTest do
     refute_receive {:launched, ^on_cadence_program_id}
   end
 
-  test "default scheduled execution remains disabled before budgeted Oban rollout" do
+  test "default scheduled execution enqueues the durable budget-aware worker" do
     {:ok, program} =
       Commercial.create_discovery_program(%{
         name: "Disabled Schedule #{System.unique_integer([:positive])}",
@@ -63,9 +64,18 @@ defmodule GnomeGarden.Commercial.DiscoverySchedulerTest do
     summary = DiscoveryScheduler.run_due_programs(DateTime.utc_now())
 
     assert summary.due == 1
-    assert summary.launched == 0
-    assert summary.skipped == 1
+    assert summary.launched == 1
+    assert summary.skipped == 0
     assert summary.errors == 0
     assert {:ok, []} = GnomeGarden.Acquisition.list_lead_preview_runs()
+    assert {:ok, [run]} = Commercial.list_discovery_runs()
+    assert run.discovery_program_id == program.id
+    assert run.trigger == :scheduled
+    assert run.status == :queued
+
+    assert_enqueued(
+      worker: GnomeGarden.Commercial.DiscoveryRunWorker,
+      args: %{run_id: run.id}
+    )
   end
 end

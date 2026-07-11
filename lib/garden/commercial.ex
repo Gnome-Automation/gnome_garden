@@ -115,6 +115,19 @@ defmodule GnomeGarden.Commercial do
         args: [:owner_team_member_id]
     end
 
+    resource GnomeGarden.Commercial.DiscoveryRun do
+      define :list_discovery_runs, action: :read
+      define :get_discovery_run, action: :read, get_by: [:id]
+      define :get_discovery_run_by_key, action: :by_idempotency_key, args: [:idempotency_key]
+      define :create_discovery_run, action: :create
+      define :start_discovery_run, action: :start
+      define :retry_discovery_run, action: :retry
+      define :recover_discovery_run, action: :recover
+      define :complete_discovery_run, action: :complete
+      define :partially_complete_discovery_run, action: :partial_failure
+      define :fail_discovery_run, action: :fail
+    end
+
     resource GnomeGarden.Commercial.DiscoveryRecord do
       define :list_discovery_records, action: :read
       define :get_discovery_record, action: :read, get_by: [:id]

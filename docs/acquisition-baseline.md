@@ -21,8 +21,9 @@ The baseline deliberately distinguishes the two implemented execution paths:
 - Procurement routes persisted sources to live API or browser-backed scanners.
 - Scheduled commercial discovery uses the preview-safe Exa candidate path. It
   persists lead-preview runs and candidates without creating findings or
-  downstream commercial records. Production scheduling remains disabled until
-  shared budget controls and durable Oban execution are implemented.
+  downstream commercial records. Scheduled and manual launches create the same
+  durable `Commercial.DiscoveryRun` and enqueue the same budget-aware Oban
+  worker.
 
 `GnomeGarden.Commercial.DiscoveryPipeline.execution_profile/0` is the runtime
 descriptor behind this distinction.
