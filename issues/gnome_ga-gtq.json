@@ -4,6 +4,7 @@
     "gnome_ga-s29"
   ],
   "blocks": [],
+  "closed_at": "2026-07-11T05:17:22Z",
   "created": "2026-07-06T20:04:55Z",
   "description": "Diagnose and improve the SAM.gov-first acquisition lead loop so configured controls and software-development sources produce visible actionable leads. Treat BidNet/BidBanana as resolver-only discovery unless they resolve to public canonical notices.",
   "id": "gnome_ga-gtq",
@@ -19,8 +20,8 @@
     }
   ],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Make SAM-first lead ingestion visible",
   "type": "task",
-  "updated_at": "2026-07-11T05:17:08Z"
+  "updated_at": "2026-07-11T05:17:22Z"
 }
