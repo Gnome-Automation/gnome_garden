@@ -6,9 +6,15 @@
   "description": "Add CaliforniaBids Orange County as a resolver-only agency discovery source and capture the California Science Center LSS Rockwell Support Services RFQ as historical fit evidence, not an active lead because it is past due.",
   "id": "gnome_ga-ew4",
   "labels": [],
+  "comments": [
+    {
+      "text": "Canceled per operator: the California Science Center Rockwell RFQ is old/past due, so we are not adding CaliforniaBids Orange or capturing this job right now.",
+      "timestamp": "2026-07-11T06:08:28Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Add CaliforniaBids Orange discovery source",
   "type": "task",
-  "updated_at": "2026-07-11T06:07:54Z"
+  "updated_at": "2026-07-11T06:08:28Z"
 }
