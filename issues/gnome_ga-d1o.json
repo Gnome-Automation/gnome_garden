@@ -2,6 +2,8 @@
   "assignee": "Codex",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-07-11T17:34:10Z",
+  "close_reason": "Captured and verified cold-call contacts from stale procurement/contact signals",
   "created": "2026-07-11T17:29:31Z",
   "description": "Review stale or non-priority procurement opportunities discovered during Orange County and related source triage. Identify agency contacts or durable procurement/contact paths worth cold outreach for Gnome automation/software/controls work, then capture concrete contacts/signals locally without treating stale bids as active opportunities.",
   "id": "gnome_ga-d1o",
@@ -13,7 +15,7 @@
     }
   ],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Capture cold-call contacts from stale procurement signals",
   "type": "task",
   "updated_at": "2026-07-11T17:34:10Z"
