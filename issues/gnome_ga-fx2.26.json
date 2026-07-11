@@ -11,7 +11,9 @@
   "created": "2026-07-11T18:42:54Z",
   "description": "Add a deterministic E2E test from an active due DiscoveryProgram through Oban execution, Exa fixture responses, candidate persistence, dedupe/ranking, selective enrichment, Acquisition Finding creation, provenance, and operator review readiness. Include manual and scheduled launch through the same Ash interface. Acceptance: the test proves durable statuses/costs and no duplicate candidates or findings after retry.",
   "id": "gnome_ga-fx2.26",
-  "labels": [],
+  "labels": [
+    "e2e"
+  ],
   "parent": "gnome_ga-fx2",
   "priority": 1,
   "status": "open",
