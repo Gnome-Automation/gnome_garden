@@ -5,7 +5,8 @@
     "gnome_ga-fx2.5"
   ],
   "blocks": [
-    "gnome_ga-fx2.33"
+    "gnome_ga-fx2.33",
+    "gnome_ga-fx2.34"
   ],
   "created": "2026-07-11T18:42:55Z",
   "description": "Record provider terms, robots expectations, authentication constraints, storage restrictions, rate limits, retention rules, and allowed automation paths for Exa, SAM.gov, OpenGov, BidNet, and browser-fetched public sites. Bind policy decisions to adapter configuration so unsupported behavior cannot be silently enabled. Acceptance: each production provider has an adopt/defer/reject decision and operational limits before canary traffic.",
@@ -16,5 +17,5 @@
   "status": "open",
   "title": "Complete provider compliance and rate policy review",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:41Z"
+  "updated_at": "2026-07-11T18:43:42Z"
 }
