@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "Codex",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-07-11T06:12:01Z",
@@ -7,8 +7,8 @@
   "id": "gnome_ga-aux",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Add California Science Center as target account",
   "type": "task",
-  "updated_at": "2026-07-11T06:12:01Z"
+  "updated_at": "2026-07-11T06:12:06Z"
 }
