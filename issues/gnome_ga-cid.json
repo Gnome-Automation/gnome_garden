@@ -6,9 +6,15 @@
   "description": "Provide a reachable egress or compliant fetch path for the FI PeopleSoft guest CSCR endpoint, implement and verify deterministic result extraction, then enable Cal eProcure source 7b35ae03-78aa-4b38-9092-a1fb0fd42bf3.",
   "id": "gnome_ga-cid",
   "labels": [],
+  "comments": [
+    {
+      "text": "Access diagnosis corrected 2026-07-11: this is not a blanket VM/IP 403. https://caleprocure.ca.gov/pages/index.aspx returns 200 and sets AWSALB cookies; then /pages/Events-BS3/event-search.aspx returns 200. A direct deep link without session bootstrap returns 403. suppliers.fiscal.ca.gov:165.235.74.141 times out directly, so scanner should use the Cal eProcure InFlight front-end proxy and preserve its session. Source metadata updated accordingly.",
+      "timestamp": "2026-07-11T19:23:53Z"
+    }
+  ],
   "priority": 1,
   "status": "open",
   "title": "Enable automated Cal eProcure scanning from Garden VM",
   "type": "task",
-  "updated_at": "2026-07-11T19:21:19Z"
+  "updated_at": "2026-07-11T19:23:53Z"
 }
