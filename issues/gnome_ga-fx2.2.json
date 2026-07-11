@@ -4,6 +4,7 @@
     "gnome_ga-fx2.1"
   ],
   "blocks": [
+    "gnome_ga-fx2.14",
     "gnome_ga-fx2.6"
   ],
   "created": "2026-07-11T18:36:15Z",
@@ -15,5 +16,5 @@
   "status": "open",
   "title": "Define acquisition channel and program-source contract",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T18:36:16Z"
 }
