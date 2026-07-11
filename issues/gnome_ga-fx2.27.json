@@ -3,7 +3,9 @@
   "blocked_by": [
     "gnome_ga-fx2.25"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.29"
+  ],
   "created": "2026-07-11T18:42:54Z",
   "description": "Add deterministic E2E scenarios for one API-first source and one browser-required source from runnable Acquisition Source through retrieval, normalized extraction, Bid persistence, Finding projection, document/provenance state, and operator queue visibility. Acceptance: SAM plus a provider adapter path pass offline fixtures, and canonical auth, throttling, selector/schema, and zero-result failures land in the correct durable health states.",
   "id": "gnome_ga-fx2.27",
