@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.16"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:36:15Z",
   "description": "Implement a non-writing Pyex workflow that plans bounded Exa queries, dedupes candidates, ranks them against the company profile, and selects enrichment targets. Inject only frozen inputs and narrow read capabilities; enforce hard BEAM process limits. Acceptance: compare determinism, precision, latency, and maintainability against the existing Elixir baseline using the evaluation corpus.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Pilot Pyex for acquisition query planning and ranking",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T18:36:16Z"
 }
