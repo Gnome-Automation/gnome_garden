@@ -12,11 +12,15 @@
     {
       "text": "Environment check: Bitwarden CLI is unlocked for pc when BITWARDENCLI_APPDATA_DIR=/opt/gnome-garden-shared/.config/bitwarden-cli is set, and user pc now has ACL write access to that config dir. The current sam_gov source credential is invalid because item name SAM.gov is not present in the Gnome Automation org vault. Org currently lists bidnetdirect.com and SDCOC APEX eCenterDirect only. Add a SAM.gov API key item or update the credential to the correct item ID/name, then mark/test it verified.",
       "timestamp": "2026-07-06T20:16:03Z"
+    },
+    {
+      "text": "Tried the operator-provided SAM.gov value from chat on 2026-07-11. SAM.gov API returned 401/rejected during SourceCredentialTesting.test_credential/2. Deleted the newly-created invalid local encrypted credential so the rejected value is not retained. Remaining sam_gov credential is the Bitwarden reference to item name SAM.gov, still invalid because that item is not present in the Gnome Automation vault.",
+      "timestamp": "2026-07-11T05:10:40Z"
     }
   ],
   "priority": 2,
   "status": "in_progress",
   "title": "Add verified SAM.gov API credential",
   "type": "task",
-  "updated_at": "2026-07-11T05:08:27Z"
+  "updated_at": "2026-07-11T05:10:40Z"
 }
