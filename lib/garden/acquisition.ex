@@ -133,6 +133,24 @@ defmodule GnomeGarden.Acquisition do
       define :mark_lead_preview_candidate_promoted, action: :mark_promoted
       define :mark_lead_preview_candidate_status, action: :mark_status
     end
+
+    resource GnomeGarden.Acquisition.ProviderBudget do
+      define :list_provider_budgets, action: :read
+
+      define :get_provider_budget_window,
+        action: :by_window,
+        args: [:provider, :operation, :window_key]
+    end
+
+    resource GnomeGarden.Acquisition.ProviderReservation do
+      define :reserve_provider_capacity, action: :reserve, args: [:request]
+      define :settle_provider_capacity, action: :settle, args: [:settlement]
+      define :release_provider_capacity, action: :release, args: [:release]
+
+      define :get_provider_reservation_by_key,
+        action: :by_idempotency_key,
+        args: [:idempotency_key]
+    end
   end
 
   def sync_bid_finding(bid_or_id, opts \\ []), do: Projector.sync_bid(bid_or_id, opts)

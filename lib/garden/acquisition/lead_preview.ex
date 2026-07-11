@@ -23,7 +23,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   require Logger
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Acquisition.{LeadDedup, LeadPromote}
+  alias GnomeGarden.Acquisition.{LeadDedup, LeadPromote, ProviderBudgetPolicy}
   alias GnomeGarden.Commercial
   alias GnomeGarden.Search.Exa
   alias GnomeGarden.Support.WebIdentity
@@ -92,6 +92,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     * `:actor`
   """
   def run(opts \\ []) do
+    opts = Keyword.put_new_lazy(opts, :budget_idempotency_key, &Ecto.UUID.generate/0)
     max_queries = Keyword.get(opts, :max_queries, @default_max_queries)
     max_results = Keyword.get(opts, :max_results_per_query, @default_max_results)
     ceiling = Keyword.get(opts, :spend_ceiling, @default_spend_ceiling)
@@ -108,12 +109,21 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         # Bias toward company homepages (not articles); news is excluded outright.
         category: Keyword.get(opts, :category, "company"),
         exclude_domains:
-          Enum.uniq(@default_vendor_domains ++ @default_news_domains ++ Keyword.get(opts, :exclude_domains, [])),
+          Enum.uniq(
+            @default_vendor_domains ++
+              @default_news_domains ++ Keyword.get(opts, :exclude_domains, [])
+          ),
         start_published_date: Keyword.get(opts, :start_published_date)
       ]
 
     %{cost: cost, candidates: raw, executed: executed, errors: errors} =
-      search_all(queries, search_opts, ceiling)
+      search_all(
+        queries,
+        search_opts,
+        ceiling,
+        Keyword.fetch!(opts, :budget_idempotency_key),
+        actor
+      )
 
     candidates =
       raw
@@ -159,6 +169,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
        suppressed_count: suppressed,
        failed_queries: length(errors),
        errors: error_strings,
+       budget_idempotency_key: Keyword.fetch!(opts, :budget_idempotency_key),
        candidates: ranked
      }}
   end
@@ -169,7 +180,10 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     case Acquisition.list_lead_preview_candidates_for_run(run.id) do
       {:ok, persisted} ->
         by_url = Map.new(persisted, &{&1.url, &1.id})
-        Enum.map(ranked, fn candidate -> Map.put(candidate, :id, Map.get(by_url, candidate[:url])) end)
+
+        Enum.map(ranked, fn candidate ->
+          Map.put(candidate, :id, Map.get(by_url, candidate[:url]))
+        end)
 
       _ ->
         ranked
@@ -192,6 +206,9 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         suppressed_count: summary.suppressed,
         total_cost: cost_decimal(summary.cost),
         errors: summary.errors,
+        metadata: %{
+          "provider_budget_idempotency_key" => Keyword.fetch!(opts, :budget_idempotency_key)
+        },
         discovery_program_id: Keyword.get(opts, :discovery_program_id),
         created_by_id: actor_id(Keyword.get(opts, :actor)),
         candidates: Enum.map(ranked, &candidate_attrs/1)
@@ -227,7 +244,9 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   end
 
   defp related_metadata(%{related: related}) when is_list(related) do
-    Enum.map(related, fn r -> %{"kind" => to_string(r[:kind]), "id" => r[:id], "label" => r[:label]} end)
+    Enum.map(related, fn r ->
+      %{"kind" => to_string(r[:kind]), "id" => r[:id], "label" => r[:label]}
+    end)
   end
 
   defp related_metadata(_dedupe), do: []
@@ -293,28 +312,83 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
 
   # --- search with caps + spend ceiling ---
 
-  defp search_all(queries, search_opts, ceiling) do
-    Enum.reduce_while(queries, %{cost: 0.0, candidates: [], executed: 0, errors: []}, fn query, acc ->
-      if acc.cost >= ceiling do
-        {:halt, acc}
-      else
-        case Exa.search(query.text, search_opts) do
-          {:ok, %{cost: cost, results: results}} ->
-            acc = %{
-              acc
-              | cost: acc.cost + (cost || 0.0),
-                candidates: acc.candidates ++ tag(results, query),
-                executed: acc.executed + 1
-            }
+  defp search_all(queries, search_opts, ceiling, budget_idempotency_key, actor) do
+    queries
+    |> Enum.with_index()
+    |> Enum.reduce_while(
+      %{cost: 0.0, candidates: [], executed: 0, errors: []},
+      fn {query, query_index}, acc ->
+        if acc.cost >= ceiling do
+          {:halt, acc}
+        else
+          reservation_key = "#{budget_idempotency_key}:search:#{query_index}"
 
-            if acc.cost >= ceiling, do: {:halt, acc}, else: {:cont, acc}
+          case budgeted_search(query, search_opts, reservation_key, query_index, actor) do
+            {:ok, %{cost: cost, results: results}} ->
+              acc = %{
+                acc
+                | cost: acc.cost + (cost || 0.0),
+                  candidates: acc.candidates ++ tag(results, query),
+                  executed: acc.executed + 1
+              }
 
-          {:error, reason} ->
-            # Don't let a failed query silently look like "no results" — record it.
-            {:cont, %{acc | executed: acc.executed + 1, errors: [reason | acc.errors]}}
+              if acc.cost >= ceiling, do: {:halt, acc}, else: {:cont, acc}
+
+            {:error, {:provider_budget, reason}} ->
+              {:halt, %{acc | errors: [reason | acc.errors]}}
+
+            {:error, reason} ->
+              {:cont, %{acc | executed: acc.executed + 1, errors: [reason | acc.errors]}}
+          end
         end
       end
-    end)
+    )
+  end
+
+  defp budgeted_search(query, search_opts, reservation_key, query_index, actor) do
+    with {:ok, request} <-
+           ProviderBudgetPolicy.configured_request(
+             "exa",
+             "search",
+             reservation_key,
+             metadata: %{"query_index" => query_index}
+           ),
+         {:ok, %{reservation: %{status: :reserved}}} <-
+           Acquisition.reserve_provider_capacity(request, actor: actor) do
+      case Exa.search(query.text, search_opts) do
+        {:ok, %{cost: cost} = response} ->
+          case Acquisition.settle_provider_capacity(
+                 %{
+                   idempotency_key: reservation_key,
+                   actual_cost: cost || 0,
+                   actual_requests: 1,
+                   status: :settled
+                 },
+                 actor: actor
+               ) do
+            {:ok, _settlement} -> {:ok, response}
+            {:error, reason} -> {:error, {:provider_budget, reason}}
+          end
+
+        {:error, reason} ->
+          _ =
+            Acquisition.release_provider_capacity(
+              %{
+                idempotency_key: reservation_key,
+                failure_reason: inspect(reason)
+              },
+              actor: actor
+            )
+
+          {:error, reason}
+      end
+    else
+      {:ok, %{reservation: reservation}} ->
+        {:error, {:provider_budget, {:provider_reservation_finalized, reservation.status}}}
+
+      {:error, reason} ->
+        {:error, {:provider_budget, reason}}
+    end
   end
 
   defp tag(results, query) do
@@ -332,7 +406,9 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   # Dedupe by registrable domain (falling back to URL) so the same company
   # surfaced via several pages collapses to one candidate.
   defp dedupe_within_run(candidates) do
-    Enum.uniq_by(candidates, fn candidate -> WebIdentity.website_domain(candidate.url) || candidate.url end)
+    Enum.uniq_by(candidates, fn candidate ->
+      WebIdentity.website_domain(candidate.url) || candidate.url
+    end)
   end
 
   # Type is decided by the PAGE/DOMAIN, not the query intent: a company's own
@@ -362,6 +438,9 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   end
 
   defp present([]), do: nil
-  defp present(list) when is_list(list), do: list |> Enum.map(&to_string/1) |> Enum.reject(&(&1 == ""))
+
+  defp present(list) when is_list(list),
+    do: list |> Enum.map(&to_string/1) |> Enum.reject(&(&1 == ""))
+
   defp present(_), do: nil
 end

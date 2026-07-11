@@ -8,7 +8,9 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
 
   describe "build_queries/1" do
     test "builds firmographic queries — no expansion/hiring/automation framing" do
-      queries = LeadPreview.build_queries(industries: ["food processing"], regions: ["orange county"])
+      queries =
+        LeadPreview.build_queries(industries: ["food processing"], regions: ["orange county"])
+
       texts = Enum.map(queries, & &1.text)
 
       assert Enum.any?(texts, &(&1 =~ "food processing"))
@@ -30,14 +32,25 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
       domain = "globex-#{uniq()}.example.com"
 
       {:ok, _org} =
-        GnomeGarden.Operations.create_organization(%{name: "Globex #{uniq()}", website: "https://#{domain}"})
+        GnomeGarden.Operations.create_organization(%{
+          name: "Globex #{uniq()}",
+          website: "https://#{domain}"
+        })
 
       Req.Test.stub(Exa, fn conn ->
         Req.Test.json(conn, %{
           "costDollars" => %{"total" => 0.007},
           "results" => [
-            %{"title" => "Globex expands", "url" => "https://#{domain}/press/expansion", "publishedDate" => "2026-05-01T00:00:00.000Z"},
-            %{"title" => "Brand New Co", "url" => "https://brand-new-#{uniq()}.example.com", "publishedDate" => nil}
+            %{
+              "title" => "Globex expands",
+              "url" => "https://#{domain}/press/expansion",
+              "publishedDate" => "2026-05-01T00:00:00.000Z"
+            },
+            %{
+              "title" => "Brand New Co",
+              "url" => "https://brand-new-#{uniq()}.example.com",
+              "publishedDate" => nil
+            }
           ]
         })
       end)
@@ -73,20 +86,47 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
       Req.Test.stub(Exa, fn conn ->
         Req.Test.json(conn, %{
           "costDollars" => %{"total" => 0.01},
-          "results" => [%{"title" => "Acme Co", "url" => "https://acme-#{uniq()}.example.com", "publishedDate" => nil}]
+          "results" => [
+            %{
+              "title" => "Acme Co",
+              "url" => "https://acme-#{uniq()}.example.com",
+              "publishedDate" => nil
+            }
+          ]
         })
       end)
 
-      assert {:ok, %{run_id: run_id, promotable_count: 1}} =
-               LeadPreview.run(industries: ["manufacturing"], regions: ["california"], max_queries: 1, spend_ceiling: 1.0)
+      assert {:ok,
+              %{
+                run_id: run_id,
+                promotable_count: 1,
+                budget_idempotency_key: budget_idempotency_key
+              }} =
+               LeadPreview.run(
+                 industries: ["manufacturing"],
+                 regions: ["california"],
+                 max_queries: 1,
+                 spend_ceiling: 1.0
+               )
 
       assert is_binary(run_id)
       assert {:ok, run} = GnomeGarden.Acquisition.get_lead_preview_run(run_id)
       assert run.candidate_count == 1
       assert run.promotable_count == 1
       assert Decimal.equal?(run.total_cost, Decimal.new("0.01"))
+      assert run.metadata["provider_budget_idempotency_key"] == budget_idempotency_key
 
-      assert {:ok, [candidate]} = GnomeGarden.Acquisition.list_lead_preview_candidates_for_run(run_id)
+      assert {:ok, reservation} =
+               GnomeGarden.Acquisition.get_provider_reservation_by_key(
+                 "#{budget_idempotency_key}:search:0"
+               )
+
+      assert reservation.status == :settled
+      assert Decimal.equal?(reservation.actual_cost, Decimal.new("0.01"))
+
+      assert {:ok, [candidate]} =
+               GnomeGarden.Acquisition.list_lead_preview_candidates_for_run(run_id)
+
       # Company domain from a signal-shaped query -> :company -> promotable, not enrichment.
       assert candidate.candidate_type == :company
       assert candidate.route == :promote
@@ -128,13 +168,27 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
         Req.Test.json(conn, %{
           "costDollars" => %{"total" => 0.005},
           "results" => [
-            %{"title" => "Acme on its own site", "url" => "https://acme-co-#{uniq()}.example.com", "publishedDate" => nil},
-            %{"title" => "Acme in the news", "url" => "https://www.ocbj.com/article/acme-#{uniq()}", "publishedDate" => nil}
+            %{
+              "title" => "Acme on its own site",
+              "url" => "https://acme-co-#{uniq()}.example.com",
+              "publishedDate" => nil
+            },
+            %{
+              "title" => "Acme in the news",
+              "url" => "https://www.ocbj.com/article/acme-#{uniq()}",
+              "publishedDate" => nil
+            }
           ]
         })
       end)
 
-      {:ok, preview} = LeadPreview.run(industries: ["food processing"], regions: ["oc"], max_queries: 1, spend_ceiling: 1.0)
+      {:ok, preview} =
+        LeadPreview.run(
+          industries: ["food processing"],
+          regions: ["oc"],
+          max_queries: 1,
+          spend_ceiling: 1.0
+        )
 
       assert_received {:exa_body, body}
       assert body["category"] == "company"
@@ -159,6 +213,64 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
 
       # First query already exceeds the ceiling, so no further queries are issued.
       assert preview.queries_run == 1
+    end
+
+    test "shared provider ceiling stops Exa before another request is issued" do
+      assert {:ok, _reservation} =
+               GnomeGarden.Acquisition.reserve_provider_capacity(%{
+                 provider: "exa",
+                 operation: "search",
+                 idempotency_key: "consume-shared-exa-budget",
+                 estimated_cost: "5.00",
+                 estimated_requests: 1,
+                 spend_limit: "5.00",
+                 request_limit: 500,
+                 period: :daily
+               })
+
+      Req.Test.stub(Exa, fn _conn ->
+        flunk("Exa request must not run after shared budget exhaustion")
+      end)
+
+      assert {:ok, preview} =
+               LeadPreview.run(
+                 industries: ["manufacturing"],
+                 regions: ["california"],
+                 max_queries: 1,
+                 spend_ceiling: 1.0
+               )
+
+      assert preview.queries_run == 0
+      assert preview.failed_queries == 1
+      assert preview.candidate_count == 0
+    end
+
+    test "zero-cost Exa failure releases capacity for an idempotent retry" do
+      Req.Test.stub(Exa, fn conn ->
+        conn
+        |> Plug.Conn.put_status(429)
+        |> Req.Test.json(%{"error" => "rate limited"})
+      end)
+
+      assert {:ok, preview} =
+               LeadPreview.run(
+                 industries: ["manufacturing"],
+                 regions: ["california"],
+                 max_queries: 1,
+                 spend_ceiling: 1.0,
+                 budget_idempotency_key: "exa-zero-cost-retry"
+               )
+
+      assert preview.queries_run == 1
+      assert preview.failed_queries == 1
+
+      assert {:ok, reservation} =
+               GnomeGarden.Acquisition.get_provider_reservation_by_key(
+                 "exa-zero-cost-retry:search:0"
+               )
+
+      assert reservation.status == :released
+      assert Decimal.equal?(reservation.actual_cost, Decimal.new(0))
     end
   end
 end
