@@ -3,7 +3,9 @@
   "blocked_by": [
     "gnome_ga-fx2.5"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.15"
+  ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Replace generic selector scraping for OpenGov with a provider adapter that prefers public/network APIs and uses Playwright only when necessary. Capture provider diagnostics and canonical opportunity fields. Acceptance: current OpenGov sources no longer fail as generic selector_failed and have fixture-backed extraction tests.",
   "id": "gnome_ga-fx2.11",
