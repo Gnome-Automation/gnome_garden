@@ -7,14 +7,16 @@
   "blocks": [
     "gnome_ga-fx2.7"
   ],
+  "closed_at": "2026-07-11T20:09:54Z",
+  "close_reason": "Merged PR #45: scheduled-facing commercial discovery now executes preview-safe live Exa search through Ash, persists only preview telemetry, retains seed replay as an explicit fixture path, and remains production-disabled pending fx2.21/fx2.7.",
   "created": "2026-07-11T18:36:15Z",
   "description": "Implement the missing commercial search capability without changing preview semantics. Add an intent-named Ash interface that takes a DiscoveryProgram, executes the existing bounded Exa query/search/dedupe/ranking behavior, and persists only LeadPreviewRun plus LeadPreviewCandidate telemetry and provenance. It must create no Acquisition Findings, Organizations, DiscoveryRecords, Signals, or Pursuits and must never auto-promote. Keep seed_candidates only as an explicit test fixture until legacy retirement. Production scheduling must remain feature-flagged off by default until fx2.21 shared budget controls and fx2.7 durable execution are complete. Acceptance: a scheduler-facing integration test with an Exa fixture starts from program industries/regions/search terms, persists ranked candidates and real cost, respects the existing per-run ceiling, redacts the runtime-managed EXA_API_KEY from logs/errors/metadata, and proves zero manually seeded candidates are required.",
   "id": "gnome_ga-fx2.6",
   "labels": [],
   "parent": "gnome_ga-fx2",
   "priority": 0,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Connect scheduled commercial discovery to live Exa search",
   "type": "task",
-  "updated_at": "2026-07-11T19:59:04Z"
+  "updated_at": "2026-07-11T20:09:54Z"
 }
