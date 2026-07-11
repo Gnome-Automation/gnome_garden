@@ -48,4 +48,24 @@ defmodule GnomeGarden.Commercial.DiscoverySchedulerTest do
     assert_receive {:launched, ^due_program_id}
     refute_receive {:launched, ^on_cadence_program_id}
   end
+
+  test "default scheduled execution remains disabled before budgeted Oban rollout" do
+    {:ok, program} =
+      Commercial.create_discovery_program(%{
+        name: "Disabled Schedule #{System.unique_integer([:positive])}",
+        target_regions: ["oc"],
+        target_industries: ["packaging"],
+        cadence_hours: 24
+      })
+
+    {:ok, _program} = Commercial.activate_discovery_program(program)
+
+    summary = DiscoveryScheduler.run_due_programs(DateTime.utc_now())
+
+    assert summary.due == 1
+    assert summary.launched == 0
+    assert summary.skipped == 1
+    assert summary.errors == 0
+    assert {:ok, []} = GnomeGarden.Acquisition.list_lead_preview_runs()
+  end
 end

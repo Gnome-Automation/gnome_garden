@@ -47,7 +47,8 @@ defmodule GnomeGarden.Acquisition.Actions.BuildBaseline do
           programs_with_runs: Enum.count(discovery_programs, &present?(&1.last_run_at)),
           programs_with_seed_candidates: Enum.count(discovery_programs, &seed_candidates?/1),
           finding_count: length(discovery_findings),
-          scheduled_live_search_run_count: 0
+          scheduled_live_search_run_count:
+            Enum.count(preview_runs, &present?(&1.discovery_program_id))
         }
       },
       sources: %{
