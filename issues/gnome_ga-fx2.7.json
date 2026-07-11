@@ -18,11 +18,15 @@
     {
       "text": "Starting after fx2.21 merged. Goal: one Ash-owned run lifecycle and one Oban execution path for both manual and scheduled launches, preserving preview-only semantics and budget idempotency.",
       "timestamp": "2026-07-11T20:42:57Z"
+    },
+    {
+      "text": "Implementation evidence: Commercial.DiscoveryRun state machine owns queued/running/completed/partial_failure/failed lifecycle, provenance, budget key/cost, attempts, counts and diagnostics; manual and scheduled launches enqueue one unique DiscoveryRunWorker; retry and abandoned-running recovery tests pass; 120 commercial/acquisition tests plus codegen/format/compile/map checks pass.",
+      "timestamp": "2026-07-11T20:55:14Z"
     }
   ],
   "priority": 1,
   "status": "in_progress",
   "title": "Run Exa discovery programs durably through Oban",
   "type": "task",
-  "updated_at": "2026-07-11T20:42:57Z"
+  "updated_at": "2026-07-11T20:55:14Z"
 }
