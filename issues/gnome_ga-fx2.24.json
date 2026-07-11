@@ -8,8 +8,7 @@
     "gnome_ga-fx2.11",
     "gnome_ga-fx2.12",
     "gnome_ga-fx2.13",
-    "gnome_ga-fx2.25",
-    "gnome_ga-fx2.6"
+    "gnome_ga-fx2.25"
   ],
   "created": "2026-07-11T18:42:54Z",
   "description": "Create deterministic contract fixtures and injectable adapters for Exa Search/Contents, SAM.gov, OpenGov, BidNet, Jido web fetch/session, and provider-specific Playwright. Normalize success, empty, throttled, auth, schema-drift, WAF, timeout, malformed, and partial payload cases. Acceptance: provider parsers and normalized retrieval results run offline in CI with PHX_SERVER disabled, secrets and live network access are not required, fixture provenance/version is recorded, and each provider implementation consumes the shared contract rather than bespoke test-only shapes.",
@@ -20,5 +19,5 @@
   "status": "open",
   "title": "Build provider contract fixture harness",
   "type": "task",
-  "updated_at": "2026-07-11T18:44:16Z"
+  "updated_at": "2026-07-11T19:18:50Z"
 }
