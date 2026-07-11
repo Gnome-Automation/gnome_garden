@@ -12,6 +12,7 @@
     "gnome_ga-fx2.32",
     "gnome_ga-fx2.6"
   ],
+  "closed_at": "2026-07-11T19:58:18Z",
   "created": "2026-07-11T18:36:15Z",
   "description": "Refine the model so Acquisition.Source means where/how data is retrieved, Acquisition.Program means why/what Garden seeks, and a program-source configuration owns provider query templates, budget, cadence, enrichment policy, and enabled state. Use Ash resources/actions and code interfaces; do not leave durable configuration in ad hoc metadata. Acceptance: reviewed resource/action design and migration plan grounded in the implemented resource map.",
   "id": "gnome_ga-fx2.2",
@@ -24,7 +25,7 @@
     }
   ],
   "priority": 1,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Define acquisition channel and program-source contract",
   "type": "task",
   "updated_at": "2026-07-11T19:58:18Z"
