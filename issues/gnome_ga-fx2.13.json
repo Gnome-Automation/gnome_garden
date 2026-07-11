@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:36:15Z",
+  "description": "Treat SAM.gov as an API source with explicit daily request budget, query dedupe, backoff, reset timing, and filter-level yield metrics. Avoid burning quota on duplicate keyword/NAICS combinations. Acceptance: rate limits become scheduled/deferred work rather than repeated generic failures, and operators can see remaining budget and next eligible run.",
+  "id": "gnome_ga-fx2.13",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 1,
+  "status": "open",
+  "title": "Add SAM query budgeting and rate-limit scheduling",
+  "type": "task",
+  "updated_at": "2026-07-11T18:36:15Z"
+}
