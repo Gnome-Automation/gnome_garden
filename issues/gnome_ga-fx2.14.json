@@ -4,7 +4,9 @@
     "gnome_ga-6hf",
     "gnome_ga-fx2.2"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.15"
+  ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Consume the nearby free procurement portal inventory, classify each portal by provider family and retrieval method, dedupe overlapping coverage, and onboard only sources with a supported adapter and measurable value. Acceptance: each candidate portal has adopt/defer/reject status, expected coverage, adapter owner, and launch prerequisites.",
   "id": "gnome_ga-fx2.14",
