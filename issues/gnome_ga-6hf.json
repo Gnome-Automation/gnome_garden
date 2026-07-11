@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:12:36Z",
+  "description": "Build a systematic coverage inventory for nearby Southern California public agencies, starting with PlanetBids agency portal IDs such as City of Cypress 78736. Distinguish directly scannable free canonical portals from paid discovery-only directories such as BidNet/CaliforniaBids, identify missing agency IDs, and capture approved sources so Garden can iterate them reliably.",
+  "id": "gnome_ga-6hf",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Inventory nearby free procurement portals",
+  "type": "task",
+  "updated_at": "2026-07-11T18:12:36Z"
+}
