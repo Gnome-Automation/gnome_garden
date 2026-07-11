@@ -8,7 +8,7 @@
     "gnome_ga-fx2.7"
   ],
   "created": "2026-07-11T18:36:15Z",
-  "description": "Treat this as the missing commercial discovery capability, not cleanup of a mature pipeline. Replace Commercial.DiscoveryPipeline seed replay as the scheduled production behavior by calling the existing bounded Exa search, dedupe, ranking, and candidate-persistence logic for a DiscoveryProgram. Route both scheduler and manual program launch through one intent-named Ash interface; preserve operator review and do not auto-promote. Keep seed_candidates only as an explicit test fixture until legacy retirement. Acceptance: a scheduled-program integration test with an Exa fixture starts from program industries/regions/search terms, performs live-search-shaped execution, persists LeadPreviewRun/candidates plus Acquisition findings and provenance, respects the existing per-run spend ceiling, and proves zero manually seeded candidates are required.",
+  "description": "Implement the missing commercial search capability without changing preview semantics. Add an intent-named Ash interface that takes a DiscoveryProgram, executes the existing bounded Exa query/search/dedupe/ranking behavior, and persists only LeadPreviewRun plus LeadPreviewCandidate telemetry and provenance. It must create no Acquisition Findings, Organizations, DiscoveryRecords, Signals, or Pursuits and must never auto-promote. Keep seed_candidates only as an explicit test fixture until legacy retirement. Production scheduling must remain feature-flagged off by default until fx2.21 shared budget controls and fx2.7 durable execution are complete. Acceptance: a scheduler-facing integration test with an Exa fixture starts from program industries/regions/search terms, persists ranked candidates and real cost, respects the existing per-run ceiling, redacts the runtime-managed EXA_API_KEY from logs/errors/metadata, and proves zero manually seeded candidates are required.",
   "id": "gnome_ga-fx2.6",
   "labels": [],
   "parent": "gnome_ga-fx2",
@@ -16,5 +16,5 @@
   "status": "open",
   "title": "Connect scheduled commercial discovery to live Exa search",
   "type": "task",
-  "updated_at": "2026-07-11T19:18:51Z"
+  "updated_at": "2026-07-11T19:25:11Z"
 }
