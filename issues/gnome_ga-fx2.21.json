@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.1"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:42:54Z",
   "description": "Add a shared Ash-owned provider budget policy for Exa search/contents, SAM requests, and future paid retrieval. Reserve budget before work, record actual cost, prevent concurrent overspend, expose reset/remaining state, and make retries reuse the original reservation or idempotency key. Acceptance: concurrency, ceiling, reset, partial-failure, and zero-cost retry cases are tested without live provider spend.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Enforce provider spend and quota policy",
   "type": "task",
-  "updated_at": "2026-07-11T18:42:54Z"
+  "updated_at": "2026-07-11T18:43:39Z"
 }
