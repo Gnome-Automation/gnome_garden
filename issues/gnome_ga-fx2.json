@@ -6,9 +6,15 @@
   "description": "Replace seed-only commercial discovery with an Exa-first, evidence-driven acquisition system while keeping API-first procurement, Jido Browser as the bounded browser engine, provider-specific Playwright where needed, and a later governed Pyex workflow-harvesting lane. Preserve Ash as the business boundary, Oban durability, operator review, and source-level outcome measurement.",
   "id": "gnome_ga-fx2",
   "labels": [],
+  "comments": [
+    {
+      "text": "Dependency map:\n\n```mermaid\ngraph LR\n  B[fx2.1 Baseline] --\u003e M[fx2.2 Source contract]\n  N[fx2.3 Nix browser] --\u003e J[fx2.4 Jido API] --\u003e R[fx2.5 Retrieval policy]\n  B --\u003e E[fx2.6 Exa generation]\n  M --\u003e E --\u003e O[fx2.7 Oban durability] --\u003e X[fx2.8 Enrichment] --\u003e F[fx2.9 Feedback]\n  F --\u003e W[fx2.10 Websets evaluation]\n  R --\u003e G[fx2.11 OpenGov]\n  R --\u003e D[fx2.12 BidNet]\n  B --\u003e S[fx2.13 SAM budgeting]\n  P[6hf Portal inventory] --\u003e C[fx2.14 Source portfolio]\n  M --\u003e C\n  F --\u003e H[fx2.15 Health routing]\n  G --\u003e H\n  D --\u003e H\n  S --\u003e H\n  C --\u003e H\n  F --\u003e V[fx2.16 Eval corpus]\n  H --\u003e V --\u003e Y[fx2.17 Pyex pilot] --\u003e Z[fx2.18 Harvest governance]\n```\n\nExecution guidance: browser foundation and acquisition baseline can run in parallel worktrees. Exa production work waits on the baseline and source contract. Provider adapters converge before automatic portfolio routing. Pyex remains downstream of measured feedback and an offline eval corpus.",
+      "timestamp": "2026-07-11T18:36:30Z"
+    }
+  ],
   "priority": 1,
   "status": "open",
   "title": "Rebuild acquisition discovery and source execution",
   "type": "epic",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T18:36:30Z"
 }
