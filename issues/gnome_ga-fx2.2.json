@@ -17,9 +17,15 @@
   "id": "gnome_ga-fx2.2",
   "labels": [],
   "parent": "gnome_ga-fx2",
+  "comments": [
+    {
+      "text": "Reviewed design merged in PR #44. Defines ProgramSource typed policy, Ash actions/interfaces, provenance, execution invariants, migration/backfill and rollback plan, and downstream bead ownership grounded in the implemented resource map.",
+      "timestamp": "2026-07-11T19:58:18Z"
+    }
+  ],
   "priority": 1,
   "status": "in_progress",
   "title": "Define acquisition channel and program-source contract",
   "type": "task",
-  "updated_at": "2026-07-11T19:55:52Z"
+  "updated_at": "2026-07-11T19:58:18Z"
 }
