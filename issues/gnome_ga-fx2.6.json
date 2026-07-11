@@ -3,7 +3,8 @@
   "blocked_by": [
     "gnome_ga-fx2.1",
     "gnome_ga-fx2.2",
-    "gnome_ga-fx2.20"
+    "gnome_ga-fx2.20",
+    "gnome_ga-fx2.21"
   ],
   "blocks": [
     "gnome_ga-fx2.7"
