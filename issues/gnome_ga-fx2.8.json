@@ -9,13 +9,13 @@
     "gnome_ga-fx2.9"
   ],
   "created": "2026-07-11T18:36:15Z",
-  "description": "Verify and enrich only the highest-value Exa candidates. Prefer Exa Contents/Websets structured enrichment, use Jido web_fetch for ordinary pages/documents, and invoke browser sessions only for JS-required evidence. Acceptance: enrichment policy is budgeted, actor-aware, records citations/evidence, and leaves unresolved candidates explicitly marked rather than guessed.",
+  "description": "Verify and enrich only the highest-value persisted Exa candidates, then own the sole scheduled candidate-to-Finding admission boundary. Prefer Exa Contents or structured enrichment, use Jido web_fetch for ordinary pages/documents, and invoke browser sessions only for JS-required evidence. Admission requires route == :promote, not suppressed, no duplicate context, valid company identity/domain, sufficient cited evidence, configured score/verification thresholds, and available per-run and per-day Finding capacity. Candidates that fail or need more evidence remain preview telemetry with explicit status. The scheduled path may create an Acquisition Finding for qualified operator review but must not create Organizations, DiscoveryRecords, Signals, Pursuits, or auto-promote. Acceptance: tests cover admitted, suppressed, duplicate, insufficient-evidence, cap-exhausted, retry, and unresolved cases with provenance and no downstream commercial writes.",
   "id": "gnome_ga-fx2.8",
   "labels": [],
   "parent": "gnome_ga-fx2",
-  "priority": 2,
+  "priority": 1,
   "status": "open",
   "title": "Add budgeted candidate verification and enrichment",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:40Z"
+  "updated_at": "2026-07-11T19:25:11Z"
 }
