@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.9"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:36:15Z",
   "description": "Create a versioned evaluation corpus from historical accepted, rejected, suppressed, duplicate, and promoted candidates plus representative source failures. Include frozen Exa/provider fixtures and expected routing/ranking outcomes. Acceptance: query planning and ranking changes can be evaluated offline without live API spend or browser access.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Build acquisition workflow evaluation corpus",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T18:36:16Z"
 }
