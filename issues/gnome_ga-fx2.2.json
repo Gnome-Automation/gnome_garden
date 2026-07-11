@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "Codex",
   "blocked_by": [
     "gnome_ga-fx2.1"
   ],
@@ -18,8 +18,8 @@
   "labels": [],
   "parent": "gnome_ga-fx2",
   "priority": 1,
-  "status": "open",
+  "status": "in_progress",
   "title": "Define acquisition channel and program-source contract",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:41Z"
+  "updated_at": "2026-07-11T19:55:52Z"
 }
