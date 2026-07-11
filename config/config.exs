@@ -113,6 +113,7 @@ config :gnome_garden, Oban,
   notifier: Oban.Notifiers.Postgres,
   queues: [
     default: 10,
+    commercial_discovery: 2,
     procurement_configuring: 1,
     procurement_scanning: 2,
     banking: 5
