@@ -16,11 +16,15 @@
     {
       "text": "Tried the operator-provided SAM.gov value from chat on 2026-07-11. SAM.gov API returned 401/rejected during SourceCredentialTesting.test_credential/2. Deleted the newly-created invalid local encrypted credential so the rejected value is not retained. Remaining sam_gov credential is the Bitwarden reference to item name SAM.gov, still invalid because that item is not present in the Gnome Automation vault.",
       "timestamp": "2026-07-11T05:10:40Z"
+    },
+    {
+      "text": "Corrected SAM.gov API key verified successfully on 2026-07-11. Stored as local encrypted sam_gov family credential id 313709e8-57cf-4e42-b0cf-94cb93d2b996; disabled stale Bitwarden reference credential 43c3c531-0b86-41fc-8e7b-9c8c44e14020 so resolver uses the verified local credential.",
+      "timestamp": "2026-07-11T05:13:10Z"
     }
   ],
   "priority": 2,
   "status": "in_progress",
   "title": "Add verified SAM.gov API credential",
   "type": "task",
-  "updated_at": "2026-07-11T05:10:40Z"
+  "updated_at": "2026-07-11T05:13:10Z"
 }
