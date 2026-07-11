@@ -4,7 +4,9 @@
     "gnome_ga-fx2.5",
     "gnome_ga-fx2.7"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.25"
+  ],
   "created": "2026-07-11T18:42:54Z",
   "description": "Instrument provider calls, retrieval stages, Oban runs, candidate routing, review latency, promotion yield, cost, retries, and terminal failures with bounded-cardinality telemetry. Define SLOs and alert thresholds for stale schedules, repeated source failures, queue backlog, budget exhaustion, and zero-yield runs. Acceptance: tests assert emitted events/measurements and an operator can trace one run from program or source through findings without reading raw logs.",
   "id": "gnome_ga-fx2.23",
@@ -14,5 +16,5 @@
   "status": "open",
   "title": "Add acquisition telemetry SLOs and alerts",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:39Z"
+  "updated_at": "2026-07-11T18:43:40Z"
 }
