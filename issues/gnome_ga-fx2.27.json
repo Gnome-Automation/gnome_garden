@@ -1,6 +1,7 @@
 {
   "assignee": "",
   "blocked_by": [
+    "gnome_ga-fx2.11",
     "gnome_ga-fx2.25"
   ],
   "blocks": [
@@ -19,5 +20,5 @@
   "status": "open",
   "title": "Prove procurement retrieval end to end",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:42Z"
+  "updated_at": "2026-07-11T19:25:11Z"
 }
