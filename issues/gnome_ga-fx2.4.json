@@ -4,6 +4,7 @@
     "gnome_ga-fx2.3"
   ],
   "blocks": [
+    "gnome_ga-fx2.22",
     "gnome_ga-fx2.5"
   ],
   "created": "2026-07-11T18:36:15Z",
@@ -15,5 +16,5 @@
   "status": "open",
   "title": "Migrate Garden browser facade to Jido Browser API",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T18:43:39Z"
 }

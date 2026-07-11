@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.4"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:42:54Z",
   "description": "Define the production lifecycle for browser storage state, provider credentials, and runtime payloads. Encrypt persisted session material, bind it to source and credential identity, rotate and expire it through Ash actions, redact logs/telemetry/errors, and ensure browser/Playwright arguments never contain secrets. Acceptance: valid, expired, rotated, and compromised-session paths are tested and no secret material appears in serialized run metadata.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Harden browser session and secret custody",
   "type": "task",
-  "updated_at": "2026-07-11T18:42:54Z"
+  "updated_at": "2026-07-11T18:43:39Z"
 }
