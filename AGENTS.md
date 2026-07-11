@@ -104,6 +104,30 @@ evaluation to update the database directly through Ash domain code interfaces or
 resource actions. Importers are only appropriate when the product needs a
 repeatable ingestion feature for an ongoing external data source.
 
+### Hard Rule: Operational Data Belongs in the Database
+
+Do not hard-code operational or market data in application modules, module
+attributes, configuration files, seed lists, scanner clauses, or UI code when it
+can be represented as persisted Ash resources. This includes procurement agency
+catalogs, source URLs, portal IDs and codes, jurisdictions, monitored agencies,
+search keywords, qualification terms, exclusions, scoring weights, contact
+targets, source priority, scan cadence, and parent/sub-source membership.
+
+- Store each independently scanned portal, agency endpoint, search lane, or
+  provider sub-source as a database record with its external ID/code and parent
+  relationship where applicable.
+- Add or correct this data through idempotent Ash actions and domain code
+  interfaces. Do not require a deploy to expand source coverage or tune lead
+  discovery.
+- Keep hard-coded values only for true application invariants, protocol mechanics,
+  supported enum values, and safe defaults needed before persisted configuration
+  exists.
+- Tests may use fixed fixture values, but production catalogs and targeting data
+  must not be derived from those fixtures.
+- Legacy hard-coded catalogs should not be expanded. When work touches one,
+  migrate the relevant values into persisted resources and retire the duplicated
+  constants when safe.
+
 When cleanup reveals a durable architectural rule or correction, add it to this
 file in the same pass so future agents do not have to rediscover it from chat.
 

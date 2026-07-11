@@ -3,8 +3,8 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
   Scan a PlanetBids portal for bid opportunities.
 
   PlanetBids is used by many SoCal cities and agencies:
-  - City of Irvine (47688)
-  - City of Anaheim (14424)
+  - City of Irvine (15927)
+  - City of Cypress (78736)
   - OC San (14058)
   - And 15+ more
 
@@ -44,7 +44,7 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
     http_get = http_get(params, context)
 
     case fetch_api_bids(portal_id, Map.get(params, :source_url), max_results, http_get) do
-      {:ok, [_ | _] = bids, api_summary} ->
+      {:ok, bids, api_summary} when is_list(bids) ->
         results = Enum.take(bids, max_results)
         Logger.info("[ScanPlanetBids] Found #{length(results)} API bids from #{portal_name}")
 
@@ -131,10 +131,10 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
 
     case http_get.(url, headers: api_headers(portal_id, source_url, visit_id)) do
       {:ok, %{status: 200, body: body}} when is_binary(body) ->
-        {:ok, parse_api_bids(body, portal_id, source_url)}
+        parse_api_bids(body, portal_id, source_url)
 
       {:ok, %{status: 200, body: body}} when is_map(body) ->
-        {:ok, parse_api_bids(body, portal_id, source_url)}
+        parse_api_bids(body, portal_id, source_url)
 
       {:ok, %{status: status}} ->
         {:error, {:bids_status, status}}
@@ -182,25 +182,22 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBids do
 
   defp parse_api_bids(body, portal_id, source_url) when is_binary(body) do
     case Jason.decode(body) do
-      {:ok, %{"data" => rows}} when is_list(rows) ->
-        rows
-        |> Enum.map(&parse_api_bid(&1, portal_id, source_url))
-        |> Enum.reject(&is_nil/1)
-        |> Enum.uniq_by(& &1.external_id)
-
-      _ ->
-        []
+      {:ok, decoded} -> parse_api_bids(decoded, portal_id, source_url)
+      _ -> {:error, :invalid_bids_payload}
     end
   end
 
   defp parse_api_bids(%{"data" => rows}, portal_id, source_url) when is_list(rows) do
-    rows
-    |> Enum.map(&parse_api_bid(&1, portal_id, source_url))
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq_by(& &1.external_id)
+    bids =
+      rows
+      |> Enum.map(&parse_api_bid(&1, portal_id, source_url))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq_by(& &1.external_id)
+
+    {:ok, bids}
   end
 
-  defp parse_api_bids(_body, _portal_id, _source_url), do: []
+  defp parse_api_bids(_body, _portal_id, _source_url), do: {:error, :invalid_bids_payload}
 
   defp parse_api_bid(%{"attributes" => attrs}, portal_id, source_url) when is_map(attrs) do
     bid_id = attrs["bidId"]

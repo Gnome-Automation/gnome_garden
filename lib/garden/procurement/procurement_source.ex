@@ -46,6 +46,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
 
     references do
       reference :organization, on_delete: :nilify
+      reference :parent_source, on_delete: :nilify
     end
   end
 
@@ -131,6 +132,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :added_by,
         :notes,
         :organization_id,
+        :parent_source_id,
         :status
       ]
 
@@ -177,6 +179,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :portal_id,
         :region,
         :organization_id,
+        :parent_source_id,
         :priority,
         :api_available,
         :enabled,
@@ -389,6 +392,20 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       filter expr(organization_id == ^arg(:organization_id))
     end
 
+    read :by_parent do
+      description "List independently scanned sub-sources belonging to a parent source"
+      argument :parent_source_id, :uuid, allow_nil?: false
+      filter expr(parent_source_id == ^arg(:parent_source_id))
+      prepare build(sort: [name: :asc])
+    end
+
+    read :by_parent_and_portal_id do
+      description "Find a sub-source by its provider-specific portal ID or code"
+      argument :parent_source_id, :uuid, allow_nil?: false
+      argument :portal_id, :string, allow_nil?: false
+      get_by [:parent_source_id, :portal_id]
+    end
+
     read :failed do
       filter expr(config_status in [:config_failed, :scan_failed])
     end
@@ -515,6 +532,17 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       description "Organization this source belongs to (for company_site type)"
     end
 
+    belongs_to :parent_source, __MODULE__ do
+      public? true
+      description "Provider, directory, or portal family that discovered and groups this source"
+    end
+
+    has_many :sub_sources, __MODULE__ do
+      destination_attribute :parent_source_id
+      public? true
+      description "Independently configured and scanned child sources keyed by portal ID or code"
+    end
+
     has_many :search_filters, GnomeGarden.Procurement.SourceSearchFilter do
       destination_attribute :procurement_source_id
       public? true
@@ -574,6 +602,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
 
   identities do
     identity :unique_url, [:url]
+    identity :unique_parent_portal_id, [:parent_source_id, :portal_id]
   end
 
   @doc "Returns the scanner strategy for a given source type atom."

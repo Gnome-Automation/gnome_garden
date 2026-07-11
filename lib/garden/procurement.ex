@@ -58,6 +58,14 @@ defmodule GnomeGarden.Procurement do
       define :list_procurement_sources_by_organization,
         action: :by_organization,
         args: [:organization_id]
+
+      define :list_procurement_sub_sources,
+        action: :by_parent,
+        args: [:parent_source_id]
+
+      define :get_procurement_sub_source_by_portal_id,
+        action: :by_parent_and_portal_id,
+        args: [:parent_source_id, :portal_id]
     end
 
     resource GnomeGarden.Procurement.CrawlRun do

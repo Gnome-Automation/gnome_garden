@@ -69,6 +69,32 @@ defmodule GnomeGarden.Agents.Tools.Procurement.ScanPlanetBidsTest do
            ] = bid.documents
   end
 
+  test "treats a valid empty PlanetBids API response as a successful scan" do
+    http_get = fn
+      "https://api-external.prod.planetbids.com/papi/version?new_session=true", _opts ->
+        {:ok, %{status: 200, body: version_json()}}
+
+      url, _opts ->
+        assert String.starts_with?(url, "https://api-external.prod.planetbids.com/papi/bids?")
+        {:ok, %{status: 200, body: ~s({"data": []})}}
+    end
+
+    assert {:ok, result} =
+             ScanPlanetBids.run(
+               %{
+                 portal_id: "12345",
+                 portal_name: "Empty PlanetBids",
+                 source_url: @source_url
+               },
+               %{http_get: http_get}
+             )
+
+    assert result.bids_found == 0
+    assert result.bids == []
+    assert result.extraction["source"] == "planetbids_api"
+    assert result.extraction["row_count"] == 0
+  end
+
   test "parses PlanetBids rows with bid links and document descriptors" do
     http_get = fn
       @source_url, _opts -> {:ok, %{status: 200, body: listing_html()}}

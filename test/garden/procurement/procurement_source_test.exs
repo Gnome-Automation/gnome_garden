@@ -61,6 +61,51 @@ defmodule GnomeGarden.Procurement.ProcurementSourceTest do
     assert Enum.any?(ready_sources, &(&1.id == source.id))
   end
 
+  test "groups independently scanned sub-sources by provider portal ID" do
+    {:ok, parent} =
+      Procurement.create_procurement_source(%{
+        name: "PlanetBids Orange County",
+        url: "https://vendors.planetbids.com/",
+        source_type: :directory,
+        region: :oc,
+        priority: :high,
+        enabled: false,
+        status: :approved
+      })
+
+    {:ok, cypress} =
+      Procurement.create_procurement_source(%{
+        name: "City of Cypress PlanetBids",
+        url: "https://vendors.planetbids.com/portal/78736/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "78736",
+        parent_source_id: parent.id,
+        region: :oc,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, irvine} =
+      Procurement.create_procurement_source(%{
+        name: "City of Irvine PlanetBids",
+        url: "https://vendors.planetbids.com/portal/15927/bo/bo-search",
+        source_type: :planetbids,
+        portal_id: "15927",
+        parent_source_id: parent.id,
+        region: :oc,
+        priority: :high,
+        status: :approved
+      })
+
+    assert {:ok, sub_sources} = Procurement.list_procurement_sub_sources(parent.id)
+    assert Enum.map(sub_sources, & &1.id) == [cypress.id, irvine.id]
+
+    assert {:ok, fetched} =
+             Procurement.get_procurement_sub_source_by_portal_id(parent.id, "78736")
+
+    assert fetched.id == cypress.id
+  end
+
   test "auto configure failure marks source config failed and records diagnostics" do
     original_browser_path = Application.get_env(:gnome_garden, :browser_path)
     browser_path = fake_browser_path("Navigation failed: net::ERR_NAME_NOT_RESOLVED")
