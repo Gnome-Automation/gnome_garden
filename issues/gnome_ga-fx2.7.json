@@ -9,7 +9,7 @@
     "gnome_ga-fx2.8"
   ],
   "created": "2026-07-11T18:36:15Z",
-  "description": "Connect due DiscoveryProgram execution to one idempotent Oban worker invoked through an intent-named Ash interface. Model run lifecycle as durable Ash-owned state with queued/running/completed/partial_failure/failed outcomes, query provenance, cost, candidate counts, program-source linkage, idempotency key, attempt history, and terminal diagnostics; do not hide authoritative run state in ad hoc program metadata. Recover abandoned work and avoid duplicate candidates/findings on retry. Acceptance: scheduled and manual runs share one code interface, worker tests cover enqueue/perform/retry, and run/attention surfaces load state through Ash reads.",
+  "description": "After scheduled commercial discovery genuinely calls Exa, move that same Ash interface behind one idempotent Oban worker. Model run lifecycle as durable Ash-owned state with queued/running/completed/partial_failure/failed outcomes, query provenance, cost, candidate counts, program linkage, idempotency key, attempt history, and terminal diagnostics; do not hide authoritative run state in ad hoc program metadata. Recover abandoned work and avoid duplicate candidates/findings on retry. Acceptance: scheduled and manual launches enqueue the same worker, worker tests cover enqueue/perform/retry, and run/attention surfaces load state through Ash reads.",
   "id": "gnome_ga-fx2.7",
   "labels": [],
   "parent": "gnome_ga-fx2",
@@ -17,5 +17,5 @@
   "status": "open",
   "title": "Run Exa discovery programs durably through Oban",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:43Z"
+  "updated_at": "2026-07-11T19:18:51Z"
 }
