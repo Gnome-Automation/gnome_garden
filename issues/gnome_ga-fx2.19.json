@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:42:54Z",
+  "description": "Replace meaningful Ash.Query construction in acquisition LiveViews, especially source bucket/search filters and finding queue shapes, with intent-named resource read actions or preparations exposed through Acquisition code interfaces. Keep Cinder wired to resource/action contracts and leave only presentation mapping in the web layer. Acceptance: acquisition LiveViews contain no business filtering, sorting, loading, or status-bucket rules; focused action and LiveView tests prove equivalent behavior.",
+  "id": "gnome_ga-fx2.19",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 1,
+  "status": "open",
+  "title": "Move acquisition UI query shapes into Ash reads",
+  "type": "task",
+  "updated_at": "2026-07-11T18:42:54Z"
+}
