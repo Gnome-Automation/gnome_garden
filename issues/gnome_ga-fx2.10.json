@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:36:15Z",
+  "description": "Evaluate Exa Websets criteria verification, enrichments, monitors, and webhooks against the scheduled Search-based implementation. Compare cost, precision, latency, explainability, and operational complexity. Acceptance: documented adopt/defer decision with a fixture-backed integration spike; do not require Websets for the first Exa production path.",
+  "id": "gnome_ga-fx2.10",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 2,
+  "status": "open",
+  "title": "Evaluate Exa Websets monitors for recurring discovery",
+  "type": "task",
+  "updated_at": "2026-07-11T18:36:15Z"
+}
