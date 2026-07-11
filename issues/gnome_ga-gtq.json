@@ -12,11 +12,15 @@
     {
       "text": "Implemented scanner credential resolution fix: QuerySamGov now falls back to SourceCredentials.sam_gov_api_key/0 when no explicit run-context key is passed. Verified focused tests pass. Live SAM scans remain blocked because dev has no SAM.gov API key in env or Bitwarden; existing sam_gov Bitwarden credential points to item name SAM.gov but the Gnome Automation org currently only has bidnetdirect.com and SDCOC APEX eCenterDirect. Also fixed /opt/gnome-garden-shared/.config/bitwarden-cli ACL for user pc so the dev service can create Bitwarden CLI lock files.",
       "timestamp": "2026-07-06T20:14:24Z"
+    },
+    {
+      "text": "2026-07-11: Corrected SAM.gov key verified and stored. Software-development SAM source scanned successfully: 15 extracted, 15 scored, 2 saved warm bids, and both saved bids have acquisition findings. Controls SAM source hit SAM.gov rate limit; patched SamGovScanner to persist current scan_failed diagnostics, and live controls source now records reason 'SAM.gov rate limit exceeded (1000/day)' instead of stale credential failure.",
+      "timestamp": "2026-07-11T05:17:08Z"
     }
   ],
   "priority": 2,
   "status": "in_progress",
   "title": "Make SAM-first lead ingestion visible",
   "type": "task",
-  "updated_at": "2026-07-06T20:14:38Z"
+  "updated_at": "2026-07-11T05:17:08Z"
 }
