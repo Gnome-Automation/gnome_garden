@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:36:15Z",
+  "description": "Repair the BidNet credential lifecycle, separate credential verification from listing extraction, persist encrypted browser storage state safely, and reuse authenticated sessions through the provider adapter. Acceptance: invalid, expired, missing, and valid credentials are distinguished; retries are bounded; no credentials appear in logs, run metadata, or command arguments.",
+  "id": "gnome_ga-fx2.12",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 1,
+  "status": "open",
+  "title": "Stabilize BidNet credentials and session reuse",
+  "type": "task",
+  "updated_at": "2026-07-11T18:36:15Z"
+}
