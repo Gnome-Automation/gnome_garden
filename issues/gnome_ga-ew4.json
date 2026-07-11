@@ -1,5 +1,5 @@
 {
-  "assignee": "",
+  "assignee": "Codex",
   "blocked_by": [],
   "blocks": [],
   "created": "2026-07-11T06:07:54Z",
@@ -7,7 +7,7 @@
   "id": "gnome_ga-ew4",
   "labels": [],
   "priority": 2,
-  "status": "open",
+  "status": "in_progress",
   "title": "Add CaliforniaBids Orange discovery source",
   "type": "task",
   "updated_at": "2026-07-11T06:07:54Z"
