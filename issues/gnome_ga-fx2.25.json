@@ -13,8 +13,7 @@
     "gnome_ga-fx2.24",
     "gnome_ga-fx2.5",
     "gnome_ga-fx2.7",
-    "gnome_ga-fx2.8",
-    "gnome_ga-fx2.9"
+    "gnome_ga-fx2.8"
   ],
   "blocks": [
     "gnome_ga-fx2.16",
@@ -33,5 +32,5 @@
   "status": "open",
   "title": "Run mid-epic Ash architecture quality gate",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:43Z"
+  "updated_at": "2026-07-11T19:25:11Z"
 }
