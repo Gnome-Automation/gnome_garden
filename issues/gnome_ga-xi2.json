@@ -2,6 +2,8 @@
   "assignee": "Codex",
   "blocked_by": [],
   "blocks": [],
+  "closed_at": "2026-07-11T18:45:58Z",
+  "close_reason": "Persisted and verified Orange County and north San Diego provider/source IDs; added PublicPurchase support; retained BidNet only as disabled discovery records.",
   "created": "2026-07-11T18:38:16Z",
   "description": "Use the existing gnome-company/company resource data as a starting point, then systematically verify and persist agency portal IDs/codes for all Orange County cities, north San Diego County, nearby LA County, and relevant utilities/special districts. Store every endpoint as a ProcurementSource child under its provider parent. Keep BidNet disabled/discovery-only and prefer free canonical PlanetBids, OpenGov, Public Purchase, agency pages, and other direct portals.",
   "id": "gnome_ga-xi2",
@@ -13,8 +15,8 @@
     }
   ],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Inventory regional procurement portal IDs",
   "type": "task",
-  "updated_at": "2026-07-11T18:45:46Z"
+  "updated_at": "2026-07-11T18:45:58Z"
 }
