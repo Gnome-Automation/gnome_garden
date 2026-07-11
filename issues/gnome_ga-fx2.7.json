@@ -9,6 +9,8 @@
     "gnome_ga-fx2.25",
     "gnome_ga-fx2.8"
   ],
+  "closed_at": "2026-07-11T20:55:59Z",
+  "close_reason": "Merged PR #47: scheduled and manual Exa discovery now share one idempotent Oban worker backed by durable Ash-owned DiscoveryRun lifecycle, budget key, provenance, attempts, cost/count telemetry, and retry/recovery coverage.",
   "created": "2026-07-11T18:36:15Z",
   "description": "Move the preview-safe Exa program execution behind one idempotent Oban worker after shared provider budgets exist. Model run lifecycle as durable Ash-owned state with queued/running/completed/partial_failure/failed outcomes, query provenance, reserved and actual cost, candidate counts, program linkage, idempotency key, attempt history, and terminal diagnostics; do not hide authoritative run state in program metadata. Scheduled and manual launches must enqueue the same worker, and retries must not duplicate runs or candidates. Acceptance: tests cover DiscoverySchedulerWorker cadence evaluation/enqueue behavior and the new execution worker enqueue/perform/retry/abandoned-run recovery; production scheduling is enabled only through the budget-aware durable path.",
   "id": "gnome_ga-fx2.7",
@@ -25,8 +27,8 @@
     }
   ],
   "priority": 1,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Run Exa discovery programs durably through Oban",
   "type": "task",
-  "updated_at": "2026-07-11T20:55:14Z"
+  "updated_at": "2026-07-11T20:55:59Z"
 }
