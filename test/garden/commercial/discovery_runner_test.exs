@@ -2,9 +2,24 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
   use GnomeGarden.DataCase, async: true
 
   alias GnomeGarden.Agents
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
+  alias GnomeGarden.Search.Exa
 
-  test "launch_discovery_program processes seed candidates through AshLua discovery pipeline" do
+  test "launch_discovery_program searches Exa and persists preview telemetry only" do
+    Req.Test.stub(Exa, fn conn ->
+      Req.Test.json(conn, %{
+        "costDollars" => %{"total" => 0.012},
+        "results" => [
+          %{
+            "title" => "Acme Packaging Automation",
+            "url" => "https://acme-packaging.example",
+            "publishedDate" => nil
+          }
+        ]
+      })
+    end)
+
     {:ok, discovery_program} =
       Commercial.create_discovery_program(%{
         name: "OC Packaging Sweep",
@@ -12,35 +27,26 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         target_regions: ["oc"],
         target_industries: ["packaging"],
         search_terms: ["packaging line automation orange county"],
-        watch_channels: ["job_board", "news_site"],
-        metadata: %{
-          "seed_candidates" => [
-            %{
-              "company_name" => "Acme Packaging Automation",
-              "website" => "https://acme-packaging.example",
-              "location" => "Anaheim, CA",
-              "industry" => "packaging",
-              "signal" => "Hiring controls engineers for packaging line modernization.",
-              "company_description" =>
-                "Packaging manufacturer with PLC and SCADA modernization signals.",
-              "source_url" => "https://acme-packaging.example/careers"
-            }
-          ]
-        }
+        watch_channels: ["company_site"]
       })
 
     assert {:ok, result} = Commercial.launch_discovery_program(discovery_program)
-    assert result.mode == "processed_seed_candidates"
+    assert result.mode == :live_exa_preview
     assert result.candidate_count == 1
-    assert result.saved == 1
+    assert result.queries_run == 5
+    assert result.total_cost == 0.06
+    assert is_binary(result.run_id)
 
-    assert [%{ok: true, discovery_record_id: discovery_record_id, finding_id: finding_id}] =
-             result.results
+    assert {:ok, [candidate]} =
+             Acquisition.list_lead_preview_candidates_for_run(result.run_id)
 
-    assert {:ok, discovery_record} = Commercial.get_discovery_record(discovery_record_id)
-    assert discovery_record.name == "Acme Packaging Automation"
-    assert {:ok, finding} = GnomeGarden.Acquisition.get_finding(finding_id)
-    assert finding.source_discovery_record_id == discovery_record.id
+    assert {:ok, run} = Acquisition.get_lead_preview_run(result.run_id)
+    assert candidate.url == "https://acme-packaging.example"
+    refute inspect(result) =~ "test-exa-key"
+    refute inspect(run) =~ "test-exa-key"
+    refute inspect(candidate) =~ "test-exa-key"
+    assert {:ok, []} = Acquisition.list_findings()
+    assert {:ok, []} = Commercial.list_discovery_records()
   end
 
   test "launch_discovery_program refuses archived programs" do

@@ -71,8 +71,8 @@ defmodule GnomeGarden.Acquisition.BaselineTest do
     assert report.maturity.procurement.sources_with_runs == 1
     assert report.maturity.procurement.last_scan_totals == %{extracted: 4, scored: 2, saved: 0}
 
-    assert report.maturity.commercial_discovery.execution.live_search? == false
-    assert report.maturity.commercial_discovery.execution.mode == :seed_candidates_only
+    assert report.maturity.commercial_discovery.execution.live_search? == true
+    assert report.maturity.commercial_discovery.execution.mode == :live_exa_preview
     assert report.maturity.commercial_discovery.programs_with_seed_candidates == 1
     assert report.maturity.commercial_discovery.scheduled_live_search_run_count == 0
 

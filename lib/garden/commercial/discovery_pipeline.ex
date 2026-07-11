@@ -1,14 +1,14 @@
 defmodule GnomeGarden.Commercial.DiscoveryPipeline do
   @moduledoc """
-  Bounded AshLua orchestration for commercial discovery programs.
+  Bounded live-search orchestration for commercial discovery programs.
 
-  First production slice: process explicit seed candidates stored on a discovery
-  program's metadata under `seed_candidates`. This replaces the old open-ended
-  discovery runtime with a deterministic AshLua path that writes through the
-  existing commercial discovery Ash actions/tooling.
+  Production execution performs preview-safe Exa search and persists candidate
+  telemetry without creating findings or downstream commercial records. The
+  previous AshLua seed path remains available only as an explicit test fixture.
   """
 
   alias GnomeGarden.Agents.Tools.Commercial.SaveDiscoveryFinding
+  alias GnomeGarden.Acquisition.LeadPreview
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.DiscoveryProgram
 
@@ -45,15 +45,33 @@ defmodule GnomeGarden.Commercial.DiscoveryPipeline do
   @spec execution_profile() :: map()
   def execution_profile do
     %{
-      mode: :seed_candidates_only,
-      live_search?: false,
-      candidate_source: :program_metadata,
-      metadata_key: "seed_candidates"
+      mode: :live_exa_preview,
+      live_search?: true,
+      candidate_source: :exa,
+      preview_only?: true
     }
   end
 
   @spec run_program(DiscoveryProgram.t() | Ecto.UUID.t(), keyword()) :: pipeline_result
   def run_program(program_or_id, opts \\ []) do
+    actor = Keyword.get(opts, :actor)
+
+    with {:ok, program} <- fetch_program(program_or_id, actor),
+         {:ok, preview} <-
+           LeadPreview.run_for_program(
+             program,
+             actor: actor,
+             discovery_program_id: program.id,
+             persist: true
+           ),
+         {:ok, _program} <- Commercial.mark_discovery_program_ran(program, actor: actor) do
+      {:ok, Map.merge(preview, %{program: program, mode: :live_exa_preview})}
+    end
+  end
+
+  @doc "Runs the legacy seed-candidate path explicitly for fixture coverage."
+  @spec run_seed_fixture(DiscoveryProgram.t() | Ecto.UUID.t(), keyword()) :: pipeline_result
+  def run_seed_fixture(program_or_id, opts \\ []) do
     actor = Keyword.get(opts, :actor)
 
     with {:ok, program} <- fetch_program(program_or_id, actor),

@@ -19,13 +19,13 @@ provider requests, launch workers, or change persisted state.
 The baseline deliberately distinguishes the two implemented execution paths:
 
 - Procurement routes persisted sources to live API or browser-backed scanners.
-- Scheduled commercial discovery currently consumes `seed_candidates` from
-  program metadata and does not call Exa. Operator-triggered lead previews are
-  reported separately with their query, candidate, and cost totals.
+- Scheduled commercial discovery uses the preview-safe Exa candidate path. It
+  persists lead-preview runs and candidates without creating findings or
+  downstream commercial records. Production scheduling remains disabled until
+  shared budget controls and durable Oban execution are implemented.
 
 `GnomeGarden.Commercial.DiscoveryPipeline.execution_profile/0` is the runtime
-descriptor behind this distinction. The live Exa implementation must update
-that descriptor and the baseline tests when scheduled execution changes.
+descriptor behind this distinction.
 
 ## Failure Categories
 

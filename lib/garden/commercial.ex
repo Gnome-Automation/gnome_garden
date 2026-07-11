@@ -94,6 +94,10 @@ defmodule GnomeGarden.Commercial do
     resource GnomeGarden.Commercial.CustomerVendorRequirementArtifactAttachment
 
     resource GnomeGarden.Commercial.DiscoveryProgram do
+      define :execute_discovery_program_search,
+        action: :execute_search,
+        args: [:program_id]
+
       define :list_discovery_programs, action: :read
       define :list_active_discovery_programs, action: :active
       define :list_due_discovery_programs, action: :due_for_run

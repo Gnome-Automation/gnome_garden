@@ -53,6 +53,11 @@ defmodule GnomeGarden.Commercial.DiscoveryProgram do
   actions do
     defaults [:read, :destroy]
 
+    action :execute_search, :map do
+      argument :program_id, :uuid, allow_nil?: false
+      run GnomeGarden.Commercial.Actions.ExecuteDiscoveryProgramSearch
+    end
+
     create :create do
       primary? true
 

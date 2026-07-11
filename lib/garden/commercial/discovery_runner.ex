@@ -1,20 +1,15 @@
 defmodule GnomeGarden.Commercial.DiscoveryRunner do
   @moduledoc """
-  Bridges commercial discovery programs onto the bounded AshLua discovery pipeline.
+  Bridges commercial discovery programs onto preview-safe live search.
 
-  Executes deterministic program candidates through AshLua and writes results
-  through Ash-backed commercial/acquisition actions.
+  Production scheduling remains disabled until shared provider budgets and
+  durable Oban execution are available.
   """
 
   alias GnomeGarden.Agents
   alias GnomeGarden.Commercial
-  alias GnomeGarden.Commercial.DiscoveryPipeline
 
-  @type launch_result :: %{
-          program: GnomeGarden.Commercial.DiscoveryProgram.t(),
-          deployment: GnomeGarden.Agents.AgentDeployment.t(),
-          run: map()
-        }
+  @type launch_result :: map()
 
   @spec launch_program(Ecto.UUID.t() | GnomeGarden.Commercial.DiscoveryProgram.t(), keyword()) ::
           {:ok, launch_result()} | {:error, term()}
@@ -23,8 +18,9 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
 
     with {:ok, program} <- load_program(program_or_id, actor),
          :ok <- ensure_runnable(program),
+         :ok <- ensure_scheduled_execution_enabled(opts),
          :ok <- ensure_no_active_program_run(program),
-         {:ok, result} <- DiscoveryPipeline.run_program(program, opts) do
+         {:ok, result} <- Commercial.execute_discovery_program_search(program.id, actor: actor) do
       {:ok, result}
     end
   end
@@ -48,6 +44,19 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
     do: {:error, "Archived discovery programs must be reopened before running."}
 
   defp ensure_runnable(_program), do: :ok
+
+  defp ensure_scheduled_execution_enabled(opts) do
+    if Keyword.get(opts, :scheduled?, false) and
+         not Application.get_env(
+           :gnome_garden,
+           :commercial_discovery_scheduling_enabled,
+           false
+         ) do
+      {:error, :scheduled_discovery_disabled}
+    else
+      :ok
+    end
+  end
 
   defp ensure_no_active_program_run(program) do
     case last_agent_run_id(program) do

@@ -21,7 +21,11 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
   @spec run_due_programs(DateTime.t() | NaiveDateTime.t(), keyword()) :: summary()
   def run_due_programs(reference_time \\ DateTime.utc_now(), opts \\ []) do
     _reference_time = normalize_reference_time(reference_time)
-    launch_fun = Keyword.get(opts, :launch_fun, &Commercial.launch_discovery_program/1)
+
+    launch_fun =
+      Keyword.get(opts, :launch_fun, fn program ->
+        Commercial.launch_discovery_program(program, scheduled?: true)
+      end)
 
     case Commercial.list_due_discovery_programs() do
       {:ok, programs} ->
@@ -53,7 +57,7 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
       {:ok, _result} ->
         %{summary | launched: summary.launched + 1}
 
-      {:error, :active_run_exists} ->
+      {:error, reason} when reason in [:active_run_exists, :scheduled_discovery_disabled] ->
         %{summary | skipped: summary.skipped + 1}
 
       {:error, error} ->
