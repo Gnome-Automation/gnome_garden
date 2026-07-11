@@ -6,9 +6,15 @@
   "description": "Capture California Science Center as a durable discovery target using old RFQ evidence for Rockwell FactoryTalk/LSS support and procurement contact info. Do not create an active bid because the referenced opportunities are past due as of 2026-07-11.",
   "id": "gnome_ga-aux",
   "labels": [],
+  "comments": [
+    {
+      "text": "Captured California Science Center as target-account evidence in local data: organization, procurement contact, discovery record, evidence, and synced acquisition finding. User then asked to run the CaliforniaBids Orange County directory fully as a broader source-discovery pass.",
+      "timestamp": "2026-07-11T06:14:19Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Add California Science Center as target account",
   "type": "task",
-  "updated_at": "2026-07-11T06:12:06Z"
+  "updated_at": "2026-07-11T06:14:19Z"
 }
