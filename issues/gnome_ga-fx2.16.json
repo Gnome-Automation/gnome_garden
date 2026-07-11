@@ -2,6 +2,7 @@
   "assignee": "",
   "blocked_by": [
     "gnome_ga-fx2.15",
+    "gnome_ga-fx2.25",
     "gnome_ga-fx2.9"
   ],
   "blocks": [
@@ -16,5 +17,5 @@
   "status": "open",
   "title": "Build acquisition workflow evaluation corpus",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:16Z"
+  "updated_at": "2026-07-11T18:43:40Z"
 }
