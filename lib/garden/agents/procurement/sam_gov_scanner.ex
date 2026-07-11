@@ -23,12 +23,21 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
   def scan(%ProcurementSource{} = source, context \\ %{}) do
     profile_context = profile_context_for_source(source)
 
-    with {:ok, query_result} <- query_sam_gov(source, profile_context, context),
-         bids = Map.get(query_result, :bids, []),
-         filtered = TargetingFilter.filter_bids(bids, profile_context),
-         {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
-         {:ok, saved} <- save_qualifying_bids(scored, source, context) do
-      complete_scan(source, bids, filtered.excluded, scored, saved, query_result)
+    result =
+      with {:ok, query_result} <- query_sam_gov(source, profile_context, context),
+           bids = Map.get(query_result, :bids, []),
+           filtered = TargetingFilter.filter_bids(bids, profile_context),
+           {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
+           {:ok, saved} <- save_qualifying_bids(scored, source, context) do
+        complete_scan(source, bids, filtered.excluded, scored, saved, query_result)
+      end
+
+    case result do
+      {:ok, _payload} = ok ->
+        ok
+
+      {:error, reason} ->
+        fail_scan(source, reason)
     end
   end
 
@@ -285,6 +294,38 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
      }}
   end
 
+  defp fail_scan(source, reason) do
+    source = current_source(source)
+
+    _ =
+      Procurement.scan_fail_procurement_source(
+        source,
+        %{
+          metadata:
+            source.metadata
+            |> Map.new()
+            |> Map.put("last_scan_status", "failed")
+            |> Map.put("last_scan_summary", scan_failure_summary(reason))
+        },
+        authorize?: false
+      )
+
+    {:error, reason}
+  end
+
+  defp scan_failure_summary(reason) do
+    %{
+      "extracted" => 0,
+      "excluded" => 0,
+      "scored" => 0,
+      "saved" => 0,
+      "enriched" => 0,
+      "diagnosis" => "scan_failed",
+      "reason" => format_reason(reason),
+      "recorded_at" => DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+    }
+  end
+
   defp scan_metadata(source, bids, excluded, scored, saved, query_result, diagnostics) do
     summary = %{
       "extracted" => length(bids),
@@ -498,6 +539,9 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
   defp blank?(""), do: true
   defp blank?([]), do: true
   defp blank?(_value), do: false
+
+  defp format_reason(reason) when is_binary(reason), do: reason
+  defp format_reason(reason), do: inspect(reason)
 
   defp agent_run_id_from_context(context) when is_map(context) do
     [

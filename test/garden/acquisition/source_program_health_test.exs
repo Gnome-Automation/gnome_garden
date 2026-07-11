@@ -546,6 +546,47 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     assert [%{"value" => "541330", "returned" => 1}] = search_filter_counts
   end
 
+  test "sam.gov source scans record failure diagnostics on API errors" do
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "SAM Rate Limited Source",
+        url: "https://sam.gov/opportunities/rate-limited",
+        source_type: :sam_gov,
+        portal_id: "sam-rate-limited",
+        region: :national,
+        priority: :medium,
+        status: :approved
+      })
+
+    {:ok, procurement_source} =
+      Procurement.configure_procurement_source(procurement_source, %{
+        scrape_config: %{
+          keywords: "SCADA PLC controls",
+          naics_codes: ["541330"],
+          limit: 10
+        }
+      })
+
+    http_get = fn _url, _opts ->
+      {:ok, %{status: 429, body: %{"message" => "rate limited"}}}
+    end
+
+    assert {:error, "SAM.gov rate limit exceeded (1000/day)"} =
+             Procurement.run_source_scan(
+               %{source_id: procurement_source.id},
+               scanner_context: %{sam_gov_api_key: "test-sam-key", http_get: http_get},
+               authorize?: false
+             )
+
+    assert {:ok, source} = Procurement.get_procurement_source(procurement_source.id)
+    assert source.config_status == :scan_failed
+    assert source.metadata["last_scan_status"] == "failed"
+    assert source.metadata["last_scan_summary"]["diagnosis"] == "scan_failed"
+
+    assert source.metadata["last_scan_summary"]["reason"] ==
+             "SAM.gov rate limit exceeded (1000/day)"
+  end
+
   test "sam.gov sources show needs login health when API key is missing" do
     previous_sam_key = System.get_env("SAM_GOV_API_KEY")
     System.delete_env("SAM_GOV_API_KEY")
