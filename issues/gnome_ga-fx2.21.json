@@ -10,6 +10,8 @@
     "gnome_ga-fx2.7",
     "gnome_ga-fx2.8"
   ],
+  "closed_at": "2026-07-11T20:42:07Z",
+  "close_reason": "Merged PR #46: Ash-owned provider budget windows and idempotent reservations now enforce configured Exa/SAM cost and request authority; Exa previews reserve, settle actual cost, and release zero-cost failures with concurrency/retry coverage.",
   "created": "2026-07-11T18:42:54Z",
   "description": "Add a shared Ash-owned provider budget policy for Exa search/contents, SAM requests, and future paid retrieval. Reserve budget before work, record actual cost, prevent concurrent overspend, expose reset/remaining state, and make retries reuse the original reservation or idempotency key. Acceptance: concurrency, ceiling, reset, partial-failure, and zero-cost retry cases are tested without live provider spend.",
   "id": "gnome_ga-fx2.21",
@@ -28,8 +30,8 @@
     }
   ],
   "priority": 1,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Enforce provider spend and quota policy",
   "type": "task",
-  "updated_at": "2026-07-11T20:41:40Z"
+  "updated_at": "2026-07-11T20:42:07Z"
 }
