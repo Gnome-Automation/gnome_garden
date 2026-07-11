@@ -1,7 +1,9 @@
 {
   "assignee": "",
   "blocked_by": [],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.4"
+  ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Package the Jido Browser pinned agent-browser binary as a Nix derivation using a Nix glibc interpreter/RPATH rather than the generic /lib64 loader. Wire a stable binary path for development and releases. Acceptance: agent-browser help and a real navigation smoke test pass inside the Nix shell; no manual patching of _build and no global nix-ld requirement.",
   "id": "gnome_ga-fx2.3",
