@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T19:16:30Z",
+  "description": "Add Cal eProcure to the live procurement source catalog using database-backed search configuration, verify its public search path, and test the scanner behavior.",
+  "id": "gnome_ga-14c",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Configure Cal eProcure statewide discovery",
+  "type": "task",
+  "updated_at": "2026-07-11T19:16:30Z"
+}
