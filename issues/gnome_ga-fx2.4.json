@@ -3,7 +3,9 @@
   "blocked_by": [
     "gnome_ga-fx2.3"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.5"
+  ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Replace direct System.cmd orchestration in GnomeGarden.Browser with the public Jido.Browser session and web_fetch APIs while preserving the procurement-shaped facade. Add explicit session lifecycle, bounded outputs, structured errors, and injectable adapters for tests. Acceptance: existing browser callers work without raw agent-browser CLI coupling and tests cover HTTP fetch and browser sessions.",
   "id": "gnome_ga-fx2.4",
