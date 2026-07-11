@@ -4,6 +4,7 @@
     "gnome_ga-fx2.6"
   ],
   "blocks": [
+    "gnome_ga-fx2.23",
     "gnome_ga-fx2.8"
   ],
   "created": "2026-07-11T18:36:15Z",
@@ -15,5 +16,5 @@
   "status": "open",
   "title": "Run Exa discovery programs durably through Oban",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T18:43:39Z"
 }
