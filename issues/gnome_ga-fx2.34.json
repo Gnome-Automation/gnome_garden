@@ -17,12 +17,13 @@
   "description": "Shadow the new Exa and procurement execution paths against current behavior with production-like budgets and a small allowlisted source/program cohort. Compare yield, precision, cost, latency, failures, and operator workload; prevent autonomous promotion or external side effects during shadowing. Acceptance: predefined thresholds pass for multiple runs and rollback/disable controls are exercised before widening traffic.",
   "id": "gnome_ga-fx2.34",
   "labels": [
-    "e2e"
+    "e2e",
+    "operations"
   ],
   "parent": "gnome_ga-fx2",
   "priority": 1,
   "status": "open",
   "title": "Run acquisition canary and shadow rollout",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:42Z"
+  "updated_at": "2026-07-11T18:43:43Z"
 }
