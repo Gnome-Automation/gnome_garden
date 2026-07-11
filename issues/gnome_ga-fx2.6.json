@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.1"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:36:15Z",
   "description": "Replace Commercial.DiscoveryPipeline's seed_candidates-only production path with an intent-named Ash action that executes Exa discovery for a DiscoveryProgram using its industries, regions, terms, criteria, and budget. Reuse LeadPreview behavior where appropriate without bypassing domain interfaces. Acceptance: a program run produces persisted candidate telemetry from Exa and no longer requires manually seeded candidates.",
