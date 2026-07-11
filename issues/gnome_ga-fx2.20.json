@@ -11,11 +11,13 @@
   "created": "2026-07-11T18:42:54Z",
   "description": "Implement the approved program-source contract with Ash resource changes, generated Ash migrations, and an idempotent backfill through domain code interfaces. Move durable query templates, cadence, budgets, enrichment policy, and enabled state out of ad hoc metadata while preserving historical provenance. Acceptance: migration and rollback are reviewed, backfill is rerunnable, old rows remain readable during transition, and the generated resource map is refreshed.",
   "id": "gnome_ga-fx2.20",
-  "labels": [],
+  "labels": [
+    "ash-quality"
+  ],
   "parent": "gnome_ga-fx2",
   "priority": 1,
   "status": "open",
   "title": "Apply acquisition configuration migration and backfill",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:40Z"
+  "updated_at": "2026-07-11T18:43:43Z"
 }
