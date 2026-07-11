@@ -9,7 +9,9 @@
   "created": "2026-07-11T18:42:55Z",
   "description": "Run the approved source/program cohort through the supported production path long enough to evaluate adoption criteria. Measure reviewed yield, precision, promotions, cost per reviewed candidate, cost per promotion, queue latency, retry rate, provider failures, and operator effort. Acceptance: stakeholders record adopt, iterate, or rollback with evidence; any unmet threshold becomes a new blocking bead rather than an undocumented exception.",
   "id": "gnome_ga-fx2.36",
-  "labels": [],
+  "labels": [
+    "e2e"
+  ],
   "parent": "gnome_ga-fx2",
   "priority": 1,
   "status": "open",
