@@ -5,7 +5,7 @@
     "gnome_ga-fx2.4"
   ],
   "created": "2026-07-11T18:36:15Z",
-  "description": "Package the Jido Browser pinned agent-browser binary as a Nix derivation using a Nix glibc interpreter/RPATH rather than the generic /lib64 loader. Wire a stable binary path for development and releases. Acceptance: agent-browser help and a real navigation smoke test pass inside the Nix shell; no manual patching of _build and no global nix-ld requirement.",
+  "description": "Package the Jido Browser pinned agent-browser binary as a Nix derivation using a Nix glibc interpreter/RPATH rather than the generic /lib64 loader. Wire a stable binary path for development and releases. Reconcile and preserve the existing uncommitted flake.nix shell PATH cleanup that keeps host Codex available while filtering recursively injected Nix Codex binaries. Acceptance: flake evaluation and shell syntax checks pass, agent-browser help and a real navigation smoke test pass inside the Nix shell, Codex resolves correctly, and no manual patching of _build or global nix-ld is required.",
   "id": "gnome_ga-fx2.3",
   "labels": [],
   "parent": "gnome_ga-fx2",
@@ -13,5 +13,5 @@
   "status": "open",
   "title": "Package agent-browser reproducibly for Nix",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T19:31:15Z"
 }
