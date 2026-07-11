@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:36:15Z",
+  "description": "Verify and enrich only the highest-value Exa candidates. Prefer Exa Contents/Websets structured enrichment, use Jido web_fetch for ordinary pages/documents, and invoke browser sessions only for JS-required evidence. Acceptance: enrichment policy is budgeted, actor-aware, records citations/evidence, and leaves unresolved candidates explicitly marked rather than guessed.",
+  "id": "gnome_ga-fx2.8",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 2,
+  "status": "open",
+  "title": "Add budgeted candidate verification and enrichment",
+  "type": "task",
+  "updated_at": "2026-07-11T18:36:15Z"
+}
