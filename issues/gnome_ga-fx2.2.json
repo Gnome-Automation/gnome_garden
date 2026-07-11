@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.1"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:36:15Z",
   "description": "Refine the model so Acquisition.Source means where/how data is retrieved, Acquisition.Program means why/what Garden seeks, and a program-source configuration owns provider query templates, budget, cadence, enrichment policy, and enabled state. Use Ash resources/actions and code interfaces; do not leave durable configuration in ad hoc metadata. Acceptance: reviewed resource/action design and migration plan grounded in the implemented resource map.",
