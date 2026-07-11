@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:45:58Z",
+  "description": "Systematically verify and persist free canonical procurement portal IDs/codes for nearby Los Angeles County cities, water/wastewater agencies, ports, and special districts. Use the ProcurementSource parent/sub-source hierarchy; prioritize PlanetBids, OpenGov, PublicPurchase, agency pages, LA County/City canonical systems, and keep BidNet disabled/discovery-only.",
+  "id": "gnome_ga-tqg",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Expand procurement source IDs into Los Angeles County",
+  "type": "task",
+  "updated_at": "2026-07-11T18:45:58Z"
+}
