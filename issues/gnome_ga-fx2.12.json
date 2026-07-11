@@ -2,6 +2,7 @@
   "assignee": "",
   "blocked_by": [
     "gnome_ga-fx2.22",
+    "gnome_ga-fx2.24",
     "gnome_ga-fx2.5"
   ],
   "blocks": [
