@@ -2,7 +2,8 @@
   "assignee": "",
   "blocked_by": [
     "gnome_ga-6hf",
-    "gnome_ga-fx2.2"
+    "gnome_ga-fx2.2",
+    "gnome_ga-fx2.20"
   ],
   "blocks": [
     "gnome_ga-fx2.15"
@@ -16,5 +17,5 @@
   "status": "open",
   "title": "Turn free portal inventory into a governed source portfolio",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:16Z"
+  "updated_at": "2026-07-11T18:43:40Z"
 }
