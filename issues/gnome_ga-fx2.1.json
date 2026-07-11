@@ -2,6 +2,7 @@
   "assignee": "",
   "blocked_by": [],
   "blocks": [
+    "gnome_ga-fx2.13",
     "gnome_ga-fx2.2",
     "gnome_ga-fx2.6"
   ],
@@ -14,5 +15,5 @@
   "status": "open",
   "title": "Baseline acquisition yield and failure taxonomy",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T18:36:16Z"
 }
