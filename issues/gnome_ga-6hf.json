@@ -8,9 +8,15 @@
   "description": "Build a systematic coverage inventory for nearby Southern California public agencies, starting with PlanetBids agency portal IDs such as City of Cypress 78736. Distinguish directly scannable free canonical portals from paid discovery-only directories such as BidNet/CaliforniaBids, identify missing agency IDs, and capture approved sources so Garden can iterate them reliably.",
   "id": "gnome_ga-6hf",
   "labels": [],
+  "comments": [
+    {
+      "text": "Replaced hard-coded source catalog approach with persisted ProcurementSource hierarchy. Added parent_source/sub_sources relationship and parent+portal_id uniqueness; migrated dev DB; created disabled provider parents for PlanetBids, OpenGov, and BidNet; linked 29 OC PlanetBids and 8 OC OpenGov child sources; recorded Los Alamitos, Stanton, and Mission Viejo BidNet agency children as disabled discovery-only; disabled all BidNet children. Fixed PlanetBids valid-empty API responses so zero open bids is a successful scan. Added AGENTS.md hard rule that operational catalogs/IDs/keywords belong in DB. Removed unused hard-coded SourceCatalog and its seed script/tests. Focused tests: 7 passed; compile warnings-as-errors and ash.codegen --check passed. Broader procurement suite: 57/58 passed with one pre-existing SourceInspector login-form assertion failing in isolation.",
+      "timestamp": "2026-07-11T18:37:47Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Inventory nearby free procurement portals",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:16Z"
+  "updated_at": "2026-07-11T18:37:47Z"
 }
