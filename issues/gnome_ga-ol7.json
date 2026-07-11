@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T06:14:19Z",
+  "description": "Review the CaliforniaBids Orange County agency directory as a source-discovery pass. Identify agencies relevant to Gnome's automation/software/controls work, resolve useful public/official procurement sites where possible, and capture durable target/source candidates without treating paywalled CaliforniaBids listings as canonical opportunities.",
+  "id": "gnome_ga-ol7",
+  "labels": [],
+  "priority": 2,
+  "status": "open",
+  "title": "Triage CaliforniaBids Orange County directory",
+  "type": "task",
+  "updated_at": "2026-07-11T06:14:19Z"
+}
