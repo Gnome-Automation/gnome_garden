@@ -3,7 +3,7 @@
   "blocked_by": [],
   "blocks": [],
   "created": "2026-07-11T18:36:15Z",
-  "description": "Rebuild acquisition discovery and source execution as a measured production system: Exa-first commercial discovery, API-first procurement, bounded Jido Browser and provider-specific Playwright fallback, durable Ash/Oban run state, governed feedback, and a later Pyex workflow-harvesting lane. Preserve Ash as the business boundary, operator review before promotion, explicit budgets/capabilities, provider compliance, observable failure recovery, offline contract/E2E proof, canary rollout, and evidence-based adoption.",
+  "description": "Rebuild acquisition discovery and source execution as a measured production system. Procurement is the mature reference path: it already scans live API/browser-backed sources. Commercial discovery is the urgent missing vertical slice: its cron path currently replays static seed_candidates while bounded Exa search exists only in operator-triggered preview flows. First connect scheduled DiscoveryProgram execution to live Exa search and durable Ash/Oban state; then harden shared source contracts, budgets, provider adapters, feedback, E2E proof, compliance, canary rollout, and later governed Pyex workflow harvesting. Preserve Ash as the business boundary and operator review before promotion.",
   "id": "gnome_ga-fx2",
   "labels": [],
   "comments": [
@@ -20,5 +20,5 @@
   "status": "open",
   "title": "Rebuild acquisition discovery and source execution",
   "type": "epic",
-  "updated_at": "2026-07-11T18:44:16Z"
+  "updated_at": "2026-07-11T19:18:51Z"
 }
