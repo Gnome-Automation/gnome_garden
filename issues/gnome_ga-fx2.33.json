@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.23"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:42:55Z",
   "description": "Document deployment prerequisites, Nix/browser verification, credentials and session rotation, budget controls, queue draining, stuck-run recovery, source pausing, alert response, schema migration rollback, provider disable switches, and data reconciliation. Acceptance: a dry-run tabletop follows the runbook to disable one provider, recover one abandoned run, and reconcile one duplicate-delivery scenario.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Publish acquisition operations runbook and rollback",
   "type": "task",
-  "updated_at": "2026-07-11T18:42:55Z"
+  "updated_at": "2026-07-11T18:43:41Z"
 }
