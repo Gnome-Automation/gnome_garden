@@ -6,9 +6,15 @@
   "description": "Review the CaliforniaBids Orange County agency directory as a source-discovery pass. Identify agencies relevant to Gnome's automation/software/controls work, resolve useful public/official procurement sites where possible, and capture durable target/source candidates without treating paywalled CaliforniaBids listings as canonical opportunities.",
   "id": "gnome_ga-ol7",
   "labels": [],
+  "comments": [
+    {
+      "text": "Orange County triage completed. Treated CaliforniaBids Orange directory as discovery-only, resolved official/canonical sources for water, transit, fire, county/JWA, TCA, OCPA, Golden State Water, OCWD, SOCWA, etc. Direct read-only PlanetBids spot check found and saved three current reviewable bids: Mesa Water ERP implementation (bid a93f8785-8f89-4be5-8727-f243ee21e848, finding ea150534-b9aa-4e6a-b806-9e14e69de638, due 2026-08-07, warm 70), OCFA Autonomous Wildfire Suppression Drones (bid efa650dc-358b-4c6a-884c-509eef38d8fe, finding c2567403-456d-4a35-86d6-414e8e6c81eb, due 2026-07-23, warm 60), and TCA Automatic License Plate Recognition (bid 7a816afd-afa1-4a0b-917c-3bdcdcc68727, finding adb0221d-1688-4c47-94ab-3d57de3453af, due 2026-07-20, warm 55). Mesa is the strongest software lead; OCFA/TCA are adjacent and should be reviewed/parked depending on appetite. PlanetBids packet files require portal login; document ingest recorded download_failed/405, so stored public detail URLs and document descriptors only. Earlier stuck Mesa agent scan run 71b8090e-3268-447c-83cd-121c01ef385b was cancelled and source metadata updated; active run count verified as 0.",
+      "timestamp": "2026-07-11T06:30:14Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Triage CaliforniaBids Orange County directory",
   "type": "task",
-  "updated_at": "2026-07-11T06:14:46Z"
+  "updated_at": "2026-07-11T06:30:14Z"
 }
