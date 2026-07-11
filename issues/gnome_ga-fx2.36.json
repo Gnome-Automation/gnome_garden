@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.34"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:42:55Z",
   "description": "Run the approved source/program cohort through the supported production path long enough to evaluate adoption criteria. Measure reviewed yield, precision, promotions, cost per reviewed candidate, cost per promotion, queue latency, retry rate, provider failures, and operator effort. Acceptance: stakeholders record adopt, iterate, or rollback with evidence; any unmet threshold becomes a new blocking bead rather than an undocumented exception.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Complete measured acquisition production pilot",
   "type": "task",
-  "updated_at": "2026-07-11T18:42:55Z"
+  "updated_at": "2026-07-11T18:43:42Z"
 }
