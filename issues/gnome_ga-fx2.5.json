@@ -3,7 +3,9 @@
   "blocked_by": [
     "gnome_ga-fx2.4"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.11"
+  ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Add a deterministic retrieval policy: structured provider API first, then Jido web_fetch/Req/Floki, then Jido browser session or provider-specific Playwright, with remote Browserless reserved as an optional operational fallback. Persist retrieval_path, fallback_reason, blocked status, timing, and extraction diagnostics. Acceptance: callers receive one normalized result and source health can distinguish each stage.",
   "id": "gnome_ga-fx2.5",
@@ -13,5 +15,5 @@
   "status": "open",
   "title": "Implement staged retrieval backend policy",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:15Z"
+  "updated_at": "2026-07-11T18:36:16Z"
 }
