@@ -4,6 +4,8 @@
   "blocks": [
     "gnome_ga-fx2.14"
   ],
+  "closed_at": "2026-07-11T18:38:03Z",
+  "close_reason": "Persisted procurement source hierarchy and Orange County provider/source records; removed hard-coded catalog; fixed empty PlanetBids scans; BidNet disabled and discovery-only.",
   "created": "2026-07-11T18:12:36Z",
   "description": "Build a systematic coverage inventory for nearby Southern California public agencies, starting with PlanetBids agency portal IDs such as City of Cypress 78736. Distinguish directly scannable free canonical portals from paid discovery-only directories such as BidNet/CaliforniaBids, identify missing agency IDs, and capture approved sources so Garden can iterate them reliably.",
   "id": "gnome_ga-6hf",
@@ -15,8 +17,8 @@
     }
   ],
   "priority": 2,
-  "status": "in_progress",
+  "status": "closed",
   "title": "Inventory nearby free procurement portals",
   "type": "task",
-  "updated_at": "2026-07-11T18:37:47Z"
+  "updated_at": "2026-07-11T18:38:03Z"
 }
