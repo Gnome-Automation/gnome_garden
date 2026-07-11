@@ -6,9 +6,15 @@
   "description": "Use the existing gnome-company/company resource data as a starting point, then systematically verify and persist agency portal IDs/codes for all Orange County cities, north San Diego County, nearby LA County, and relevant utilities/special districts. Store every endpoint as a ProcurementSource child under its provider parent. Keep BidNet disabled/discovery-only and prefer free canonical PlanetBids, OpenGov, Public Purchase, agency pages, and other direct portals.",
   "id": "gnome_ga-xi2",
   "labels": [],
+  "comments": [
+    {
+      "text": "Used Gnome-Automation/gnome-company 03-operations/lead-sources.md and vsm_leads only as historical checklists; verified current IDs against official pages/live APIs before DB writes. Regional DB now has provider hierarchy counts: PlanetBids OC 29 + SD 5 (all enabled), OpenGov OC 8 + SD 1 (enabled), PublicPurchase SD 1 (disabled pending registration), BidNet OC 3 + SD 5 (all disabled discovery-only). Verified north SD PlanetBids IDs live: Carlsbad 27970, Encinitas/San Dieguito Water 29744, San Marcos 39481, Vallecitos Water 50139, Olivenhain MWD 66222. Added Vista OpenGov cityofvista; official pages for Oceanside, Solana Beach, Del Mar, Poway, Vista Irrigation, Rincon del Diablo MWD, Valley Center MWD, Vallecitos, Santa Fe Irrigation, and Olivenhain. Added PublicPurchase as a supported persisted source type and Del Mar code delmar,ca. Focused tests 8 passed; compile warnings-as-errors and diff check passed.",
+      "timestamp": "2026-07-11T18:45:46Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Inventory regional procurement portal IDs",
   "type": "task",
-  "updated_at": "2026-07-11T18:38:32Z"
+  "updated_at": "2026-07-11T18:45:46Z"
 }
