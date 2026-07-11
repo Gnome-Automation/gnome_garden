@@ -14,6 +14,12 @@
   "id": "gnome_ga-fx2.7",
   "labels": [],
   "parent": "gnome_ga-fx2",
+  "comments": [
+    {
+      "text": "Starting after fx2.21 merged. Goal: one Ash-owned run lifecycle and one Oban execution path for both manual and scheduled launches, preserving preview-only semantics and budget idempotency.",
+      "timestamp": "2026-07-11T20:42:57Z"
+    }
+  ],
   "priority": 1,
   "status": "in_progress",
   "title": "Run Exa discovery programs durably through Oban",
