@@ -1,0 +1,14 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T19:21:19Z",
+  "description": "Provide a reachable egress or compliant fetch path for the FI PeopleSoft guest CSCR endpoint, implement and verify deterministic result extraction, then enable Cal eProcure source 7b35ae03-78aa-4b38-9092-a1fb0fd42bf3.",
+  "id": "gnome_ga-cid",
+  "labels": [],
+  "priority": 1,
+  "status": "open",
+  "title": "Enable automated Cal eProcure scanning from Garden VM",
+  "type": "task",
+  "updated_at": "2026-07-11T19:21:19Z"
+}
