@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:42:54Z",
+  "description": "Create deterministic contract fixtures and adapters for Exa Search/Contents, SAM.gov, OpenGov, BidNet, Jido web fetch/session, and provider-specific Playwright. Normalize success, empty, throttled, auth, schema-drift, WAF, timeout, and partial payload cases. Acceptance: provider parsers and normalized retrieval results run offline in CI; secrets and live network access are not required.",
+  "id": "gnome_ga-fx2.24",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 1,
+  "status": "open",
+  "title": "Build provider contract fixture harness",
+  "type": "task",
+  "updated_at": "2026-07-11T18:42:54Z"
+}
