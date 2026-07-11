@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:36:15Z",
+  "description": "Add the promotion path for a successful code-mode acquisition workflow: immutable source, runtime version, schemas, capability manifest, fixtures, eval thresholds, shadow execution, operator approval, publication, and rollback. Production writes remain idempotent Ash actions executed by Oban. Acceptance: no workflow can publish itself or widen its own capabilities.",
+  "id": "gnome_ga-fx2.18",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 3,
+  "status": "open",
+  "title": "Govern harvested acquisition workflows",
+  "type": "task",
+  "updated_at": "2026-07-11T18:36:15Z"
+}
