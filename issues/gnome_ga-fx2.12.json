@@ -1,6 +1,7 @@
 {
   "assignee": "",
   "blocked_by": [
+    "gnome_ga-fx2.22",
     "gnome_ga-fx2.5"
   ],
   "blocks": [
@@ -15,5 +16,5 @@
   "status": "open",
   "title": "Stabilize BidNet credentials and session reuse",
   "type": "task",
-  "updated_at": "2026-07-11T18:36:16Z"
+  "updated_at": "2026-07-11T18:43:40Z"
 }
