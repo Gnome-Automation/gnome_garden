@@ -3,7 +3,9 @@
   "blocked_by": [
     "gnome_ga-fx2.7"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.9"
+  ],
   "created": "2026-07-11T18:36:15Z",
   "description": "Verify and enrich only the highest-value Exa candidates. Prefer Exa Contents/Websets structured enrichment, use Jido web_fetch for ordinary pages/documents, and invoke browser sessions only for JS-required evidence. Acceptance: enrichment policy is budgeted, actor-aware, records citations/evidence, and leaves unresolved candidates explicitly marked rather than guessed.",
   "id": "gnome_ga-fx2.8",
