@@ -5,7 +5,9 @@
     "gnome_ga-fx2.27",
     "gnome_ga-fx2.28"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.33"
+  ],
   "created": "2026-07-11T18:42:54Z",
   "description": "Exercise crashes and partial failures between provider response, run persistence, candidate creation, evidence write, finding projection, review feedback, and promotion. Cover Oban retry, abandoned-running recovery, duplicate delivery, timeout, malformed payload, and database rollback boundaries. Acceptance: every case has a documented idempotency key and proves either complete recovery or an operator-visible terminal state with no duplicate business records.",
   "id": "gnome_ga-fx2.29",
