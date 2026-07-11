@@ -3,7 +3,6 @@
   "blocked_by": [
     "gnome_ga-fx2.1",
     "gnome_ga-fx2.2",
-    "gnome_ga-fx2.20",
     "gnome_ga-fx2.21",
     "gnome_ga-fx2.24"
   ],
@@ -19,5 +18,5 @@
   "status": "open",
   "title": "Replace seed-only discovery runs with Exa candidate generation",
   "type": "task",
-  "updated_at": "2026-07-11T18:43:39Z"
+  "updated_at": "2026-07-11T19:18:50Z"
 }
