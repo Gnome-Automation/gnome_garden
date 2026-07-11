@@ -6,9 +6,15 @@
   "description": "Add Cal eProcure to the live procurement source catalog using database-backed search configuration, verify its public search path, and test the scanner behavior.",
   "id": "gnome_ga-14c",
   "labels": [],
+  "comments": [
+    {
+      "text": "Configured live Cal eProcure CSCR source 7b35ae03-78aa-4b38-9092-a1fb0fd42bf3 through Ash. Persisted 14 keyword filters, 7 verified department IDs, FI guest endpoint, result fields, and VM access diagnosis. Source is approved/manual but disabled so it cannot create false scan failures while the VM is blocked by HTTP 403/unreachable FI egress.",
+      "timestamp": "2026-07-11T19:21:19Z"
+    }
+  ],
   "priority": 2,
   "status": "in_progress",
   "title": "Configure Cal eProcure statewide discovery",
   "type": "task",
-  "updated_at": "2026-07-11T19:16:33Z"
+  "updated_at": "2026-07-11T19:21:19Z"
 }
