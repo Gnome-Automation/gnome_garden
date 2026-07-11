@@ -1,0 +1,15 @@
+{
+  "assignee": "",
+  "blocked_by": [],
+  "blocks": [],
+  "created": "2026-07-11T18:36:15Z",
+  "description": "Turn accepted, rejected, suppressed, duplicate, and promoted outcomes into query-, program-, source-, and profile-level performance signals. Add intent-named Ash reads/calculations for precision, yield, cost per reviewed candidate, cost per promotion, and rejection categories. Acceptance: operator decisions change future query/ranking recommendations only through governed learning and review.",
+  "id": "gnome_ga-fx2.9",
+  "labels": [],
+  "parent": "gnome_ga-fx2",
+  "priority": 1,
+  "status": "open",
+  "title": "Close the discovery feedback loop",
+  "type": "task",
+  "updated_at": "2026-07-11T18:36:15Z"
+}
