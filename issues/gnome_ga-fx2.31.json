@@ -5,7 +5,9 @@
     "gnome_ga-fx2.27",
     "gnome_ga-fx2.28"
   ],
-  "blocks": [],
+  "blocks": [
+    "gnome_ga-fx2.33"
+  ],
   "created": "2026-07-11T18:42:54Z",
   "description": "Verify the existing source, program, finding, lead-preview, run, credential, and attention surfaces against the new execution model. Add missing Ash workspace reads and PubSub subscriptions rather than assembling state in LiveViews. Acceptance: mobile and desktop LiveView tests cover launch, progress refresh, failure triage, budget state, provenance, review, retry, and promotion with no manual page refresh.",
   "id": "gnome_ga-fx2.31",
