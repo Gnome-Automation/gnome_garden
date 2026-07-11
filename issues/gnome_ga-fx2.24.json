@@ -1,7 +1,8 @@
 {
   "assignee": "",
   "blocked_by": [
-    "gnome_ga-fx2.2"
+    "gnome_ga-fx2.2",
+    "gnome_ga-fx2.5"
   ],
   "blocks": [],
   "created": "2026-07-11T18:42:54Z",
