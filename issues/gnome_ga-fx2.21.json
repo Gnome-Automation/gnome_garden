@@ -17,6 +17,12 @@
     "ash-quality"
   ],
   "parent": "gnome_ga-fx2",
+  "comments": [
+    {
+      "text": "Starting isolated implementation after fx2.6 merged. Goal boundary: Ash-owned provider budget/reservation lifecycle plus Exa integration and focused evidence; preserve main-tree flake/runtime-notes edits.",
+      "timestamp": "2026-07-11T20:10:19Z"
+    }
+  ],
   "priority": 1,
   "status": "in_progress",
   "title": "Enforce provider spend and quota policy",
