@@ -13,6 +13,27 @@ config :ash_oban, pro?: false
 
 config :gnome_garden, serve_local_storage?: false, max_agent_run_timeout_ms: 600_000
 
+config :gnome_garden, :provider_budgets, %{
+  {"exa", "search"} => %{
+    estimated_cost: "0.05",
+    spend_limit: "5.00",
+    request_limit: 500,
+    period: :daily
+  },
+  {"exa", "contents"} => %{
+    estimated_cost: "0.25",
+    spend_limit: "10.00",
+    request_limit: 100,
+    period: :daily
+  },
+  {"sam_gov", "search"} => %{
+    estimated_cost: "0",
+    spend_limit: "0",
+    request_limit: 900,
+    period: :daily
+  }
+}
+
 # Register Z.AI (Zhipu AI) models in LLMDB catalog
 config :llm_db,
   custom: %{
