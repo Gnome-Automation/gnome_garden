@@ -1,6 +1,8 @@
 {
   "assignee": "",
-  "blocked_by": [],
+  "blocked_by": [
+    "gnome_ga-fx2.25"
+  ],
   "blocks": [],
   "created": "2026-07-11T18:42:54Z",
   "description": "Add a cross-domain E2E test that starts with both a discovery finding and a procurement finding, records evidence and structured review feedback, accepts and promotes through the Acquisition workflow, creates or links the Commercial Signal, and creates a Pursuit through the supported workflow. Acceptance: actor/policy behavior, PubSub refresh, provenance, review decisions, dedupe, and idempotent repeat submission are asserted without calling raw transition interfaces.",
@@ -11,5 +13,5 @@
   "status": "open",
   "title": "Prove review to pursuit end to end",
   "type": "task",
-  "updated_at": "2026-07-11T18:42:54Z"
+  "updated_at": "2026-07-11T18:43:41Z"
 }
