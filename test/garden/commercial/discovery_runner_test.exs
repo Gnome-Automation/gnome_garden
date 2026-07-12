@@ -119,4 +119,27 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
 
     assert {:ok, []} = Commercial.list_discovery_runs()
   end
+
+  test "latest discovery run returns one newest row after repeated executions" do
+    {:ok, discovery_program} =
+      Commercial.create_discovery_program(%{
+        name: "Latest Run #{System.unique_integer([:positive])}",
+        target_regions: ["oc"],
+        target_industries: ["food_bev"]
+      })
+
+    assert {:ok, %{run: first}} =
+             Commercial.launch_discovery_program(discovery_program, idempotency_key: "latest-1")
+
+    assert {:ok, first} = Commercial.start_discovery_run(first, %{})
+    assert {:ok, _first} = Commercial.complete_discovery_run(first, %{})
+
+    assert {:ok, %{run: second}} =
+             Commercial.launch_discovery_program(discovery_program, idempotency_key: "latest-2")
+
+    assert {:ok, latest} =
+             Commercial.get_latest_discovery_run_for_program(discovery_program.id)
+
+    assert latest.id == second.id
+  end
 end

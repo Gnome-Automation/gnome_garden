@@ -287,7 +287,8 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
             %{
               "title" => query,
               "url" => "https://#{URI.encode_www_form(query)}.example.com",
-              "publishedDate" => nil
+              "publishedDate" => nil,
+              "score" => if(query == "first query", do: 0.91, else: 0.82)
             }
           ]
         })
@@ -316,6 +317,12 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
       assert retried.queries_run == 2
       assert retried.candidate_count == 2
       assert retried.total_cost == 0.02
+
+      assert Enum.map(retried.candidates, &{&1.title, &1.score}) == [
+               {"first query", 0.91},
+               {"second query", 0.82}
+             ]
+
       assert_received {:exa_query, "first query"}
       assert_received {:exa_query, "second query"}
       refute_received {:exa_query, "first query"}

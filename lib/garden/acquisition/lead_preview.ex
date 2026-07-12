@@ -242,7 +242,10 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       recommendation: candidate.dedupe.recommendation,
       rank: candidate.rank,
       status: :pending,
-      metadata: %{"related" => related_metadata(candidate.dedupe)}
+      metadata: %{
+        "related" => related_metadata(candidate.dedupe),
+        "exa_score" => candidate[:score]
+      }
     }
   end
 
@@ -476,7 +479,8 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
           %{
             "title" => result.title,
             "url" => result.url,
-            "published_date" => result.published_date
+            "published_date" => result.published_date,
+            "score" => result[:score]
           }
         end)
     }
@@ -491,7 +495,8 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
           %{
             title: result["title"],
             url: result["url"],
-            published_date: result["published_date"]
+            published_date: result["published_date"],
+            score: result["score"]
           }
         end)
     }
@@ -503,6 +508,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         title: result.title,
         url: result.url,
         published_date: result.published_date,
+        score: result[:score],
         intent: query.intent,
         query: query.text
       }

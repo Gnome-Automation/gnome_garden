@@ -82,7 +82,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
       argument :discovery_program_id, :uuid, allow_nil?: false
       get? true
       filter expr(discovery_program_id == ^arg(:discovery_program_id))
-      prepare build(sort: [inserted_at: :desc])
+      prepare build(sort: [inserted_at: :desc], limit: 1)
     end
 
     update :start do

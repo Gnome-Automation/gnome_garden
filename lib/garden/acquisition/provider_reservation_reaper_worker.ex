@@ -7,7 +7,7 @@ defmodule GnomeGarden.Acquisition.ProviderReservationReaperWorker do
 
   alias GnomeGarden.Acquisition
 
-  @stale_after_seconds 10 * 60
+  @stale_after_seconds 75 * 60
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
