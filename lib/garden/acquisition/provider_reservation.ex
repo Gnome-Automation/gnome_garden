@@ -60,8 +60,14 @@ defmodule GnomeGarden.Acquisition.ProviderReservation do
       prepare build(load: [:provider_budget])
     end
 
+    read :stale_reserved do
+      argument :reserved_before, :utc_datetime, allow_nil?: false
+      filter expr(status == :reserved and inserted_at < ^arg(:reserved_before))
+      prepare build(sort: [inserted_at: :asc], limit: 100)
+    end
+
     update :mark_settled do
-      accept [:status, :actual_cost, :actual_requests, :failure_reason]
+      accept [:status, :actual_cost, :actual_requests, :failure_reason, :metadata]
       validate GnomeGarden.Acquisition.Validations.ProviderReservationOpen
     end
 

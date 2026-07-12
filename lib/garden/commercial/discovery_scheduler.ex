@@ -26,7 +26,7 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
       Keyword.get(opts, :launch_fun, fn program ->
         Commercial.launch_discovery_program(program,
           scheduled?: true,
-          idempotency_key: "scheduled:#{program.id}:#{DateTime.to_iso8601(reference_time)}"
+          idempotency_key: scheduled_idempotency_key(program, reference_time)
         )
       end)
 
@@ -53,6 +53,12 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
     reference_time
     |> NaiveDateTime.truncate(:second)
     |> DateTime.from_naive!("Etc/UTC")
+  end
+
+  defp scheduled_idempotency_key(program, reference_time) do
+    cadence_seconds = max(program.cadence_hours, 1) * 60 * 60
+    cadence_bucket = div(DateTime.to_unix(reference_time), cadence_seconds)
+    "scheduled:#{program.id}:#{cadence_bucket}"
   end
 
   defp launch_due_program(summary, program, launch_fun) do

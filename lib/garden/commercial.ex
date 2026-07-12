@@ -94,10 +94,6 @@ defmodule GnomeGarden.Commercial do
     resource GnomeGarden.Commercial.CustomerVendorRequirementArtifactAttachment
 
     resource GnomeGarden.Commercial.DiscoveryProgram do
-      define :execute_discovery_program_search,
-        action: :execute_search,
-        args: [:program_id]
-
       define :list_discovery_programs, action: :read
       define :list_active_discovery_programs, action: :active
       define :list_due_discovery_programs, action: :due_for_run
@@ -119,6 +115,15 @@ defmodule GnomeGarden.Commercial do
       define :list_discovery_runs, action: :read
       define :get_discovery_run, action: :read, get_by: [:id]
       define :get_discovery_run_by_key, action: :by_idempotency_key, args: [:idempotency_key]
+
+      define :get_active_discovery_run_for_program,
+        action: :active_for_program,
+        args: [:discovery_program_id]
+
+      define :get_latest_discovery_run_for_program,
+        action: :latest_for_program,
+        args: [:discovery_program_id]
+
       define :create_discovery_run, action: :create
       define :start_discovery_run, action: :start
       define :retry_discovery_run, action: :retry

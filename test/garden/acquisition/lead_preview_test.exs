@@ -272,5 +272,93 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
       assert reservation.status == :released
       assert Decimal.equal?(reservation.actual_cost, Decimal.new(0))
     end
+
+    test "retry replays settled query results and continues remaining queries" do
+      test_pid = self()
+
+      Req.Test.stub(Exa, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        query = Jason.decode!(body)["query"]
+        send(test_pid, {:exa_query, query})
+
+        Req.Test.json(conn, %{
+          "costDollars" => %{"total" => 0.01},
+          "results" => [
+            %{
+              "title" => query,
+              "url" => "https://#{URI.encode_www_form(query)}.example.com",
+              "publishedDate" => nil
+            }
+          ]
+        })
+      end)
+
+      assert {:ok, first} =
+               LeadPreview.run(
+                 search_terms: ["first query", "second query"],
+                 max_queries: 1,
+                 spend_ceiling: 1.0,
+                 persist: false,
+                 budget_idempotency_key: "settled-query-retry"
+               )
+
+      assert first.candidate_count == 1
+
+      assert {:ok, retried} =
+               LeadPreview.run(
+                 search_terms: ["first query", "second query"],
+                 max_queries: 2,
+                 spend_ceiling: 1.0,
+                 persist: false,
+                 budget_idempotency_key: "settled-query-retry"
+               )
+
+      assert retried.queries_run == 2
+      assert retried.candidate_count == 2
+      assert retried.total_cost == 0.02
+      assert_received {:exa_query, "first query"}
+      assert_received {:exa_query, "second query"}
+      refute_received {:exa_query, "first query"}
+    end
+
+    test "ambiguous transport failure settles the estimate instead of releasing capacity" do
+      Req.Test.stub(Exa, &Req.Test.transport_error(&1, :timeout))
+
+      assert {:ok, preview} =
+               LeadPreview.run(
+                 search_terms: ["timeout query"],
+                 max_queries: 1,
+                 spend_ceiling: 1.0,
+                 persist: false,
+                 budget_idempotency_key: "ambiguous-provider-failure"
+               )
+
+      assert preview.failed_queries == 1
+
+      assert {:ok, reservation} =
+               GnomeGarden.Acquisition.get_provider_reservation_by_key(
+                 "ambiguous-provider-failure:search:0"
+               )
+
+      assert reservation.status == :failed
+      assert reservation.actual_requests == 1
+      assert Decimal.equal?(reservation.actual_cost, reservation.estimated_cost)
+
+      Req.Test.stub(Exa, fn _conn ->
+        flunk("a finalized ambiguous failure must not spend again")
+      end)
+
+      assert {:ok, retried} =
+               LeadPreview.run(
+                 search_terms: ["timeout query"],
+                 max_queries: 1,
+                 spend_ceiling: 1.0,
+                 persist: false,
+                 budget_idempotency_key: "ambiguous-provider-failure"
+               )
+
+      assert retried.queries_run == 1
+      assert retried.failed_queries == 1
+    end
   end
 end

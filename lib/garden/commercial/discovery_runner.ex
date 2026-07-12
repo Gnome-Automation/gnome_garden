@@ -27,15 +27,6 @@ defmodule GnomeGarden.Commercial.DiscoveryRunner do
     end
   end
 
-  @spec ensure_target_discovery_deployment(term()) ::
-          {:ok, GnomeGarden.Agents.AgentDeployment.t()} | {:error, term()}
-  def ensure_target_discovery_deployment(actor \\ nil) do
-    _ = actor
-
-    {:error,
-     "Commercial target discovery runs through the bounded AshLua discovery pipeline; it does not create agent deployments."}
-  end
-
   defp load_program(%{id: id}, actor), do: load_program(id, actor)
 
   defp load_program(id, actor) when is_binary(id) do

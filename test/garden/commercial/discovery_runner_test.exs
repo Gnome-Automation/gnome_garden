@@ -66,11 +66,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
     {:ok, archived_program} = Commercial.archive_discovery_program(discovery_program)
 
     assert {:error, "Archived discovery programs must be reopened before running."} =
-             Commercial.launch_discovery_program(archived_program,
-               launch_fun: fn _deployment_id, _opts ->
-                 flunk("launch_fun should not be called for archived programs")
-               end
-             )
+             Commercial.launch_discovery_program(archived_program)
   end
 
   test "launch_discovery_program reuses the same durable run idempotency key" do
@@ -88,5 +84,39 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
              Commercial.launch_discovery_program(discovery_program, idempotency_key: "same-run")
 
     assert first.id == second.id
+  end
+
+  test "launch_discovery_program rejects a different key while a run is active" do
+    {:ok, discovery_program} =
+      Commercial.create_discovery_program(%{
+        name: "Active Run Guard #{System.unique_integer([:positive])}",
+        target_regions: ["oc"],
+        target_industries: ["food_bev"]
+      })
+
+    assert {:ok, %{run: first}} =
+             Commercial.launch_discovery_program(discovery_program, idempotency_key: "first-run")
+
+    assert first.status == :queued
+
+    assert {:error, :active_run_exists} =
+             Commercial.launch_discovery_program(discovery_program, idempotency_key: "second-run")
+  end
+
+  test "failed Oban insertion rolls back the queued run" do
+    {:ok, discovery_program} =
+      Commercial.create_discovery_program(%{
+        name: "Atomic Enqueue #{System.unique_integer([:positive])}",
+        target_regions: ["oc"],
+        target_industries: ["food_bev"]
+      })
+
+    assert {:error, _error} =
+             GnomeGarden.Commercial.DiscoveryExecution.enqueue(discovery_program,
+               idempotency_key: "failed-insert",
+               insert_fun: fn _job -> {:error, :oban_unavailable} end
+             )
+
+    assert {:ok, []} = Commercial.list_discovery_runs()
   end
 end

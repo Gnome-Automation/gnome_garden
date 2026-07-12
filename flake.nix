@@ -63,7 +63,24 @@
               set +a
             fi
 
-            export PATH="$MIX_HOME/bin:$HEX_HOME/bin:${pkgs.lib.makeBinPath devTools}:$PATH"
+            codex_shell_path="$HOME/.local/bin:$MIX_HOME/bin:$HEX_HOME/bin:${pkgs.lib.makeBinPath devTools}:$PATH"
+            clean_path=""
+            old_ifs="$IFS"
+            IFS=:
+            for path_entry in $codex_shell_path; do
+              case "$path_entry" in
+                /nix/store/*-codex-*/bin) continue ;;
+              esac
+
+              if [ -z "$clean_path" ]; then
+                clean_path="$path_entry"
+              else
+                clean_path="$clean_path:$path_entry"
+              fi
+            done
+            IFS="$old_ifs"
+            export PATH="$clean_path"
+            unset codex_shell_path clean_path old_ifs path_entry
 
             # Local Postgres — default to 5433 while allowing .env overrides
             export PGDATA="$PWD/.pgdata"
