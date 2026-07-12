@@ -36,8 +36,24 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
                {:error, error} -> {:halt, {:error, error}}
              end
            end) do
-        {:ok, result} -> {:ok, finalize_result(result)}
-        {:error, error} -> {:error, error}
+        {:ok, result} ->
+          result = finalize_result(result)
+
+          GnomeGarden.Acquisition.Telemetry.admission(
+            %{
+              verified_count: result.verified,
+              admitted_count: result.admitted,
+              unresolved_count: result.unresolved,
+              ineligible_count: result.ineligible,
+              enrichment_cost: Decimal.to_float(result.enrichment_cost)
+            },
+            %{lead_preview_run_id: lead_preview_run_id}
+          )
+
+          {:ok, result}
+
+        {:error, error} ->
+          {:error, error}
       end
     end
   end

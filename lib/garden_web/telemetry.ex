@@ -86,6 +86,21 @@ defmodule GnomeGardenWeb.Telemetry do
         tag_values: &oban_job_tags/1,
         unit: {:native, :millisecond}
       ),
+      summary("gnome_garden.acquisition.provider.stop.duration",
+        tags: [:provider, :operation, :outcome],
+        unit: {:native, :millisecond}
+      ),
+      sum("gnome_garden.acquisition.provider.stop.cost",
+        tags: [:provider, :operation, :outcome]
+      ),
+      sum("gnome_garden.acquisition.candidate.routed.candidate_count"),
+      sum("gnome_garden.acquisition.candidate.admitted.admitted_count"),
+      summary("gnome_garden.acquisition.review.promoted.review_latency_seconds",
+        unit: :second
+      ),
+      counter("gnome_garden.acquisition.slo.alert.count",
+        tags: [:kind, :severity]
+      ),
 
       # VM Metrics
       summary("vm.memory.total", unit: {:byte, :kilobyte}),

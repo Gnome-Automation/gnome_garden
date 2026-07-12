@@ -8,21 +8,38 @@ defmodule GnomeGarden.Commercial.DiscoveryRunWorker do
 
   alias GnomeGarden.Commercial
   alias GnomeGarden.Commercial.DiscoveryPipeline
+  alias GnomeGarden.Acquisition.Telemetry
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"run_id" => run_id}, attempt: attempt}) do
-    with {:ok, run} <- Commercial.get_discovery_run(run_id),
-         {:ok, run} <- begin_attempt(run, attempt),
-         {:ok, result} <-
-           DiscoveryPipeline.run_program(run.discovery_program_id,
-             budget_idempotency_key: run.idempotency_key
-           ),
-         {:ok, _run} <- finish(run, result) do
-      :ok
-    else
-      {:terminal, _run} -> :ok
-      {:error, reason} -> fail_run(run_id, reason)
-    end
+    started_at = System.monotonic_time()
+    trace = %{discovery_run_id: run_id, attempt: attempt}
+    Telemetry.discovery_run(:start, :running, %{system_time: System.system_time()}, trace)
+
+    result =
+      with {:ok, run} <- Commercial.get_discovery_run(run_id),
+           {:ok, run} <- begin_attempt(run, attempt),
+           {:ok, result} <-
+             DiscoveryPipeline.run_program(run.discovery_program_id,
+               budget_idempotency_key: run.idempotency_key
+             ),
+           {:ok, _run} <- finish(run, result) do
+        :ok
+      else
+        {:terminal, _run} -> :ok
+        {:error, reason} -> fail_run(run_id, reason)
+      end
+
+    outcome = if result == :ok, do: :ok, else: :error
+
+    Telemetry.discovery_run(
+      :stop,
+      outcome,
+      %{duration: Telemetry.elapsed_native(started_at)},
+      trace
+    )
+
+    result
   end
 
   defp begin_attempt(%{status: status} = run, _attempt)

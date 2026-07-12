@@ -35,7 +35,21 @@ defmodule GnomeGarden.Acquisition.Review do
          {:ok, result} <- promote_origin(finding, actor),
          {:ok, refreshed_finding} <- reload_finding(finding, actor),
          :ok <- record_review_decision(refreshed_finding, :promoted, %{}, actor, finding) do
+      review_latency = review_latency_seconds(finding)
+
+      GnomeGarden.Acquisition.Telemetry.review(
+        %{review_latency_seconds: review_latency, promoted_count: 1},
+        %{finding_family: finding.finding_family}
+      )
+
       {:ok, %{finding: refreshed_finding, result: result}}
+    end
+  end
+
+  defp review_latency_seconds(finding) do
+    case finding.reviewed_at || finding.inserted_at do
+      %DateTime{} = started_at -> max(DateTime.diff(DateTime.utc_now(), started_at, :second), 0)
+      _other -> 0
     end
   end
 

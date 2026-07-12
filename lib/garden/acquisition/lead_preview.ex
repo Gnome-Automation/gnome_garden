@@ -160,6 +160,18 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     with {:ok, run} <- persist_run(ranked, opts, summary) do
       ranked = attach_persisted_ids(ranked, run)
 
+      GnomeGarden.Acquisition.Telemetry.candidate_routing(
+        %{
+          candidate_count: length(ranked),
+          promotable_count: promotable,
+          needs_enrichment_count: needs_enrichment,
+          suppressed_count: suppressed,
+          failed_query_count: length(errors),
+          cost: Float.round(cost, 4)
+        },
+        %{lead_preview_run_id: run && run.id}
+      )
+
       {:ok,
        %{
          run_id: run && run.id,
