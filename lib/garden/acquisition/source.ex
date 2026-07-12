@@ -10,6 +10,31 @@ defmodule GnomeGarden.Acquisition.Source do
     extensions: [AshAdmin.Resource],
     notifiers: [Ash.Notifier.PubSub]
 
+  @console_loads [
+    :organization,
+    :finding_count,
+    :review_finding_count,
+    :accepted_finding_count,
+    :parked_finding_count,
+    :rejected_finding_count,
+    :promoted_finding_count,
+    :noise_finding_count,
+    :source_family_label,
+    :source_kind_label,
+    :scan_strategy_label,
+    :status_label,
+    :health_label,
+    :runnable,
+    :health_status,
+    :health_variant,
+    :health_note,
+    :status_variant,
+    :latest_run_id,
+    :last_run_state,
+    :last_run_state_variant,
+    :procurement_source
+  ]
+
   admin do
     table_columns [:name, :source_family, :source_kind, :status, :enabled, :scan_strategy]
   end
@@ -92,30 +117,71 @@ defmodule GnomeGarden.Acquisition.Source do
 
       prepare build(
                 sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
-                load: [
-                  :organization,
-                  :finding_count,
-                  :review_finding_count,
-                  :accepted_finding_count,
-                  :parked_finding_count,
-                  :rejected_finding_count,
-                  :promoted_finding_count,
-                  :noise_finding_count,
-                  :source_family_label,
-                  :source_kind_label,
-                  :scan_strategy_label,
-                  :status_label,
-                  :health_label,
-                  :runnable,
-                  :health_status,
-                  :health_variant,
-                  :health_note,
-                  :status_variant,
-                  :latest_run_id,
-                  :last_run_state,
-                  :last_run_state_variant,
-                  :procurement_source
-                ]
+                load: @console_loads
+              )
+    end
+
+    read :console_needs_configuration do
+      pagination offset?: true, countable: true, required?: false
+      filter expr(procurement_source.config_status in [:found, :pending, :config_failed, :manual])
+
+      prepare build(
+                sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
+                load: @console_loads
+              )
+    end
+
+    read :console_ready do
+      pagination offset?: true, countable: true, required?: false
+
+      filter expr(
+               enabled == true and status == :active and
+                 (procurement_source.config_status in [:configured, :scan_failed] or
+                    (is_nil(procurement_source_id) and scan_strategy in [:agentic, :deterministic]))
+             )
+
+      prepare build(
+                sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
+                load: @console_loads
+              )
+    end
+
+    read :console_credentials_needed do
+      pagination offset?: true, countable: true, required?: false
+      filter expr(procurement_source.requires_login == true)
+
+      prepare build(
+                sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
+                load: @console_loads
+              )
+    end
+
+    read :console_attention do
+      pagination offset?: true, countable: true, required?: false
+
+      filter expr(
+               status == :blocked or
+                 procurement_source.config_status in [:config_failed, :scan_failed] or
+                 fragment("? ->> 'last_agent_run_state' in ('failed', 'cancelled')", metadata) or
+                 fragment("? -> 'packet' ->> 'status' = 'download_failed'", metadata) or
+                 fragment(
+                   "? -> 'last_scan_summary' ->> 'diagnosis' in ('selector_failed', 'listing_selector_matched_no_rows', 'title_selector_matched_no_titles', 'scanner_not_implemented', 'scan_failed', 'all_candidates_filtered_before_scoring', 'no_candidates_extracted')",
+                   metadata
+                 ) or
+                 fragment(
+                   "nullif(? -> 'last_scan_summary' ->> 'extracted', '')::integer = 0",
+                   metadata
+                 ) or
+                 fragment(
+                   "nullif(? -> 'last_scan_summary' ->> 'extracted', '')::integer > 0 and coalesce(nullif(? -> 'last_scan_summary' ->> 'saved', '')::integer, 0) = 0",
+                   metadata,
+                   metadata
+                 )
+             )
+
+      prepare build(
+                sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
+                load: @console_loads
               )
     end
   end

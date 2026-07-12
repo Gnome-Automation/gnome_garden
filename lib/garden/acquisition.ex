@@ -43,6 +43,10 @@ defmodule GnomeGarden.Acquisition do
     resource GnomeGarden.Acquisition.Source do
       define :list_sources, action: :read
       define :list_console_sources, action: :console
+      define :list_console_sources_needing_configuration, action: :console_needs_configuration
+      define :list_console_sources_ready, action: :console_ready
+      define :list_console_sources_needing_credentials, action: :console_credentials_needed
+      define :list_console_sources_needing_attention, action: :console_attention
       define :get_source, action: :read, get_by: [:id]
       define :get_source_by_external_ref, action: :by_external_ref, args: [:external_ref]
       define :get_source_by_url, action: :by_url, args: [:url]

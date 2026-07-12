@@ -14,9 +14,8 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   alias GnomeGarden.Procurement.SourceCredentials
   alias GnomeGarden.Procurement.SourcePipeline
   alias GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog
+  alias GnomeGardenWeb.Acquisition.CollectionQueries
   alias Phoenix.LiveView.JS
-
-  require Ash.Query
 
   @buckets [:needs_configuration, :ready, :credentials_needed, :attention, :all]
   @configuration_batch_limit 10
@@ -434,7 +433,8 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                 <Cinder.collection
                   id="acquisition-sources-mobile"
                   layout={:list}
-                  query={source_query(@selected_bucket)}
+                  resource={Source}
+                  action={source_action(@selected_bucket)}
                   actor={@current_user}
                   url_state={@url_state}
                   theme={GnomeGardenWeb.CinderTheme}
@@ -443,15 +443,16 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                   search={[
                     label: "Search sources",
                     placeholder: "Search name, URL, source type, portal ID, or description",
-                    fn: &cinder_source_search/3
+                    fn: &CollectionQueries.source_search/3
                   ]}
                   empty_message="No sources in this queue."
                 >
                   <:col field="name" search sort label="Source" />
                   <:col field="url" search label="URL" />
                   <:col field="description" search label="Description" />
-                  <:col field="source_family" sort label="Family" />
-                  <:col field="source_kind" sort label="Kind" />
+                  <:col field="source_family" search sort label="Family" />
+                  <:col field="source_kind" search sort label="Kind" />
+                  <:col field="scan_strategy" search label="Strategy" />
                   <:col field="status" sort label="Status" />
 
                   <:item :let={source}>
@@ -476,7 +477,8 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
               <div class="hidden md:block">
                 <Cinder.collection
                   id="acquisition-sources"
-                  query={source_query(@selected_bucket)}
+                  resource={Source}
+                  action={source_action(@selected_bucket)}
                   actor={@current_user}
                   url_state={@url_state}
                   theme={GnomeGardenWeb.CinderTheme}
@@ -485,7 +487,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                   search={[
                     label: "Search sources",
                     placeholder: "Search name, URL, source type, portal ID, or description",
-                    fn: &cinder_source_search/3
+                    fn: &CollectionQueries.source_search/3
                   ]}
                   empty_message="No sources in this queue."
                 >
@@ -1005,78 +1007,11 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
     |> refresh_tables(["acquisition-sources-mobile", "acquisition-sources"])
   end
 
-  defp source_query(bucket) do
-    Source
-    |> Ash.Query.for_read(:console)
-    |> filter_source_query(bucket)
-  end
-
-  defp cinder_source_search(query, _searchable_columns, term) do
-    term = "%#{String.trim(term)}%"
-
-    Ash.Query.filter(
-      query,
-      fragment("? ILIKE ?", name, ^term) or
-        fragment("? ILIKE ?", url, ^term) or
-        fragment("? ILIKE ?", description, ^term) or
-        fragment("? ILIKE ?", external_ref, ^term) or
-        fragment("?::text ILIKE ?", source_family, ^term) or
-        fragment("?::text ILIKE ?", source_kind, ^term) or
-        fragment("?::text ILIKE ?", scan_strategy, ^term) or
-        fragment("? ILIKE ?", procurement_source.name, ^term) or
-        fragment("? ILIKE ?", procurement_source.url, ^term) or
-        fragment("? ILIKE ?", procurement_source.portal_id, ^term) or
-        fragment("?::text ILIKE ?", procurement_source.source_type, ^term)
-    )
-  end
-
-  defp filter_source_query(query, :needs_configuration) do
-    Ash.Query.filter(
-      query,
-      procurement_source.config_status in [:found, :pending, :config_failed, :manual]
-    )
-  end
-
-  defp filter_source_query(query, :ready) do
-    Ash.Query.filter(
-      query,
-      enabled == true and status == :active and
-        (procurement_source.config_status in [:configured, :scan_failed] or
-           (is_nil(procurement_source_id) and scan_strategy in [:agentic, :deterministic]))
-    )
-  end
-
-  defp filter_source_query(query, :credentials_needed) do
-    Ash.Query.filter(
-      query,
-      procurement_source.requires_login == true or procurement_source.source_type == :bidnet
-    )
-  end
-
-  defp filter_source_query(query, :attention) do
-    Ash.Query.filter(
-      query,
-      status == :blocked or
-        procurement_source.config_status in [:config_failed, :scan_failed] or
-        fragment("? ->> 'last_agent_run_state' in ('failed', 'cancelled')", metadata) or
-        fragment("? -> 'packet' ->> 'status' = 'download_failed'", metadata) or
-        fragment(
-          "? -> 'last_scan_summary' ->> 'diagnosis' in ('selector_failed', 'listing_selector_matched_no_rows', 'title_selector_matched_no_titles', 'scanner_not_implemented', 'scan_failed', 'all_candidates_filtered_before_scoring', 'no_candidates_extracted')",
-          metadata
-        ) or
-        fragment(
-          "nullif(? -> 'last_scan_summary' ->> 'extracted', '')::integer = 0",
-          metadata
-        ) or
-        fragment(
-          "nullif(? -> 'last_scan_summary' ->> 'extracted', '')::integer > 0 and coalesce(nullif(? -> 'last_scan_summary' ->> 'saved', '')::integer, 0) = 0",
-          metadata,
-          metadata
-        )
-    )
-  end
-
-  defp filter_source_query(query, :all), do: query
+  defp source_action(:needs_configuration), do: :console_needs_configuration
+  defp source_action(:ready), do: :console_ready
+  defp source_action(:credentials_needed), do: :console_credentials_needed
+  defp source_action(:attention), do: :console_attention
+  defp source_action(:all), do: :console
 
   defp assign_sources(socket, sources) do
     socket
