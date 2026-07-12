@@ -2,8 +2,8 @@ defmodule GnomeGarden.Commercial.DiscoveryPipeline do
   @moduledoc """
   Bounded live-search orchestration for commercial discovery programs.
 
-  Production execution performs preview-safe Exa search and persists candidate
-  telemetry without creating findings or downstream commercial records.
+  Production execution persists preview-safe Exa search telemetry, verifies a
+  bounded candidate set, and admits only qualified companies as Findings.
   """
 
   alias GnomeGarden.Acquisition.LeadPreview
@@ -16,10 +16,11 @@ defmodule GnomeGarden.Commercial.DiscoveryPipeline do
   @spec execution_profile() :: map()
   def execution_profile do
     %{
-      mode: :live_exa_preview,
+      mode: :live_exa_verified,
       live_search?: true,
       candidate_source: :exa,
-      preview_only?: true
+      preview_only?: false,
+      finding_admission?: true
     }
   end
 
@@ -37,8 +38,20 @@ defmodule GnomeGarden.Commercial.DiscoveryPipeline do
                Keyword.get_lazy(opts, :budget_idempotency_key, &Ecto.UUID.generate/0),
              persist: true
            ),
+         {:ok, verification} <-
+           GnomeGarden.Acquisition.verify_lead_preview_run(preview.run_id, actor: actor),
          {:ok, _program} <- Commercial.mark_discovery_program_ran(program, actor: actor) do
-      {:ok, Map.merge(preview, %{program: program, mode: :live_exa_preview})}
+      {:ok,
+       preview
+       |> Map.merge(verification)
+       |> Map.merge(%{
+         program: program,
+         mode: :live_exa_verified,
+         total_cost:
+           Float.round(preview.total_cost + Decimal.to_float(verification.enrichment_cost), 4),
+         failed_queries: preview.failed_queries + length(verification.errors),
+         errors: preview.errors ++ verification.errors
+       })}
     end
   end
 

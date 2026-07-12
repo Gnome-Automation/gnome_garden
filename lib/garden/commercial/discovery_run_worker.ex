@@ -50,7 +50,11 @@ defmodule GnomeGarden.Commercial.DiscoveryRunWorker do
       actual_cost: result.total_cost,
       query_count: result.queries_run,
       candidate_count: result.candidate_count,
-      promotable_count: result.promotable_count
+      promotable_count: result.promotable_count,
+      verified_count: result.verified,
+      admitted_count: result.admitted,
+      unresolved_count: result.unresolved,
+      enrichment_cost: result.enrichment_cost
     }
 
     if result.failed_queries > 0 do

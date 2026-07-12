@@ -157,24 +157,25 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       errors: error_strings
     }
 
-    run = persist_run(ranked, opts, summary)
-    ranked = attach_persisted_ids(ranked, run)
+    with {:ok, run} <- persist_run(ranked, opts, summary) do
+      ranked = attach_persisted_ids(ranked, run)
 
-    {:ok,
-     %{
-       run_id: run && run.id,
-       queries_run: executed,
-       total_cost: Float.round(cost, 4),
-       candidate_count: length(ranked),
-       promotable_count: promotable,
-       needs_enrichment_count: needs_enrichment,
-       kept_count: Enum.count(ranked, &(not &1.dedupe.suppress?)),
-       suppressed_count: suppressed,
-       failed_queries: length(errors),
-       errors: error_strings,
-       budget_idempotency_key: Keyword.fetch!(opts, :budget_idempotency_key),
-       candidates: ranked
-     }}
+      {:ok,
+       %{
+         run_id: run && run.id,
+         queries_run: executed,
+         total_cost: Float.round(cost, 4),
+         candidate_count: length(ranked),
+         promotable_count: promotable,
+         needs_enrichment_count: needs_enrichment,
+         kept_count: Enum.count(ranked, &(not &1.dedupe.suppress?)),
+         suppressed_count: suppressed,
+         failed_queries: length(errors),
+         errors: error_strings,
+         budget_idempotency_key: Keyword.fetch!(opts, :budget_idempotency_key),
+         candidates: ranked
+       }}
+    end
   end
 
   defp attach_persisted_ids(ranked, nil), do: ranked
@@ -198,6 +199,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       now = DateTime.truncate(DateTime.utc_now(), :second)
 
       attrs = %{
+        idempotency_key: Keyword.fetch!(opts, :budget_idempotency_key),
         source: :exa,
         status: run_status(summary),
         started_at: now,
@@ -217,14 +219,15 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         candidates: Enum.map(ranked, &candidate_attrs/1)
       }
 
-      case Acquisition.create_lead_preview_run(attrs, actor: Keyword.get(opts, :actor)) do
-        {:ok, run} ->
-          run
+      actor = Keyword.get(opts, :actor)
+      idempotency_key = Keyword.fetch!(opts, :budget_idempotency_key)
 
-        {:error, reason} ->
-          Logger.warning("LeadPreview: failed to persist run: #{inspect(reason)}")
-          nil
+      case Acquisition.get_lead_preview_run_by_key(idempotency_key, actor: actor) do
+        {:ok, run} -> Acquisition.get_lead_preview_run(run.id, actor: actor)
+        {:error, _not_found} -> Acquisition.create_lead_preview_run(attrs, actor: actor)
       end
+    else
+      {:ok, nil}
     end
   end
 
@@ -428,27 +431,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   end
 
   defp account_provider_failure(reservation, reason, actor) do
-    result =
-      if confirmed_zero_cost_failure?(reason) do
-        Acquisition.release_provider_capacity(
-          %{
-            idempotency_key: reservation.idempotency_key,
-            failure_reason: inspect(reason)
-          },
-          actor: actor
-        )
-      else
-        Acquisition.settle_provider_capacity(
-          %{
-            idempotency_key: reservation.idempotency_key,
-            actual_cost: reservation.estimated_cost,
-            actual_requests: 1,
-            status: :failed,
-            failure_reason: inspect(reason)
-          },
-          actor: actor
-        )
-      end
+    result = ProviderBudgetPolicy.account_failure(reservation, reason, actor: actor)
 
     case result do
       {:ok, _result} ->
@@ -458,17 +441,6 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         Logger.warning("LeadPreview: provider accounting failed: #{inspect(error)}")
     end
   end
-
-  defp confirmed_zero_cost_failure?(:missing_exa_api_key), do: true
-
-  defp confirmed_zero_cost_failure?({:http_error, status, _body}) when status in 400..499,
-    do: true
-
-  defp confirmed_zero_cost_failure?(%{reason: reason})
-       when reason in [:econnrefused, :nxdomain],
-       do: true
-
-  defp confirmed_zero_cost_failure?(_reason), do: false
 
   defp cache_response(response) do
     %{

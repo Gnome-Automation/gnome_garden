@@ -113,7 +113,11 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
         :actual_cost,
         :query_count,
         :candidate_count,
-        :promotable_count
+        :promotable_count,
+        :verified_count,
+        :admitted_count,
+        :unresolved_count,
+        :enrichment_cost
       ]
 
       change transition_state(:completed)
@@ -127,6 +131,10 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
         :query_count,
         :candidate_count,
         :promotable_count,
+        :verified_count,
+        :admitted_count,
+        :unresolved_count,
+        :enrichment_cost,
         :terminal_diagnostics
       ]
 
@@ -183,6 +191,15 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
     attribute :query_count, :integer, allow_nil?: false, default: 0, public?: true
     attribute :candidate_count, :integer, allow_nil?: false, default: 0, public?: true
     attribute :promotable_count, :integer, allow_nil?: false, default: 0, public?: true
+    attribute :verified_count, :integer, allow_nil?: false, default: 0, public?: true
+    attribute :admitted_count, :integer, allow_nil?: false, default: 0, public?: true
+    attribute :unresolved_count, :integer, allow_nil?: false, default: 0, public?: true
+
+    attribute :enrichment_cost, :decimal,
+      allow_nil?: false,
+      default: Decimal.new(0),
+      public?: true
+
     attribute :attempt_count, :integer, allow_nil?: false, default: 0, public?: true
     attribute :attempt_history, {:array, :map}, allow_nil?: false, default: [], public?: true
     attribute :lead_preview_run_id, :uuid, public?: true

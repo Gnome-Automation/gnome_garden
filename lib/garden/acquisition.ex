@@ -123,6 +123,7 @@ defmodule GnomeGarden.Acquisition do
     resource GnomeGarden.Acquisition.LeadPreviewRun do
       define :create_lead_preview_run, action: :create
       define :get_lead_preview_run, action: :read, get_by: [:id]
+      define :get_lead_preview_run_by_key, action: :by_idempotency_key, args: [:idempotency_key]
       define :list_lead_preview_runs, action: :read
       define :list_recent_lead_preview_runs, action: :recent
     end
@@ -132,6 +133,45 @@ defmodule GnomeGarden.Acquisition do
       define :list_lead_preview_candidates_for_run, action: :for_run, args: [:lead_preview_run_id]
       define :mark_lead_preview_candidate_promoted, action: :mark_promoted
       define :mark_lead_preview_candidate_status, action: :mark_status
+    end
+
+    resource GnomeGarden.Acquisition.LeadCandidateVerification do
+      define :record_lead_candidate_verification, action: :record
+
+      define :get_lead_candidate_verification,
+        action: :by_candidate,
+        args: [:lead_preview_candidate_id]
+    end
+
+    resource GnomeGarden.Acquisition.LeadAdmissionPolicy do
+      define :ensure_lead_admission_policy, action: :ensure_default
+      define :get_lead_admission_policy, action: :by_key, args: [:key]
+      define :update_lead_admission_policy, action: :update
+    end
+
+    resource GnomeGarden.Acquisition.FindingAdmissionCapacity do
+      define :open_finding_admission_capacity, action: :open
+
+      define :get_finding_admission_capacity,
+        action: :by_scope_key,
+        args: [:scope, :scope_key]
+
+      define :consume_finding_admission_capacity, action: :consume
+    end
+
+    resource GnomeGarden.Acquisition.FindingAdmission do
+      define :verify_lead_preview_run, action: :verify_preview_run, args: [:lead_preview_run_id]
+      define :create_finding_admission, action: :create
+
+      define :get_finding_admission_by_identity,
+        action: :by_identity_key,
+        args: [:identity_key]
+
+      define :get_finding_admission_by_candidate,
+        action: :by_candidate,
+        args: [:lead_preview_candidate_id]
+
+      define :list_finding_admissions_for_run, action: :for_run, args: [:lead_preview_run_id]
     end
 
     resource GnomeGarden.Acquisition.ProviderBudget do

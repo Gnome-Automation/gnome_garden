@@ -71,6 +71,41 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
     end
   end
 
+  @doc "Accounts for a failed provider request without under-reporting uncertain spend."
+  def account_failure(reservation, reason, opts \\ []) do
+    if confirmed_zero_cost_failure?(reason) do
+      release(
+        %{
+          idempotency_key: reservation.idempotency_key,
+          failure_reason: inspect(reason)
+        },
+        opts
+      )
+    else
+      settle(
+        %{
+          idempotency_key: reservation.idempotency_key,
+          actual_cost: reservation.estimated_cost,
+          actual_requests: 1,
+          status: :failed,
+          failure_reason: inspect(reason)
+        },
+        opts
+      )
+    end
+  end
+
+  def confirmed_zero_cost_failure?(:missing_exa_api_key), do: true
+
+  def confirmed_zero_cost_failure?({:http_error, status, _body}) when status in 400..499,
+    do: true
+
+  def confirmed_zero_cost_failure?(%{reason: reason})
+      when reason in [:econnrefused, :nxdomain],
+      do: true
+
+  def confirmed_zero_cost_failure?(_reason), do: false
+
   defp create_reservation(request, actor) do
     transaction_result =
       transact([ProviderBudget, ProviderReservation], fn ->

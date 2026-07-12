@@ -31,6 +31,7 @@ defmodule GnomeGarden.Acquisition.LeadDedup do
   """
 
   alias GnomeGarden.{Acquisition, Commercial, Operations, Procurement}
+  alias GnomeGarden.Acquisition.LeadIdentity
   alias GnomeGarden.Support.{IdentityNormalizer, WebIdentity}
 
   # Domains that are bid portals / agency listings even if not in our source
@@ -49,9 +50,12 @@ defmodule GnomeGarden.Acquisition.LeadDedup do
 
     cond do
       bid = bid_match(url, actor) ->
-        result(:existing_bid_related, true,
+        result(
+          :existing_bid_related,
+          true,
           "Matches a saved bid — do not create a lead; attach as context/evidence if promoted.",
-          [related(:bid, bid.id, bid.title)])
+          [related(:bid, bid.id, bid.title)]
+        )
 
       source = source_match(domain, url, source_domains, actor) ->
         known_source_result(source, signal?)
@@ -66,8 +70,9 @@ defmodule GnomeGarden.Acquisition.LeadDedup do
         discovery_result(record, signal?)
 
       finding = finding_match(url, actor) ->
-        result(:duplicate_existing_lead, true,
-          "Already a finding in the review queue.", [related(:finding, finding.id, finding.title)])
+        result(:duplicate_existing_lead, true, "Already a finding in the review queue.", [
+          related(:finding, finding.id, finding.title)
+        ])
 
       true ->
         result(:new, false, "New candidate lead.", [])
@@ -83,49 +88,81 @@ defmodule GnomeGarden.Acquisition.LeadDedup do
   # --- result builders ---
 
   defp known_source_result(source, false),
-    do: result(:known_procurement_source, true,
-      "Already a configured procurement/acquisition source — procurement context, not a new commercial lead.",
-      [related(:source, source.id, source_label(source))])
+    do:
+      result(
+        :known_procurement_source,
+        true,
+        "Already a configured procurement/acquisition source — procurement context, not a new commercial lead.",
+        [related(:source, source.id, source_label(source))]
+      )
 
   defp known_source_result(source, true),
-    do: result(:known_procurement_source, false,
-      "Domain is a known source, but this looks like a company-specific signal — attach as signal/context.",
-      [related(:source, source.id, source_label(source))])
+    do:
+      result(
+        :known_procurement_source,
+        false,
+        "Domain is a known source, but this looks like a company-specific signal — attach as signal/context.",
+        [related(:source, source.id, source_label(source))]
+      )
 
   defp known_bid_source_result(domain, signal?),
-    do: result(:known_bid_source, not signal?,
-      "Bid portal / agency listing (#{domain}) — keep only if the extracted entity is the prospect; otherwise public-sector signal.",
-      [related(:portal, nil, domain)])
+    do:
+      result(
+        :known_bid_source,
+        not signal?,
+        "Bid portal / agency listing (#{domain}) — keep only if the extracted entity is the prospect; otherwise public-sector signal.",
+        [related(:portal, nil, domain)]
+      )
 
   defp org_result(org, true),
-    do: result(:known_organization_new_signal, false,
-      "Known organization (#{org.name}) with a new signal — route to the existing org; do not create a new one.",
-      [related(:organization, org.id, org.name)])
+    do:
+      result(
+        :known_organization_new_signal,
+        false,
+        "Known organization (#{org.name}) with a new signal — route to the existing org; do not create a new one.",
+        [related(:organization, org.id, org.name)]
+      )
 
   defp org_result(org, false),
-    do: result(:duplicate_existing_lead, true,
-      "Company already exists as an organization (#{org.name}).",
-      [related(:organization, org.id, org.name)])
+    do:
+      result(
+        :duplicate_existing_lead,
+        true,
+        "Company already exists as an organization (#{org.name}).",
+        [related(:organization, org.id, org.name)]
+      )
 
   defp discovery_result(record, true),
-    do: result(:known_organization_new_signal, false,
-      "Already a discovery record (#{record.name}) — attach the new signal to it.",
-      [related(:discovery_record, record.id, record.name)])
+    do:
+      result(
+        :known_organization_new_signal,
+        false,
+        "Already a discovery record (#{record.name}) — attach the new signal to it.",
+        [related(:discovery_record, record.id, record.name)]
+      )
 
   defp discovery_result(record, false),
-    do: result(:duplicate_existing_lead, true,
-      "Already a discovery record (#{record.name}).",
-      [related(:discovery_record, record.id, record.name)])
+    do:
+      result(:duplicate_existing_lead, true, "Already a discovery record (#{record.name}).", [
+        related(:discovery_record, record.id, record.name)
+      ])
 
   defp result(context, suppress?, recommendation, related),
-    do: %{context: context, suppress?: suppress?, recommendation: recommendation, related: related}
+    do: %{
+      context: context,
+      suppress?: suppress?,
+      recommendation: recommendation,
+      related: related
+    }
 
   defp related(kind, id, label), do: %{kind: kind, id: id, label: label}
 
   # --- lookups (internal system reads; authorize? false) ---
 
   defp bid_match(nil, _actor), do: nil
-  defp bid_match(url, actor), do: Procurement.get_bid_by_url(url, actor: actor, authorize?: false) |> first_ok()
+
+  defp bid_match(url, actor),
+    do: Procurement.get_bid_by_url(url, actor: actor, authorize?: false) |> first_ok()
 
   defp source_match(domain, url, source_domains, actor) do
     if domain && MapSet.member?(source_domains, domain) do
@@ -143,17 +180,37 @@ defmodule GnomeGarden.Acquisition.LeadDedup do
   end
 
   defp org_match(domain, name_key, actor) do
-    (domain && Operations.get_organization_by_website_domain(domain, actor: actor, authorize?: false) |> first_ok()) ||
-      (name_key && Operations.list_organizations_by_name_key(name_key, actor: actor, authorize?: false) |> first_ok())
+    (domain &&
+       Operations.get_organization_by_website_domain(domain, actor: actor, authorize?: false)
+       |> first_ok()) ||
+      (name_key &&
+         Operations.list_organizations_by_name_key(name_key, actor: actor, authorize?: false)
+         |> first_ok())
   end
 
   defp discovery_record_match(nil, _actor), do: nil
 
   defp discovery_record_match(domain, actor),
-    do: Commercial.get_discovery_record_by_website_domain(domain, actor: actor, authorize?: false) |> first_ok()
+    do:
+      Commercial.get_discovery_record_by_website_domain(domain, actor: actor, authorize?: false)
+      |> first_ok()
 
   defp finding_match(nil, _actor), do: nil
-  defp finding_match(url, actor), do: Acquisition.get_finding_by_external_ref(url, actor: actor, authorize?: false) |> first_ok()
+
+  defp finding_match(url, actor) do
+    normalized_match =
+      case LeadIdentity.company_domain_key(url) do
+        nil ->
+          nil
+
+        key ->
+          Acquisition.get_finding_by_external_ref(key, actor: actor, authorize?: false)
+          |> first_ok()
+      end
+
+    normalized_match ||
+      Acquisition.get_finding_by_external_ref(url, actor: actor, authorize?: false) |> first_ok()
+  end
 
   defp load_source_domains(actor) do
     procurement =
