@@ -31,11 +31,6 @@ defmodule GnomeGarden.Acquisition.FindingAdmission do
   actions do
     defaults [:read]
 
-    action :verify_preview_run, :map do
-      argument :lead_preview_run_id, :uuid, allow_nil?: false
-      run GnomeGarden.Acquisition.Actions.VerifyLeadPreviewRun
-    end
-
     create :create do
       accept [
         :lead_candidate_verification_id,
@@ -51,12 +46,6 @@ defmodule GnomeGarden.Acquisition.FindingAdmission do
     read :by_identity_key do
       argument :identity_key, :string, allow_nil?: false
       get_by [:identity_key]
-      prepare build(load: [:finding, :lead_candidate_verification])
-    end
-
-    read :by_candidate do
-      argument :lead_preview_candidate_id, :uuid, allow_nil?: false
-      get_by [:lead_preview_candidate_id]
       prepare build(load: [:finding, :lead_candidate_verification])
     end
 

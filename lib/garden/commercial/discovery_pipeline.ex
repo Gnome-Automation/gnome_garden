@@ -52,7 +52,7 @@ defmodule GnomeGarden.Commercial.DiscoveryPipeline do
          program: program,
          mode: :live_exa_verified,
          total_cost:
-           Float.round(preview.total_cost + Decimal.to_float(verification.enrichment_cost), 4),
+           Decimal.add(Decimal.from_float(preview.total_cost), verification.enrichment_cost),
          failed_queries: preview.failed_queries + length(verification.errors),
          errors: preview.errors ++ verification.errors
        })}

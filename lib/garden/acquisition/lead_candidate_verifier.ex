@@ -8,7 +8,13 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
   """
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Acquisition.{FindingAdmissionPolicy, ProviderBudgetPolicy}
+
+  alias GnomeGarden.Acquisition.{
+    FindingAdmissionPolicy,
+    ProgramSourcePolicy,
+    ProviderBudgetPolicy
+  }
+
   alias GnomeGarden.Search.Exa
   alias GnomeGarden.Support.WebIdentity
 
@@ -60,17 +66,25 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
   end
 
   defp verify_candidate(candidate, preview_run, program, result, config, actor) do
-    case eligibility(candidate, config) do
-      :eligible when result.enrichment_attempts < config.candidate_limit ->
+    candidate = %{candidate | website_domain: candidate_domain(candidate)}
+
+    case {eligibility(candidate, config), config.enrichment_policy} do
+      {:eligible, :none} ->
+        with {:ok, verification} <-
+               record(candidate, :unresolved, :enrichment_disabled, %{}, nil, 0, actor) do
+          {:ok, add_outcome(result, :unresolved, verification)}
+        end
+
+      {:eligible, :verify_promotable} when result.enrichment_attempts < config.candidate_limit ->
         enrich_and_admit(candidate, preview_run, program, result, config, actor)
 
-      :eligible ->
+      {:eligible, :verify_promotable} ->
         with {:ok, verification} <-
                record(candidate, :unresolved, :verification_limit_reached, %{}, nil, 0, actor) do
           {:ok, add_outcome(result, :unresolved, verification)}
         end
 
-      {:ineligible, reason} ->
+      {{:ineligible, reason}, _policy} ->
         with {:ok, verification} <- record(candidate, :ineligible, reason, %{}, nil, 0, actor) do
           {:ok, add_outcome(result, :ineligible, verification)}
         end
@@ -200,7 +214,7 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
     do: {:ineligible, :invalid_company_identity}
 
   defp eligibility(candidate, config) do
-    domain = candidate.website_domain || WebIdentity.website_domain(candidate.url)
+    domain = candidate.website_domain
     score = search_score(candidate)
 
     cond do
@@ -300,7 +314,7 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
   end
 
   defp assess_evidence(candidate, response, config) do
-    domain = candidate.website_domain || WebIdentity.website_domain(candidate.url)
+    domain = candidate.website_domain
 
     matching =
       response.results
@@ -360,12 +374,12 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
 
   defp verification_score(candidate, evidence_characters, config) do
     search_points =
-      candidate |> search_score() |> Decimal.to_float() |> Kernel.*(20) |> round() |> min(20)
+      candidate |> search_score() |> Decimal.to_float() |> Kernel.*(40) |> round() |> min(40)
 
     evidence_points =
-      min(div(evidence_characters, max(config.min_evidence_characters, 1)) * 10, 20)
+      min(div(evidence_characters, max(config.min_evidence_characters, 1)) * 10, 40)
 
-    min(60 + search_points + evidence_points, 100)
+    min(20 + search_points + evidence_points, 100)
   end
 
   defp record(
@@ -383,7 +397,7 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
         lead_preview_candidate_id: candidate.id,
         status: status,
         reason: reason,
-        website_domain: candidate.website_domain || WebIdentity.website_domain(candidate.url),
+        website_domain: candidate.website_domain,
         search_score: search_score(candidate),
         verification_score: score,
         evidence: evidence,
@@ -411,12 +425,14 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
       preview_run.idempotency_key ||
         preview_run.metadata["provider_budget_idempotency_key"] || preview_run.id
 
-    identity =
-      candidate.website_domain || WebIdentity.website_domain(candidate.url) || candidate.url
+    identity = candidate.website_domain || candidate.url
 
     digest = :crypto.hash(:sha256, identity) |> Base.encode16(case: :lower)
     "#{base}:contents:#{digest}"
   end
+
+  defp candidate_domain(candidate),
+    do: candidate.website_domain || WebIdentity.website_domain(candidate.url)
 
   defp cache_response(response) do
     %{
@@ -462,30 +478,7 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
   end
 
   defp verification_config(preview_run, thresholds) do
-    metadata = preview_run.metadata
-
-    with {:ok, candidate_limit} <- non_negative_limit(metadata, "max_enrichments_per_run"),
-         {:ok, finding_run_limit} <- non_negative_limit(metadata, "finding_limit_per_run"),
-         {:ok, finding_daily_limit} <- non_negative_limit(metadata, "finding_limit_per_day"),
-         true <- is_binary(metadata["program_source_id"]) do
-      {:ok,
-       %{
-         candidate_limit: candidate_limit,
-         finding_run_limit: finding_run_limit,
-         finding_daily_limit: finding_daily_limit,
-         min_search_score: thresholds.min_search_score,
-         min_evidence_characters: thresholds.min_evidence_characters
-       }}
-    else
-      _invalid -> {:error, :invalid_program_source_snapshot}
-    end
-  end
-
-  defp non_negative_limit(metadata, key) do
-    case metadata[key] do
-      value when is_integer(value) and value >= 0 -> {:ok, value}
-      _invalid -> {:error, :invalid_program_source_snapshot}
-    end
+    ProgramSourcePolicy.verification_config(preview_run.metadata, thresholds)
   end
 
   defp initial_result do

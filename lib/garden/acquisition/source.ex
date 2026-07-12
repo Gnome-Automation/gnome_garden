@@ -55,7 +55,7 @@ defmodule GnomeGarden.Acquisition.Source do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
 
     create :create do
       primary? true
@@ -114,21 +114,14 @@ defmodule GnomeGarden.Acquisition.Source do
 
     read :console do
       pagination offset?: true, countable: true, required?: false
-
-      prepare build(
-                sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
-                load: @console_loads
-              )
+      prepare {GnomeGarden.Acquisition.Preparations.SourceConsole, loads: @console_loads}
     end
 
     read :console_needs_configuration do
       pagination offset?: true, countable: true, required?: false
       filter expr(procurement_source.config_status in [:found, :pending, :config_failed, :manual])
 
-      prepare build(
-                sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
-                load: @console_loads
-              )
+      prepare {GnomeGarden.Acquisition.Preparations.SourceConsole, loads: @console_loads}
     end
 
     read :console_ready do
@@ -140,20 +133,18 @@ defmodule GnomeGarden.Acquisition.Source do
                     (is_nil(procurement_source_id) and scan_strategy in [:agentic, :deterministic]))
              )
 
-      prepare build(
-                sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
-                load: @console_loads
-              )
+      prepare {GnomeGarden.Acquisition.Preparations.SourceConsole, loads: @console_loads}
     end
 
     read :console_credentials_needed do
       pagination offset?: true, countable: true, required?: false
-      filter expr(procurement_source.requires_login == true)
 
-      prepare build(
-                sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
-                load: @console_loads
-              )
+      filter expr(
+               procurement_source.requires_login == true or
+                 procurement_source.source_type == :bidnet
+             )
+
+      prepare {GnomeGarden.Acquisition.Preparations.SourceConsole, loads: @console_loads}
     end
 
     read :console_attention do
@@ -179,10 +170,7 @@ defmodule GnomeGarden.Acquisition.Source do
                  )
              )
 
-      prepare build(
-                sort: [status: :asc, last_run_at: :desc, inserted_at: :desc],
-                load: @console_loads
-              )
+      prepare {GnomeGarden.Acquisition.Preparations.SourceConsole, loads: @console_loads}
     end
   end
 
@@ -275,11 +263,6 @@ defmodule GnomeGarden.Acquisition.Source do
     end
 
     has_many :findings, GnomeGarden.Acquisition.Finding do
-      destination_attribute :source_id
-      public? true
-    end
-
-    has_many :program_sources, GnomeGarden.Acquisition.ProgramSource do
       destination_attribute :source_id
       public? true
     end

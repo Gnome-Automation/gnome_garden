@@ -36,7 +36,9 @@ again instead of creating another ledger entry.
 
 Provider metering values intentionally use Ash `:decimal` attributes rather
 than the Ledger domain's `:money` type. These records represent single-currency
-provider quota arithmetic, not journaled business money.
+provider quota arithmetic, not journaled business money. The same exception
+applies to preview, verification, and discovery-run cost telemetry derived from
+those reservations; operator-authored spend limits remain typed `:money`.
 
 ## Configuration
 

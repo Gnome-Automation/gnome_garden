@@ -72,7 +72,6 @@ defmodule GnomeGarden.Acquisition do
 
     resource GnomeGarden.Acquisition.ProgramSource do
       define :backfill_program_sources, action: :backfill
-      define :list_program_sources, action: :read
       define :get_program_source, action: :read, get_by: [:id]
       define :create_program_source, action: :create
       define :update_program_source_policy, action: :update_policy
@@ -92,8 +91,6 @@ defmodule GnomeGarden.Acquisition do
       define :get_active_exa_program_source_for_discovery_program,
         action: :active_exa_for_discovery_program,
         args: [:discovery_program_id]
-
-      define :get_program_source_workspace, action: :workspace, args: [:id]
     end
 
     resource GnomeGarden.Acquisition.Finding do
@@ -151,6 +148,7 @@ defmodule GnomeGarden.Acquisition do
     end
 
     resource GnomeGarden.Acquisition.LeadPreviewRun do
+      define :verify_lead_preview_run, action: :verify, args: [:lead_preview_run_id]
       define :create_lead_preview_run, action: :create
       define :get_lead_preview_run, action: :read, get_by: [:id]
       define :get_lead_preview_run_by_key, action: :by_idempotency_key, args: [:idempotency_key]
@@ -176,7 +174,6 @@ defmodule GnomeGarden.Acquisition do
     resource GnomeGarden.Acquisition.LeadAdmissionPolicy do
       define :ensure_lead_admission_policy, action: :ensure_default
       define :get_lead_admission_policy, action: :by_key, args: [:key]
-      define :update_lead_admission_policy, action: :update
     end
 
     resource GnomeGarden.Acquisition.FindingAdmissionCapacity do
@@ -190,16 +187,11 @@ defmodule GnomeGarden.Acquisition do
     end
 
     resource GnomeGarden.Acquisition.FindingAdmission do
-      define :verify_lead_preview_run, action: :verify_preview_run, args: [:lead_preview_run_id]
       define :create_finding_admission, action: :create
 
       define :get_finding_admission_by_identity,
         action: :by_identity_key,
         args: [:identity_key]
-
-      define :get_finding_admission_by_candidate,
-        action: :by_candidate,
-        args: [:lead_preview_candidate_id]
 
       define :list_finding_admissions_for_run, action: :for_run, args: [:lead_preview_run_id]
     end

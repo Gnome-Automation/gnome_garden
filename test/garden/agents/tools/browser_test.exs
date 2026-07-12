@@ -14,7 +14,11 @@ defmodule GnomeGarden.BrowserTest do
     def start_session(opts) do
       test_pid = Keyword.fetch!(opts, :test_pid)
       send(test_pid, {:browser_started, opts})
-      Session.new!(%{adapter: __MODULE__, connection: %{test_pid: test_pid}})
+
+      Session.new!(%{
+        adapter: __MODULE__,
+        connection: %{test_pid: test_pid, download_path: Keyword.fetch!(opts, :download_path)}
+      })
     end
 
     @impl true
@@ -26,6 +30,12 @@ defmodule GnomeGarden.BrowserTest do
     @impl true
     def navigate(session, url, opts) do
       send(test_pid(session), {:browser_navigate, url, opts})
+
+      if String.contains?(url, "/blocked") do
+        send(test_pid(session), {:browser_navigate_blocked, self()})
+        receive do: (:continue_navigation -> :ok)
+      end
+
       {:ok, session, %{"url" => url, "title" => "Adapter Title"}}
     end
 
@@ -45,9 +55,6 @@ defmodule GnomeGarden.BrowserTest do
               "forms" => [%{"action" => "/submit"}]
             }
 
-          String.contains?(script, "arrayBuffer") ->
-            %{"ok" => true, "base64" => Base.encode64("downloaded")}
-
           true ->
             %{"evaluated" => true}
         end
@@ -56,7 +63,12 @@ defmodule GnomeGarden.BrowserTest do
     end
 
     @impl true
-    def click(session, _selector, _opts), do: {:ok, session, %{}}
+    def click(session, selector, opts) do
+      send(test_pid(session), {:browser_click, selector, opts})
+      path = Path.join(session.connection.download_path, "cross-origin-download.bin")
+      File.write!(path, "downloaded")
+      {:ok, session, %{}}
+    end
 
     @impl true
     def type(session, _selector, _text, _opts), do: {:ok, session, %{}}
@@ -156,6 +168,23 @@ defmodule GnomeGarden.BrowserTest do
     assert_receive :browser_ended
   end
 
+  test "does not serialize slow operations across caller sessions" do
+    tasks =
+      for index <- 1..2 do
+        Task.async(fn -> Browser.navigate("https://example.test/blocked/#{index}") end)
+      end
+
+    assert_receive {:browser_navigate_blocked, first_session_owner}
+    assert_receive {:browser_navigate_blocked, second_session_owner}
+    refute first_session_owner == second_session_owner
+
+    send(first_session_owner, :continue_navigation)
+    send(second_session_owner, :continue_navigation)
+
+    results = Enum.map(tasks, &Task.await/1)
+    assert Enum.all?(results, &match?({:ok, _navigation}, &1))
+  end
+
   test "returns a bounded browser snapshot" do
     assert {:ok, snapshot} =
              Browser.inspect_page("https://example.test", max_links: 2, max_text_chars: 5)
@@ -172,9 +201,8 @@ defmodule GnomeGarden.BrowserTest do
 
     assert :ok = Browser.download("#download", target)
     assert File.read!(target) == "downloaded"
-    assert_received {:browser_evaluate, script, _opts}
-    assert script =~ ~s|document.querySelector("#download")|
-    assert script =~ "credentials: \"include\""
+    assert_received {:browser_click, "#download", _opts}
+    refute_received {:browser_evaluate, _script, _opts}
   end
 
   test "bounds stateless Jido web fetch output" do

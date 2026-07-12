@@ -43,6 +43,11 @@ defmodule GnomeGarden.Acquisition.LeadPreviewRun do
   actions do
     defaults [:read]
 
+    action :verify, :map do
+      argument :lead_preview_run_id, :uuid, allow_nil?: false
+      run GnomeGarden.Acquisition.Actions.VerifyLeadPreviewRun
+    end
+
     create :create do
       primary? true
 
@@ -124,10 +129,6 @@ defmodule GnomeGarden.Acquisition.LeadPreviewRun do
 
   relationships do
     has_many :candidates, GnomeGarden.Acquisition.LeadPreviewCandidate do
-      public? true
-    end
-
-    has_many :finding_admissions, GnomeGarden.Acquisition.FindingAdmission do
       public? true
     end
   end

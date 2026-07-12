@@ -86,6 +86,7 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerification do
                     :invalid_company_identity,
                     :below_search_score,
                     :insufficient_evidence,
+                    :enrichment_disabled,
                     :verification_limit_reached,
                     :provider_budget_exhausted,
                     :provider_failure

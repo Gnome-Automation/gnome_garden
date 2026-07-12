@@ -13,6 +13,7 @@ defmodule GnomeGarden.Browser do
   @default_timeout_ms 30_000
   @default_max_content_chars 50_000
   @default_max_download_bytes 25_000_000
+  @download_poll_ms 50
 
   @doc "Navigate the managed browser session to a URL."
   def navigate(url, opts \\ []) when is_binary(url) do
@@ -105,33 +106,33 @@ defmodule GnomeGarden.Browser do
     max_bytes = positive_integer(opts[:max_bytes], @default_max_download_bytes)
 
     result =
-      with_session(:download, opts, fn client, session ->
-        with {:ok, session, evaluation} <-
-               client.evaluate(session, download_script(selector, max_bytes),
-                 timeout: timeout(opts)
-               ),
-             {:ok, payload} <- evaluation_result(evaluation) do
-          {:ok, session, payload}
+      with_session(:download, opts, fn client, session, context ->
+        before = download_entries(context.download_dir)
+
+        with {:ok, session, _click} <-
+               client.click(session, selector, timeout: timeout(opts)),
+             {:ok, download_path} <-
+               await_download(
+                 context.download_dir,
+                 before,
+                 max_bytes,
+                 System.monotonic_time(:millisecond) + timeout(opts)
+               ) do
+          {:ok, session, download_path}
         end
       end)
 
-    with {:ok, payload} <- result,
-         true <- value(payload, :ok) == true,
-         encoded when is_binary(encoded) <- value(payload, :base64),
-         {:ok, bytes} <- Base.decode64(encoded),
-         true <- byte_size(bytes) <= max_bytes,
-         :ok <- File.write(target_path, bytes) do
+    with {:ok, download_path} <- result,
+         {:ok, stat} <- File.stat(download_path),
+         true <- stat.size <= max_bytes,
+         :ok <- move_download(download_path, target_path) do
       :ok
     else
       {:error, reason} ->
         {:error, {:browser_download_failed, reason}}
 
       false ->
-        {:error,
-         {:browser_download_failed, value(payload(result), :error) || :download_too_large}}
-
-      :error ->
-        {:error, {:browser_download_failed, :invalid_base64}}
+        {:error, {:browser_download_failed, :download_too_large}}
 
       other ->
         {:error, {:browser_download_failed, other}}
@@ -178,7 +179,6 @@ defmodule GnomeGarden.Browser do
 
   defp evaluation_result(%{result: result}), do: {:ok, result}
   defp evaluation_result(%{"result" => result}), do: {:ok, result}
-  defp evaluation_result(result) when is_map(result), do: {:ok, result}
   defp evaluation_result(result), do: {:ok, result}
 
   defp bound_fetch_result(result, max_content_chars) do
@@ -201,29 +201,74 @@ defmodule GnomeGarden.Browser do
     do: Map.get(map, key) || Map.get(map, Atom.to_string(key))
 
   defp value(_map, _key), do: nil
-  defp payload({:ok, payload}), do: payload
-  defp payload(_result), do: %{}
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 
-  defp download_script(selector, max_bytes) do
-    """
-    (async () => {
-      const element = document.querySelector(#{Jason.encode!(selector)});
-      if (!element) return {ok: false, error: "element_not_found"};
-      const url = element.href || element.getAttribute("href");
-      if (!url) return {ok: false, error: "missing_download_url"};
-      const response = await fetch(url, {credentials: "include"});
-      if (!response.ok) return {ok: false, error: `http_${response.status}`};
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      if (bytes.byteLength > #{max_bytes}) return {ok: false, error: "download_too_large"};
-      let binary = "";
-      for (let offset = 0; offset < bytes.length; offset += 32768) {
-        binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
-      }
-      return {ok: true, base64: btoa(binary), size: bytes.byteLength};
-    })()
-    """
+  defp download_entries(download_dir) do
+    download_dir
+    |> Path.join("*")
+    |> Path.wildcard()
+    |> Map.new(fn path -> {path, file_signature(path)} end)
+  end
+
+  defp await_download(download_dir, before, max_bytes, deadline, previous \\ nil) do
+    candidates =
+      download_dir
+      |> download_entries()
+      |> Enum.reject(fn {path, signature} ->
+        Map.get(before, path) == signature or partial_download?(path)
+      end)
+      |> Enum.sort_by(fn {_path, {_size, modified}} -> modified end, :desc)
+
+    case candidates do
+      [{_path, {size, _modified}} | _rest] when size > max_bytes ->
+        {:error, :download_too_large}
+
+      [{path, signature} | _rest] when previous == {path, signature} ->
+        {:ok, path}
+
+      [{path, signature} | _rest] ->
+        wait_for_download(download_dir, before, max_bytes, deadline, {path, signature})
+
+      [] ->
+        wait_for_download(download_dir, before, max_bytes, deadline, nil)
+    end
+  end
+
+  defp wait_for_download(download_dir, before, max_bytes, deadline, previous) do
+    if System.monotonic_time(:millisecond) >= deadline do
+      {:error, :download_timeout}
+    else
+      Process.sleep(@download_poll_ms)
+      await_download(download_dir, before, max_bytes, deadline, previous)
+    end
+  end
+
+  defp file_signature(path) do
+    case File.stat(path, time: :posix) do
+      {:ok, stat} -> {stat.size, stat.mtime}
+      {:error, _reason} -> {0, 0}
+    end
+  end
+
+  defp partial_download?(path) do
+    String.ends_with?(path, [".crdownload", ".part", ".tmp"])
+  end
+
+  defp move_download(source, target) do
+    case File.rename(source, target) do
+      :ok ->
+        :ok
+
+      {:error, :exdev} ->
+        with {:ok, _bytes} <- File.copy(source, target),
+             :ok <- File.rm(source) do
+          :ok
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   defp page_snapshot_js(max_links, max_text_chars) do

@@ -18,6 +18,7 @@ defmodule GnomeGarden.Application do
        )},
       {Phoenix.PubSub, name: GnomeGarden.PubSub},
       {Task.Supervisor, name: GnomeGarden.AsyncSupervisor},
+      {DynamicSupervisor, name: GnomeGarden.Browser.SessionSupervisor, strategy: :one_for_one},
       GnomeGarden.Browser.SessionManager,
 
       # Durable run/deployment tracking

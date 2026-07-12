@@ -31,7 +31,7 @@ defmodule GnomeGarden.Acquisition.Program do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
 
     action :baseline, :map do
       run GnomeGarden.Acquisition.Actions.BuildBaseline
@@ -176,11 +176,6 @@ defmodule GnomeGarden.Acquisition.Program do
     end
 
     has_many :findings, GnomeGarden.Acquisition.Finding do
-      destination_attribute :program_id
-      public? true
-    end
-
-    has_many :program_sources, GnomeGarden.Acquisition.ProgramSource do
       destination_attribute :program_id
       public? true
     end

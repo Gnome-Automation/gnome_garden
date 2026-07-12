@@ -41,6 +41,9 @@ defmodule GnomeGarden.Acquisition.LeadPreviewCandidate do
 
     create :create do
       primary? true
+      upsert? true
+      upsert_identity :unique_run_url
+      upsert_fields []
 
       accept [
         :lead_preview_run_id,
@@ -142,5 +145,9 @@ defmodule GnomeGarden.Acquisition.LeadPreviewCandidate do
       destination_attribute :lead_preview_candidate_id
       public? true
     end
+  end
+
+  identities do
+    identity :unique_run_url, [:lead_preview_run_id, :url]
   end
 end

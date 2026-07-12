@@ -61,7 +61,7 @@ defmodule GnomeGarden.Acquisition.ScheduledDiscoveryE2ETest do
 
     scheduled_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    assert %{checked: 1, due: 1, launched: 1, skipped: 0, errors: 0} =
+    assert %{due: 1, launched: 1, skipped: 0, errors: 0} =
              DiscoveryScheduler.run_due_programs(scheduled_at)
 
     assert {:ok, [queued]} = Commercial.list_discovery_runs()

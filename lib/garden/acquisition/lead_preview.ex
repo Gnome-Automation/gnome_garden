@@ -23,7 +23,14 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   require Logger
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Acquisition.{LeadDedup, LeadPromote, ProviderBudgetPolicy}
+
+  alias GnomeGarden.Acquisition.{
+    LeadDedup,
+    LeadPromote,
+    ProgramSourcePolicy,
+    ProviderBudgetPolicy
+  }
+
   alias GnomeGarden.Commercial
   alias GnomeGarden.Search.Exa
   alias GnomeGarden.Support.WebIdentity
@@ -310,61 +317,14 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     actor = Keyword.get(opts, :actor)
 
     case Keyword.get(opts, :execution_policy_snapshot) do
-      %{} = snapshot -> snapshot_policy_opts(snapshot)
+      %{} = snapshot -> ProgramSourcePolicy.execution_options(snapshot)
       nil -> current_policy_opts(program, opts, actor)
     end
   end
 
   defp current_policy_opts(program, opts, actor) do
     with {:ok, policy} <- resolve_program_source(program, opts, actor) do
-      {:ok,
-       [
-         search_terms: policy.query_templates,
-         regions: [],
-         industries: [],
-         max_queries: policy.max_queries_per_run,
-         max_results_per_query: policy.max_results_per_query,
-         spend_ceiling: Decimal.to_float(policy.spend_limit_per_run.amount),
-         execution_policy_snapshot: %{
-           "program_source_id" => policy.id,
-           "source_id" => policy.source_id,
-           "query_templates" => policy.query_templates,
-           "cadence_minutes" => policy.cadence_minutes,
-           "max_queries_per_run" => policy.max_queries_per_run,
-           "max_results_per_query" => policy.max_results_per_query,
-           "enrichment_policy" => to_string(policy.enrichment_policy),
-           "max_enrichments_per_run" => policy.max_enrichments_per_run,
-           "finding_limit_per_run" => policy.finding_limit_per_run,
-           "finding_limit_per_day" => policy.finding_limit_per_day
-         }
-       ]}
-    end
-  end
-
-  defp snapshot_policy_opts(snapshot) do
-    with {:ok, spend_ceiling} <- parse_snapshot_float(snapshot, "spend_limit_per_run"),
-         true <- is_binary(snapshot["program_source_id"]),
-         true <- is_binary(snapshot["source_id"]),
-         [_ | _] = query_templates <- snapshot["query_templates"] do
-      {:ok,
-       [
-         search_terms: query_templates,
-         regions: [],
-         industries: [],
-         max_queries: snapshot["max_queries_per_run"],
-         max_results_per_query: snapshot["max_results_per_query"],
-         spend_ceiling: spend_ceiling,
-         execution_policy_snapshot: snapshot
-       ]}
-    else
-      _invalid -> {:error, :invalid_program_source_snapshot}
-    end
-  end
-
-  defp parse_snapshot_float(snapshot, key) do
-    case Float.parse(to_string(snapshot[key])) do
-      {value, ""} when value > 0 -> {:ok, value}
-      _invalid -> {:error, :invalid_program_source_snapshot}
+      policy |> ProgramSourcePolicy.snapshot() |> ProgramSourcePolicy.execution_options()
     end
   end
 

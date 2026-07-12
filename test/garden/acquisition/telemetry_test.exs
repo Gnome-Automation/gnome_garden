@@ -2,6 +2,7 @@ defmodule GnomeGarden.Acquisition.TelemetryTest do
   use ExUnit.Case, async: true
 
   alias GnomeGarden.Acquisition.Telemetry
+  alias GnomeGarden.Acquisition.SloEvaluatorWorker
 
   test "emits bounded provider and trace events" do
     handler = "acquisition-telemetry-#{System.unique_integer([:positive])}"
@@ -37,6 +38,13 @@ defmodule GnomeGarden.Acquisition.TelemetryTest do
     assert_receive {^event, %{value: 30, threshold: 25, count: 1}, metadata}
     assert metadata == %{kind: :queue_backlog, severity: :warning}
     refute Map.has_key?(metadata, :run_id)
+  end
+
+  test "scheduled evaluator captures and evaluates a durable snapshot" do
+    assert {:ok, [%{kind: :queue_backlog}]} =
+             SloEvaluatorWorker.run(fn ->
+               {:ok, %{queue_backlog: 30}}
+             end)
   end
 
   defp send_event(event, measurements, metadata, pid),

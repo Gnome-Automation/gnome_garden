@@ -3,6 +3,7 @@ defmodule GnomeGarden.Acquisition.ProgramSourceTest do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.LeadPreview
+  alias GnomeGarden.Acquisition.ProgramSourcePolicy
   alias GnomeGarden.Commercial
   alias GnomeGarden.Search.Exa
 
@@ -48,6 +49,75 @@ defmodule GnomeGarden.Acquisition.ProgramSourceTest do
     assert scheduled.last_run_at == scheduled_at
     assert scheduled.last_run_at
     assert DateTime.diff(scheduled.next_run_at, scheduled.last_run_at, :minute) == 60
+  end
+
+  test "active policy updates preserve activation invariants and support lifecycle transitions" do
+    program = program_fixture()
+    source = source_fixture()
+
+    policy =
+      Acquisition.create_program_source!(%{
+        program_id: program.id,
+        source_id: source.id,
+        query_templates: ["industrial automation"],
+        spend_limit_per_run: Money.new!(:USD, "0.25"),
+        spend_limit_per_day: Money.new!(:USD, "2.00")
+      })
+
+    policy = Acquisition.activate_program_source!(policy)
+
+    assert {:error, error} =
+             Acquisition.update_program_source_policy(policy, %{query_templates: []})
+
+    fields =
+      error
+      |> Ash.Error.to_error_class()
+      |> Map.fetch!(:errors)
+      |> Enum.flat_map(fn error ->
+        List.wrap(Map.get(error, :fields) || Map.get(error, :field))
+      end)
+
+    assert :query_templates in fields
+
+    assert {:error, _error} =
+             Acquisition.update_program_source_policy(policy, %{
+               spend_limit_per_run: Money.new!(:USD, "0.00")
+             })
+
+    assert {:ok, unchanged} = Acquisition.get_program_source(policy.id)
+    assert unchanged.query_templates == ["industrial automation"]
+    assert Money.positive?(unchanged.spend_limit_per_run)
+
+    assert {:ok, paused} = Acquisition.pause_program_source(unchanged)
+    refute paused.enabled
+    assert paused.status == :paused
+
+    assert {:ok, blocked} =
+             Acquisition.block_program_source(paused, %{blocked_reason: "Provider review"})
+
+    assert blocked.status == :blocked
+    assert blocked.blocked_reason == "Provider review"
+
+    assert {:ok, archived} = Acquisition.archive_program_source(blocked)
+    assert archived.status == :archived
+    refute archived.enabled
+  end
+
+  test "policy snapshots reject tampering" do
+    policy =
+      Acquisition.create_program_source!(%{
+        program_id: program_fixture().id,
+        source_id: source_fixture().id,
+        query_templates: ["industrial automation"]
+      })
+
+    snapshot = ProgramSourcePolicy.snapshot(policy)
+    assert {:ok, _options} = ProgramSourcePolicy.execution_options(snapshot)
+
+    assert {:error, :invalid_program_source_snapshot} =
+             snapshot
+             |> Map.put("max_queries_per_run", snapshot["max_queries_per_run"] + 1)
+             |> ProgramSourcePolicy.execution_options()
   end
 
   test "backfill is rerunnable, creates disabled Exa drafts, and attaches exact finding pairs" do

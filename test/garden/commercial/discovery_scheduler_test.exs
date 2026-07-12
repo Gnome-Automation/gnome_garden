@@ -44,7 +44,6 @@ defmodule GnomeGarden.Commercial.DiscoverySchedulerTest do
         end
       )
 
-    assert summary.checked == 1
     assert summary.due == 1
     assert summary.launched == 1
     assert summary.skipped == 0

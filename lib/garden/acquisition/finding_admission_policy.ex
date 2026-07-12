@@ -10,8 +10,7 @@ defmodule GnomeGarden.Acquisition.FindingAdmissionPolicy do
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.{Finding, FindingAdmission, FindingAdmissionCapacity}
   alias GnomeGarden.Acquisition.LeadIdentity
-
-  @capacity_message "finding admission capacity exceeded"
+  alias GnomeGarden.Acquisition.Support
 
   def admit(verification, candidate, preview_run, program, opts \\ []) do
     actor = Keyword.get(opts, :actor)
@@ -29,9 +28,9 @@ defmodule GnomeGarden.Acquisition.FindingAdmissionPolicy do
 
   def capacity_exceeded?(error) do
     error
-    |> error_list()
+    |> Support.errors()
     |> Enum.any?(fn
-      %Ash.Error.Changes.InvalidChanges{message: @capacity_message} -> true
+      %GnomeGarden.Acquisition.Errors.FindingAdmissionCapacityExceeded{} -> true
       _error -> false
     end)
   end
@@ -43,7 +42,7 @@ defmodule GnomeGarden.Acquisition.FindingAdmissionPolicy do
     {day_started_at, day_resets_at, day_key} = day_window(now, preview_run)
 
     result =
-      transact(fn ->
+      Support.transact([FindingAdmissionCapacity, Finding, FindingAdmission], fn ->
         with {:ok, run_capacity} <- open_run_capacity(preview_run, run_limit, actor),
              {:ok, day_capacity} <-
                open_day_capacity(day_key, day_started_at, day_resets_at, daily_limit, actor),
@@ -177,16 +176,4 @@ defmodule GnomeGarden.Acquisition.FindingAdmissionPolicy do
       {:error, _not_found} -> {:error, error}
     end
   end
-
-  defp transact(function) do
-    case Ash.transact([FindingAdmissionCapacity, Finding, FindingAdmission], function) do
-      {:ok, {:ok, result}} -> {:ok, result}
-      {:ok, {:error, error}} -> {:error, error}
-      result -> result
-    end
-  end
-
-  defp error_list(%Ash.Error.Invalid{errors: errors}), do: errors
-  defp error_list(%{errors: errors}) when is_list(errors), do: errors
-  defp error_list(error), do: [error]
 end

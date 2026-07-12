@@ -1,6 +1,7 @@
 defmodule GnomeGarden.Acquisition.Actions.BackfillProgramSources do
   @moduledoc false
   use Ash.Resource.Actions.Implementation
+  require Logger
 
   alias GnomeGarden.Acquisition
 
@@ -73,7 +74,12 @@ defmodule GnomeGarden.Acquisition.Actions.BackfillProgramSources do
              Acquisition.update_finding(finding, %{program_source_id: policy.id}, actor: actor) do
         {:cont, {:ok, %{acc | pairs: acc.pairs + 1, linked: acc.linked + 1}}}
       else
-        {:error, _error} -> {:cont, {:ok, %{acc | unresolved: acc.unresolved + 1}}}
+        {:error, error} ->
+          Logger.warning(
+            "Unable to backfill ProgramSource for finding #{finding.id}: #{inspect(error)}"
+          )
+
+          {:cont, {:ok, %{acc | unresolved: acc.unresolved + 1}}}
       end
     end)
   end

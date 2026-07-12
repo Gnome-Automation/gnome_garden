@@ -3,6 +3,7 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifierTest do
 
   alias GnomeGarden.{Acquisition, Commercial, Operations}
   alias GnomeGarden.Acquisition.LeadCandidateVerifier
+  alias GnomeGarden.Acquisition.ProgramSourcePolicy
   alias GnomeGarden.Search.Exa
 
   test "verifies, admits, and replays a qualified candidate without downstream writes" do
@@ -76,6 +77,25 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifierTest do
 
     assert reasons[suppressed_domain] == :suppressed
     assert reasons[duplicate_domain] == :duplicate_context
+  end
+
+  test "enrichment policy none skips Exa Contents and records an explicit reason" do
+    program = program("No Enrichment")
+    domain = unique_domain("no-enrichment")
+    preview_run = preview_run(program, [candidate(domain)], %{enrichment_policy: :none})
+
+    Req.Test.stub(Exa, fn _conn -> flunk("disabled enrichment must not call Exa Contents") end)
+
+    assert {:ok, result} = Acquisition.verify_lead_preview_run(preview_run.id)
+    assert result.enrichment_attempts == 0
+    assert result.admitted == 0
+    assert result.unresolved == 1
+
+    assert {:ok, [candidate]} =
+             Acquisition.list_lead_preview_candidates_for_run(preview_run.id)
+
+    assert {:ok, verification} = Acquisition.get_lead_candidate_verification(candidate.id)
+    assert verification.reason == :enrichment_disabled
   end
 
   test "keeps insufficient and failed evidence unresolved or ineligible with provenance" do
@@ -185,14 +205,10 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifierTest do
         promotable_count: Enum.count(candidates, &(&1.route == :promote)),
         total_cost: Decimal.new("0.01"),
         discovery_program_id: program.id,
-        metadata: %{
-          "provider_budget_idempotency_key" => Ecto.UUID.generate(),
-          "program_source_id" => program_source.id,
-          "source_id" => program_source.source_id,
-          "max_enrichments_per_run" => program_source.max_enrichments_per_run,
-          "finding_limit_per_run" => program_source.finding_limit_per_run,
-          "finding_limit_per_day" => program_source.finding_limit_per_day
-        },
+        metadata:
+          program_source
+          |> ProgramSourcePolicy.snapshot()
+          |> Map.put("provider_budget_idempotency_key", Ecto.UUID.generate()),
         candidates: candidates
       })
 

@@ -116,7 +116,7 @@ defmodule GnomeGarden.Acquisition.Finding do
         :source_discovery_record_id
       ]
 
-      change GnomeGarden.Acquisition.Changes.ValidateFindingProgramSource
+      validate GnomeGarden.Acquisition.Validations.FindingProgramSourceMatches
     end
 
     update :update do
@@ -158,7 +158,7 @@ defmodule GnomeGarden.Acquisition.Finding do
         :source_discovery_record_id
       ]
 
-      change GnomeGarden.Acquisition.Changes.ValidateFindingProgramSource
+      validate GnomeGarden.Acquisition.Validations.FindingProgramSourceMatches
     end
 
     update :start_review do

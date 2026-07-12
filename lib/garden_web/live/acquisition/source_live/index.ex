@@ -14,7 +14,6 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
   alias GnomeGarden.Procurement.SourceCredentials
   alias GnomeGarden.Procurement.SourcePipeline
   alias GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog
-  alias GnomeGardenWeb.Acquisition.CollectionQueries
   alias Phoenix.LiveView.JS
 
   @buckets [:needs_configuration, :ready, :credentials_needed, :attention, :all]
@@ -442,8 +441,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                   show_sort={false}
                   search={[
                     label: "Search sources",
-                    placeholder: "Search name, URL, source type, portal ID, or description",
-                    fn: &CollectionQueries.source_search/3
+                    placeholder: "Search name, URL, family, kind, strategy, or description"
                   ]}
                   empty_message="No sources in this queue."
                 >
@@ -486,8 +484,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Index do
                   click={fn source -> JS.navigate(~p"/acquisition/sources/#{source.id}") end}
                   search={[
                     label: "Search sources",
-                    placeholder: "Search name, URL, source type, portal ID, or description",
-                    fn: &CollectionQueries.source_search/3
+                    placeholder: "Search name, URL, family, kind, strategy, or description"
                   ]}
                   empty_message="No sources in this queue."
                 >

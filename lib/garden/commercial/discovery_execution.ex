@@ -3,7 +3,8 @@ defmodule GnomeGarden.Commercial.DiscoveryExecution do
 
   alias GnomeGarden.Commercial
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Acquisition.ProgramSource
+  alias GnomeGarden.Acquisition.{ProgramSource, ProgramSourcePolicy}
+  alias GnomeGarden.Acquisition.Support
   alias GnomeGarden.Commercial.DiscoveryRun
   alias GnomeGarden.Commercial.DiscoveryRunWorker
 
@@ -11,7 +12,7 @@ defmodule GnomeGarden.Commercial.DiscoveryExecution do
     actor = Keyword.get(opts, :actor)
     key = Keyword.get_lazy(opts, :idempotency_key, &Ecto.UUID.generate/0)
     program_source = Keyword.fetch!(opts, :program_source)
-    policy_snapshot = policy_snapshot(program_source)
+    policy_snapshot = ProgramSourcePolicy.snapshot(program_source)
 
     attrs = %{
       discovery_program_id: program.id,
@@ -32,7 +33,7 @@ defmodule GnomeGarden.Commercial.DiscoveryExecution do
   defp create_and_enqueue(attrs, program, program_source, actor, opts) do
     with :ok <- ensure_no_active_run(program.id, actor),
          {:ok, %{run: run, job: job}} <-
-           transact(fn ->
+           Support.transact([DiscoveryRun, ProgramSource], fn ->
              with {:ok, run} <- Commercial.create_discovery_run(attrs, actor: actor),
                   {:ok, job} <- insert_job(run, opts),
                   {:ok, program_source} <- maybe_mark_scheduled(program_source, actor, opts) do
@@ -87,44 +88,6 @@ defmodule GnomeGarden.Commercial.DiscoveryExecution do
     end
   end
 
-  defp transact(function) do
-    case Ash.transact([DiscoveryRun, ProgramSource], function) do
-      {:ok, {:ok, result}} -> {:ok, result}
-      {:ok, {:error, error}} -> {:error, error}
-      result -> result
-    end
-  end
-
   defp actor_id(%{id: id}), do: id
   defp actor_id(_actor), do: nil
-
-  defp policy_snapshot(program_source) do
-    snapshot = %{
-      "program_source_id" => program_source.id,
-      "source_id" => program_source.source_id,
-      "query_templates" => program_source.query_templates,
-      "cadence_minutes" => program_source.cadence_minutes,
-      "max_queries_per_run" => program_source.max_queries_per_run,
-      "max_results_per_query" => program_source.max_results_per_query,
-      "spend_limit_per_run" => Decimal.to_string(program_source.spend_limit_per_run.amount),
-      "spend_limit_per_day" => Decimal.to_string(program_source.spend_limit_per_day.amount),
-      "currency" => to_string(program_source.spend_limit_per_run.currency),
-      "enrichment_policy" => to_string(program_source.enrichment_policy),
-      "max_enrichments_per_run" => program_source.max_enrichments_per_run,
-      "finding_limit_per_run" => program_source.finding_limit_per_run,
-      "finding_limit_per_day" => program_source.finding_limit_per_day,
-      "adapter" => "exa",
-      "adapter_version" => "1",
-      "capability_manifest" => ["exa.search", "exa.contents"]
-    }
-
-    Map.put(snapshot, "policy_hash", policy_hash(snapshot))
-  end
-
-  defp policy_hash(snapshot) do
-    snapshot
-    |> :erlang.term_to_binary([:deterministic])
-    |> then(&:crypto.hash(:sha256, &1))
-    |> Base.encode16(case: :lower)
-  end
 end

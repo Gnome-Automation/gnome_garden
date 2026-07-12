@@ -34,8 +34,8 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
     end
 
     references do
-      reference :program, on_delete: :delete
-      reference :source, on_delete: :delete
+      reference :program, on_delete: :restrict
+      reference :source, on_delete: :restrict
     end
   end
 
@@ -53,7 +53,7 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
 
     action :backfill, :map do
       run GnomeGarden.Acquisition.Actions.BackfillProgramSources
@@ -72,11 +72,13 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
     update :update_policy do
       require_atomic? false
       accept @policy_fields ++ [:metadata]
+      validate GnomeGarden.Acquisition.Validations.ProgramSourcePolicyValid
     end
 
     update :activate do
       require_atomic? false
       accept []
+      validate GnomeGarden.Acquisition.Validations.ProgramSourcePolicyValid
       change GnomeGarden.Acquisition.Changes.ValidateProgramSourceActivation
       change transition_state(:active)
       change set_attribute(:enabled, true)
@@ -105,14 +107,18 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
     end
 
     update :mark_scheduled do
-      require_atomic? false
       accept []
 
       argument :scheduled_at, :utc_datetime do
         allow_nil? false
       end
 
-      change GnomeGarden.Acquisition.Changes.AdvanceProgramSourceSchedule
+      change atomic_set(:last_run_at, expr(^arg(:scheduled_at)))
+
+      change atomic_set(
+               :next_run_at,
+               expr(datetime_add(^arg(:scheduled_at), cadence_minutes, :minute))
+             )
     end
 
     read :for_program do
@@ -171,12 +177,6 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
 
       prepare build(load: [:program, :source])
     end
-
-    read :workspace do
-      argument :id, :uuid, allow_nil?: false
-      get_by [:id]
-      prepare build(load: [:program, :source, :findings])
-    end
   end
 
   attributes do
@@ -225,7 +225,7 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
       allow_nil? false
       default :verify_promotable
       public? true
-      constraints one_of: [:none, :verify_promotable, :verify_ranked]
+      constraints one_of: [:none, :verify_promotable]
     end
 
     attribute :max_enrichments_per_run, :integer,
@@ -256,11 +256,6 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
   relationships do
     belongs_to :program, GnomeGarden.Acquisition.Program, allow_nil?: false, public?: true
     belongs_to :source, GnomeGarden.Acquisition.Source, allow_nil?: false, public?: true
-
-    has_many :findings, GnomeGarden.Acquisition.Finding do
-      destination_attribute :program_source_id
-      public? true
-    end
   end
 
   identities do

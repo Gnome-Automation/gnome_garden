@@ -60,6 +60,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunWorker do
       :queued -> Commercial.start_discovery_run(run, attrs)
       :failed -> Commercial.retry_discovery_run(run, attrs)
       :running -> Commercial.recover_discovery_run(run, attrs)
+      status -> {:error, {:unexpected_run_status, status}}
     end
   end
 

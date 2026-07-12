@@ -1,5 +1,5 @@
 defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
-  use GnomeGarden.DataCase, async: true
+  use GnomeGarden.DataCase, async: false
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
@@ -125,6 +125,30 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
 
     assert {:error, :active_run_exists} =
              Commercial.launch_discovery_program(discovery_program, idempotency_key: "second-run")
+  end
+
+  test "concurrent manual launches admit only one active run" do
+    {:ok, discovery_program} =
+      Commercial.create_discovery_program(%{
+        name: "Concurrent Guard #{System.unique_integer([:positive])}",
+        target_regions: ["oc"],
+        target_industries: ["food_bev"]
+      })
+
+    _program_source = activate_exa_program_source!(discovery_program)
+
+    results =
+      ["concurrent-1", "concurrent-2"]
+      |> Task.async_stream(
+        &Commercial.launch_discovery_program(discovery_program, idempotency_key: &1),
+        max_concurrency: 2,
+        ordered: false
+      )
+      |> Enum.map(fn {:ok, result} -> result end)
+
+    assert Enum.count(results, &match?({:ok, _}, &1)) == 1
+    assert Enum.count(results, &match?({:error, :active_run_exists}, &1)) == 1
+    assert {:ok, [_run]} = Commercial.list_discovery_runs()
   end
 
   test "failed Oban insertion rolls back the queued run" do

@@ -12,7 +12,6 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
   alias GnomeGarden.Commercial
 
   @type summary :: %{
-          checked: non_neg_integer(),
           due: non_neg_integer(),
           launched: non_neg_integer(),
           skipped: non_neg_integer(),
@@ -84,7 +83,6 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
 
   defp empty_summary(due_count) do
     %{
-      checked: due_count,
       due: due_count,
       launched: 0,
       skipped: 0,

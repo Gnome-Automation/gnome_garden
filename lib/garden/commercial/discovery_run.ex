@@ -88,6 +88,12 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
       prepare build(sort: [inserted_at: :desc], limit: 1)
     end
 
+    read :slo_window do
+      argument :updated_since, :utc_datetime, allow_nil?: false
+      filter expr(updated_at >= ^arg(:updated_since))
+      prepare build(sort: [updated_at: :desc])
+    end
+
     update :start do
       accept [:attempt_count, :attempt_history]
       change transition_state(:running)
