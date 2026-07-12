@@ -32,10 +32,6 @@ business meaning, policies, validations, state transitions, and audit history.
 
 ## Why This Direction
 
-The earlier Pi direction gave us useful exploration notes and markdown-based
-thinking, but it was not durable enough for operating the business. It did not
-give us policies, queryable state, review queues, or an execution boundary.
-
 Jido is extensive and useful as inspiration, but it pushes toward a broad
 runtime framework. For this application, that makes the boundary harder to see.
 The repo also now has a clear rule: do not add a Jido agent runtime. Keep
