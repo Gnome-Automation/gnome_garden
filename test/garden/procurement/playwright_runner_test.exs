@@ -2,19 +2,16 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
   use ExUnit.Case, async: true
 
   alias GnomeGarden.Procurement.PlaywrightRunner
+  alias GnomeGarden.ProviderContract
 
   test "runs the Node runner with JSON stdin and secret-free command args" do
     parent = self()
+    contract_case = ProviderContract.load(:playwright, :provider_action, :success)
+    fixture_runner = ProviderContract.command_runner(contract_case)
 
     command_runner = fn command, args, opts ->
       send(parent, {:command, command, args, opts})
-
-      {Jason.encode!(%{
-         ok: true,
-         action: "probe",
-         finalUrl: "https://www.bidnetdirect.com/private",
-         storageStatePath: "/tmp/session/state.json"
-       }), 0}
+      fixture_runner.(command, args, opts)
     end
 
     assert {:ok, result} =
@@ -29,7 +26,7 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
                timeout_ms: 12_000
              )
 
-    assert result["storageStatePath"] == "/tmp/session/state.json"
+    assert result["items"] == [%{"id" => "project-1", "title" => "Controls Upgrade"}]
 
     assert_receive {:command, command, [runner_path], opts}
     assert command == PlaywrightRunner.node_path()
@@ -43,9 +40,8 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
   end
 
   test "returns runner JSON failures without exposing the input payload" do
-    command_runner = fn _command, _args, _opts ->
-      {Jason.encode!(%{ok: false, code: "unsupported_action", error: "Unsupported action"}), 1}
-    end
+    contract_case = ProviderContract.load(:playwright, :provider_action, :auth)
+    command_runner = ProviderContract.command_runner(contract_case)
 
     assert {:error, error} =
              PlaywrightRunner.run(
@@ -54,7 +50,7 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
                command_runner: command_runner
              )
 
-    assert error["code"] == "unsupported_action"
+    assert error["code"] == "authentication_required"
     refute inspect(error) =~ "super-secret"
   end
 

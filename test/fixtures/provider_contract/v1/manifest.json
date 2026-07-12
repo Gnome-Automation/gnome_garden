@@ -1,0 +1,42 @@
+{
+  "version": "provider-contract/v1",
+  "provenance": {
+    "captured_at": "2026-07-12",
+    "source": "synthetic payloads derived from provider documentation and bounded production response shapes",
+    "redacted": true,
+    "live_network_required": false,
+    "secrets_required": false
+  },
+  "defaults": {
+    "empty": {"transport": "http", "status": 200, "outcome": "empty", "body": {}},
+    "throttled": {"transport": "http", "status": 429, "outcome": "throttled", "body": {"error": "rate_limited"}},
+    "auth": {"transport": "http", "status": 401, "outcome": "auth", "body": {"error": "unauthorized"}},
+    "schema_drift": {"transport": "http", "status": 200, "outcome": "schema_drift", "body": {"unexpected": {"items": "not-a-list"}}},
+    "waf": {"transport": "http", "status": 403, "outcome": "waf", "fixture": "shared/waf.html"},
+    "timeout": {"transport": "timeout", "outcome": "timeout"},
+    "malformed": {"transport": "http", "status": 200, "outcome": "malformed", "fixture": "shared/malformed.txt"},
+    "partial": {"transport": "http", "status": 206, "outcome": "partial", "body": {"partial": true}}
+  },
+  "providers": {
+    "exa": {
+      "search": {"cases": {"success": {"transport": "http", "status": 200, "outcome": "success", "fixture": "exa/search-success.json"}, "empty": {"transport": "http", "status": 200, "outcome": "empty", "fixture": "exa/search-empty.json"}}},
+      "contents": {"cases": {"success": {"transport": "http", "status": 200, "outcome": "success", "fixture": "exa/contents-success.json"}, "partial": {"transport": "http", "status": 200, "outcome": "partial", "fixture": "exa/contents-partial.json"}}}
+    },
+    "sam_gov": {
+      "search": {"cases": {"success": {"transport": "http", "status": 200, "outcome": "success", "fixture": "sam_gov/search-success.json"}, "empty": {"transport": "http", "status": 200, "outcome": "empty", "body": {"opportunitiesData": []}}}}
+    },
+    "opengov": {
+      "projects": {"cases": {"success": {"transport": "http", "status": 200, "outcome": "success", "fixture": "opengov/projects-success.json"}}}
+    },
+    "bidnet": {
+      "listings": {"cases": {"success": {"transport": "http", "status": 200, "outcome": "success", "fixture": "bidnet/listings-success.html"}, "empty": {"transport": "http", "status": 200, "outcome": "empty", "fixture": "bidnet/listings-empty.html"}}}
+    },
+    "jido": {
+      "web_fetch": {"cases": {"success": {"transport": "http", "status": 200, "outcome": "success", "fixture": "jido/web-fetch-success.html"}}},
+      "session": {"cases": {"success": {"transport": "http", "status": 200, "outcome": "success", "fixture": "jido/session-success.json"}}}
+    },
+    "playwright": {
+      "provider_action": {"cases": {"success": {"transport": "command", "status": 200, "outcome": "success", "fixture": "playwright/action-success.json"}, "auth": {"transport": "command", "status": 401, "outcome": "auth", "fixture": "playwright/action-auth.json"}}}
+    }
+  }
+}
