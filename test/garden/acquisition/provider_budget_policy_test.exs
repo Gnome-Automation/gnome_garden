@@ -58,9 +58,31 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicyTest do
              )
 
     assert first.budget.id != second.budget.id
-    assert first.budget.window_key == "daily:2026-07-11"
-    assert second.budget.window_key == "daily:2026-07-12"
+    assert String.starts_with?(first.budget.window_key, "daily:2026-07-11:limit:")
+    assert String.starts_with?(second.budget.window_key, "daily:2026-07-12:limit:")
     assert first.budget.resets_at == second.budget.window_started_at
+  end
+
+  test "trusted narrow limits use a separate window without clamping shared authority" do
+    assert {:ok, narrow} = reserve("narrow-window", "0.25", spend_limit: "0.50")
+
+    assert {:ok, shared} =
+             ProviderBudgetPolicy.reserve(
+               %{
+                 provider: "exa",
+                 operation: "search",
+                 idempotency_key: "shared-window",
+                 estimated_cost: "1.00",
+                 estimated_requests: 1
+               },
+               period: :daily,
+               requested_at: @requested_at
+             )
+
+    assert narrow.budget.id != shared.budget.id
+    assert Decimal.equal?(narrow.budget.spend_limit, Decimal.new("0.50"))
+    assert Decimal.equal?(shared.budget.spend_limit, Decimal.new("5.00"))
+    assert shared.budget.request_limit == 500
   end
 
   test "zero-cost retry reopens the original reservation without double counting" do

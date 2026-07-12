@@ -38,7 +38,7 @@ defmodule GnomeGarden.Acquisition.ProviderBudget do
 
       upsert? true
       upsert_identity :unique_provider_operation_window
-      upsert_fields [:resets_at, :spend_limit, :request_limit]
+      upsert_fields []
     end
 
     read :by_window do

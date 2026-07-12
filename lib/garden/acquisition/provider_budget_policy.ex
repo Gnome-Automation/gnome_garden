@@ -10,16 +10,17 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
   alias GnomeGarden.Acquisition.{ProviderBudget, ProviderReservation}
 
   @periods [:hourly, :daily, :monthly]
+  @budget_exceeded_message "provider budget exceeded"
 
   def configured_request(provider, operation, idempotency_key, overrides \\ %{}) do
     overrides = if is_list(overrides), do: Map.new(overrides), else: overrides
 
-    with %{} = profile <-
+    with %{} <-
            Application.get_env(:gnome_garden, :provider_budgets, %{})
            |> Map.get({provider, operation}) do
       {:ok,
-       profile
-       |> Map.merge(overrides)
+       overrides
+       |> Map.take([:metadata, "metadata"])
        |> Map.merge(%{
          provider: provider,
          operation: operation,
@@ -32,8 +33,11 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
 
   def budget_exceeded?(error) do
     error
-    |> Exception.message()
-    |> String.contains?("provider budget exceeded")
+    |> error_list()
+    |> Enum.any?(fn
+      %Ash.Error.Changes.InvalidChanges{message: @budget_exceeded_message} -> true
+      _error -> false
+    end)
   end
 
   def reserve(request, opts \\ []) when is_map(request) do
@@ -71,7 +75,16 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
     transaction_result =
       transact([ProviderBudget, ProviderReservation], fn ->
         with {:ok, budget} <- open_window(request, actor),
-             {:ok, budget} <- reserve_budget(budget, request, actor),
+             {:ok, budget} <-
+               update_record(
+                 budget,
+                 :reserve_capacity,
+                 %{
+                   estimated_cost: request.estimated_cost,
+                   estimated_requests: request.estimated_requests
+                 },
+                 actor
+               ),
              {:ok, reservation} <-
                create_reservation_record(
                  %{
@@ -152,7 +165,8 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
                    status: settlement.status,
                    actual_cost: settlement.actual_cost,
                    actual_requests: settlement.actual_requests,
-                   failure_reason: settlement.failure_reason
+                   failure_reason: settlement.failure_reason,
+                   metadata: Map.merge(reservation.metadata, settlement.metadata)
                  },
                  actor
                ),
@@ -225,21 +239,6 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
     |> Ash.create()
   end
 
-  defp reserve_budget(budget, request, actor) do
-    case update_record(
-           budget,
-           :reserve_capacity,
-           %{
-             estimated_cost: request.estimated_cost,
-             estimated_requests: request.estimated_requests
-           },
-           actor
-         ) do
-      {:ok, budget} -> {:ok, budget}
-      {:error, error} -> {:error, error}
-    end
-  end
-
   defp normalize_request(request, opts) do
     with {:ok, provider} <- fetch_string(request, :provider),
          {:ok, operation} <- fetch_string(request, :operation),
@@ -260,6 +259,15 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
          {:ok, requested_at} <-
            datetime(Keyword.get(opts, :requested_at, DateTime.utc_now())) do
       {window_key, window_started_at, resets_at} = window(period, requested_at)
+
+      window_key =
+        scoped_window_key(
+          window_key,
+          spend_limit,
+          configured_spend_limit,
+          request_limit,
+          configured_request_limit
+        )
 
       {:ok,
        %{
@@ -321,7 +329,8 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
          actual_cost: actual_cost,
          actual_requests: actual_requests,
          status: status,
-         failure_reason: map_value(settlement, :failure_reason)
+         failure_reason: map_value(settlement, :failure_reason),
+         metadata: map_value(settlement, :metadata, %{})
        }}
     end
   end
@@ -410,6 +419,35 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
   defp map_value(map, key, default \\ nil) do
     Map.get(map, key, Map.get(map, Atom.to_string(key), default))
   end
+
+  defp scoped_window_key(
+         window_key,
+         spend_limit,
+         configured_spend_limit,
+         request_limit,
+         configured_request_limit
+       ) do
+    if Decimal.compare(spend_limit, configured_spend_limit) == :lt or
+         request_limit < configured_request_limit do
+      scope =
+        {Decimal.to_string(spend_limit), request_limit}
+        |> :erlang.term_to_binary()
+        |> then(&:crypto.hash(:sha256, &1))
+        |> Base.url_encode64(padding: false)
+        |> binary_part(0, 12)
+
+      "#{window_key}:limit:#{scope}"
+    else
+      window_key
+    end
+  end
+
+  defp error_list(%{errors: errors} = error) when is_list(errors) do
+    [error | Enum.flat_map(errors, &error_list/1)]
+  end
+
+  defp error_list(errors) when is_list(errors), do: Enum.flat_map(errors, &error_list/1)
+  defp error_list(error), do: [error]
 
   defp create_reservation_record(attrs, actor) do
     ProviderReservation

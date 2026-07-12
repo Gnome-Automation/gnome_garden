@@ -10,10 +10,23 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("discovery_run:created")
+      GnomeGardenWeb.Endpoint.subscribe("discovery_run:updated")
+    end
+
     {:ok,
      socket
      |> assign(:page_title, "Discovery Programs")
      |> assign_counts()}
+  end
+
+  @impl true
+  def handle_info(%{topic: "discovery_run:" <> _event}, socket) do
+    {:noreply,
+     socket
+     |> assign_counts()
+     |> refresh_table("discovery-programs-table")}
   end
 
   @impl true

@@ -10,7 +10,8 @@ defmodule Mix.Tasks.Exa.Search do
       mix exa.search "small US manufacturers seeking warehouse automation"
       mix exa.search "..." --num 15 --category company --type neural
 
-  Requires `EXA_API_KEY` in the environment (locally: `source ~/.config/pi/env`).
+  Requires `EXA_API_KEY` in the process environment. The Nix dev shell loads an
+  untracked root `.env` when present.
   """
 
   use Mix.Task
@@ -25,7 +26,10 @@ defmodule Mix.Tasks.Exa.Search do
     query = args |> Enum.join(" ") |> String.trim()
 
     if query == "" do
-      Mix.shell().error(~s(Usage: mix exa.search "your query" [--num N] [--category company] [--type auto|neural|keyword]))
+      Mix.shell().error(
+        ~s(Usage: mix exa.search "your query" [--num N] [--category company] [--type auto|neural|keyword])
+      )
+
       exit({:shutdown, 1})
     end
 
@@ -41,14 +45,19 @@ defmodule Mix.Tasks.Exa.Search do
         results
         |> Enum.with_index(1)
         |> Enum.each(fn {result, index} ->
-          Mix.shell().info("#{String.pad_leading(to_string(index), 2)}. #{result.title || "(no title)"}")
+          Mix.shell().info(
+            "#{String.pad_leading(to_string(index), 2)}. #{result.title || "(no title)"}"
+          )
+
           Mix.shell().info("    #{result.url}")
         end)
 
         Mix.shell().info("")
 
       {:error, :missing_exa_api_key} ->
-        Mix.shell().error("EXA_API_KEY not set. Export it (e.g. `source ~/.config/pi/env`) before running.")
+        Mix.shell().error(
+          "EXA_API_KEY not set. Export it or add it to the untracked root .env before running."
+        )
 
       {:error, reason} ->
         Mix.shell().error("Exa search failed: #{inspect(reason)}")

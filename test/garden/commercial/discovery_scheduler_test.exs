@@ -78,4 +78,25 @@ defmodule GnomeGarden.Commercial.DiscoverySchedulerTest do
       args: %{run_id: run.id}
     )
   end
+
+  test "a later cadence tick skips a program with a queued run" do
+    {:ok, program} =
+      Commercial.create_discovery_program(%{
+        name: "Queued Schedule Guard #{System.unique_integer([:positive])}",
+        target_regions: ["oc"],
+        target_industries: ["packaging"],
+        cadence_hours: 1
+      })
+
+    {:ok, _program} = Commercial.activate_discovery_program(program)
+    first_tick = DateTime.utc_now()
+
+    assert %{launched: 1, skipped: 0} = DiscoveryScheduler.run_due_programs(first_tick)
+
+    assert %{launched: 0, skipped: 1} =
+             DiscoveryScheduler.run_due_programs(DateTime.add(first_tick, 2, :hour))
+
+    assert {:ok, [run]} = Commercial.list_discovery_runs()
+    assert run.status == :queued
+  end
 end

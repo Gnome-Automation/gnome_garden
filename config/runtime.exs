@@ -53,8 +53,8 @@ if mercury_webhook_secret = System.get_env("MERCURY_WEBHOOK_SECRET") do
     mercury_webhook_secret: mercury_webhook_secret
 end
 
-# Exa neural-search API (lead discovery). Key lives in the environment;
-# locally it is exported from ~/.config/pi/env (EXA_API_KEY).
+# Exa neural-search API (lead discovery). Production injects the key through
+# deployment secret management; the Nix dev shell loads an untracked root .env.
 if exa_api_key = System.get_env("EXA_API_KEY") do
   config :gnome_garden, :exa, api_key: exa_api_key
 end

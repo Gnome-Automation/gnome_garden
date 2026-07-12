@@ -4,11 +4,15 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
   import GnomeGardenWeb.Commercial.Helpers
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Agents
   alias GnomeGarden.Commercial
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
+    if connected?(socket) do
+      GnomeGardenWeb.Endpoint.subscribe("discovery_run:created:#{id}")
+      GnomeGardenWeb.Endpoint.subscribe("discovery_run:updated:#{id}")
+    end
+
     discovery_program = load_discovery_program!(id, socket.assigns.current_user)
 
     acquisition_program =
@@ -20,8 +24,19 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
      |> assign(:discovery_program, discovery_program)
      |> assign(:acquisition_program, acquisition_program)
      |> assign(:acquisition_program_id, acquisition_program && acquisition_program.id)
-     |> assign(:latest_run, load_latest_run(discovery_program))
+     |> assign(:latest_run, load_latest_run(discovery_program, socket.assigns.current_user))
      |> assign(:findings, load_findings(acquisition_program, socket.assigns.current_user))}
+  end
+
+  @impl true
+  def handle_info(%{topic: "discovery_run:" <> _event}, socket) do
+    discovery_program =
+      load_discovery_program!(socket.assigns.discovery_program.id, socket.assigns.current_user)
+
+    {:noreply,
+     socket
+     |> assign(:discovery_program, discovery_program)
+     |> assign(:latest_run, load_latest_run(discovery_program, socket.assigns.current_user))}
   end
 
   @impl true
@@ -61,7 +76,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
     case Commercial.launch_discovery_program(discovery_program,
            actor: socket.assigns.current_user
          ) do
-      {:ok, %{program: refreshed_program} = result} ->
+      {:ok, %{program: refreshed_program, run: run}} ->
         refreshed_program =
           load_discovery_program!(refreshed_program.id, socket.assigns.current_user)
 
@@ -73,11 +88,11 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
          |> assign(:discovery_program, refreshed_program)
          |> assign(:acquisition_program, acquisition_program)
          |> assign(:acquisition_program_id, acquisition_program && acquisition_program.id)
-         |> assign(:latest_run, load_latest_run(refreshed_program))
+         |> assign(:latest_run, load_latest_run(refreshed_program, socket.assigns.current_user))
          |> assign(:findings, load_findings(acquisition_program, socket.assigns.current_user))
          |> put_flash(
            :info,
-           "Discovery run complete — #{result.candidate_count} candidate(s), #{result.saved} saved."
+           "Queued discovery run #{run.id}."
          )}
 
       {:error, :active_run_exists} ->
@@ -209,8 +224,8 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
       </div>
 
       <.section
-        title="Latest Agent Run"
-        description="Discovery programs now launch through the durable agent deployment/run stack, not a hidden ad hoc task."
+        title="Latest Discovery Run"
+        description="Discovery programs launch through a durable, budget-aware Oban execution path."
       >
         <div
           :if={@latest_run}
@@ -222,7 +237,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
                 Run {short_id(@latest_run.id)}
               </p>
               <p class="text-xs text-base-content/50">
-                {run_deployment_label(@latest_run)}
+                {format_atom(@latest_run.trigger)} run · {@latest_run.query_count} queries · {@latest_run.candidate_count} candidates
               </p>
               <p class="text-xs text-base-content/40">
                 Started {format_datetime(@latest_run.started_at || @latest_run.inserted_at)}
@@ -230,16 +245,9 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
             </div>
 
             <div class="flex items-center gap-3">
-              <.status_badge status={run_state_variant(@latest_run.state)}>
-                {format_atom(@latest_run.state)}
+              <.status_badge status={run_state_variant(@latest_run.status)}>
+                {format_atom(@latest_run.status)}
               </.status_badge>
-
-              <.link
-                navigate={~p"/console/agents/runs/#{@latest_run.id}"}
-                class="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-300"
-              >
-                Open run
-              </.link>
             </div>
           </div>
         </div>
@@ -248,7 +256,7 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
           <.empty_state
             icon="hero-cpu-chip"
             title="No run launched yet"
-            description="Use Run Discovery to launch this program onto the real agent run stack."
+            description="Use Run Discovery to queue the first durable discovery execution."
           />
         </div>
       </.section>
@@ -391,20 +399,12 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
     end
   end
 
-  defp load_latest_run(%{metadata: metadata}) when is_map(metadata) do
-    case Map.get(metadata, "last_agent_run_id") || Map.get(metadata, :last_agent_run_id) do
-      run_id when is_binary(run_id) ->
-        case Agents.get_agent_run(run_id, load: [:agent, :deployment]) do
-          {:ok, run} -> run
-          {:error, _error} -> nil
-        end
-
-      _ ->
-        nil
+  defp load_latest_run(program, actor) do
+    case Commercial.get_latest_discovery_run_for_program(program.id, actor: actor) do
+      {:ok, run} -> run
+      {:error, _error} -> nil
     end
   end
-
-  defp load_latest_run(_program), do: nil
 
   defp summary_list([], empty_label), do: empty_label
   defp summary_list(values, _empty_label), do: Enum.join(values, ", ")
@@ -420,11 +420,8 @@ defmodule GnomeGardenWeb.Commercial.DiscoveryProgramLive.Show do
   defp run_state_variant(:completed), do: :success
   defp run_state_variant(:running), do: :info
   defp run_state_variant(:failed), do: :error
-  defp run_state_variant(:cancelled), do: :warning
+  defp run_state_variant(:partial_failure), do: :warning
   defp run_state_variant(_state), do: :default
-
-  defp run_deployment_label(%{deployment: %{name: name}}), do: name
-  defp run_deployment_label(_run), do: "Commercial Target Discovery"
 
   defp short_id(id), do: String.slice(id, 0, 8)
 

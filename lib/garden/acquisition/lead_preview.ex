@@ -32,6 +32,9 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   @default_max_results 8
   @default_spend_ceiling 0.25
 
+  @doc "Returns the default per-preview provider spend ceiling."
+  def default_spend_ceiling, do: Decimal.from_float(@default_spend_ceiling)
+
   # Automation vendors/integrators the tuning loop showed dominate "automation"
   # queries. Always excluded (operators can add more via :exclude_domains).
   @default_vendor_domains ~w(
@@ -239,7 +242,10 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       recommendation: candidate.dedupe.recommendation,
       rank: candidate.rank,
       status: :pending,
-      metadata: %{"related" => related_metadata(candidate.dedupe)}
+      metadata: %{
+        "related" => related_metadata(candidate.dedupe),
+        "exa_score" => candidate[:score]
+      }
     }
   end
 
@@ -334,6 +340,18 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
 
               if acc.cost >= ceiling, do: {:halt, acc}, else: {:cont, acc}
 
+            {:skip, cost} ->
+              {:cont, %{acc | cost: acc.cost + cost, executed: acc.executed + 1}}
+
+            {:failed_skip, cost, reason} ->
+              {:cont,
+               %{
+                 acc
+                 | cost: acc.cost + cost,
+                   executed: acc.executed + 1,
+                   errors: [reason | acc.errors]
+               }}
+
             {:error, {:provider_budget, reason}} ->
               {:halt, %{acc | errors: [reason | acc.errors]}}
 
@@ -353,42 +371,135 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
              reservation_key,
              metadata: %{"query_index" => query_index}
            ),
-         {:ok, %{reservation: %{status: :reserved}}} <-
+         {:ok, %{reservation: reservation}} <-
            Acquisition.reserve_provider_capacity(request, actor: actor) do
-      case Exa.search(query.text, search_opts) do
-        {:ok, %{cost: cost} = response} ->
-          case Acquisition.settle_provider_capacity(
-                 %{
-                   idempotency_key: reservation_key,
-                   actual_cost: cost || 0,
-                   actual_requests: 1,
-                   status: :settled
-                 },
-                 actor: actor
-               ) do
-            {:ok, _settlement} -> {:ok, response}
-            {:error, reason} -> {:error, {:provider_budget, reason}}
-          end
-
-        {:error, reason} ->
-          _ =
-            Acquisition.release_provider_capacity(
-              %{
-                idempotency_key: reservation_key,
-                failure_reason: inspect(reason)
-              },
-              actor: actor
-            )
-
-          {:error, reason}
+      case reservation.status do
+        :reserved -> execute_budgeted_search(query, search_opts, reservation, actor)
+        _finalized -> replay_settled_search(reservation)
       end
     else
-      {:ok, %{reservation: reservation}} ->
-        {:error, {:provider_budget, {:provider_reservation_finalized, reservation.status}}}
-
       {:error, reason} ->
         {:error, {:provider_budget, reason}}
     end
+  end
+
+  defp execute_budgeted_search(query, search_opts, reservation, actor) do
+    case Exa.search(query.text, search_opts) do
+      {:ok, %{cost: cost} = response} ->
+        case Acquisition.settle_provider_capacity(
+               %{
+                 idempotency_key: reservation.idempotency_key,
+                 actual_cost: cost || 0,
+                 actual_requests: 1,
+                 status: :settled,
+                 metadata: %{"response" => cache_response(response)}
+               },
+               actor: actor
+             ) do
+          {:ok, _settlement} -> {:ok, response}
+          {:error, reason} -> {:error, {:provider_budget, reason}}
+        end
+
+      {:error, reason} ->
+        account_provider_failure(reservation, reason, actor)
+        {:error, reason}
+    end
+  end
+
+  defp replay_settled_search(%{status: :settled, metadata: %{"response" => response}}) do
+    {:ok, restore_response(response)}
+  end
+
+  defp replay_settled_search(%{status: :settled, actual_cost: actual_cost}) do
+    {:skip, Decimal.to_float(actual_cost)}
+  end
+
+  defp replay_settled_search(%{
+         status: status,
+         actual_cost: actual_cost,
+         failure_reason: reason
+       })
+       when status in [:partial_failure, :failed] do
+    {:failed_skip, Decimal.to_float(actual_cost), reason || Atom.to_string(status)}
+  end
+
+  defp replay_settled_search(reservation) do
+    {:error, {:provider_budget, {:provider_reservation_finalized, reservation.status}}}
+  end
+
+  defp account_provider_failure(reservation, reason, actor) do
+    result =
+      if confirmed_zero_cost_failure?(reason) do
+        Acquisition.release_provider_capacity(
+          %{
+            idempotency_key: reservation.idempotency_key,
+            failure_reason: inspect(reason)
+          },
+          actor: actor
+        )
+      else
+        Acquisition.settle_provider_capacity(
+          %{
+            idempotency_key: reservation.idempotency_key,
+            actual_cost: reservation.estimated_cost,
+            actual_requests: 1,
+            status: :failed,
+            failure_reason: inspect(reason)
+          },
+          actor: actor
+        )
+      end
+
+    case result do
+      {:ok, _result} ->
+        :ok
+
+      {:error, error} ->
+        Logger.warning("LeadPreview: provider accounting failed: #{inspect(error)}")
+    end
+  end
+
+  defp confirmed_zero_cost_failure?(:missing_exa_api_key), do: true
+
+  defp confirmed_zero_cost_failure?({:http_error, status, _body}) when status in 400..499,
+    do: true
+
+  defp confirmed_zero_cost_failure?(%{reason: reason})
+       when reason in [:econnrefused, :nxdomain],
+       do: true
+
+  defp confirmed_zero_cost_failure?(_reason), do: false
+
+  defp cache_response(response) do
+    %{
+      "cost" => response.cost,
+      "resolved_type" => response[:resolved_type],
+      "results" =>
+        Enum.map(response.results, fn result ->
+          %{
+            "title" => result.title,
+            "url" => result.url,
+            "published_date" => result.published_date,
+            "score" => result[:score]
+          }
+        end)
+    }
+  end
+
+  defp restore_response(response) do
+    %{
+      cost: response["cost"],
+      resolved_type: response["resolved_type"],
+      results:
+        Enum.map(response["results"] || [], fn result ->
+          %{
+            title: result["title"],
+            url: result["url"],
+            published_date: result["published_date"],
+            score: result["score"]
+          }
+        end)
+    }
   end
 
   defp tag(results, query) do
@@ -397,6 +508,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         title: result.title,
         url: result.url,
         published_date: result.published_date,
+        score: result[:score],
         intent: query.intent,
         query: query.text
       }

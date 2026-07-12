@@ -150,6 +150,10 @@ defmodule GnomeGarden.Acquisition do
       define :get_provider_reservation_by_key,
         action: :by_idempotency_key,
         args: [:idempotency_key]
+
+      define :list_stale_provider_reservations,
+        action: :stale_reserved,
+        args: [:reserved_before]
     end
   end
 

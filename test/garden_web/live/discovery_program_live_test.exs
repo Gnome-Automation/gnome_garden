@@ -67,10 +67,10 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
     |> element("button[phx-click='run_now']")
     |> render_click()
 
-    assert render(show_view) =~ "Discovery run complete"
+    assert render(show_view) =~ "Queued discovery run"
 
     {:ok, refreshed_program} = Commercial.get_discovery_program(discovery_program.id)
-    assert refreshed_program.last_run_at
+    refute refreshed_program.last_run_at
 
     {:ok, form_view, _form_html} = live(conn, ~p"/commercial/discovery-programs/new")
     assert has_element?(form_view, "#discovery-program-form")

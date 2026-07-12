@@ -5,6 +5,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Commercial,
     data_layer: AshPostgres.DataLayer,
+    notifiers: [Ash.Notifier.PubSub],
     extensions: [AshAdmin.Resource, AshStateMachine]
 
   postgres do
@@ -18,6 +19,11 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
     custom_indexes do
       index [:discovery_program_id, :inserted_at], name: "discovery_runs_program_inserted_index"
       index [:status, :updated_at], name: "discovery_runs_status_updated_index"
+
+      index [:discovery_program_id],
+        name: "discovery_runs_active_program_index",
+        unique: true,
+        where: "status IN ('queued', 'running')"
     end
   end
 
@@ -58,6 +64,25 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
       argument :idempotency_key, :string, allow_nil?: false
       get? true
       filter expr(idempotency_key == ^arg(:idempotency_key))
+    end
+
+    read :active_for_program do
+      argument :discovery_program_id, :uuid, allow_nil?: false
+      get? true
+
+      filter expr(
+               discovery_program_id == ^arg(:discovery_program_id) and
+                 status in [:queued, :running]
+             )
+
+      prepare build(sort: [inserted_at: :desc])
+    end
+
+    read :latest_for_program do
+      argument :discovery_program_id, :uuid, allow_nil?: false
+      get? true
+      filter expr(discovery_program_id == ^arg(:discovery_program_id))
+      prepare build(sort: [inserted_at: :desc], limit: 1)
     end
 
     update :start do
@@ -114,6 +139,26 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
       change transition_state(:failed)
       change set_attribute(:finished_at, &DateTime.utc_now/0)
     end
+  end
+
+  pub_sub do
+    module GnomeGardenWeb.Endpoint
+    prefix "discovery_run"
+
+    publish :create, "created"
+    publish :create, ["created", :discovery_program_id]
+    publish :start, "updated"
+    publish :start, ["updated", :discovery_program_id]
+    publish :retry, "updated"
+    publish :retry, ["updated", :discovery_program_id]
+    publish :recover, "updated"
+    publish :recover, ["updated", :discovery_program_id]
+    publish :complete, "updated"
+    publish :complete, ["updated", :discovery_program_id]
+    publish :partial_failure, "updated"
+    publish :partial_failure, ["updated", :discovery_program_id]
+    publish :fail, "updated"
+    publish :fail, ["updated", :discovery_program_id]
   end
 
   attributes do

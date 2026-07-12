@@ -19,6 +19,55 @@ separate actions requiring additional permission.
 Keep Beadwork local by default in this repo; do not run `bw sync` unless the
 user explicitly asks.
 
+### Branches, Worktrees, and Large Projects
+
+Beadwork issues are units of durable planning and evidence, not a mandatory
+branching scheme. Do not assume that every bead needs its own worktree, branch,
+PR, or user confirmation about delivery.
+
+- Use the workflow the user has already established for the current project.
+- For a large related project or epic, prefer one working branch/worktree and
+  one coherent PR across multiple beads when that matches how the work is being
+  executed in practice.
+- Use separate worktrees when work is genuinely concurrent, delegated to other
+  agents, needs isolation from unrelated dirty files, or has meaningful merge
+  conflict risk.
+- Sequential related beads may share the same branch/worktree. Keep their
+  Beadwork statuses, comments, evidence, and dependency updates distinct even
+  when their code lands together.
+- Working directly in the current checkout is acceptable when the user requests
+  it or when no isolation benefit justifies another worktree.
+- Do not create worktrees mechanically because `bw prime` recommends them. Repo
+  and user instructions override generic Beadwork workflow suggestions.
+- Do not ask whether to use a quick fix, branch, PR, or multi-step delivery when
+  the user has already made the desired workflow clear.
+
+Regardless of branch strategy, inspect existing uncommitted changes before
+editing, preserve unrelated work, and never let concurrent agents share a
+writable checkout.
+
+### Continuous Cleanup During Builds
+
+Treat removal of superseded code as part of implementing its replacement, not
+as an indefinite follow-up phase.
+
+- After rerouting a workflow, use `rg` to verify whether the old entry points,
+  actions, workers, adapters, UI panels, tests, and documentation still have
+  live callers.
+- Delete confirmed orphaned paths in the same project/PR once the replacement
+  has focused regression coverage. Do not keep unconditional-error stubs,
+  unreachable branches, stale compatibility panels, or misleading tests.
+- Preserve old code when a live caller, migration window, rollback plan, or
+  explicit compatibility contract still requires it. Record that reason and
+  the retirement condition in Beadwork.
+- Keep cleanup close to the changed boundary. Do not turn a focused build into
+  speculative repository-wide refactoring.
+- Refresh generated architecture artifacts after Ash resource or domain
+  changes so deleted interfaces do not remain advertised as implemented.
+- Prefer net simplification: remove duplicated orchestration, obsolete aliases,
+  dead options, and stale documentation while keeping business behavior behind
+  Ash interfaces.
+
 ## Critical: Documentation Lookup
 
 **Always search docs before implementing.** Use these mix tasks:
