@@ -604,7 +604,13 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   end
 
   defp rank_key(row) do
-    {if(row.dedupe.suppress?, do: 1, else: 0), Map.get(@context_rank, row.dedupe.context, 9)}
+    score = if is_number(row.score), do: row.score, else: 0.0
+
+    {
+      if(row.dedupe.suppress?, do: 1, else: 0),
+      Map.get(@context_rank, row.dedupe.context, 9),
+      -score
+    }
   end
 
   defp fill(template, industry, region) do
