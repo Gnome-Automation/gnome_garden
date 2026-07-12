@@ -15,7 +15,14 @@ globally installed browser, or a manually patched `_build` artifact.
 GNOME_GARDEN_BROWSER_PATH=/nix/store/...-agent-browser-0.20.2/bin/agent-browser
 ```
 
-`config/runtime.exs` applies that path to both `GnomeGarden.Browser` and Jido Browser.
+`config/runtime.exs` applies that path to Jido Browser. `GnomeGarden.Browser` delegates all
+session operations to Jido, so it uses the same immutable runtime indirectly.
+
+Garden owns browser lifecycle through a supervised session manager. Each caller receives an
+isolated session that is reused across navigation and evaluation, closed explicitly with
+`GnomeGarden.Browser.close/0`, and automatically closed when the caller exits. Stateless HTTP
+retrieval does not open a browser session. Snapshot, fetch, and download output is bounded before
+it crosses the facade.
 
 ## Releases
 
@@ -26,5 +33,5 @@ nix build .#agent-browser
 ```
 
 Set `GNOME_GARDEN_BROWSER_PATH` to the resulting immutable `bin/agent-browser` path in the
-release environment. The same variable configures the current Garden facade and the Jido
-Browser adapter used by the staged retrieval migration.
+release environment. The variable configures the Jido Browser adapter used by the Garden facade
+and the staged retrieval policy.

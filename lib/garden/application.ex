@@ -18,6 +18,7 @@ defmodule GnomeGarden.Application do
        )},
       {Phoenix.PubSub, name: GnomeGarden.PubSub},
       {Task.Supervisor, name: GnomeGarden.AsyncSupervisor},
+      GnomeGarden.Browser.SessionManager,
 
       # Durable run/deployment tracking
       {Registry, keys: :unique, name: GnomeGarden.Agents.SessionRegistry},

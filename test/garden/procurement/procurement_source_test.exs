@@ -4,6 +4,14 @@ defmodule GnomeGarden.Procurement.ProcurementSourceTest do
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
+  defmodule FailingBrowserClient do
+    def start_session(_opts), do: {:ok, %{id: "failing-browser"}}
+    def end_session(_session), do: :ok
+
+    def navigate(_session, _url, _opts),
+      do: {:error, "Navigation failed: net::ERR_NAME_NOT_RESOLVED"}
+  end
+
   test "creates a pre-configured company-site source for an organization" do
     {:ok, organization} =
       Operations.create_organization(%{
@@ -133,19 +141,19 @@ defmodule GnomeGarden.Procurement.ProcurementSourceTest do
   end
 
   test "auto configure failure marks source config failed and records diagnostics" do
-    original_browser_path = Application.get_env(:gnome_garden, :browser_path)
-    browser_path = fake_browser_path("Navigation failed: net::ERR_NAME_NOT_RESOLVED")
+    original_browser_client = Application.get_env(:gnome_garden, :browser_client)
 
-    Application.put_env(:gnome_garden, :browser_path, browser_path)
+    :ok = GnomeGarden.Browser.SessionManager.reset()
+    Application.put_env(:gnome_garden, :browser_client, FailingBrowserClient)
 
     on_exit(fn ->
-      if original_browser_path do
-        Application.put_env(:gnome_garden, :browser_path, original_browser_path)
-      else
-        Application.delete_env(:gnome_garden, :browser_path)
-      end
+      _ = GnomeGarden.Browser.SessionManager.reset()
 
-      File.rm(browser_path)
+      if original_browser_client do
+        Application.put_env(:gnome_garden, :browser_client, original_browser_client)
+      else
+        Application.delete_env(:gnome_garden, :browser_client)
+      end
     end)
 
     {:ok, source} =
@@ -168,24 +176,5 @@ defmodule GnomeGarden.Procurement.ProcurementSourceTest do
              Procurement.list_procurement_sources_needing_configuration()
 
     refute Enum.any?(sources_needing_configuration, &(&1.id == source.id))
-  end
-
-  defp fake_browser_path(output) do
-    path =
-      Path.join(
-        System.tmp_dir!(),
-        "gnome-garden-fake-browser-#{System.unique_integer([:positive])}"
-      )
-
-    File.write!(path, """
-    #!/bin/sh
-    cat <<'EOF'
-    #{output}
-    EOF
-    exit 1
-    """)
-
-    File.chmod!(path, 0o755)
-    path
   end
 end
