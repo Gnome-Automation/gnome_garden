@@ -132,14 +132,11 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifierTest do
     program = program("Capacity")
     first_domain = unique_domain("first")
     second_domain = unique_domain("second")
-    preview_run = preview_run(program, [candidate(first_domain), candidate(second_domain)])
 
-    {:ok, policy} = Acquisition.ensure_lead_admission_policy(%{})
-
-    {:ok, _policy} =
-      Acquisition.update_lead_admission_policy(policy, %{
-        finding_run_limit: 1,
-        finding_daily_limit: 1
+    preview_run =
+      preview_run(program, [candidate(first_domain), candidate(second_domain)], %{
+        finding_limit_per_run: 1,
+        finding_limit_per_day: 1
       })
 
     stub_contents(fn conn ->
@@ -173,8 +170,9 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifierTest do
     program
   end
 
-  defp preview_run(program, candidates) do
+  defp preview_run(program, candidates, policy_attrs \\ %{}) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
+    program_source = activate_exa_program_source!(program, policy_attrs)
 
     {:ok, run} =
       Acquisition.create_lead_preview_run(%{
@@ -187,7 +185,14 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifierTest do
         promotable_count: Enum.count(candidates, &(&1.route == :promote)),
         total_cost: Decimal.new("0.01"),
         discovery_program_id: program.id,
-        metadata: %{"provider_budget_idempotency_key" => Ecto.UUID.generate()},
+        metadata: %{
+          "provider_budget_idempotency_key" => Ecto.UUID.generate(),
+          "program_source_id" => program_source.id,
+          "source_id" => program_source.source_id,
+          "max_enrichments_per_run" => program_source.max_enrichments_per_run,
+          "finding_limit_per_run" => program_source.finding_limit_per_run,
+          "finding_limit_per_day" => program_source.finding_limit_per_day
+        },
         candidates: candidates
       })
 

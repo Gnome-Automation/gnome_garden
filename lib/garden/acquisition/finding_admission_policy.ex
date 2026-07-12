@@ -40,7 +40,7 @@ defmodule GnomeGarden.Acquisition.FindingAdmissionPolicy do
     actor = Keyword.get(opts, :actor)
     run_limit = Keyword.fetch!(opts, :run_limit)
     daily_limit = Keyword.fetch!(opts, :daily_limit)
-    {day_started_at, day_resets_at, day_key} = day_window(now)
+    {day_started_at, day_resets_at, day_key} = day_window(now, preview_run)
 
     result =
       transact(fn ->
@@ -162,9 +162,13 @@ defmodule GnomeGarden.Acquisition.FindingAdmissionPolicy do
   defp confidence(score) when score >= 60, do: :medium
   defp confidence(_score), do: :low
 
-  defp day_window(now) do
+  defp day_window(now, preview_run) do
     started_at = DateTime.new!(DateTime.to_date(now), ~T[00:00:00], "Etc/UTC")
-    {started_at, DateTime.add(started_at, 1, :day), Date.to_iso8601(DateTime.to_date(started_at))}
+
+    day_key =
+      "#{preview_run.metadata["program_source_id"]}:#{Date.to_iso8601(DateTime.to_date(started_at))}"
+
+    {started_at, DateTime.add(started_at, 1, :day), day_key}
   end
 
   defp reuse_after_conflict(error, identity_key, actor) do

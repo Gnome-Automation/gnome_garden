@@ -27,11 +27,12 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
 
     with {:ok, preview_run} <- Acquisition.get_lead_preview_run(lead_preview_run_id, actor: actor),
          {:ok, program} <- acquisition_program(preview_run, actor),
-         {:ok, policy} <- admission_policy(actor),
+         {:ok, thresholds} <- admission_policy(actor),
+         {:ok, config} <- verification_config(preview_run, thresholds),
          {:ok, candidates} <-
            Acquisition.list_lead_preview_candidates_for_run(lead_preview_run_id, actor: actor) do
       case Enum.reduce_while(candidates, {:ok, initial_result()}, fn candidate, {:ok, result} ->
-             case verify_candidate(candidate, preview_run, program, result, policy, actor) do
+             case verify_candidate(candidate, preview_run, program, result, config, actor) do
                {:ok, result} -> {:cont, {:ok, result}}
                {:error, error} -> {:halt, {:error, error}}
              end
@@ -457,6 +458,33 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
     case Acquisition.get_lead_admission_policy(key, actor: actor) do
       {:ok, policy} -> {:ok, policy}
       {:error, _not_found} -> Acquisition.ensure_lead_admission_policy(%{key: key}, actor: actor)
+    end
+  end
+
+  defp verification_config(preview_run, thresholds) do
+    metadata = preview_run.metadata
+
+    with {:ok, candidate_limit} <- non_negative_limit(metadata, "max_enrichments_per_run"),
+         {:ok, finding_run_limit} <- non_negative_limit(metadata, "finding_limit_per_run"),
+         {:ok, finding_daily_limit} <- non_negative_limit(metadata, "finding_limit_per_day"),
+         true <- is_binary(metadata["program_source_id"]) do
+      {:ok,
+       %{
+         candidate_limit: candidate_limit,
+         finding_run_limit: finding_run_limit,
+         finding_daily_limit: finding_daily_limit,
+         min_search_score: thresholds.min_search_score,
+         min_evidence_characters: thresholds.min_evidence_characters
+       }}
+    else
+      _invalid -> {:error, :invalid_program_source_snapshot}
+    end
+  end
+
+  defp non_negative_limit(metadata, key) do
+    case metadata[key] do
+      value when is_integer(value) and value >= 0 -> {:ok, value}
+      _invalid -> {:error, :invalid_program_source_snapshot}
     end
   end
 

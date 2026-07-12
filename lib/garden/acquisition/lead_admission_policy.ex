@@ -2,9 +2,9 @@ defmodule GnomeGarden.Acquisition.LeadAdmissionPolicy do
   @moduledoc """
   Persisted operator policy for commercial candidate verification and admission.
 
-  The singleton default is created idempotently on first use. Limits and
-  thresholds are database state so operators can tune discovery without a
-  deploy.
+  The singleton default is created idempotently on first use. Thresholds are
+  database state so operators can tune evidence quality without a deploy.
+  Per-source execution and admission caps belong to `ProgramSource`.
   """
 
   use Ash.Resource,
@@ -32,9 +32,6 @@ defmodule GnomeGarden.Acquisition.LeadAdmissionPolicy do
 
     update :update do
       accept [
-        :candidate_limit,
-        :finding_run_limit,
-        :finding_daily_limit,
         :min_search_score,
         :min_evidence_characters
       ]
@@ -49,27 +46,6 @@ defmodule GnomeGarden.Acquisition.LeadAdmissionPolicy do
   attributes do
     uuid_primary_key :id
     attribute :key, :string, allow_nil?: false, default: @default_key, public?: true
-
-    attribute :candidate_limit, :integer do
-      allow_nil? false
-      default 5
-      public? true
-      constraints min: 0
-    end
-
-    attribute :finding_run_limit, :integer do
-      allow_nil? false
-      default 3
-      public? true
-      constraints min: 0
-    end
-
-    attribute :finding_daily_limit, :integer do
-      allow_nil? false
-      default 20
-      public? true
-      constraints min: 0
-    end
 
     attribute :min_search_score, :decimal do
       allow_nil? false
