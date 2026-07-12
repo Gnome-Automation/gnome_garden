@@ -37,7 +37,8 @@ defmodule GnomeGarden.Repo.Migrations.AddSourceRetrievalRuns do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create index(:procurement_source_retrieval_runs, [:status, :retrieval_path])

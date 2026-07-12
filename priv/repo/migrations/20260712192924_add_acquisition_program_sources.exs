@@ -43,7 +43,8 @@ defmodule GnomeGarden.Repo.Migrations.AddAcquisitionProgramSources do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
 
       add :source_id,
           references(:acquisition_sources,
@@ -52,7 +53,8 @@ defmodule GnomeGarden.Repo.Migrations.AddAcquisitionProgramSources do
             type: :uuid,
             prefix: "public",
             on_delete: :delete_all
-          ), null: false
+          ),
+          null: false
     end
 
     create index(:acquisition_program_sources, [:status, :enabled, :next_run_at])
