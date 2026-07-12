@@ -55,6 +55,37 @@ defmodule GnomeGarden.Commercial.DiscoveryRunWorkerTest do
     assert retried.attempt_count == 2
   end
 
+  test "worker executes the immutable enqueue policy snapshot" do
+    program = program("Snapshot retry")
+
+    {:ok, %{run: queued}} =
+      Commercial.launch_discovery_program(program, idempotency_key: "snapshot-retry")
+
+    assert {:ok, policy} = Acquisition.get_program_source(queued.program_source_id)
+
+    assert {:ok, _policy} =
+             Acquisition.update_program_source_policy(policy, %{
+               query_templates: ["mutated after enqueue"]
+             })
+
+    test_pid = self()
+
+    Req.Test.stub(Exa, fn conn ->
+      if conn.request_path == "/search" do
+        {:ok, body, _conn} = Plug.Conn.read_body(conn)
+        send(test_pid, {:snapshot_query, Jason.decode!(body)["query"]})
+      end
+
+      Req.Test.json(conn, %{"costDollars" => %{"total" => 0.01}, "results" => []})
+    end)
+
+    assert :ok =
+             DiscoveryRunWorker.perform(%Oban.Job{args: %{"run_id" => queued.id}, attempt: 1})
+
+    assert_receive {:snapshot_query, "packaging orange county"}
+    refute_received {:snapshot_query, "mutated after enqueue"}
+  end
+
   test "runs search through verified Finding admission end to end" do
     program = program("Verified E2E")
     domain = "verified-e2e-#{System.unique_integer([:positive])}.example.com"
@@ -188,6 +219,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRunWorkerTest do
         search_terms: ["packaging orange county"]
       })
 
+    _program_source = activate_exa_program_source!(program)
     program
   end
 

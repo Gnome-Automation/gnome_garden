@@ -21,6 +21,8 @@ defmodule GnomeGarden.Commercial.DiscoveryRunWorker do
            {:ok, run} <- begin_attempt(run, attempt),
            {:ok, result} <-
              DiscoveryPipeline.run_program(run.discovery_program_id,
+               program_source_id: run.program_source_id,
+               execution_policy_snapshot: run.query_provenance,
                budget_idempotency_key: run.idempotency_key
              ),
            {:ok, _run} <- finish(run, result) do

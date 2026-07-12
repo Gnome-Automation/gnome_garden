@@ -223,9 +223,11 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         suppressed_count: summary.suppressed,
         total_cost: cost_decimal(summary.cost),
         errors: summary.errors,
-        metadata: %{
-          "provider_budget_idempotency_key" => Keyword.fetch!(opts, :budget_idempotency_key)
-        },
+        metadata:
+          %{
+            "provider_budget_idempotency_key" => Keyword.fetch!(opts, :budget_idempotency_key)
+          }
+          |> Map.merge(Keyword.get(opts, :execution_policy_snapshot, %{})),
         discovery_program_id: Keyword.get(opts, :discovery_program_id),
         created_by_id: actor_id(Keyword.get(opts, :actor)),
         candidates: Enum.map(ranked, &candidate_attrs/1)
@@ -292,16 +294,9 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   def run_for_program(program, opts \\ [])
 
   def run_for_program(%{} = program, opts) do
-    run(
-      Keyword.merge(
-        [
-          search_terms: List.wrap(program.search_terms),
-          regions: List.wrap(program.target_regions),
-          industries: List.wrap(program.target_industries)
-        ],
-        opts
-      )
-    )
+    with {:ok, policy_opts} <- typed_policy_opts(program, opts) do
+      run(Keyword.merge(opts, policy_opts))
+    end
   end
 
   def run_for_program(id, opts) when is_binary(id) do
@@ -310,6 +305,93 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       error -> error
     end
   end
+
+  defp typed_policy_opts(program, opts) do
+    actor = Keyword.get(opts, :actor)
+
+    case Keyword.get(opts, :execution_policy_snapshot) do
+      %{} = snapshot -> snapshot_policy_opts(snapshot)
+      nil -> current_policy_opts(program, opts, actor)
+    end
+  end
+
+  defp current_policy_opts(program, opts, actor) do
+    with {:ok, policy} <- resolve_program_source(program, opts, actor) do
+      {:ok,
+       [
+         search_terms: policy.query_templates,
+         regions: [],
+         industries: [],
+         max_queries: policy.max_queries_per_run,
+         max_results_per_query: policy.max_results_per_query,
+         spend_ceiling: Decimal.to_float(policy.spend_limit_per_run.amount),
+         execution_policy_snapshot: %{
+           "program_source_id" => policy.id,
+           "source_id" => policy.source_id,
+           "query_templates" => policy.query_templates,
+           "cadence_minutes" => policy.cadence_minutes,
+           "max_queries_per_run" => policy.max_queries_per_run,
+           "max_results_per_query" => policy.max_results_per_query,
+           "enrichment_policy" => to_string(policy.enrichment_policy),
+           "max_enrichments_per_run" => policy.max_enrichments_per_run,
+           "finding_limit_per_run" => policy.finding_limit_per_run,
+           "finding_limit_per_day" => policy.finding_limit_per_day
+         }
+       ]}
+    end
+  end
+
+  defp snapshot_policy_opts(snapshot) do
+    with {:ok, spend_ceiling} <- parse_snapshot_float(snapshot, "spend_limit_per_run"),
+         true <- is_binary(snapshot["program_source_id"]),
+         true <- is_binary(snapshot["source_id"]),
+         [_ | _] = query_templates <- snapshot["query_templates"] do
+      {:ok,
+       [
+         search_terms: query_templates,
+         regions: [],
+         industries: [],
+         max_queries: snapshot["max_queries_per_run"],
+         max_results_per_query: snapshot["max_results_per_query"],
+         spend_ceiling: spend_ceiling,
+         execution_policy_snapshot: snapshot
+       ]}
+    else
+      _invalid -> {:error, :invalid_program_source_snapshot}
+    end
+  end
+
+  defp parse_snapshot_float(snapshot, key) do
+    case Float.parse(to_string(snapshot[key])) do
+      {value, ""} when value > 0 -> {:ok, value}
+      _invalid -> {:error, :invalid_program_source_snapshot}
+    end
+  end
+
+  defp resolve_program_source(program, opts, actor) do
+    case Keyword.get(opts, :program_source_id) do
+      nil ->
+        Acquisition.get_active_exa_program_source_for_discovery_program(program.id, actor: actor)
+
+      program_source_id ->
+        with {:ok, policy} <- Acquisition.get_program_source(program_source_id, actor: actor),
+             true <- active_exa_policy?(policy, program.id) do
+          {:ok, policy}
+        else
+          _invalid_policy -> {:error, :active_program_source_required}
+        end
+    end
+  end
+
+  defp active_exa_policy?(%{status: :active, enabled: true} = policy, discovery_program_id) do
+    policy = Ash.load!(policy, [:program, :source])
+
+    policy.program.discovery_program_id == discovery_program_id and
+      policy.program.status == :active and policy.source.enabled and
+      policy.source.status == :active and policy.source.external_ref == "provider:exa:search"
+  end
+
+  defp active_exa_policy?(_policy, _discovery_program_id), do: false
 
   @doc "Builds the (deduped) list of `%{text:, intent:}` queries from inputs."
   def build_queries(opts) do

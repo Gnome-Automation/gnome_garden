@@ -8,6 +8,7 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
 
   require Logger
 
+  alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
 
   @type summary :: %{
@@ -23,17 +24,20 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
     reference_time = normalize_reference_time(reference_time)
 
     launch_fun =
-      Keyword.get(opts, :launch_fun, fn program ->
-        Commercial.launch_discovery_program(program,
+      Keyword.get(opts, :launch_fun, fn program_source ->
+        Commercial.launch_discovery_program(program_source.program.discovery_program,
           scheduled?: true,
-          idempotency_key: scheduled_idempotency_key(program, reference_time)
+          scheduled_at: reference_time,
+          program_source: program_source,
+          idempotency_key: scheduled_idempotency_key(program_source, reference_time)
         )
       end)
 
-    case Commercial.list_due_discovery_programs() do
-      {:ok, programs} ->
-        Enum.reduce(programs, empty_summary(length(programs)), fn program, summary ->
-          launch_due_program(summary, program, launch_fun)
+    case Acquisition.list_runnable_commercial_discovery_sources(reference_time) do
+      {:ok, program_sources} ->
+        Enum.reduce(program_sources, empty_summary(length(program_sources)), fn program_source,
+                                                                                summary ->
+          launch_due_program(summary, program_source, launch_fun)
         end)
 
       {:error, error} ->
@@ -55,14 +59,14 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
     |> DateTime.from_naive!("Etc/UTC")
   end
 
-  defp scheduled_idempotency_key(program, reference_time) do
-    cadence_seconds = max(program.cadence_hours, 1) * 60 * 60
+  defp scheduled_idempotency_key(program_source, reference_time) do
+    cadence_seconds = max(program_source.cadence_minutes, 1) * 60
     cadence_bucket = div(DateTime.to_unix(reference_time), cadence_seconds)
-    "scheduled:#{program.id}:#{cadence_bucket}"
+    "scheduled:#{program_source.id}:#{cadence_bucket}"
   end
 
-  defp launch_due_program(summary, program, launch_fun) do
-    case launch_fun.(program) do
+  defp launch_due_program(summary, program_source, launch_fun) do
+    case launch_fun.(program_source) do
       {:ok, _result} ->
         %{summary | launched: summary.launched + 1}
 
@@ -71,7 +75,7 @@ defmodule GnomeGarden.Commercial.DiscoveryScheduler do
 
       {:error, error} ->
         Logger.error(
-          "Failed scheduled discovery launch for #{program.name} (#{program.id}): #{inspect(error)}"
+          "Failed scheduled discovery launch for program source #{program_source.id}: #{inspect(error)}"
         )
 
         %{summary | errors: summary.errors + 1}

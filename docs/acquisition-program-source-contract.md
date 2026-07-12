@@ -50,8 +50,8 @@ erDiagram
     integer cadence_minutes
     integer max_queries_per_run
     integer max_results_per_query
-    decimal spend_limit_per_run
-    decimal spend_limit_per_day
+    money spend_limit_per_run
+    money spend_limit_per_day
     atom enrichment_policy
     integer max_enrichments_per_run
     integer finding_limit_per_run
@@ -92,8 +92,8 @@ the `GnomeGarden.Acquisition` domain.
 | `cadence_minutes` | integer | Positive and independent for every program/source pair. |
 | `max_queries_per_run` | integer | Positive hard ceiling. |
 | `max_results_per_query` | integer | Positive hard ceiling. |
-| `spend_limit_per_run` | decimal | Non-negative policy ceiling, not consumption state. |
-| `spend_limit_per_day` | decimal | Non-negative policy ceiling, enforced by budget reservations. |
+| `spend_limit_per_run` | money | Positive USD policy ceiling, not consumption state. |
+| `spend_limit_per_day` | money | Positive USD policy ceiling, enforced by budget reservations. |
 | `enrichment_policy` | atom | `none`, `verify_promotable`, or `verify_ranked`. |
 | `max_enrichments_per_run` | integer | Non-negative hard ceiling. |
 | `finding_limit_per_run` | integer | Non-negative admission cap. |
@@ -199,16 +199,16 @@ limits belong to `ProgramSource`.
    IDs, then attach `program_source_id` to those findings.
 6. Do not guess ambiguous procurement coverage. Emit unresolved rows for
    operator review and let `gnome_ga-fx2.14` govern portfolio adoption.
-7. Dual-read old scope/metadata only during deployment compatibility; all new
-   writes use typed `ProgramSource` fields.
+7. Existing legacy scope remains readable for historical context, but execution
+   requires an active typed `ProgramSource` and never falls back to legacy fields.
 8. Verify row counts, uniqueness, parent consistency, enabled-state safety, and
    zero newly runnable configurations before enabling the scheduler.
 9. Remove compatibility reads and obsolete metadata keys only in
    `gnome_ga-fx2.35` after the measured pilot.
 
-Rollback disables all `ProgramSource` rows first, returns reads to the existing
-program/source fields, clears nullable provenance references, and then removes
-the new table. No backfill step may activate execution.
+Rollback disables all `ProgramSource` rows first, clears nullable provenance
+references, and then removes the new table. No backfill step may activate
+execution.
 
 ## Downstream Ownership
 

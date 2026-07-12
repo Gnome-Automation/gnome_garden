@@ -278,6 +278,11 @@ defmodule GnomeGarden.Acquisition.Source do
       destination_attribute :source_id
       public? true
     end
+
+    has_many :program_sources, GnomeGarden.Acquisition.ProgramSource do
+      destination_attribute :source_id
+      public? true
+    end
   end
 
   calculations do

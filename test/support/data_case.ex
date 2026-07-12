@@ -55,6 +55,53 @@ defmodule GnomeGarden.DataCase do
     end
   end
 
+  def activate_exa_program_source!(discovery_program, attrs \\ %{}) do
+    discovery_program =
+      case discovery_program.status do
+        :active -> discovery_program
+        _not_active -> GnomeGarden.Commercial.activate_discovery_program!(discovery_program)
+      end
+
+    acquisition_program =
+      GnomeGarden.Acquisition.get_program_by_discovery_program!(discovery_program.id)
+
+    source =
+      GnomeGarden.Acquisition.create_source!(
+        %{
+          external_ref: "provider:exa:search",
+          name: "Exa Search",
+          url: "https://api.exa.ai/search",
+          source_family: :discovery,
+          source_kind: :directory,
+          status: :active,
+          enabled: true,
+          scan_strategy: :deterministic
+        },
+        upsert?: true,
+        upsert_identity: :unique_external_ref,
+        upsert_fields: []
+      )
+
+    policy =
+      GnomeGarden.Acquisition.create_program_source!(%{
+        program_id: acquisition_program.id,
+        source_id: source.id
+      })
+
+    defaults = %{
+      query_templates:
+        case discovery_program.search_terms do
+          [_ | _] = search_terms -> search_terms
+          [] -> ["#{discovery_program.name} commercial company search"]
+        end,
+      cadence_minutes: max(discovery_program.cadence_hours, 1) * 60
+    }
+
+    policy
+    |> GnomeGarden.Acquisition.update_program_source_policy!(Map.merge(defaults, attrs))
+    |> GnomeGarden.Acquisition.activate_program_source!()
+  end
+
   @doc """
   A helper that transforms changeset errors into a map of messages.
 

@@ -70,6 +70,32 @@ defmodule GnomeGarden.Acquisition do
       define :update_program, action: :update
     end
 
+    resource GnomeGarden.Acquisition.ProgramSource do
+      define :backfill_program_sources, action: :backfill
+      define :list_program_sources, action: :read
+      define :get_program_source, action: :read, get_by: [:id]
+      define :create_program_source, action: :create
+      define :update_program_source_policy, action: :update_policy
+      define :activate_program_source, action: :activate
+      define :pause_program_source, action: :pause
+      define :block_program_source, action: :block
+      define :archive_program_source, action: :archive
+      define :mark_program_source_scheduled, action: :mark_scheduled, args: [:scheduled_at]
+      define :list_program_sources_for_program, action: :for_program, args: [:program_id]
+      define :list_program_sources_for_source, action: :for_source, args: [:source_id]
+      define :list_runnable_program_sources, action: :runnable, args: [:reference_time]
+
+      define :list_runnable_commercial_discovery_sources,
+        action: :runnable_commercial_discovery,
+        args: [:reference_time]
+
+      define :get_active_exa_program_source_for_discovery_program,
+        action: :active_exa_for_discovery_program,
+        args: [:discovery_program_id]
+
+      define :get_program_source_workspace, action: :workspace, args: [:id]
+    end
+
     resource GnomeGarden.Acquisition.Finding do
       define :list_findings, action: :read
       define :list_findings_for_program, action: :for_program, args: [:program_id]

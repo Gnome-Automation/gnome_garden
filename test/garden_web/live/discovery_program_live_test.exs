@@ -21,6 +21,8 @@ defmodule GnomeGardenWeb.DiscoveryProgramLiveTest do
         watch_channels: ["job_board", "news_site"]
       })
 
+    _program_source = GnomeGarden.DataCase.activate_exa_program_source!(discovery_program)
+
     {:ok, discovery_record} =
       Commercial.create_discovery_record(%{
         discovery_program_id: discovery_program.id,

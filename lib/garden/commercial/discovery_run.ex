@@ -14,6 +14,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
 
     references do
       reference :discovery_program, on_delete: :restrict
+      reference :program_source, on_delete: :restrict
     end
 
     custom_indexes do
@@ -48,6 +49,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
     create :create do
       accept [
         :discovery_program_id,
+        :program_source_id,
         :idempotency_key,
         :trigger,
         :query_provenance,
@@ -58,6 +60,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
       upsert? true
       upsert_identity :unique_idempotency_key
       upsert_fields []
+      validate present(:program_source_id)
     end
 
     read :by_idempotency_key do
@@ -213,6 +216,10 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
   relationships do
     belongs_to :discovery_program, GnomeGarden.Commercial.DiscoveryProgram do
       allow_nil? false
+      public? true
+    end
+
+    belongs_to :program_source, GnomeGarden.Acquisition.ProgramSource do
       public? true
     end
   end

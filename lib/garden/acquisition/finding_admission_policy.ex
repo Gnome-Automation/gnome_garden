@@ -135,6 +135,8 @@ defmodule GnomeGarden.Acquisition.FindingAdmissionPolicy do
         recommendation: "Review verified commercial company lead.",
         observed_at: now,
         program_id: program.id,
+        source_id: preview_run.metadata["source_id"],
+        program_source_id: preview_run.metadata["program_source_id"],
         metadata: %{
           "lead_preview_run_id" => preview_run.id,
           "lead_preview_candidate_id" => candidate.id,
