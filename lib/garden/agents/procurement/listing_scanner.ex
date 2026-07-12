@@ -25,6 +25,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   """
 
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.RetrievalPolicy
   alias GnomeGarden.Procurement.TargetingFilter
   alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
   alias GnomeGarden.Browser
@@ -76,56 +77,30 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   end
 
   defp do_scan(source, context) do
-    result =
+    stages =
       case source.source_type do
         :planetbids ->
-          with :ok <- ensure_credentials_if_required(source) do
-            if source.requires_login do
-              case do_browser_scan(source, context) do
-                {:ok, _result} = ok ->
-                  ok
-
-                {:error, browser_reason} ->
-                  Logger.warning(
-                    "Browser scan failed for #{source.name}, falling back to HTTP scanner: #{inspect(browser_reason)}"
-                  )
-
-                  do_planetbids_scan(source, context)
-              end
-            else
-              case do_planetbids_scan(source, context) do
-                {:ok, _result} = ok ->
-                  ok
-
-                {:error, http_reason} ->
-                  Logger.warning(
-                    "HTTP PlanetBids scan failed for #{source.name}, falling back to browser scan: #{inspect(http_reason)}"
-                  )
-
-                  planetbids_browser_fallback(source, context, http_reason)
-              end
-            end
+          if source.requires_login do
+            [credentialed_stage(:browser, source, fn -> do_browser_scan(source, context) end)]
+          else
+            planetbids_stages(source, context)
           end
 
         :bidnet ->
-          do_bidnet_scan(source, context)
+          [
+            maybe_credentialed_stage(:playwright, source, fn ->
+              do_bidnet_scan(source, context)
+            end)
+          ]
 
         _other ->
-          # Prefer a cheap HTTP+Floki scan when the source declares
-          # `http_selectors` (server-rendered agency sites); fall back to the
-          # browser for JS/SPA/WAF-walled portals or when HTTP yields nothing.
-          case do_http_scan(source, context) do
-            {:ok, _payload} = ok ->
-              ok
-
-            {:error, http_reason} ->
-              Logger.info(
-                "HTTP scan unavailable for #{source.name} (#{inspect(http_reason)}); using browser scan"
-              )
-
-              do_browser_scan(source, context)
-          end
+          [
+            stage(:http, fn -> do_http_scan(source, context) end),
+            stage(:browser, fn -> do_browser_scan(source, context) end)
+          ]
       end
+
+    result = RetrievalPolicy.run(source, stages, actor: context_value(context, :actor))
 
     case result do
       {:ok, _payload} = ok ->
@@ -134,6 +109,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       {:error, reason} ->
         Logger.error("Scan failed for #{source.name}: #{inspect(reason)}")
 
+        source = current_source(source)
+
         Procurement.scan_fail_procurement_source(source, %{
           metadata: scan_failure_metadata(source, reason)
         })
@@ -141,14 +118,6 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         {:error, reason}
     end
   end
-
-  defp ensure_credentials_if_required(source) do
-    if source_requires_credentials?(source), do: ensure_credentials(source), else: :ok
-  end
-
-  defp source_requires_credentials?(%{source_type: :bidnet}), do: true
-  defp source_requires_credentials?(%{requires_login: true}), do: true
-  defp source_requires_credentials?(_source), do: false
 
   defp ensure_credentials(source) do
     if GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source) do
@@ -206,17 +175,13 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   end
 
   # HTTP getter is injectable via context (`:http_get`) for tests, matching the
-  # PlanetBids scanner; defaults to Req.get.
+  # PlanetBids scanner; defaults to bounded Jido Browser web fetch.
   defp http_fetch(url, context) do
-    getter = Map.get(context, :http_get) || Map.get(context, "http_get") || (&Req.get/2)
-
-    case getter.(url,
-           headers: [{"user-agent", @http_user_agent}],
-           redirect: true,
-           retry: false,
-           receive_timeout: 30_000
-         ) do
+    case http_get(url, context) do
       {:ok, %{status: 200, body: body}} when is_binary(body) ->
+        {:ok, body}
+
+      {:ok, %{content: body}} when is_binary(body) ->
         {:ok, body}
 
       {:ok, %{status: status}} ->
@@ -226,6 +191,53 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         {:error, reason}
     end
   end
+
+  defp http_get(url, context) do
+    case Map.get(context, :http_get) || Map.get(context, "http_get") do
+      getter when is_function(getter, 2) ->
+        getter.(url,
+          headers: [{"user-agent", @http_user_agent}],
+          redirect: true,
+          retry: false,
+          receive_timeout: 30_000
+        )
+
+      _other ->
+        Browser.web_fetch(url, format: :html, timeout_ms: 30_000)
+    end
+  end
+
+  defp stage(path, function), do: %{path: path, run: function}
+
+  defp credentialed_stage(path, source, function) do
+    stage(path, fn ->
+      case ensure_credentials(source) do
+        :ok -> function.()
+        {:error, reason} -> {:blocked, reason}
+      end
+    end)
+  end
+
+  defp maybe_credentialed_stage(path, %{requires_login: true} = source, function),
+    do: credentialed_stage(path, source, function)
+
+  defp maybe_credentialed_stage(path, _source, function), do: stage(path, function)
+
+  defp planetbids_stages(source, context) do
+    provider_stage = stage(:provider_api, fn -> do_planetbids_scan(source, context) end)
+
+    if truthy?(context_value(context, :disable_browser_fallback?)) do
+      [provider_stage]
+    else
+      [provider_stage, stage(:browser, fn -> do_browser_scan(source, context) end)]
+    end
+  end
+
+  defp context_value(context, key) do
+    Map.get(context, key) || Map.get(context, Atom.to_string(key))
+  end
+
+  defp truthy?(value), do: value in [true, "true", 1, "1"]
 
   # Extract bids from raw HTML into the canonical bid-map shape the scoring
   # pipeline consumes (atom keys; `bid_value/2` reads either). Supports
@@ -417,19 +429,6 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       {:error, reason} -> {:error, reason}
     end
   end
-
-  defp planetbids_browser_fallback(source, context, http_reason) do
-    if truthy?(
-         Map.get(context, :disable_browser_fallback?) ||
-           Map.get(context, "disable_browser_fallback?")
-       ) do
-      {:error, http_reason}
-    else
-      do_browser_scan(source, context)
-    end
-  end
-
-  defp truthy?(value), do: value in [true, "true", 1, "1"]
 
   defp do_bidnet_scan(source, context) do
     Logger.info("Scanning #{source.name} via BidNet HTML scanner")

@@ -310,6 +310,25 @@ defmodule GnomeGarden.Acquisition.Source do
                  cancelled: :warning
                ],
                default: :default}
+
+    calculate :last_retrieval_path,
+              :atom,
+              {GnomeGarden.Calculations.MetadataField,
+               field: ["last_retrieval", "retrieval_path"],
+               cast: :atom,
+               allowed: [:provider_api, :http, :browser, :playwright, :browserless]}
+
+    calculate :last_retrieval_status,
+              :atom,
+              {GnomeGarden.Calculations.MetadataField,
+               field: ["last_retrieval", "status"],
+               cast: :atom,
+               allowed: [:running, :completed, :failed, :blocked]}
+
+    calculate :last_retrieval_blocked,
+              :boolean,
+              {GnomeGarden.Calculations.MetadataField,
+               field: ["last_retrieval", "blocked"], cast: :raw}
   end
 
   aggregates do

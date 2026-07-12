@@ -62,6 +62,8 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
       source.status == :paused -> :paused
       source.enabled == false -> :disabled
       not is_nil(credential_status) -> credential_status
+      retrieval_status(source) == :blocked -> :blocked
+      retrieval_status(source) == :failed -> :failing
       noisy?(source) -> :noisy
       procurement_config_status(source) == :pending -> :configuring
       procurement_config_status(source) == :found -> :needs_configuration
@@ -85,7 +87,15 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   end
 
   defp health_note(_source, :archived, _opts), do: "Archived source."
-  defp health_note(_source, :blocked, _opts), do: "Blocked until operator repair."
+
+  defp health_note(source, :blocked, _opts) do
+    if retrieval_status(source) == :blocked do
+      retrieval_note(source, "Retrieval blocked")
+    else
+      "Blocked until operator repair."
+    end
+  end
+
   defp health_note(_source, :paused, _opts), do: "Paused and out of rotation."
   defp health_note(_source, :disabled, _opts), do: "Disabled and not launchable."
   defp health_note(source, :needs_login, _opts), do: missing_credentials_note(source)
@@ -115,10 +125,15 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp health_note(source, :zero_saved, _opts), do: scan_issue_note(source)
 
   defp health_note(source, :failing, _opts) do
-    if scan_issue(source) in [:login_required, :scanner_not_implemented, :scan_failed] do
-      scan_issue_note(source)
-    else
-      timestamp_note("Last run failed", source.last_run_at)
+    cond do
+      retrieval_status(source) == :failed ->
+        retrieval_note(source, "Retrieval failed")
+
+      scan_issue(source) in [:login_required, :scanner_not_implemented, :scan_failed] ->
+        scan_issue_note(source)
+
+      true ->
+        timestamp_note("Last run failed", source.last_run_at)
     end
   end
 
@@ -395,6 +410,32 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceHealth do
   defp procurement_source_value(_source, _key), do: nil
 
   defp procurement_config_status(source), do: procurement_source_value(source, :config_status)
+
+  defp retrieval_status(source) do
+    source.metadata
+    |> metadata_value("last_retrieval")
+    |> metadata_value("status")
+    |> case do
+      status when status in [:running, :completed, :failed, :blocked] -> status
+      "running" -> :running
+      "completed" -> :completed
+      "failed" -> :failed
+      "blocked" -> :blocked
+      _other -> nil
+    end
+  end
+
+  defp retrieval_note(source, prefix) do
+    retrieval = metadata_value(source.metadata, "last_retrieval") || %{}
+    path = metadata_value(retrieval, "retrieval_path") || "unknown path"
+    reason = metadata_value(retrieval, "fallback_reason")
+
+    if is_binary(reason) and reason != "" do
+      "#{prefix} at #{path}: #{reason}."
+    else
+      "#{prefix} at #{path}."
+    end
+  end
 
   defp procurement_source_metadata_value(source, key) do
     source
