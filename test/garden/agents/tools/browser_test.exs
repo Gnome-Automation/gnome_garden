@@ -61,6 +61,13 @@ defmodule GnomeGarden.BrowserTest do
     assert Browser.binary_path() == binary
   end
 
+  test "uses the immutable runtime-configured browser path" do
+    path = "/nix/store/test-agent-browser/bin/agent-browser"
+    Application.put_env(:gnome_garden, :browser_path, path)
+
+    assert Browser.binary_path() == path
+  end
+
   defp restore_app_env(key, nil), do: Application.delete_env(:gnome_garden, key)
   defp restore_app_env(key, value), do: Application.put_env(:gnome_garden, key, value)
 end
