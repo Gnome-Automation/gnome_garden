@@ -79,6 +79,8 @@ defmodule GnomeGarden.Operations.Task do
       reference :work_item, on_delete: :nilify
       reference :work_order, on_delete: :nilify
       reference :bid, on_delete: :nilify
+      reference :playbook_run, on_delete: :nilify
+      reference :playbook_step, on_delete: :nilify
       reference :procurement_source, on_delete: :nilify
     end
   end
@@ -127,6 +129,16 @@ defmodule GnomeGarden.Operations.Task do
       accept @create_and_update_attributes
       change set_attribute(:origin_domain, :commercial)
       change set_attribute(:origin_resource, "pursuit")
+      validate GnomeGarden.Operations.Validations.AssigneeIsActive
+      change GnomeGarden.Operations.Changes.StampTaskAccountability
+    end
+
+    create :create_from_playbook_step do
+      accept @create_and_update_attributes ++
+               [:playbook_run_id, :playbook_step_id, :playbook_step_snapshot]
+
+      change set_attribute(:origin_domain, :operations)
+      change set_attribute(:origin_resource, "playbook_run")
       validate GnomeGarden.Operations.Validations.AssigneeIsActive
       change GnomeGarden.Operations.Changes.StampTaskAccountability
     end
@@ -478,6 +490,10 @@ defmodule GnomeGarden.Operations.Task do
       public? true
     end
 
+    attribute :playbook_step_snapshot, :map do
+      public? true
+    end
+
     attribute :metadata, :map do
       default %{}
       public? true
@@ -540,6 +556,14 @@ defmodule GnomeGarden.Operations.Task do
     end
 
     belongs_to :procurement_source, GnomeGarden.Procurement.ProcurementSource do
+      public? true
+    end
+
+    belongs_to :playbook_run, GnomeGarden.Operations.PlaybookRun do
+      public? true
+    end
+
+    belongs_to :playbook_step, GnomeGarden.Operations.PlaybookStep do
       public? true
     end
   end

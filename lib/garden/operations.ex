@@ -195,6 +195,50 @@ defmodule GnomeGarden.Operations do
       define :list_overdue_tasks, action: :overdue
       define :list_due_today_tasks, action: :due_today
       define :list_blocked_tasks, action: :blocked
+
+      define :create_task_from_playbook_step, action: :create_from_playbook_step
+    end
+
+    resource GnomeGarden.Operations.Playbook do
+      define :list_playbooks, action: :read
+      define :list_active_playbooks, action: :active
+      define :get_playbook, action: :read, get_by: [:id]
+      define :get_playbook_by_name, action: :by_name, args: [:name]
+      define :create_playbook, action: :create
+      define :update_playbook, action: :update
+      define :archive_playbook, action: :archive
+      define :reactivate_playbook, action: :reactivate
+      define :ensure_starter_playbooks, action: :ensure_starters
+    end
+
+    resource GnomeGarden.Operations.PlaybookStep do
+      define :get_playbook_step, action: :read, get_by: [:id]
+      define :create_playbook_step, action: :create
+      define :update_playbook_step, action: :update
+      define :delete_playbook_step, action: :destroy
+
+      define :list_playbook_steps_for_playbook,
+        action: :for_playbook,
+        args: [:playbook_id]
+    end
+
+    resource GnomeGarden.Operations.PlaybookRun do
+      define :list_playbook_runs, action: :read
+      define :get_playbook_run, action: :read, get_by: [:id]
+      define :apply_playbook, action: :apply
+      define :list_playbook_runs_for_pursuit, action: :for_pursuit, args: [:pursuit_id]
+      define :list_playbook_runs_for_project, action: :for_project, args: [:project_id]
+      define :list_playbook_runs_for_bid, action: :for_bid, args: [:bid_id]
+
+      define :list_playbook_runs_for_procurement_source,
+        action: :for_procurement_source,
+        args: [:procurement_source_id]
+
+      define :list_playbook_runs_for_organization,
+        action: :for_organization,
+        args: [:organization_id]
+
+      define :list_playbook_runs_for_signal, action: :for_signal, args: [:signal_id]
     end
 
     resource GnomeGarden.Operations.MemoryBlock do

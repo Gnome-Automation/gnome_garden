@@ -2,6 +2,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   use GnomeGardenWeb, :live_view
 
   import GnomeGardenWeb.Commercial.Helpers
+  import GnomeGardenWeb.Components.OperationsUI, only: [playbook_runs_panel: 1]
 
   alias GnomeGarden.{Commercial, Operations}
   alias GnomeGardenWeb.Operations.TaskEntry
@@ -11,12 +12,33 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   def mount(%{"id" => id}, _session, socket) do
     pursuit = load_pursuit!(id, socket.assigns.current_user)
 
-    if connected?(socket), do: TaskPubSub.subscribe_related(:pursuit, pursuit.id)
+    if connected?(socket) do
+      TaskPubSub.subscribe_related(:pursuit, pursuit.id)
+      GnomeGardenWeb.Endpoint.subscribe("playbook_run:pursuit:#{pursuit.id}")
+    end
 
     {:ok,
      socket
      |> assign(:page_title, pursuit.name)
-     |> assign(:pursuit, pursuit)}
+     |> assign(:pursuit, pursuit)
+     |> assign_playbook_context()}
+  end
+
+  @impl true
+  def handle_event("apply_playbook", %{"playbook_id" => playbook_id}, socket) do
+    case Operations.apply_playbook(
+           %{playbook_id: playbook_id, pursuit_id: socket.assigns.pursuit.id},
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, run} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Applied playbook: #{run.playbook_name}")
+         |> assign_playbook_context()}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not apply playbook: #{inspect(error)}")}
+    end
   end
 
   @impl true
@@ -70,11 +92,40 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   @impl true
   def handle_info(%{topic: "task:pursuit:" <> _pursuit_id}, socket) do
     {:noreply,
-     assign(
-       socket,
+     socket
+     |> assign(
        :pursuit,
        load_pursuit!(socket.assigns.pursuit.id, socket.assigns.current_user)
-     )}
+     )
+     |> assign_playbook_context()}
+  end
+
+  @impl true
+  def handle_info(%{topic: "playbook_run:pursuit:" <> _pursuit_id}, socket) do
+    {:noreply, assign_playbook_context(socket)}
+  end
+
+  defp assign_playbook_context(socket) do
+    actor = socket.assigns.current_user
+    pursuit = socket.assigns.pursuit
+
+    socket
+    |> assign(:playbooks, list_active_playbooks(actor))
+    |> assign(:playbook_runs, list_runs(pursuit.id, actor))
+  end
+
+  defp list_active_playbooks(actor) do
+    case Operations.list_active_playbooks(actor: actor) do
+      {:ok, playbooks} -> playbooks
+      {:error, _error} -> []
+    end
+  end
+
+  defp list_runs(pursuit_id, actor) do
+    case Operations.list_playbook_runs_for_pursuit(pursuit_id, actor: actor) do
+      {:ok, runs} -> runs
+      {:error, error} -> raise "failed to load playbook runs: #{inspect(error)}"
+    end
   end
 
   @impl true
@@ -112,6 +163,12 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
       </.page_header>
 
       <.pursuit_next_steps pursuit={@pursuit} new_task_path={new_pursuit_task_path(@pursuit)} />
+
+      <.playbook_runs_panel
+        runs={@playbook_runs}
+        playbooks={@playbooks}
+        description="Apply a playbook to spawn this pursuit's standard task set."
+      />
 
       <.section
         title="Stage Actions"

@@ -79,6 +79,10 @@ defmodule GnomeGardenWeb.Router do
       # Operations - Tasks
       live "/operations/review", Operations.ReviewLive, :index
       live "/operations/my-tasks", Operations.MyTasksLive, :index
+      live "/operations/playbooks", Operations.PlaybookLive.Index, :index
+      live "/operations/playbooks/new", Operations.PlaybookLive.Form, :new
+      live "/operations/playbooks/:id", Operations.PlaybookLive.Show, :show
+      live "/operations/playbooks/:id/edit", Operations.PlaybookLive.Form, :edit
       live "/operations/tasks", Operations.TaskLive.Index, :index
       live "/operations/tasks/new", Operations.TaskLive.Form, :new
       live "/operations/tasks/:id", Operations.TaskLive.Show, :show
