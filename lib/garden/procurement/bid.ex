@@ -244,6 +244,11 @@ defmodule GnomeGarden.Procurement.Bid do
       end
 
       change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
+
+      # After the tier computation so when_changing sees the new value; fires
+      # only when the tier band actually moves, not on every re-score.
+      change {GnomeGarden.Automation.Emit,
+              resource: "bid", action: "scored", when_changing: [:score_tier]}
     end
 
     # -- Reads --
@@ -274,6 +279,19 @@ defmodule GnomeGarden.Procurement.Bid do
     read :active do
       filter expr(status in [:pursuing, :submitted])
       prepare build(sort: [due_at: :asc, score_total: :desc, updated_at: :desc])
+    end
+
+    read :due_within do
+      argument :days, :integer, allow_nil?: false
+
+      filter expr(
+               status in [:new, :reviewing, :pursuing] and
+                 not is_nil(due_at) and
+                 due_at > now() and
+                 due_at < datetime_add(now(), ^arg(:days), :day)
+             )
+
+      prepare build(sort: [due_at: :asc])
     end
 
     read :by_url do

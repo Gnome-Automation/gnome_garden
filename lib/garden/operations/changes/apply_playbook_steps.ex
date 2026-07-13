@@ -23,10 +23,12 @@ defmodule GnomeGarden.Operations.Changes.ApplyPlaybookSteps do
 
   @impl true
   def change(changeset, _opts, context) do
+    default_owner_id = Ash.Changeset.get_argument(changeset, :default_owner_team_member_id)
+
     changeset
     |> stamp_run(context.actor)
     |> Ash.Changeset.after_action(fn _changeset, run ->
-      create_tasks(run, context.actor)
+      create_tasks(run, context.actor, default_owner_id)
     end)
   end
 
@@ -56,9 +58,9 @@ defmodule GnomeGarden.Operations.Changes.ApplyPlaybookSteps do
     end
   end
 
-  defp create_tasks(run, actor) do
+  defp create_tasks(run, actor, default_owner_id) do
     steps = Operations.list_playbook_steps_for_playbook!(run.playbook_id, authorize?: false)
-    applier_member_id = Operations.current_team_member_id(actor)
+    applier_member_id = Operations.current_team_member_id(actor) || default_owner_id
 
     steps
     |> Enum.reduce_while({:ok, run}, fn step, {:ok, run} ->
