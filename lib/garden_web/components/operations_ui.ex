@@ -90,6 +90,25 @@ defmodule GnomeGardenWeb.Components.OperationsUI do
     end
   end
 
+  @doc """
+  Route to the most specific record a task is linked to, built from foreign
+  keys so no relationship loading is required. Bid and procurement-source
+  links have no routable page yet and fall through to broader contexts.
+  """
+  def context_path(%{work_item_id: id}) when is_binary(id), do: "/execution/work-items/#{id}"
+  def context_path(%{work_order_id: id}) when is_binary(id), do: "/execution/work-orders/#{id}"
+  def context_path(%{project_id: id}) when is_binary(id), do: "/execution/projects/#{id}"
+  def context_path(%{pursuit_id: id}) when is_binary(id), do: "/commercial/pursuits/#{id}"
+  def context_path(%{signal_id: id}) when is_binary(id), do: "/commercial/signals/#{id}"
+  def context_path(%{finding_id: id}) when is_binary(id), do: "/acquisition/findings/#{id}"
+  def context_path(%{agent_run_id: id}) when is_binary(id), do: "/console/agents/runs/#{id}"
+
+  def context_path(%{organization_id: id}) when is_binary(id),
+    do: "/operations/organizations/#{id}"
+
+  def context_path(%{person_id: id}) when is_binary(id), do: "/operations/people/#{id}"
+  def context_path(_task), do: nil
+
   defp origin_color(:acquisition), do: :emerald
   defp origin_color(:agents), do: :sky
   defp origin_color(:commercial), do: :amber

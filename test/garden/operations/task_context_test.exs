@@ -144,6 +144,32 @@ defmodule GnomeGarden.Operations.TaskContextTest do
     assert is_nil(unassigned.assigned_by_team_member_id)
   end
 
+  test "actorless owner changes clear the previous human assigner" do
+    active = team_member_fixture("Human Assigner Target")
+    other = team_member_fixture("Agent Reassignment Target")
+    actor_user = user_fixture()
+
+    {:ok, _actor_member} =
+      Operations.create_team_member(%{
+        user_id: actor_user.id,
+        display_name: "Human Assigner",
+        role: :operator,
+        status: :active
+      })
+
+    {:ok, task} = Operations.create_task(%{title: "Handoff task"}, actor: actor_user)
+
+    {:ok, assigned} =
+      Operations.assign_task(task, %{owner_team_member_id: active.id}, actor: actor_user)
+
+    assert assigned.assigned_by_team_member_id
+
+    {:ok, reassigned} = Operations.assign_task(assigned, %{owner_team_member_id: other.id})
+
+    assert reassigned.owner_team_member_id == other.id
+    assert is_nil(reassigned.assigned_by_team_member_id)
+  end
+
   test "reassignment publishes to both the old and new owner topics" do
     old_owner = team_member_fixture("Old Owner")
     new_owner = team_member_fixture("New Owner")

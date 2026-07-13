@@ -11,22 +11,23 @@ defmodule GnomeGarden.Operations.Changes.StampTaskAccountability do
 
   @impl true
   def change(changeset, _opts, context) do
-    case team_member_id(context.actor) do
-      nil ->
-        changeset
+    member_id = team_member_id(context.actor)
 
-      member_id ->
-        changeset
-        |> stamp_created_by(member_id)
-        |> stamp_assigned_by(member_id)
-    end
+    changeset
+    |> stamp_created_by(member_id)
+    |> stamp_assigned_by(member_id)
   end
+
+  defp stamp_created_by(changeset, nil), do: changeset
 
   defp stamp_created_by(%{action_type: :create} = changeset, member_id),
     do: Ash.Changeset.force_change_attribute(changeset, :created_by_team_member_id, member_id)
 
   defp stamp_created_by(changeset, _member_id), do: changeset
 
+  # Any owner change rewrites the assigner — including actorless changes
+  # (agents, background jobs), which must clear the previous human's stamp
+  # rather than leave it stale.
   defp stamp_assigned_by(changeset, member_id) do
     case Ash.Changeset.fetch_change(changeset, :owner_team_member_id) do
       {:ok, nil} ->

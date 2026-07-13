@@ -65,4 +65,24 @@ defmodule GnomeGardenWeb.TaskEntryPointsLiveTest do
     {:ok, _wo_view, wo_html} = live(conn, ~p"/execution/work-orders/#{work_order}")
     assert wo_html =~ "work_order_id=#{work_order.id}"
   end
+
+  test "context-only tasks link back to their record from task show", %{conn: conn} do
+    {:ok, organization} =
+      Operations.create_organization(%{
+        name: "Context Link HOA",
+        organization_kind: :business,
+        status: :prospect
+      })
+
+    {:ok, project} =
+      Execution.create_project(%{organization_id: organization.id, name: "Context link build"})
+
+    {:ok, task} = Operations.create_task(%{title: "API-created task", project_id: project.id})
+
+    {:ok, view, _html} = live(conn, ~p"/operations/tasks/#{task}")
+
+    assert view
+           |> element("#task-context-link")
+           |> render() =~ "/execution/projects/#{project.id}"
+  end
 end

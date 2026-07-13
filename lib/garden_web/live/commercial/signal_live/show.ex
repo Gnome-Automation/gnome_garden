@@ -490,29 +490,8 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
     })
   end
 
-  # Bid-sourced signals store the bid's external_id (or id) in external_ref;
-  # resolving it lets signal tasks carry a concrete bid link.
-  defp source_bid_id(%{external_ref: nil}), do: nil
-
-  defp source_bid_id(%{external_ref: external_ref}) do
-    case GnomeGarden.Procurement.list_bids_by_external_id(external_ref, authorize?: false) do
-      {:ok, [bid | _rest]} ->
-        bid.id
-
-      _none ->
-        case Ecto.UUID.cast(external_ref) do
-          {:ok, bid_id} -> existing_bid_id(bid_id)
-          :error -> nil
-        end
-    end
-  end
-
-  defp existing_bid_id(bid_id) do
-    case GnomeGarden.Procurement.get_bid(bid_id, authorize?: false) do
-      {:ok, bid} -> bid.id
-      {:error, _error} -> nil
-    end
-  end
+  defp source_bid_id(%{procurement_bid: %{id: bid_id}}), do: bid_id
+  defp source_bid_id(_signal), do: nil
 
   defp can_create_pursuit?(signal),
     do: signal.status == :accepted and Enum.empty?(signal.pursuits || [])
