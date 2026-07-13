@@ -90,6 +90,61 @@ defmodule GnomeGardenWeb.Components.OperationsUI do
     end
   end
 
+  attr :runs, :list, default: []
+  attr :playbooks, :list, default: []
+  attr :description, :string, default: "Apply a playbook to create its task set for this record."
+
+  def playbook_runs_panel(assigns) do
+    ~H"""
+    <.section title="Playbooks" description={@description} compact body_class="p-0">
+      <:actions :if={@playbooks != []}>
+        <form id="apply-playbook-form" phx-submit="apply_playbook" class="flex items-center gap-2">
+          <select
+            name="playbook_id"
+            class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10"
+          >
+            {Phoenix.HTML.Form.options_for_select(
+              Enum.map(@playbooks, &{&1.name, &1.id}),
+              nil
+            )}
+          </select>
+          <.button type="submit" variant="primary">Apply</.button>
+        </form>
+      </:actions>
+
+      <div :if={@runs == []} class="p-4">
+        <.empty_state
+          icon="hero-book-open"
+          title="No playbook runs"
+          description="Applied playbooks and their progress will appear here."
+        />
+      </div>
+
+      <div :if={@runs != []} class="divide-y divide-zinc-200 dark:divide-white/10">
+        <div :for={run <- @runs} class="px-4 py-3">
+          <div class="flex items-center justify-between gap-3">
+            <p class="min-w-0 truncate font-medium text-base-content">{run.playbook_name}</p>
+            <span class="shrink-0 text-xs text-base-content/50">
+              {run.completed_task_count} of {run.task_count} done
+            </span>
+          </div>
+          <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
+            <div
+              class="h-full rounded-full bg-emerald-600 dark:bg-emerald-500"
+              style={"width: #{progress_percent(run)}%"}
+            />
+          </div>
+        </div>
+      </div>
+    </.section>
+    """
+  end
+
+  defp progress_percent(%{task_count: 0}), do: 0
+
+  defp progress_percent(%{task_count: total, completed_task_count: completed}),
+    do: round(completed / total * 100)
+
   @doc """
   Route to the most specific record a task is linked to, built from foreign
   keys so no relationship loading is required. Bid and procurement-source

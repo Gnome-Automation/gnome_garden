@@ -263,6 +263,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/operations/tasks"]
     },
     %{
+      id: "ops-playbooks",
+      section: "Operations",
+      icon: "hero-book-open",
+      label: "Playbooks",
+      path: "/operations/playbooks",
+      badge: 0,
+      hot: false,
+      match: ["/operations/playbooks"]
+    },
+    %{
       id: "ops-orgs",
       section: "Operations",
       icon: "hero-building-office-2",

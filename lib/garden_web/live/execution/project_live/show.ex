@@ -1,7 +1,9 @@
 defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
   use GnomeGardenWeb, :live_view
 
-  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
+  import GnomeGardenWeb.Components.OperationsUI,
+    only: [related_tasks_panel: 1, playbook_runs_panel: 1]
+
   import GnomeGardenWeb.Execution.Helpers
 
   alias GnomeGarden.Execution
@@ -14,24 +16,69 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
     actor = socket.assigns.current_user
     project = load_project!(id, actor)
 
-    if connected?(socket), do: TaskPubSub.subscribe_related(:project, project.id)
+    if connected?(socket) do
+      TaskPubSub.subscribe_related(:project, project.id)
+      GnomeGardenWeb.Endpoint.subscribe("playbook_run:project:#{project.id}")
+    end
 
     {:ok,
      socket
      |> assign(:page_title, project.name)
      |> assign(:project, project)
      |> assign(:related_tasks, load_related_tasks(project, actor))
+     |> assign_playbook_context()
      |> assign(:project_work_items, load_project_work_items!(project.id, actor))}
   end
 
   @impl true
   def handle_info(%{topic: "task:project:" <> _project_id}, socket) do
     {:noreply,
-     assign(
-       socket,
+     socket
+     |> assign(
        :related_tasks,
        load_related_tasks(socket.assigns.project, socket.assigns.current_user)
-     )}
+     )
+     |> assign_playbook_context()}
+  end
+
+  @impl true
+  def handle_info(%{topic: "playbook_run:project:" <> _project_id}, socket) do
+    {:noreply, assign_playbook_context(socket)}
+  end
+
+  defp assign_playbook_context(socket) do
+    actor = socket.assigns.current_user
+
+    playbooks =
+      case Operations.list_active_playbooks(actor: actor) do
+        {:ok, playbooks} -> playbooks
+        {:error, _error} -> []
+      end
+
+    runs =
+      case Operations.list_playbook_runs_for_project(socket.assigns.project.id, actor: actor) do
+        {:ok, runs} -> runs
+        {:error, error} -> raise "failed to load playbook runs: #{inspect(error)}"
+      end
+
+    socket |> assign(:playbooks, playbooks) |> assign(:playbook_runs, runs)
+  end
+
+  @impl true
+  def handle_event("apply_playbook", %{"playbook_id" => playbook_id}, socket) do
+    case Operations.apply_playbook(
+           %{playbook_id: playbook_id, project_id: socket.assigns.project.id},
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, run} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Applied playbook: #{run.playbook_name}")
+         |> assign_playbook_context()}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not apply playbook: #{inspect(error)}")}
+    end
   end
 
   @impl true
@@ -98,6 +145,12 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
         description="Operator follow-up linked to this project."
         empty_description="Permits, materials, and coordination tasks for this project will appear here."
         new_task_path={new_project_task_path(@project)}
+      />
+
+      <.playbook_runs_panel
+        runs={@playbook_runs}
+        playbooks={@playbooks}
+        description="Apply a playbook to spawn this project's standard task set."
       />
 
       <.section

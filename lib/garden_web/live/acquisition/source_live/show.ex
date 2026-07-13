@@ -1,7 +1,9 @@
 defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   use GnomeGardenWeb, :live_view
 
-  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
+  import GnomeGardenWeb.Components.OperationsUI,
+    only: [related_tasks_panel: 1, playbook_runs_panel: 1]
+
   import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
@@ -46,6 +48,10 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
       {:ok, source} ->
         if connected?(socket) && source.procurement_source do
           TaskPubSub.subscribe_related(:procurement_source, source.procurement_source.id)
+
+          GnomeGardenWeb.Endpoint.subscribe(
+            "playbook_run:procurement_source:#{source.procurement_source.id}"
+          )
         end
 
         {:ok,
@@ -53,6 +59,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
          |> assign(:source, source)
          |> assign(:page_title, source.name)
          |> assign(:related_tasks, load_related_tasks(source, socket.assigns.current_user))
+         |> assign_playbook_context(source)
          |> assign(:source_credential, credential_for_source(source))
          |> assign(:browser_session, browser_session_for_source(source))
          |> assign(:credential_dialog, nil)
@@ -111,6 +118,13 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
         description="Operator follow-up linked to this procurement source."
         empty_description="Credential fixes, configuration, and remediation tasks will appear here."
         new_task_path={new_source_task_path(@source)}
+      />
+
+      <.playbook_runs_panel
+        :if={@source.procurement_source}
+        runs={@playbook_runs}
+        playbooks={@playbooks}
+        description="Apply a playbook such as source remediation to create its task set."
       />
 
       <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -382,6 +396,25 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   end
 
   @impl true
+  def handle_event("apply_playbook", %{"playbook_id" => playbook_id}, socket) do
+    %{procurement_source: %{id: procurement_source_id}} = socket.assigns.source
+
+    case Operations.apply_playbook(
+           %{playbook_id: playbook_id, procurement_source_id: procurement_source_id},
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, run} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Applied playbook: #{run.playbook_name}")
+         |> assign_playbook_context(socket.assigns.source)}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not apply playbook: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
   def handle_info(%{topic: "procurement_source_browser_session:" <> _event}, socket) do
     {:noreply, reload_source(socket)}
   end
@@ -389,12 +422,41 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   @impl true
   def handle_info(%{topic: "task:procurement_source:" <> _procurement_source_id}, socket) do
     {:noreply,
-     assign(
-       socket,
+     socket
+     |> assign(
        :related_tasks,
        load_related_tasks(socket.assigns.source, socket.assigns.current_user)
-     )}
+     )
+     |> assign_playbook_context(socket.assigns.source)}
   end
+
+  @impl true
+  def handle_info(%{topic: "playbook_run:procurement_source:" <> _procurement_source_id}, socket) do
+    {:noreply, assign_playbook_context(socket, socket.assigns.source)}
+  end
+
+  defp assign_playbook_context(socket, %{procurement_source: %{id: procurement_source_id}}) do
+    actor = socket.assigns.current_user
+
+    playbooks =
+      case Operations.list_active_playbooks(actor: actor) do
+        {:ok, playbooks} -> playbooks
+        {:error, _error} -> []
+      end
+
+    runs =
+      case Operations.list_playbook_runs_for_procurement_source(procurement_source_id,
+             actor: actor
+           ) do
+        {:ok, runs} -> runs
+        {:error, error} -> raise "failed to load playbook runs: #{inspect(error)}"
+      end
+
+    socket |> assign(:playbooks, playbooks) |> assign(:playbook_runs, runs)
+  end
+
+  defp assign_playbook_context(socket, _source),
+    do: socket |> assign(:playbooks, []) |> assign(:playbook_runs, [])
 
   defp load_related_tasks(%{procurement_source: %{id: procurement_source_id}}, actor) do
     case Operations.list_tasks_by_procurement_source(procurement_source_id,
