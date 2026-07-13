@@ -16,8 +16,9 @@ defmodule GnomeGarden.Automation.Validations.ValidDefinition do
   def validate(changeset, _opts, _context) do
     with :ok <- validate_trigger(changeset),
          :ok <- validate_criteria(Ash.Changeset.get_attribute(changeset, :criteria)),
-         :ok <- validate_actions(changeset) do
-      validate_playbook_references(changeset)
+         :ok <- validate_actions(changeset),
+         :ok <- validate_playbook_references(changeset) do
+      validate_owner_references(changeset)
     end
   end
 
@@ -94,4 +95,44 @@ defmodule GnomeGarden.Automation.Validations.ValidDefinition do
       :ok
     end
   end
+
+  # Owners must resolve at publish time; a typo'd email would otherwise
+  # silently create invisible unassigned work.
+  defp validate_owner_references(changeset) do
+    if Ash.Changeset.get_attribute(changeset, :status) == :published do
+      changeset
+      |> Ash.Changeset.get_attribute(:actions)
+      |> Enum.reduce_while(:ok, fn action, :ok ->
+        case owner_resolvable?(action) do
+          :ok -> {:cont, :ok}
+          {:error, message} -> {:halt, {:error, field: :actions, message: message}}
+        end
+      end)
+    else
+      :ok
+    end
+  end
+
+  defp owner_resolvable?(%{"owner_email" => email}) when is_binary(email) do
+    with {:ok, user} <- GnomeGarden.Accounts.get_user_by_email(email, authorize?: false),
+         {:ok, %{status: :active}} <-
+           Operations.get_team_member_by_user(user.id, authorize?: false) do
+      :ok
+    else
+      _unresolved ->
+        {:error, "owner_email #{inspect(email)} does not resolve to an active team member"}
+    end
+  end
+
+  defp owner_resolvable?(%{"owner_team_member_id" => member_id}) when is_binary(member_id) do
+    case Operations.get_team_member(member_id, authorize?: false) do
+      {:ok, %{status: :active}} ->
+        :ok
+
+      _inactive_or_missing ->
+        {:error, "owner_team_member_id #{inspect(member_id)} is not an active team member"}
+    end
+  end
+
+  defp owner_resolvable?(_action), do: :ok
 end

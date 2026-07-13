@@ -30,7 +30,8 @@ defmodule GnomeGarden.Automation.RuleActions do
 
   defp valid_action?(%{"type" => "apply_playbook", "playbook_name" => name} = action)
        when is_binary(name) and name != "" do
-    optional_string(action, "owner_email")
+    optional_string(action, "owner_email") and
+      optional_string(action, "owner_team_member_id")
   end
 
   defp valid_action?(_action), do: false

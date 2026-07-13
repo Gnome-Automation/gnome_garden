@@ -69,6 +69,23 @@ defmodule GnomeGarden.Automation.AutomationEngineTest do
                })
 
       assert Exception.message(error) =~ "typed actions"
+
+      {:ok, ghost_owner} =
+        Automation.create_automation_rule(%{
+          name: "Ghost owner",
+          trigger_resource: "bid",
+          trigger_action: "scored",
+          actions: [
+            %{
+              "type" => "create_task",
+              "title" => "Owned by nobody",
+              "owner_email" => "nobody-here@example.com"
+            }
+          ]
+        })
+
+      assert {:error, error} = Automation.publish_automation_rule(ghost_owner)
+      assert Exception.message(error) =~ "does not resolve to an active team member"
     end
   end
 
