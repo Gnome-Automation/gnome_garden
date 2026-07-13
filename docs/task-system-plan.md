@@ -65,21 +65,31 @@ next, by when, and for which Garden record?*
 
 1. **Context links** (`gnome_ga-h6c.1`): `belongs_to` from Task to
    Execution.Project, WorkItem, WorkOrder, Procurement.Bid, and
-   ProcurementSource, with postgres references and `by_*` read actions.
-   (Task→Assignment link deferred — rare need, cheap to add later.)
+   ProcurementSource, with postgres references, matching reverse
+   `has_many :tasks` on each linked resource, and `by_*` read actions +
+   domain interfaces. A task may carry several context links at once (bid +
+   organization); `origin_*` stays provenance-only. (Task→Assignment link
+   deferred — rare need, cheap to add later.)
 2. **Accountability** (same bead, same migration): `created_by_team_member`,
    `assigned_by_team_member`; explicit unassigned state for triage; validate
    assignee is an active TeamMember; allow `pending → completed` directly so
-   quick tasks don't require a ceremonial start.
+   quick tasks don't require a ceremonial start. Owner-specific PubSub topic
+   (`task:owner:<team_member_id>`); reassignment publishes to old AND new
+   owner.
 3. **Operator seeding** (`.4`, P1): idempotent Ash action ensuring active
-   TeamMember records for Patrick and Sam linked to their users. (Local dev DB
-   currently has only Dev Admin.)
-4. **Entry points** (`.2`): "Create task" on finding, pursuit, bid,
-   procurement source, project, work item, and work order pages, prefilled
-   with context link + origin provenance; open-task lists on those pages.
+   TeamMember records for Patrick and Sam linked to their users — never
+   inventing credentials; missing users go through the real registration
+   flow. (Local dev DB currently has only Dev Admin.)
+4. **Entry points** (`.2`): finding, signal, pursuit, organization, person,
+   and agent-run pages already have the shared related-tasks panel. This bead
+   adds ONLY the missing pages — bid, procurement source, project, work item,
+   work order — by reusing that shared panel, prefilled with context link +
+   origin provenance.
 5. **My Tasks workspace** (`.3`, Task-only): lanes for Overdue / Today /
    Upcoming / Blocked / Unscheduled / Recently completed; every task shows its
-   context with a direct return link; PubSub-refreshed; mobile-first.
+   context with a direct return link; admin-only assignee switcher; the whole
+   shape exposed through one intent-named domain interface (AGENTS.md
+   workspace rule); PubSub-refreshed; mobile-first.
 
 **Acceptance test**: Patrick opens a bid, creates "Sam: verify insurance
 requirements," assigns Sam, sets Friday due. It immediately appears in Sam's
@@ -91,7 +101,10 @@ screen refreshes via Ash PubSub.
 - Sidebar counts + persistent assignment notifications (`.5`).
 - Heterogeneous "My Work" aggregation (`.12`): decide how WorkItems and
   Assignments appear alongside Tasks without duplicating linked tasks; saved
-  views and filters; reassignment/activity history.
+  views and filters; reassignment/activity history. Note: Execution resources
+  currently publish no Ash PubSub events — adding `pub_sub` blocks to WorkItem
+  and Assignment is part of this bead, and the combined workspace is exposed
+  through one intent-named domain interface.
 
 ## Phase 3 — Repeatable playbooks
 
@@ -106,24 +119,27 @@ screen refreshes via Ash PubSub.
 
 ## Phase 4 — Record-event automation
 
-Durable pipeline (`.8`):
+Durable pipeline, split into foundation (`.8`) and execution (`.14`):
 
 ```
-record action commits → AutomationEvent (persisted, after-transaction)
-  → Oban worker evaluates active rules → AutomationRun created
-  → typed actions executed through Ash interfaces → results on the run
+record action commits → AutomationEvent (persisted, post-commit)   [.8]
+  → Oban worker evaluates published rules → AutomationRun created  [.14]
+  → typed actions executed through Ash interfaces → results on run [.14]
 ```
 
-- `AutomationRule`: trigger (resource + event), criteria (typed field/op/value
-  predicates, JSONB), ordered typed actions (create task, apply playbook,
-  assign, update record via intent-named action, notify, schedule later
-  evaluation), enabled flag.
-- Safeguards (in `.8`/`.13`): idempotency key per rule+event+action;
-  recursion-depth cap on automation-caused events; rule definition snapshot on
-  each run; failure detail + retry state on runs; actor/authorization context;
-  no arbitrary Elixir/Lua through the admin UI.
+- `.8` foundation: AutomationEvent capture via after-transaction hook (never
+  mid-transaction), plus `AutomationRule` schema — trigger (resource + event),
+  typed field/op/value criteria (JSONB) validated at write time, ordered typed
+  actions (create task, apply playbook, assign, update record via intent-named
+  action, notify, schedule later evaluation), and a lifecycle:
+  **draft → published (immutable in place) → disabled**, clone-to-edit.
+- `.14` execution: Oban worker, AutomationRun with per-action results,
+  idempotency key per rule+event+action, recursion-depth cap, rule snapshot on
+  each run, Oban-backed retries with failure detail, actor/authorization
+  context. No arbitrary Elixir/Lua through the admin UI.
 - Dry-run/test mode and rule change history (`.13`).
-- Admin UI with firing history (`.10`).
+- Admin UI (`.10`): draft/validate/test/publish/clone lifecycle, run history,
+  retry of eligible failed actions — no free-form editing of published rules.
 
 ## Phase 5 — Time-based rules
 
@@ -149,10 +165,11 @@ graph LR
     ts3 --> ts12[.12 My Work aggregation]
     ts1 --> ts6[.6 playbook resources]
     ts6 --> ts7[.7 playbook UI]
-    ts6 --> ts8[.8 automation engine + events]
-    ts8 --> ts9[.9 time triggers]
-    ts8 --> ts10[.10 rules admin UI]
-    ts8 --> ts13[.13 dry-run + rule history]
+    ts6 --> ts8[.8 events + rule definitions]
+    ts8 --> ts14[.14 evaluation + run audit]
+    ts14 --> ts9[.9 time triggers]
+    ts14 --> ts10[.10 rules admin UI]
+    ts14 --> ts13[.13 dry-run + rule history]
 ```
 
 ## Conventions
@@ -162,6 +179,22 @@ graph LR
 - Operational data (playbook contents, rule criteria, thresholds) lives in
   the database, never in module attributes or config.
 - Emerald/Tailwind Plus form patterns per CLAUDE.md for all new UI.
+
+## Revision notes (2026-07-13, third review)
+
+Verified against code: `.2` was partially stale (six record pages already have
+the shared related-tasks panel — narrowed to the five missing pages);
+Execution resources have no `pub_sub` blocks (moved into `.12`); Task topics
+are generic (owner-specific topics added to `.1`, consumed in `.5`). Adopted:
+reverse `has_many :tasks`; multi-context links allowed; independent acceptance
+checks (bid-linked vs project-linked); no invented credentials in seeding;
+admin-only assignee switcher; single-domain-interface workspace rule; `.8`
+split into foundation (`.8`) + execution (`.14`); rule lifecycle
+draft → published-immutable → clone-to-edit; AshOban explicitly for time
+triggers with starter rules installed as editable DB records via idempotent
+action. Held: snapshot-on-run instead of PlaybookVersion/RuleVersion tables
+(immutability + clone gives the same safety); inline step fields over a
+reusable TaskTemplate resource until real duplication appears.
 
 ## Revision notes (2026-07-13, second review)
 
