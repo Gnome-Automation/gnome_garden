@@ -97,7 +97,7 @@ defmodule GnomeGarden.Automation.AutomationEngineTest do
 
       assert {:ok, [task]} = Operations.list_tasks_by_bid(bid.id)
       assert task.title == "Review this bid"
-      assert task.origin_resource == "automation_rule"
+      assert task.origin_resource == "automation_run"
       assert task.origin_label == rule.name
       assert task.metadata["automation_depth"] == 1
 
@@ -159,16 +159,87 @@ defmodule GnomeGarden.Automation.AutomationEngineTest do
       assert {:ok, [_still_one_run]} = Operations.list_playbook_runs_for_bid(bid.id)
     end
 
+    test "a run interrupted mid-flight resumes remaining actions without repeating" do
+      {:ok, rule} =
+        Automation.create_automation_rule(%{
+          name: "Two-step rule",
+          trigger_resource: "bid",
+          trigger_action: "scored",
+          actions: [
+            %{"type" => "create_task", "title" => "First action"},
+            %{"type" => "create_task", "title" => "Second action"}
+          ]
+        })
+
+      {:ok, published} = Automation.publish_automation_rule(rule)
+
+      bid = bid_fixture()
+
+      {:ok, event} =
+        Automation.record_automation_event(%{
+          resource: "bid",
+          action: "scored",
+          record_id: bid.id,
+          data: %{"score_tier" => "hot"}
+        })
+
+      # Simulate a crash after the first action: the run exists and its
+      # ledger records action one, but the process died before action two.
+      {:ok, run} =
+        Automation.start_automation_run(
+          %{
+            rule_id: published.id,
+            event_id: event.id,
+            rule_snapshot: GnomeGarden.Automation.Rule.snapshot(published)
+          },
+          authorize?: false
+        )
+
+      {:ok, _run} =
+        Automation.record_automation_run_progress(
+          run,
+          %{
+            action_results: [
+              %{"type" => "create_task", "status" => "succeeded", "detail" => "task pre-crash"}
+            ]
+          },
+          authorize?: false
+        )
+
+      {:ok, processed} = Automation.process_automation_event(event)
+      refute processed.error
+
+      {:ok, resumed} = Automation.get_automation_run(run.id, authorize?: false)
+      assert resumed.status == :succeeded
+      assert length(resumed.action_results) == 2
+
+      # Only the second action executed here — the first was already ledgered.
+      assert {:ok, [task]} = Operations.list_tasks_by_bid(bid.id)
+      assert task.title == "Second action"
+    end
+
     test "failed actions land on the run and the event error summary" do
+      {:ok, playbook} = Operations.create_playbook(%{name: "Ephemeral playbook"})
+
+      {:ok, _step} =
+        Operations.create_playbook_step(%{
+          playbook_id: playbook.id,
+          position: 1,
+          title: "Only step"
+        })
+
       {:ok, rule} =
         Automation.create_automation_rule(%{
           name: "Broken playbook reference",
           trigger_resource: "bid",
           trigger_action: "scored",
-          actions: [%{"type" => "apply_playbook", "playbook_name" => "Does Not Exist"}]
+          actions: [%{"type" => "apply_playbook", "playbook_name" => "Ephemeral playbook"}]
         })
 
+      # Publish-time validation requires the playbook to exist and be active;
+      # archiving it afterwards forces the runtime failure path.
       {:ok, _published} = Automation.publish_automation_rule(rule)
+      {:ok, _archived} = Operations.archive_playbook(playbook)
 
       bid = bid_fixture()
       {:ok, _scored} = Procurement.score_bid(bid, %{score_service_match: 40, score_geography: 40})

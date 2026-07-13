@@ -71,8 +71,8 @@ defmodule GnomeGarden.Automation.TimeTriggersTest do
         resource: "bid",
         action: "due_soon",
         record_id: bid.id,
-        data: %{"days_until_due" => 3},
-        dedupe_key: "bid_due_soon:#{bid.id}"
+        data: %{"days_until_due" => 5, "deadline_bucket" => 7},
+        dedupe_key: "bid_due_soon:#{bid.id}:test"
       })
 
     {:ok, processed} = Automation.process_automation_event(event)
@@ -81,6 +81,124 @@ defmodule GnomeGarden.Automation.TimeTriggersTest do
     assert {:ok, [task]} = Operations.list_tasks_by_bid(bid.id)
     assert task.title == "Submission deadline approaching"
     assert task.priority == :urgent
+  end
+
+  test "deadline episodes escalate through buckets and reset on reschedule" do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Escalating bid",
+        url: "https://example.com/bids/esc-#{System.unique_integer([:positive])}",
+        external_id: "ESC-#{System.unique_integer([:positive])}",
+        agency: "City of Anaheim",
+        region: :oc,
+        posted_at: DateTime.add(DateTime.utc_now(), -10, :day),
+        due_at: DateTime.add(DateTime.utc_now(), 13, :day)
+      })
+
+    assert {:ok, %{"bid_due_soon" => 1}} =
+             Automation.sweep_automation_time_triggers(authorize?: false)
+
+    {:ok, [outer]} = Automation.list_unprocessed_automation_events()
+    assert outer.data["deadline_bucket"] == 14
+
+    # The deadline moving closer is a new bucket — a new episode fires even
+    # though the 14-day episode already consumed its key.
+    {:ok, _bid} =
+      Procurement.update_bid(bid, %{due_at: DateTime.add(DateTime.utc_now(), 6, :day)})
+
+    assert {:ok, %{"bid_due_soon" => 1}} =
+             Automation.sweep_automation_time_triggers(authorize?: false)
+
+    {:ok, events} = Automation.list_unprocessed_automation_events()
+    buckets = events |> Enum.map(& &1.data["deadline_bucket"]) |> Enum.sort()
+    assert buckets == [7, 14]
+  end
+
+  test "overdue events inherit automation depth so recursion cannot reset" do
+    {:ok, task} =
+      Operations.create_task(%{
+        title: "Automation-made and overdue",
+        due_at: DateTime.add(DateTime.utc_now(), -1, :day),
+        metadata: %{"automation_depth" => 3}
+      })
+
+    assert {:ok, %{"task_overdue" => 1}} =
+             Automation.sweep_automation_time_triggers(authorize?: false)
+
+    {:ok, [event]} = Automation.list_unprocessed_automation_events()
+    assert event.record_id == task.id
+    assert event.depth == 3
+
+    {:ok, processed} = Automation.process_automation_event(event)
+    assert processed.error =~ "recursion depth"
+  end
+
+  test "rule actions resolve owners from email so automated work is assigned" do
+    user = user_fixture("owner-#{System.unique_integer([:positive])}@example.com")
+
+    {:ok, member} =
+      Operations.create_team_member(%{
+        user_id: user.id,
+        display_name: "Rule Owner",
+        role: :operator,
+        status: :active
+      })
+
+    {:ok, rule} =
+      Automation.create_automation_rule(%{
+        name: "Owned deadline task",
+        trigger_resource: "bid",
+        trigger_action: "due_soon",
+        criteria: [],
+        actions: [
+          %{
+            "type" => "create_task",
+            "title" => "Owned task",
+            "owner_email" => to_string(user.email)
+          }
+        ]
+      })
+
+    {:ok, _published} = Automation.publish_automation_rule(rule)
+
+    {:ok, owned_bid} =
+      Procurement.create_bid(%{
+        title: "Owned bid",
+        url: "https://example.com/bids/owned-#{System.unique_integer([:positive])}",
+        external_id: "OWN-#{System.unique_integer([:positive])}",
+        agency: "City of Anaheim",
+        region: :oc,
+        posted_at: DateTime.add(DateTime.utc_now(), -10, :day),
+        due_at: DateTime.add(DateTime.utc_now(), 5, :day)
+      })
+
+    {:ok, event} =
+      Automation.record_automation_event(%{
+        resource: "bid",
+        action: "due_soon",
+        record_id: owned_bid.id,
+        data: %{"deadline_bucket" => 7}
+      })
+
+    {:ok, processed} = Automation.process_automation_event(event)
+    refute processed.error
+
+    {:ok, [task]} = Operations.list_my_tasks_workspace_items(member.id, authorize?: false)
+    assert task.title == "Owned task"
+    assert task.owner_team_member_id == member.id
+  end
+
+  defp user_fixture(email) do
+    password = "valid-password-#{System.unique_integer([:positive, :monotonic])}"
+
+    {:ok, user} =
+      GnomeGarden.Accounts.create_user_with_password(%{
+        email: email,
+        password: password,
+        password_confirmation: password
+      })
+
+    user
   end
 
   test "rule dry run reports would-fire counts without executing" do

@@ -41,15 +41,26 @@ defmodule GnomeGarden.Automation do
       define :record_automation_event, action: :record
       define :process_automation_event, action: :process
       define :sweep_automation_time_triggers, action: :sweep_time_triggers
+
+      define :list_recent_automation_events_for_trigger,
+        action: :recent_for_trigger,
+        args: [:resource, :action]
     end
 
     resource GnomeGarden.Automation.Run do
       define :list_automation_runs, action: :read
       define :get_automation_run, action: :read, get_by: [:id]
+
+      define :get_automation_run_by_rule_and_event,
+        action: :by_rule_and_event,
+        args: [:rule_id, :event_id]
+
       define :list_automation_runs_for_rule, action: :for_rule, args: [:rule_id]
       define :list_automation_runs_for_event, action: :for_event, args: [:event_id]
       define :start_automation_run, action: :start
-      define :finish_automation_run, action: :finish
+      define :record_automation_run_progress, action: :record_progress
+      define :succeed_automation_run, action: :succeed
+      define :fail_automation_run, action: :fail
     end
   end
 end

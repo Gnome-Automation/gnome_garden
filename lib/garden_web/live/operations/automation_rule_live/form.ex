@@ -6,15 +6,6 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Form do
   @input_class "block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-emerald-500"
   @label_class "block text-sm/6 font-medium text-gray-900 dark:text-white"
 
-  @trigger_options [
-    {"Bid scored (tier changed)", "bid|scored"},
-    {"Bid deadline approaching", "bid|due_soon"},
-    {"Pursuit qualified", "pursuit|qualified"},
-    {"Pursuit proposed", "pursuit|proposed"},
-    {"Source credential failed", "source_credential|failed"},
-    {"Task overdue", "task|overdue"}
-  ]
-
   @impl true
   def mount(params, _session, socket) do
     rule = if id = params["id"], do: load_rule!(id, socket.assigns.current_user)
@@ -98,7 +89,7 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Form do
       assigns
       |> assign(:input_class, @input_class)
       |> assign(:label_class, @label_class)
-      |> assign(:trigger_options, @trigger_options)
+      |> assign(:trigger_options, GnomeGarden.Automation.Triggers.options())
 
     ~H"""
     <.page max_width="max-w-3xl" class="pb-8">
@@ -129,7 +120,12 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Form do
             </div>
             <div>
               <label for="rule-description" class={@label_class}>Description</label>
-              <textarea id="rule-description" name="description" rows="2" class={["mt-2", @input_class]}>{@rule && @rule.description}</textarea>
+              <textarea
+                id="rule-description"
+                name="description"
+                rows="2"
+                class={["mt-2", @input_class]}
+              >{@rule && @rule.description}</textarea>
             </div>
             <div>
               <label for="rule-trigger" class={@label_class}>Trigger</label>
@@ -145,14 +141,18 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Form do
 
         <.form_section
           title="Criteria"
-          description={~s(JSON list of predicates, e.g. [{"field": "score_tier", "op": "eq", "value": "hot"}]. Ops: eq, neq, gt, gte, lt, lte, contains, in, is_nil, not_nil. Empty list means always fire.)}
+          description={
+            ~s(JSON list of predicates, e.g. [{"field": "score_tier", "op": "eq", "value": "hot"}]. Ops: eq, neq, gt, gte, lt, lte, contains, in, is_nil, not_nil. Empty list means always fire.)
+          }
         >
           <textarea id="rule-criteria" name="criteria" rows="4" class={["font-mono", @input_class]}>{encode(@rule && @rule.criteria)}</textarea>
         </.form_section>
 
         <.form_section
           title="Actions"
-          description={~s(JSON list of typed actions: {"type": "create_task", "title": "...", "task_type": "review", "priority": "high", "due_offset_days": 2} or {"type": "apply_playbook", "playbook_name": "New bid review"}.)}
+          description={
+            ~s(JSON list of typed actions: {"type": "create_task", "title": "...", "task_type": "review", "priority": "high", "due_offset_days": 2} or {"type": "apply_playbook", "playbook_name": "New bid review"}.)
+          }
         >
           <textarea id="rule-actions" name="actions" rows="6" class={["font-mono", @input_class]}>{encode(@rule && @rule.actions)}</textarea>
         </.form_section>

@@ -10,8 +10,7 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Show do
     rule = load_rule!(id, socket.assigns.current_user)
 
     if connected?(socket) do
-      GnomeGardenWeb.Endpoint.subscribe("automation_run:created")
-      GnomeGardenWeb.Endpoint.subscribe("automation_run:updated")
+      GnomeGardenWeb.Endpoint.subscribe("automation_run:rule:#{rule.id}")
     end
 
     {:ok,
@@ -60,7 +59,7 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Show do
   end
 
   @impl true
-  def handle_info(%{topic: "automation_run:" <> _event}, socket) do
+  def handle_info(%{topic: "automation_run:rule:" <> _rule_id}, socket) do
     {:noreply, assign_runs(socket)}
   end
 
@@ -106,8 +105,7 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Show do
         description="Evaluated against recent matching events without executing anything."
       >
         <p class="text-sm text-base-content/80" id="dry-run-result">
-          {@dry_run["would_fire"]} of {@dry_run["tested_events"]} recent
-          {@rule.trigger_resource}.{@rule.trigger_action} events would fire this rule.
+          {@dry_run["would_fire"]} of {@dry_run["tested_events"]} recent {@rule.trigger_resource}.{@rule.trigger_action} events would fire this rule.
         </p>
       </.section>
 
@@ -179,7 +177,7 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Show do
     case Automation.list_automation_runs_for_rule(socket.assigns.rule.id,
            actor: socket.assigns.current_user
          ) do
-      {:ok, runs} -> assign(socket, :runs, Enum.take(runs, 50))
+      {:ok, runs} -> assign(socket, :runs, runs)
       {:error, error} -> raise "failed to load automation runs: #{inspect(error)}"
     end
   end

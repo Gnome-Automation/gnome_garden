@@ -12,7 +12,7 @@ defmodule GnomeGarden.Automation.Rule do
     otp_app: :gnome_garden,
     domain: GnomeGarden.Automation,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAdmin.Resource],
+    extensions: [AshAdmin.Resource, AshStateMachine],
     notifiers: [Ash.Notifier.PubSub]
 
   admin do
@@ -22,6 +22,18 @@ defmodule GnomeGarden.Automation.Rule do
   postgres do
     table "automation_rules"
     repo GnomeGarden.Repo
+  end
+
+  state_machine do
+    state_attribute :status
+    initial_states [:draft]
+    default_initial_state :draft
+
+    transitions do
+      transition :publish, from: :draft, to: :published
+      transition :disable, from: :published, to: :disabled
+      transition :enable, from: :disabled, to: :published
+    end
   end
 
   actions do
@@ -52,29 +64,20 @@ defmodule GnomeGarden.Automation.Rule do
     update :publish do
       require_atomic? false
       accept []
-      validate attribute_equals(:status, :draft), message: "only drafts can be published"
-      change set_attribute(:status, :published)
+      change transition_state(:published)
       change set_attribute(:published_at, &DateTime.utc_now/0)
     end
 
     update :disable do
       require_atomic? false
       accept []
-
-      validate attribute_equals(:status, :published),
-        message: "only published rules can be disabled"
-
-      change set_attribute(:status, :disabled)
+      change transition_state(:disabled)
     end
 
     update :enable do
       require_atomic? false
       accept []
-
-      validate attribute_equals(:status, :disabled),
-        message: "only disabled rules can be re-enabled"
-
-      change set_attribute(:status, :published)
+      change transition_state(:published)
     end
 
     destroy :destroy_draft do
@@ -97,6 +100,7 @@ defmodule GnomeGarden.Automation.Rule do
     end
 
     action :ensure_starters, :map do
+      argument :default_owner_email, :string
       run GnomeGarden.Automation.Actions.EnsureStarterRules
     end
 

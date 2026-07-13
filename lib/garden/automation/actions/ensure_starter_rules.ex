@@ -50,7 +50,7 @@ defmodule GnomeGarden.Automation.Actions.EnsureStarterRules do
       description: "A week before an open bid is due, create an urgent submission-check task.",
       trigger_resource: "bid",
       trigger_action: "due_soon",
-      criteria: [%{"field" => "days_until_due", "op" => "lte", "value" => 7}],
+      criteria: [%{"field" => "deadline_bucket", "op" => "eq", "value" => 7}],
       actions: [
         %{
           "type" => "create_task",
@@ -64,8 +64,9 @@ defmodule GnomeGarden.Automation.Actions.EnsureStarterRules do
   ]
 
   @impl true
-  def run(_input, _opts, context) do
+  def run(input, _opts, context) do
     opts = [actor: context.actor, authorize?: false]
+    owner_email = Ash.ActionInput.get_argument(input, :default_owner_email)
 
     results =
       Enum.map(@starters, fn starter ->
@@ -74,7 +75,7 @@ defmodule GnomeGarden.Automation.Actions.EnsureStarterRules do
             {starter.name, :existing}
 
           {:error, _not_found} ->
-            case Automation.create_automation_rule(starter, opts) do
+            case Automation.create_automation_rule(with_owner(starter, owner_email), opts) do
               {:ok, _rule} -> {starter.name, :created}
               {:error, error} -> {starter.name, {:error, Exception.message(error)}}
             end
@@ -83,4 +84,12 @@ defmodule GnomeGarden.Automation.Actions.EnsureStarterRules do
 
     {:ok, Map.new(results)}
   end
+
+  # The installing operator becomes the default owner of everything the
+  # starters create, so automated work lands in a real My Tasks inbox.
+  defp with_owner(starter, owner_email) when is_binary(owner_email) and owner_email != "" do
+    %{starter | actions: Enum.map(starter.actions, &Map.put(&1, "owner_email", owner_email))}
+  end
+
+  defp with_owner(starter, _owner_email), do: starter
 end

@@ -71,6 +71,14 @@ defmodule GnomeGarden.Automation.Event do
       filter expr(is_nil(processed_at))
       prepare build(sort: [occurred_at: :asc])
     end
+
+    read :recent_for_trigger do
+      argument :resource, :string, allow_nil?: false
+      argument :action, :string, allow_nil?: false
+
+      filter expr(resource == ^arg(:resource) and action == ^arg(:action))
+      prepare build(sort: [occurred_at: :desc], limit: 100)
+    end
   end
 
   attributes do

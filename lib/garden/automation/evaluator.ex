@@ -3,16 +3,20 @@ defmodule GnomeGarden.Automation.Evaluator do
   Executes published rules against one event.
 
   For each rule matching the event's trigger whose criteria pass, an
-  `Automation.Run` is inserted first — its unique (rule, event) identity is
-  the idempotency key, so a crashed or retried sweep can never double-execute
-  a rule. Typed actions then run through Ash domain interfaces with the
-  event's context links; per-action results land on the run.
+  `Automation.Run` is claimed first — its unique (rule, event) identity
+  makes re-processing unable to double-fire. A run found still `:running`
+  is a crashed attempt and is resumed: `action_results` is appended after
+  every executed action, so recovery skips completed actions and re-executes
+  only the rest. The window between executing one action and persisting its
+  result is at-least-once; effect-level idempotency keys are a future
+  hardening step, documented on the epic.
 
-  Automation has no human actor: generated tasks carry the rule as origin
-  and an incremented `automation_depth` so downstream events hit the
-  recursion cap.
+  Automation has no human actor: generated tasks carry the rule as origin,
+  an incremented `automation_depth`, and owners resolved from the rule's
+  explicit `owner_email`/`owner_team_member_id` params.
   """
 
+  alias GnomeGarden.Accounts
   alias GnomeGarden.Automation
   alias GnomeGarden.Automation.Criteria
   alias GnomeGarden.Automation.Rule
@@ -49,51 +53,72 @@ defmodule GnomeGarden.Automation.Evaluator do
            authorize?: false
          ) do
       {:ok, run} ->
-        execute_actions(run, rule, event)
+        execute_actions(run, rule.actions, event)
 
       {:error, %Ash.Error.Invalid{} = error} ->
-        if duplicate_run?(error), do: :ok, else: {:error, Exception.message(error)}
+        if Exception.message(error) =~ "has already been taken" do
+          resume(rule, event)
+        else
+          {:error, Exception.message(error)}
+        end
 
       {:error, error} ->
         {:error, Exception.message(error)}
     end
   end
 
-  defp duplicate_run?(error) do
-    Enum.any?(error.errors, &match?(%Ash.Error.Changes.InvalidChanges{}, &1)) or
-      Exception.message(error) =~ "has already been taken"
+  # A finished run means this (rule, event) pair is done; a :running run is a
+  # crashed attempt whose remaining actions must still execute.
+  defp resume(rule, event) do
+    case Automation.get_automation_run_by_rule_and_event(rule.id, event.id, authorize?: false) do
+      {:ok, %{status: :running} = run} ->
+        execute_actions(run, run.rule_snapshot["actions"], event)
+
+      {:ok, _finished} ->
+        :ok
+
+      {:error, error} ->
+        {:error, Exception.message(error)}
+    end
   end
 
-  defp execute_actions(run, rule, event) do
-    {results, failed?} =
-      Enum.reduce(rule.actions, {[], false}, fn action, {results, failed?} ->
-        result = execute_action(action, rule, event)
+  defp execute_actions(run, actions, event) do
+    completed = length(run.action_results)
 
-        {[describe(action, result) | results],
-         failed? or match?({:error, _message}, result)}
+    final =
+      actions
+      |> Enum.drop(completed)
+      |> Enum.reduce(run, fn action, run ->
+        result = execute_action(action, run, event)
+
+        {:ok, run} =
+          Automation.record_automation_run_progress(
+            run,
+            %{action_results: run.action_results ++ [describe(action, result)]},
+            authorize?: false
+          )
+
+        run
       end)
 
-    finish(run, Enum.reverse(results), failed?)
+    conclude(final)
   end
 
-  defp finish(run, results, failed?) do
-    status = if failed?, do: :failed, else: :succeeded
+  defp conclude(run) do
+    failed = Enum.filter(run.action_results, &(&1["status"] == "failed"))
 
-    error =
-      if failed? do
-        results
-        |> Enum.filter(&(&1["status"] == "failed"))
-        |> Enum.map_join("; ", & &1["detail"])
+    if failed == [] do
+      case Automation.succeed_automation_run(run, %{}, authorize?: false) do
+        {:ok, _run} -> :ok
+        {:error, error} -> {:error, Exception.message(error)}
       end
+    else
+      error = Enum.map_join(failed, "; ", & &1["detail"])
 
-    case Automation.finish_automation_run(
-           run,
-           %{status: status, action_results: results, error: error},
-           authorize?: false
-         ) do
-      {:ok, _run} when not failed? -> :ok
-      {:ok, _run} -> {:error, error}
-      {:error, finish_error} -> {:error, Exception.message(finish_error)}
+      case Automation.fail_automation_run(run, %{error: error}, authorize?: false) do
+        {:ok, _run} -> {:error, error}
+        {:error, fail_error} -> {:error, Exception.message(fail_error)}
+      end
     end
   end
 
@@ -103,7 +128,7 @@ defmodule GnomeGarden.Automation.Evaluator do
   defp describe(action, {:error, message}),
     do: %{"type" => action["type"], "status" => "failed", "detail" => message}
 
-  defp execute_action(%{"type" => "create_task"} = action, rule, event) do
+  defp execute_action(%{"type" => "create_task"} = action, run, event) do
     attrs =
       event
       |> context_links()
@@ -113,11 +138,11 @@ defmodule GnomeGarden.Automation.Evaluator do
         task_type: existing_atom(action["task_type"], :other),
         priority: existing_atom(action["priority"], :normal),
         due_at: due_at(action["due_offset_days"]),
-        owner_team_member_id: action["owner_team_member_id"],
+        owner_team_member_id: resolve_owner(action),
         origin_domain: :operations,
-        origin_resource: "automation_rule",
-        origin_id: rule.id,
-        origin_label: rule.name,
+        origin_resource: "automation_run",
+        origin_id: run.id,
+        origin_label: run.rule_snapshot["name"],
         metadata: %{"automation_depth" => event.depth + 1}
       })
 
@@ -127,13 +152,14 @@ defmodule GnomeGarden.Automation.Evaluator do
     end
   end
 
-  defp execute_action(%{"type" => "apply_playbook"} = action, _rule, event) do
+  defp execute_action(%{"type" => "apply_playbook"} = action, _run, event) do
     with {:ok, playbook} <-
            Operations.get_playbook_by_name(action["playbook_name"], authorize?: false),
          {:ok, run} <-
            event
            |> playbook_context()
            |> Map.put(:playbook_id, playbook.id)
+           |> Map.put(:default_owner_team_member_id, resolve_owner(action))
            |> Operations.apply_playbook(authorize?: false) do
       {:ok, "playbook run #{run.id}"}
     else
@@ -141,12 +167,32 @@ defmodule GnomeGarden.Automation.Evaluator do
     end
   end
 
-  defp execute_action(action, _rule, _event),
+  defp execute_action(action, _run, _event),
     do: {:error, "unknown action type #{inspect(action["type"])}"}
+
+  # Owners come only from explicit rule params: a team member id, or an
+  # email resolved through the registered user. Unresolvable owners leave
+  # the task unassigned rather than guessing.
+  defp resolve_owner(%{"owner_team_member_id" => member_id}) when is_binary(member_id),
+    do: member_id
+
+  defp resolve_owner(%{"owner_email" => email}) when is_binary(email) do
+    with {:ok, user} <- Accounts.get_user_by_email(email, authorize?: false),
+         {:ok, member} <- Operations.get_team_member_by_user(user.id, authorize?: false) do
+      member.id
+    else
+      _unresolved -> nil
+    end
+  end
+
+  defp resolve_owner(_action), do: nil
 
   # Context links a task can carry for the event's subject record.
   defp context_links(%{resource: "bid", record_id: id}), do: %{bid_id: id}
-  defp context_links(%{resource: "procurement_source", record_id: id}), do: %{procurement_source_id: id}
+
+  defp context_links(%{resource: "procurement_source", record_id: id}),
+    do: %{procurement_source_id: id}
+
   defp context_links(%{resource: "project", record_id: id}), do: %{project_id: id}
 
   defp context_links(%{resource: "pursuit", record_id: id} = event),

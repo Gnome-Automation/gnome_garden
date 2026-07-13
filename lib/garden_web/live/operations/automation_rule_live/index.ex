@@ -13,7 +13,10 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Index do
 
   @impl true
   def handle_event("install_starters", _params, socket) do
-    case Automation.ensure_starter_automation_rules(actor: socket.assigns.current_user) do
+    case Automation.ensure_starter_automation_rules(
+           %{default_owner_email: to_string(socket.assigns.current_user.email)},
+           actor: socket.assigns.current_user
+         ) do
       {:ok, results} ->
         created = Enum.count(results, fn {_name, outcome} -> outcome == :created end)
 
@@ -100,8 +103,9 @@ defmodule GnomeGardenWeb.Operations.AutomationRuleLive.Index do
             <.link navigate={~p"/operations/automation/#{rule}"} class="min-w-0 flex-1">
               <p class="font-medium text-base-content">{rule.name}</p>
               <p class="text-xs text-base-content/50">
-                on {rule.trigger_resource}.{rule.trigger_action}
-                · {length(rule.criteria)} criteria · {length(rule.actions)} actions
+                on {rule.trigger_resource}.{rule.trigger_action} · {length(rule.criteria)} criteria · {length(
+                  rule.actions
+                )} actions
               </p>
             </.link>
             <div class="flex shrink-0 items-center gap-2">

@@ -45,6 +45,10 @@ defmodule GnomeGarden.Operations.PlaybookRun do
         :signal_id
       ]
 
+      # Owner for :applier steps when there is no acting operator (rule
+      # automation); a human actor always wins over this default.
+      argument :default_owner_team_member_id, :uuid
+
       change GnomeGarden.Operations.Changes.ApplyPlaybookSteps
     end
 
