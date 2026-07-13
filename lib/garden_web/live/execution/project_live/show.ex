@@ -1,20 +1,36 @@
 defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Execution.Helpers
 
   alias GnomeGarden.Execution
+  alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     actor = socket.assigns.current_user
     project = load_project!(id, actor)
 
+    if connected?(socket), do: TaskPubSub.subscribe_related(:project, project.id)
+
     {:ok,
      socket
      |> assign(:page_title, project.name)
      |> assign(:project, project)
+     |> assign(:related_tasks, load_related_tasks(project, actor))
      |> assign(:project_work_items, load_project_work_items!(project.id, actor))}
+  end
+
+  @impl true
+  def handle_info(%{topic: "task:project:" <> _project_id}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :related_tasks,
+       load_related_tasks(socket.assigns.project, socket.assigns.current_user)
+     )}
   end
 
   @impl true
@@ -75,6 +91,13 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
           </.button>
         </:actions>
       </.page_header>
+
+      <.related_tasks_panel
+        tasks={@related_tasks}
+        description="Operator follow-up linked to this project."
+        empty_description="Permits, materials, and coordination tasks for this project will appear here."
+        new_task_path={new_project_task_path(@project)}
+      />
 
       <.section
         title="Project Actions"
@@ -271,6 +294,36 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
       organization_id: project.organization_id,
       project_id: project.id
     }
+  end
+
+  defp load_related_tasks(%{id: project_id}, actor) do
+    case Operations.list_tasks_by_project(project_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load project tasks: #{inspect(error)}"
+    end
+  end
+
+  defp new_project_task_path(project) do
+    query =
+      %{
+        title: "Follow up: #{project.name}",
+        task_type: :review,
+        origin_domain: :execution,
+        origin_resource: "project",
+        origin_id: project.id,
+        origin_label: project.name,
+        origin_url: ~p"/execution/projects/#{project}",
+        project_id: project.id,
+        organization_id: project.organization_id,
+        return_to: ~p"/execution/projects/#{project}"
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+      |> URI.encode_query()
+
+    "/operations/tasks/new?#{query}"
   end
 
   defp load_project!(id, actor) do

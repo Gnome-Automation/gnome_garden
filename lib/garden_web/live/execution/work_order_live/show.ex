@@ -1,20 +1,36 @@
 defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Execution.Helpers
 
   alias GnomeGarden.Execution
+  alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     actor = socket.assigns.current_user
     work_order = load_work_order!(id, actor)
 
+    if connected?(socket), do: TaskPubSub.subscribe_related(:work_order, work_order.id)
+
     {:ok,
      socket
      |> assign(:page_title, work_order.title)
      |> assign(:work_order, work_order)
+     |> assign(:related_tasks, load_related_tasks(work_order, actor))
      |> assign(:work_order_assignments, load_work_order_assignments!(work_order.id, actor))}
+  end
+
+  @impl true
+  def handle_info(%{topic: "task:work_order:" <> _work_order_id}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :related_tasks,
+       load_related_tasks(socket.assigns.work_order, socket.assigns.current_user)
+     )}
   end
 
   @impl true
@@ -82,6 +98,13 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
           </.button>
         </:actions>
       </.page_header>
+
+      <.related_tasks_panel
+        tasks={@related_tasks}
+        description="Operator follow-up linked to this work order."
+        empty_description="Dispatch prep and follow-up tasks for this work order will appear here."
+        new_task_path={new_work_order_task_path(@work_order)}
+      />
 
       <.section
         title="Work Order Actions"
@@ -260,6 +283,37 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
     |> Map.put(:organization_id, work_order.organization_id)
     |> maybe_put(:project_id, work_order.project_id)
     |> Map.put(:work_order_id, work_order.id)
+  end
+
+  defp load_related_tasks(%{id: work_order_id}, actor) do
+    case Operations.list_tasks_by_work_order(work_order_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load work order tasks: #{inspect(error)}"
+    end
+  end
+
+  defp new_work_order_task_path(work_order) do
+    query =
+      %{
+        title: "Follow up: #{work_order.title}",
+        task_type: :review,
+        origin_domain: :execution,
+        origin_resource: "work_order",
+        origin_id: work_order.id,
+        origin_label: work_order.title,
+        origin_url: ~p"/execution/work-orders/#{work_order}",
+        work_order_id: work_order.id,
+        project_id: work_order.project_id,
+        organization_id: work_order.organization_id,
+        return_to: ~p"/execution/work-orders/#{work_order}"
+      }
+      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+      |> URI.encode_query()
+
+    "/operations/tasks/new?#{query}"
   end
 
   defp load_work_order!(id, actor) do
