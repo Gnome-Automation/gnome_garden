@@ -243,6 +243,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/operations/review"]
     },
     %{
+      id: "ops-my-tasks",
+      section: "Operations",
+      icon: "hero-user-circle",
+      label: "My Tasks",
+      path: "/operations/my-tasks",
+      badge: 0,
+      hot: false,
+      match: ["/operations/my-tasks"]
+    },
+    %{
       id: "ops-tasks",
       section: "Operations",
       icon: "hero-inbox-stack",

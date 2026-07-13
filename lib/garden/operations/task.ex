@@ -279,6 +279,11 @@ defmodule GnomeGarden.Operations.Task do
       prepare build(sort: [due_at: :asc, inserted_at: :desc])
     end
 
+    action :my_tasks_workspace, :map do
+      argument :owner_team_member_id, :uuid, allow_nil?: false
+      run GnomeGarden.Operations.Actions.MyTasksWorkspace
+    end
+
     read :unassigned do
       filter expr(
                is_nil(owner_team_member_id) and

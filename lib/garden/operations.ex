@@ -190,6 +190,10 @@ defmodule GnomeGarden.Operations do
 
       define :list_unassigned_tasks, action: :unassigned
 
+      define :get_my_tasks_workspace,
+        action: :my_tasks_workspace,
+        args: [:owner_team_member_id]
+
       define :list_tasks_by_origin,
         action: :by_origin,
         args: [:origin_domain, :origin_resource, :origin_id]
