@@ -30,6 +30,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   alias GnomeGarden.Procurement.TargetingFilter
   alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
   alias GnomeGarden.Browser
+  alias GnomeGarden.Browser.LoginForm
   alias GnomeGarden.Agents.Procurement.PublicSourceResolver
   alias GnomeGarden.Agents.Tools.Procurement.{SaveBid, ScoreBid, ScanBidNet, ScanPlanetBids}
 
@@ -1370,21 +1371,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   defp maybe_login(%{source_type: :planetbids, requires_login: true} = source, listing_url) do
     with {:ok, credentials} <- GnomeGarden.Procurement.SourceCredentials.credentials_for(source),
          {:ok, _} <- Browser.navigate(listing_url),
-         {:ok, _} <-
-           Browser.type(
-             "input[type='email'], input[name*='email' i], input[id*='email' i], input[name*='user' i], input[id*='user' i]",
-             credentials.username
-           ),
-         {:ok, _} <-
-           Browser.type(
-             "input[type='password'], input[name*='password' i], input[id*='password' i]",
-             credentials.password
-           ),
-         {:ok, _} <-
-           Browser.click(
-             "button[type='submit'], input[type='submit'], button[id*='login' i], button[class*='login' i]"
-           ) do
-      Process.sleep(3500)
+         {:ok, login_result} <- LoginForm.submit_if_present(Browser, credentials) do
+      if login_result == :submitted, do: Process.sleep(3500)
       :ok
     else
       {:error, reason} -> {:error, reason}

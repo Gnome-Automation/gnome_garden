@@ -84,7 +84,10 @@ defmodule GnomeGarden.Browser do
   @doc "Type a transient value into an element without embedding it in JavaScript source."
   def type(selector, value, opts \\ []) when is_binary(selector) and is_binary(value) do
     with_session(:type, opts, fn client, session ->
-      client.type(session, selector, value, timeout: timeout(opts))
+      case client.type(session, selector, value, timeout: timeout(opts)) do
+        {:ok, session, _result} -> {:ok, session, %{}}
+        {:error, _reason} -> {:error, {:element_input_failed, selector}}
+      end
     end)
   end
 

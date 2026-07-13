@@ -330,6 +330,12 @@ async function writeSecretOutput(value) {
 }
 
 function deepMerge(publicValue, secretValue) {
+  if (Array.isArray(publicValue) && Array.isArray(secretValue)) {
+    return publicValue.map((value, index) =>
+      secretValue[index] == null ? value : deepMerge(value, secretValue[index])
+    );
+  }
+
   if (!publicValue || typeof publicValue !== 'object' || Array.isArray(publicValue)) {
     return secretValue;
   }

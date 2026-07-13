@@ -42,6 +42,37 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
     refute inspect(Keyword.delete(opts, :secret_input)) =~ "super-secret"
   end
 
+  test "splits secrets nested inside lists without removing public siblings" do
+    parent = self()
+
+    command_runner = fn _command, _args, opts ->
+      send(parent, {:nested_payload, opts})
+      {Jason.encode!(%{"ok" => true}), 0}
+    end
+
+    assert {:ok, _result} =
+             PlaywrightRunner.run(
+               :probe,
+               %{
+                 forms: [
+                   %{name: "login", fields: [%{name: "password", password: "nested-secret"}]}
+                 ]
+               },
+               command_runner: command_runner
+             )
+
+    assert_receive {:nested_payload, opts}
+    assert {:ok, public} = Jason.decode(Keyword.fetch!(opts, :input))
+    assert {:ok, secrets} = Jason.decode(Keyword.fetch!(opts, :secret_input))
+
+    assert public["forms"] == [%{"name" => "login", "fields" => [%{"name" => "password"}]}]
+
+    assert get_in(secrets, ["forms", Access.at(0), "fields", Access.at(0), "password"]) ==
+             "nested-secret"
+
+    refute Keyword.fetch!(opts, :input) =~ "nested-secret"
+  end
+
   test "returns runner JSON failures without exposing the input payload" do
     contract_case = ProviderContract.load(:playwright, :provider_action, :auth)
     command_runner = ProviderContract.command_runner(contract_case)
@@ -87,8 +118,8 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
 
   test "returns secret output in a redacted envelope and scrubs echoed secrets" do
     command_runner = fn _command, _args, _opts ->
-      {Jason.encode!(%{"ok" => true, "message" => "password=super-secret"}), 0,
-       %{"storageState" => %{"cookies" => [%{"name" => "sid", "value" => "cookie-secret"}]}}}
+      {Jason.encode!(%{"ok" => true, "message" => "password=super-secret cookie=cookie-secret"}),
+       0, %{"storageState" => %{"cookies" => [%{"name" => "sid", "value" => "cookie-secret"}]}}}
     end
 
     assert {:ok, result} =
@@ -96,7 +127,7 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
                command_runner: command_runner
              )
 
-    assert result["message"] == "password=[REDACTED]"
+    assert result["message"] == "password=[REDACTED] cookie=[REDACTED]"
     refute inspect(result) =~ "cookie-secret"
     assert PlaywrightRunner.secret(result, "storageState") =~ "cookie-secret"
   end

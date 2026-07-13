@@ -13,6 +13,8 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefresh do
   alias GnomeGarden.Procurement.Actions.SourceCredentialResolution
   alias GnomeGarden.Procurement.SourceCredentials
 
+  require Logger
+
   @session_ttl_seconds 7 * 24 * 60 * 60
   @default_max_attempts 2
 
@@ -134,20 +136,27 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefresh do
   defp mark_valid(session, result, attempt) do
     with storage_state when is_binary(storage_state) <-
            PlaywrightRunner.secret(result, "storageState") do
-      Procurement.mark_source_browser_session_valid(
-        session,
-        %{
-          storage_state: storage_state,
-          expires_at: DateTime.add(DateTime.utc_now(), @session_ttl_seconds, :second),
-          metadata: %{
-            "final_url" => result["finalUrl"],
-            "title" => result["title"],
-            "status" => result["status"],
-            "attempt_count" => attempt
-          }
-        },
-        authorize?: false
-      )
+      case Procurement.mark_source_browser_session_valid(
+             session,
+             %{
+               storage_state: storage_state,
+               expires_at: DateTime.add(DateTime.utc_now(), @session_ttl_seconds, :second),
+               metadata: %{
+                 "final_url" => result["finalUrl"],
+                 "title" => result["title"],
+                 "status" => result["status"],
+                 "attempt_count" => attempt
+               }
+             },
+             authorize?: false
+           ) do
+        {:ok, valid} ->
+          expire_superseded_sessions(valid)
+          {:ok, valid}
+
+        error ->
+          error
+      end
     else
       _missing_state -> mark_failed(session, nil, :browser_session_state_missing, attempt)
     end
@@ -272,6 +281,35 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefresh do
 
   defp positive_integer(value, _default) when is_integer(value) and value > 0, do: value
   defp positive_integer(_value, default), do: default
+
+  defp expire_superseded_sessions(valid) do
+    case Procurement.list_valid_source_browser_sessions_for_source(
+           valid.procurement_source_id,
+           authorize?: false
+         ) do
+      {:ok, sessions} ->
+        sessions
+        |> Enum.reject(&(&1.id == valid.id))
+        |> Enum.each(&expire_superseded_session/1)
+
+      {:error, error} ->
+        Logger.warning("Could not load superseded BidNet sessions", error: inspect(error))
+    end
+  end
+
+  defp expire_superseded_session(session) do
+    case Procurement.expire_source_browser_session(
+           session,
+           %{last_failure_reason: "Superseded by a newer BidNet browser session."},
+           authorize?: false
+         ) do
+      {:ok, _expired} ->
+        :ok
+
+      {:error, error} ->
+        Logger.warning("Could not expire superseded BidNet session", error: inspect(error))
+    end
+  end
 
   defp redact_reason(reason, secrets) when is_map(reason) do
     Map.new(reason, fn {key, value} -> {key, redact_reason(value, secrets)} end)

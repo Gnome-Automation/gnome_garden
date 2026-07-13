@@ -7,6 +7,7 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
   """
 
   alias GnomeGarden.Agents.Tools.Procurement.QuerySamGov
+  alias GnomeGarden.Browser.LoginForm
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.BitwardenCredentialResolver
   alias GnomeGarden.Procurement.ProcurementSource
@@ -14,9 +15,6 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
   alias GnomeGarden.Procurement.SourceCredentialCrypto
 
   @browser_wait_ms 3_500
-  @username_selector "input[type='email'], input[name*='email' i], input[id*='email' i], input[name*='user' i], input[id*='user' i], input[type='text']"
-  @password_selector "input[type='password'], input[name*='password' i], input[id*='password' i]"
-  @submit_selector "button[type='submit'], input[type='submit'], input[type='button'], button"
 
   def enqueue(credential_or_id, opts \\ [])
 
@@ -74,7 +72,7 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
           end
 
         {:error, reason} ->
-          {:error, reason}
+          {:error, {:verification_unavailable, reason}}
       end
     end
   end
@@ -155,11 +153,12 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
     browser = Keyword.get(opts, :browser, browser())
 
     with {:ok, _navigation} <- browser.navigate(url, wait_for_network: true),
-         {:ok, login_surface} <- browser.evaluate(login_surface_js()),
+         {:ok, login_surface} <- browser.evaluate(LoginForm.surface_script()),
          :ok <- maybe_follow_login_link(browser, login_surface),
-         {:ok, _typed} <- browser.type(@username_selector, credentials.username),
-         {:ok, _typed} <- browser.type(@password_selector, credentials.password),
-         {:ok, _clicked} <- browser.click(@submit_selector),
+         {:ok, _typed} <- browser.type(LoginForm.username_selector(), credentials.username),
+         {:ok, _typed} <- browser.type(LoginForm.password_selector(), credentials.password),
+         {:ok, submit_result} <- browser.evaluate(LoginForm.submit_script()),
+         :ok <- LoginForm.submitted?(submit_result),
          :ok <- wait_after_submit(opts),
          {:ok, result} <- browser.evaluate(login_result_js()) do
       interpret_login_result(result)
@@ -208,32 +207,6 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
 
   defp browser do
     Application.get_env(:gnome_garden, :source_credential_browser, GnomeGarden.Browser)
-  end
-
-  defp login_surface_js do
-    """
-    (() => {
-      const clean = value => (value || '').replace(/\\s+/g, ' ').trim();
-      const userInput = document.querySelector('input[type="email"], input[name*="email" i], input[id*="email" i], input[name*="user" i], input[id*="user" i], input[type="text"]');
-      const passInput = document.querySelector('input[type="password"], input[name*="password" i], input[id*="password" i]');
-
-      if (!userInput || !passInput) {
-        const loginLink = Array.from(document.querySelectorAll('a[href], button')).find(element => {
-          const text = clean(element.innerText || element.value || element.getAttribute('aria-label'));
-          const href = element.href || '';
-          return /login|log in|sign in|vendor|supplier|account/i.test(`${text} ${href}`);
-        });
-
-        return {
-          has_login_form: false,
-          login_url: loginLink && loginLink.href ? loginLink.href : null,
-          reason: loginLink ? 'login_link_found' : 'no_login_form'
-        };
-      }
-
-      return {has_login_form: true};
-    })()
-    """
   end
 
   defp login_result_js do

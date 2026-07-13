@@ -14,18 +14,23 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
       count = Process.get({__MODULE__, :evaluate_count}, 0)
       Process.put({__MODULE__, :evaluate_count}, count + 1)
 
-      if count == 0 do
-        {:ok, %{"has_login_form" => true}}
-      else
-        {:ok,
-         %{
-           "success" => true,
-           "invalid" => false,
-           "has_password" => false,
-           "signal" => "Sign out",
-           "url" => "https://vendors.planetbids.com/account",
-           "title" => "Account"
-         }}
+      case count do
+        0 ->
+          {:ok, %{"has_login_form" => true}}
+
+        1 ->
+          {:ok, %{"submitted" => true, "method" => "form_button"}}
+
+        _ ->
+          {:ok,
+           %{
+             "success" => true,
+             "invalid" => false,
+             "has_password" => false,
+             "signal" => "Sign out",
+             "url" => "https://vendors.planetbids.com/account",
+             "title" => "Account"
+           }}
       end
     end
 
@@ -44,18 +49,23 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
       count = Process.get({__MODULE__, :evaluate_count}, 0)
       Process.put({__MODULE__, :evaluate_count}, count + 1)
 
-      if count == 0 do
-        {:ok, %{"has_login_form" => true}}
-      else
-        {:ok,
-         %{
-           "success" => false,
-           "invalid" => true,
-           "has_password" => true,
-           "reason" => "The portal rejected these credentials.",
-           "url" => "https://vendors.planetbids.com/login",
-           "title" => "Login"
-         }}
+      case count do
+        0 ->
+          {:ok, %{"has_login_form" => true}}
+
+        1 ->
+          {:ok, %{"submitted" => true, "method" => "form_button"}}
+
+        _ ->
+          {:ok,
+           %{
+             "success" => false,
+             "invalid" => true,
+             "has_password" => true,
+             "reason" => "The portal rejected these credentials.",
+             "url" => "https://vendors.planetbids.com/login",
+             "title" => "Login"
+           }}
       end
     end
 
@@ -155,8 +165,10 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     refute verified.last_failure_reason
 
     assert_receive {:browser_script, discovery_script}
+    assert_receive {:browser_script, submit_script}
     assert_receive {:browser_script, result_script}
     refute discovery_script =~ "source-secret"
+    refute submit_script =~ "source-secret"
     refute result_script =~ "source-secret"
     assert_receive {:browser_type, _selector, "source-secret"}
   end
@@ -315,6 +327,52 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     assert unavailable.test_status == :unavailable
     assert unavailable.last_failure_reason =~ "Credential verification unavailable"
     assert GnomeGarden.Procurement.SourceCredentials.credential_status(source) == :pending
+  end
+
+  test "pre-session Bitwarden failures do not invalidate BidNet credentials" do
+    original_cli = System.get_env("GARDEN_BITWARDEN_CLI")
+    original_runner = Application.get_env(:gnome_garden, :bitwarden_command_runner)
+    original_session = Application.get_env(:gnome_garden, :bitwarden_session)
+
+    System.put_env("GARDEN_BITWARDEN_CLI", "/usr/local/bin/bitwarden")
+    Application.put_env(:gnome_garden, :bitwarden_session, "test-session")
+
+    Application.put_env(:gnome_garden, :bitwarden_command_runner, fn _command, _args, _opts ->
+      {"vault unavailable", 1}
+    end)
+
+    on_exit(fn ->
+      restore_env("GARDEN_BITWARDEN_CLI", original_cli)
+      restore_app_env(:bitwarden_command_runner, original_runner)
+      restore_app_env(:bitwarden_session, original_session)
+    end)
+
+    source = bidnet_source()
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        scope: :source,
+        procurement_source_id: source.id,
+        credential_storage: :bitwarden,
+        bitwarden_item_id: "bidnet-item-id"
+      })
+
+    assert :ok =
+             TestSourceCredential.perform(%Oban.Job{
+               args: %{
+                 "source_credential_id" => credential.id,
+                 "procurement_source_id" => source.id
+               }
+             })
+
+    assert {:ok, unavailable} =
+             Procurement.get_source_credential(credential.id, authorize?: false)
+
+    assert unavailable.status == :active
+    assert unavailable.test_status == :unavailable
+    assert unavailable.last_failure_reason =~ "Credential verification unavailable"
   end
 
   test "SAM.gov credentials are verified through the SAM API client" do

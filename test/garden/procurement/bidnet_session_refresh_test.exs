@@ -194,6 +194,35 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
     assert session.metadata["attempt_count"] == 2
   end
 
+  test "a refreshed session expires the previously valid session" do
+    source = bidnet_source()
+    credential = bidnet_credential(source)
+
+    assert {:ok, _credential} =
+             Procurement.mark_source_credential_verified(credential, %{}, authorize?: false)
+
+    assert {:ok, first} =
+             Procurement.refresh_bidnet_source_session(source, runner: SuccessfulRunner)
+
+    assert {:ok, second} =
+             Procurement.refresh_bidnet_source_session(source, runner: SuccessfulRunner)
+
+    assert first.id != second.id
+
+    assert {:ok, expired_first} =
+             Procurement.get_source_browser_session(first.id, authorize?: false)
+
+    assert expired_first.status == :expired
+    refute expired_first.encrypted_storage_state
+
+    assert {:ok, [valid]} =
+             Procurement.list_valid_source_browser_sessions_for_source(source.id,
+               authorize?: false
+             )
+
+    assert valid.id == second.id
+  end
+
   test "rejects non-BidNet sources" do
     {:ok, source} =
       Procurement.create_procurement_source(%{

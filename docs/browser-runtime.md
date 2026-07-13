@@ -43,6 +43,12 @@ values use typed `Browser.type/3` calls and are never interpolated into JavaScri
 errors, run metadata, and `Inspect` output must contain only redacted values and non-sensitive audit
 metadata.
 
+The production `Jido.Browser` client implements `type/4` and `click/3`; credential entry uses the
+agent-browser session transport rather than JavaScript interpolation. The Garden facade discards
+adapter error details from typing operations so an adapter cannot echo the typed value into logs.
+Login submission is a fixed, secret-free script scoped to the password field's nearest form, with
+`requestSubmit()` and submit-event fallbacks. A missing form remains a valid public-listing case.
+
 BidNet credential testing is a real provider login, not a generic form heuristic. A successful test
 creates a valid encrypted browser session before marking the credential verified. Invalid credentials
 fail without retry; transient browser failures retry at most twice. Listing extraction asks the BidNet

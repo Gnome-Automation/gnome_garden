@@ -61,8 +61,8 @@ defmodule GnomeGarden.Procurement.PlaywrightRunner do
       {output, 0, secret_output} ->
         decode_success(output, secret_output, secret_values)
 
-      {output, _exit_code, _secret_output} ->
-        decode_failure(output, secret_values)
+      {output, _exit_code, secret_output} ->
+        decode_failure(output, secret_values ++ secret_values(secret_output))
 
       {output, 0} ->
         decode_success(output, %{}, secret_values)
@@ -154,6 +154,8 @@ defmodule GnomeGarden.Procurement.PlaywrightRunner do
   end
 
   defp decode_success(output, secret_output, secret_values) do
+    secret_values = secret_values ++ secret_values(secret_output)
+
     case Jason.decode(output) do
       {:ok, %{"ok" => true} = result} ->
         {:ok, attach_secrets(redact(result, secret_values), secret_output)}
@@ -211,31 +213,56 @@ defmodule GnomeGarden.Procurement.PlaywrightRunner do
     end)
   end
 
-  defp deep_merge(_left, right), do: right
-
-  defp split_secrets(map) do
-    Enum.reduce(map, {%{}, %{}}, fn {key, value}, {public, secrets} ->
-      if MapSet.member?(@sensitive_keys, key) do
-        {public, Map.put(secrets, key, value)}
-      else
-        case value do
-          %{} = nested ->
-            {nested_public, nested_secrets} = split_secrets(nested)
-
-            {
-              Map.put(public, key, nested_public),
-              if(map_size(nested_secrets) == 0,
-                do: secrets,
-                else: Map.put(secrets, key, nested_secrets)
-              )
-            }
-
-          _value ->
-            {Map.put(public, key, value), secrets}
-        end
+  defp deep_merge(left, right) when is_list(left) and is_list(right) do
+    left
+    |> Enum.with_index()
+    |> Enum.map(fn {value, index} ->
+      case Enum.at(right, index) do
+        nil -> value
+        secret -> deep_merge(value, secret)
       end
     end)
   end
+
+  defp deep_merge(_left, right), do: right
+
+  defp split_secrets(map) do
+    {public, secrets, _contains_secrets?} = split_secret_value(map)
+    {public, secrets}
+  end
+
+  defp split_secret_value(map) when is_map(map) do
+    Enum.reduce(map, {%{}, %{}, false}, fn {key, value}, {public, secrets, contains?} ->
+      if MapSet.member?(@sensitive_keys, key) do
+        {public, Map.put(secrets, key, value), true}
+      else
+        {nested_public, nested_secrets, nested_contains?} = split_secret_value(value)
+
+        {
+          Map.put(public, key, nested_public),
+          if(nested_contains?, do: Map.put(secrets, key, nested_secrets), else: secrets),
+          contains? or nested_contains?
+        }
+      end
+    end)
+  end
+
+  defp split_secret_value(values) when is_list(values) do
+    {public, secrets, contains?} =
+      Enum.reduce(values, {[], [], false}, fn value, {public, secrets, contains?} ->
+        {nested_public, nested_secrets, nested_contains?} = split_secret_value(value)
+
+        {
+          [nested_public | public],
+          [if(nested_contains?, do: nested_secrets, else: nil) | secrets],
+          contains? or nested_contains?
+        }
+      end)
+
+    {Enum.reverse(public), Enum.reverse(secrets), contains?}
+  end
+
+  defp split_secret_value(value), do: {value, nil, false}
 
   defp secret_values(value) when is_map(value),
     do: value |> Map.values() |> Enum.flat_map(&secret_values/1)

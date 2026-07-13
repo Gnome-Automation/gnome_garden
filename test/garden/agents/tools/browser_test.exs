@@ -106,7 +106,8 @@ defmodule GnomeGarden.BrowserTest do
     def click(session, _selector, _opts), do: {:ok, session, %{}}
 
     @impl true
-    def type(session, _selector, _text, _opts), do: {:ok, session, %{}}
+    def type(_session, selector, text, _opts),
+      do: {:error, %{selector: selector, echoed_value: text}}
 
     @impl true
     def screenshot(session, _opts), do: {:ok, session, %{bytes: <<>>, mime: "image/png"}}
@@ -212,6 +213,14 @@ defmodule GnomeGarden.BrowserTest do
     assert {:ok, %{}} = Browser.type("input[type='password']", "super-secret")
     assert_received {:browser_type, "input[type='password']", "super-secret", _opts}
     refute_received {:browser_evaluate, _script, _opts}
+  end
+
+  test "removes typed values from adapter errors" do
+    assert {:error, %Error{operation: :type} = error} =
+             Browser.type("input[type='password']", "super-secret", adapter: FailingAdapter)
+
+    refute inspect(error) =~ "super-secret"
+    assert error.reason == {:element_input_failed, "input[type='password']"}
   end
 
   test "bounds stateless Jido web fetch output" do

@@ -7,10 +7,21 @@ defmodule GnomeGarden.Procurement.BidNetProvider do
 
   def with_session(source, context, function) when is_function(function, 1) do
     case current_session(source) do
-      {:valid, session} -> materialize(session, context, function)
+      {:valid, session} -> materialize_or_refresh(session, source, context, function)
       {:expired, _session} -> refresh_or_continue(source, context, function)
       {:unavailable, _status} -> refresh_or_continue(source, context, function)
       :missing -> refresh_or_continue(source, context, function)
+    end
+  end
+
+  defp materialize_or_refresh(session, source, context, function) do
+    case materialize(session, context, function) do
+      {:materialized, result} ->
+        result
+
+      {:error, _reason} ->
+        expire(session, "BidNet browser session could not be decrypted or rebound.")
+        refresh_or_continue(source, context, function)
     end
   end
 
@@ -27,7 +38,7 @@ defmodule GnomeGarden.Procurement.BidNetProvider do
   defp latest_session_status(source) do
     case Procurement.get_latest_source_browser_session_for_source(source.id, authorize?: false) do
       {:ok, %{status: :valid} = session} ->
-        expire(session)
+        expire(session, "BidNet browser session expired.")
         {:expired, session}
 
       {:ok, session} ->
@@ -59,8 +70,9 @@ defmodule GnomeGarden.Procurement.BidNetProvider do
       ]
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
-    with {:ok, session} <- Procurement.refresh_bidnet_source_session(source, opts) do
-      materialize(session, context, function)
+    with {:ok, session} <- Procurement.refresh_bidnet_source_session(source, opts),
+         {:materialized, result} <- materialize(session, context, function) do
+      result
     end
   end
 
@@ -71,14 +83,14 @@ defmodule GnomeGarden.Procurement.BidNetProvider do
         |> Map.put(:bidnet_session_id, session.id)
         |> Map.put(:bidnet_storage_state_path, path)
 
-      function.(context)
+      {:materialized, function.(context)}
     end)
   end
 
-  defp expire(session) do
+  defp expire(session, reason) do
     Procurement.expire_source_browser_session(
       session,
-      %{last_failure_reason: "BidNet browser session expired."},
+      %{last_failure_reason: reason},
       authorize?: false
     )
   end
