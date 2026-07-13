@@ -125,8 +125,10 @@ defmodule GnomeGarden.Commercial.Pursuit do
     end
 
     update :qualify do
+      require_atomic? false
       accept []
       change transition_state(:qualified)
+      change {GnomeGarden.Automation.Emit, resource: "pursuit", action: "qualified"}
     end
 
     update :estimate do
@@ -135,8 +137,10 @@ defmodule GnomeGarden.Commercial.Pursuit do
     end
 
     update :propose do
+      require_atomic? false
       accept []
       change transition_state(:proposed)
+      change {GnomeGarden.Automation.Emit, resource: "pursuit", action: "proposed"}
     end
 
     update :negotiate do

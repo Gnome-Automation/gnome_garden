@@ -244,6 +244,11 @@ defmodule GnomeGarden.Procurement.Bid do
       end
 
       change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
+
+      # After the tier computation so when_changing sees the new value; fires
+      # only when the tier band actually moves, not on every re-score.
+      change {GnomeGarden.Automation.Emit,
+              resource: "bid", action: "scored", when_changing: [:score_tier]}
     end
 
     # -- Reads --

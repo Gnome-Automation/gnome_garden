@@ -254,6 +254,7 @@ defmodule GnomeGarden.Procurement do
       define :search_bids, action: :search, args: [:query]
       define :create_bid, action: :create
       define :update_bid, action: :update
+      define :score_bid, action: :score
       define :record_bid_document_ingest, action: :record_document_ingest
       define :list_active_bids, action: :active
       define :list_parked_bids, action: :parked

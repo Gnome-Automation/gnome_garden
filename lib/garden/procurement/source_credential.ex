@@ -157,11 +157,15 @@ defmodule GnomeGarden.Procurement.SourceCredential do
     end
 
     update :mark_failed do
+      require_atomic? false
       accept [:last_failure_reason]
 
       change set_attribute(:status, :invalid)
       change set_attribute(:test_status, :invalid)
       change set_attribute(:last_test_completed_at, &DateTime.utc_now/0)
+
+      change {GnomeGarden.Automation.Emit,
+              resource: "source_credential", action: "failed", when_changing: [:status]}
     end
 
     update :mark_manual_verification_required do
