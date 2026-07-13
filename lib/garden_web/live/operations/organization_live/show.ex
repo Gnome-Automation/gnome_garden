@@ -6,6 +6,7 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
 
   alias GnomeGarden.Operations
   alias GnomeGarden.Operations.IdentityMergeReview
+  alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
@@ -367,22 +368,17 @@ defmodule GnomeGardenWeb.Operations.OrganizationLive.Show do
   end
 
   defp new_organization_task_path(organization) do
-    query =
-      %{
-        title: "Follow up: #{organization.name}",
-        task_type: :review,
-        origin_domain: :operations,
-        origin_resource: "organization",
-        origin_id: organization.id,
-        origin_label: organization.name,
-        origin_url: ~p"/operations/organizations/#{organization}",
-        organization_id: organization.id,
-        return_to: ~p"/operations/organizations/#{organization}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{organization.name}",
+      task_type: :review,
+      origin_domain: :operations,
+      origin_resource: "organization",
+      origin_id: organization.id,
+      origin_label: organization.name,
+      origin_url: ~p"/operations/organizations/#{organization}",
+      organization_id: organization.id,
+      return_to: ~p"/operations/organizations/#{organization}"
+    })
   end
 
   defp format_merge_reason(:website_domain), do: "Same Website Domain"

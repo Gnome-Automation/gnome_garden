@@ -123,6 +123,25 @@ defmodule GnomeGarden.Operations.TeamMember do
     belongs_to :person, GnomeGarden.Operations.Person do
       public? true
     end
+
+    has_many :owned_tasks, GnomeGarden.Operations.Task do
+      destination_attribute :owner_team_member_id
+      public? true
+    end
+  end
+
+  aggregates do
+    count :open_task_count, :owned_tasks do
+      filter expr(status in [:pending, :in_progress, :blocked])
+    end
+
+    exists :has_overdue_tasks, :owned_tasks do
+      filter expr(
+               status in [:pending, :in_progress, :blocked] and
+                 not is_nil(due_at) and
+                 due_at < now()
+             )
+    end
   end
 
   identities do

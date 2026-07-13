@@ -13,12 +13,11 @@ defmodule GnomeGarden.Operations.TaskContextTest do
     GnomeGardenWeb.Endpoint.subscribe("task:owner:#{member.id}")
 
     {:ok, task} =
-      Operations.create_manual_task(%{
+      Operations.create_task(%{
         title: "Verify insurance requirements",
         task_type: :review,
         bid_id: bid.id,
-        owner_team_member_id: member.id,
-        created_by_team_member_id: member.id
+        owner_team_member_id: member.id
       })
 
     assert task.origin_domain == :manual
@@ -45,7 +44,7 @@ defmodule GnomeGarden.Operations.TaskContextTest do
       Execution.create_project(%{name: "Irrigation retrofit", organization_id: organization.id})
 
     {:ok, task} =
-      Operations.create_manual_task(%{
+      Operations.create_task(%{
         title: "Pull county permit",
         task_type: :other,
         project_id: project.id
@@ -64,7 +63,7 @@ defmodule GnomeGarden.Operations.TaskContextTest do
     source = procurement_source_fixture()
 
     {:ok, task} =
-      Operations.create_manual_task(%{
+      Operations.create_task(%{
         title: "Cross-check bid against source listing",
         bid_id: bid.id,
         procurement_source_id: source.id
@@ -77,7 +76,7 @@ defmodule GnomeGarden.Operations.TaskContextTest do
   end
 
   test "pending tasks complete directly" do
-    {:ok, task} = Operations.create_manual_task(%{title: "Quick reply to buyer"})
+    {:ok, task} = Operations.create_task(%{title: "Quick reply to buyer"})
 
     assert task.status == :pending
     assert {:ok, completed} = Operations.complete_task(task)
@@ -96,7 +95,7 @@ defmodule GnomeGarden.Operations.TaskContextTest do
         status: :inactive
       })
 
-    {:ok, task} = Operations.create_manual_task(%{title: "Call inspector"})
+    {:ok, task} = Operations.create_task(%{title: "Call inspector"})
 
     assert {:error, error} =
              Operations.assign_task(task, %{owner_team_member_id: inactive.id})
@@ -104,26 +103,45 @@ defmodule GnomeGarden.Operations.TaskContextTest do
     assert Exception.message(error) =~ "must be an active team member"
 
     assert {:error, error} =
-             Operations.create_manual_task(%{
+             Operations.create_task(%{
                title: "Ghost-assigned task",
                owner_team_member_id: Ecto.UUID.generate()
              })
 
     assert Exception.message(error) =~ "must be an existing team member"
 
+    actor_user = user_fixture()
+
+    {:ok, actor_member} =
+      Operations.create_team_member(%{
+        user_id: actor_user.id,
+        display_name: "Acting Operator",
+        role: :operator,
+        status: :active
+      })
+
     assert {:ok, assigned} =
-             Operations.assign_task(task, %{
-               owner_team_member_id: active.id,
-               assigned_by_team_member_id: active.id
-             })
+             Operations.assign_task(task, %{owner_team_member_id: active.id}, actor: actor_user)
 
     assert assigned.owner_team_member_id == active.id
-    assert assigned.assigned_by_team_member_id == active.id
+    assert assigned.assigned_by_team_member_id == actor_member.id
 
-    assert {:ok, unassigned} = Operations.assign_task(assigned, %{owner_team_member_id: nil})
+    assert {:ok, created} =
+             Operations.create_task(%{title: "Stamped creation"}, actor: actor_user)
+
+    assert created.created_by_team_member_id == actor_member.id
+
+    assert {:error, _forged} =
+             Operations.create_task(%{
+               title: "Forged creator",
+               created_by_team_member_id: active.id
+             })
+
+    assert {:ok, unassigned} =
+             Operations.assign_task(assigned, %{owner_team_member_id: nil}, actor: actor_user)
+
     assert is_nil(unassigned.owner_team_member_id)
-    assert {:ok, [triage]} = Operations.list_unassigned_tasks()
-    assert triage.id == task.id
+    assert is_nil(unassigned.assigned_by_team_member_id)
   end
 
   test "reassignment publishes to both the old and new owner topics" do
@@ -131,7 +149,7 @@ defmodule GnomeGarden.Operations.TaskContextTest do
     new_owner = team_member_fixture("New Owner")
 
     {:ok, task} =
-      Operations.create_manual_task(%{
+      Operations.create_task(%{
         title: "Follow up on proposal",
         owner_team_member_id: old_owner.id
       })

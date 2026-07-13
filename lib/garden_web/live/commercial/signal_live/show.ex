@@ -7,6 +7,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
@@ -474,23 +475,43 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
   end
 
   defp new_signal_task_path(signal) do
-    query =
-      %{
-        title: "Follow up: #{signal.title}",
-        task_type: :review,
-        origin_domain: :commercial,
-        origin_resource: "signal",
-        origin_id: signal.id,
-        origin_label: signal.title,
-        origin_url: ~p"/commercial/signals/#{signal}",
-        signal_id: signal.id,
-        organization_id: signal.organization_id,
-        return_to: ~p"/commercial/signals/#{signal}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{signal.title}",
+      task_type: :review,
+      origin_domain: :commercial,
+      origin_resource: "signal",
+      origin_id: signal.id,
+      origin_label: signal.title,
+      origin_url: ~p"/commercial/signals/#{signal}",
+      signal_id: signal.id,
+      bid_id: source_bid_id(signal),
+      organization_id: signal.organization_id,
+      return_to: ~p"/commercial/signals/#{signal}"
+    })
+  end
 
-    "/operations/tasks/new?#{query}"
+  # Bid-sourced signals store the bid's external_id (or id) in external_ref;
+  # resolving it lets signal tasks carry a concrete bid link.
+  defp source_bid_id(%{external_ref: nil}), do: nil
+
+  defp source_bid_id(%{external_ref: external_ref}) do
+    case GnomeGarden.Procurement.list_bids_by_external_id(external_ref, authorize?: false) do
+      {:ok, [bid | _rest]} ->
+        bid.id
+
+      _none ->
+        case Ecto.UUID.cast(external_ref) do
+          {:ok, bid_id} -> existing_bid_id(bid_id)
+          :error -> nil
+        end
+    end
+  end
+
+  defp existing_bid_id(bid_id) do
+    case GnomeGarden.Procurement.get_bid(bid_id, authorize?: false) do
+      {:ok, bid} -> bid.id
+      {:error, _error} -> nil
+    end
   end
 
   defp can_create_pursuit?(signal),

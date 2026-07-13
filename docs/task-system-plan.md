@@ -70,10 +70,13 @@ next, by when, and for which Garden record?*
    domain interfaces. A task may carry several context links at once (bid +
    organization); `origin_*` stays provenance-only. (Task→Assignment link
    deferred — rare need, cheap to add later.)
-2. **Accountability** (same bead, same migration): `created_by_team_member`,
-   `assigned_by_team_member`; explicit unassigned state for triage; validate
-   assignee is an active TeamMember; allow `pending → completed` directly so
-   quick tasks don't require a ceremonial start. Owner-specific PubSub topic
+2. **Accountability** (same bead, same migration): `created_by_team_member`
+   and `assigned_by_team_member` are stamped server-side from the acting
+   operator via an Ash change — never accepted as client input. Nil owner
+   remains the valid unassigned/triage state (a dedicated triage list ships
+   with the UI that needs it); validate assignee is an active TeamMember;
+   allow `pending → completed` directly so quick tasks don't require a
+   ceremonial start. Owner-specific PubSub topic
    (`task:owner:<team_member_id>`); reassignment publishes to old AND new
    owner.
 3. **Operator seeding** (`.4`, P1): idempotent Ash action ensuring active

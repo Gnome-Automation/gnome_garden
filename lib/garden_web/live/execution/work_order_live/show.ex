@@ -6,6 +6,7 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
 
   alias GnomeGarden.Execution
   alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
@@ -296,24 +297,19 @@ defmodule GnomeGardenWeb.Execution.WorkOrderLive.Show do
   end
 
   defp new_work_order_task_path(work_order) do
-    query =
-      %{
-        title: "Follow up: #{work_order.title}",
-        task_type: :review,
-        origin_domain: :execution,
-        origin_resource: "work_order",
-        origin_id: work_order.id,
-        origin_label: work_order.title,
-        origin_url: ~p"/execution/work-orders/#{work_order}",
-        work_order_id: work_order.id,
-        project_id: work_order.project_id,
-        organization_id: work_order.organization_id,
-        return_to: ~p"/execution/work-orders/#{work_order}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{work_order.title}",
+      task_type: :review,
+      origin_domain: :execution,
+      origin_resource: "work_order",
+      origin_id: work_order.id,
+      origin_label: work_order.title,
+      origin_url: ~p"/execution/work-orders/#{work_order}",
+      work_order_id: work_order.id,
+      project_id: work_order.project_id,
+      organization_id: work_order.organization_id,
+      return_to: ~p"/execution/work-orders/#{work_order}"
+    })
   end
 
   defp load_work_order!(id, actor) do

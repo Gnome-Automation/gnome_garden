@@ -12,13 +12,13 @@ defmodule GnomeGardenWeb.NavTaskBadgeTest do
     current_team_member: team_member
   } do
     {:ok, _task} =
-      Operations.create_manual_task(%{
+      Operations.create_task(%{
         title: "Badge task one",
         owner_team_member_id: team_member.id
       })
 
     {:ok, _task} =
-      Operations.create_manual_task(%{
+      Operations.create_task(%{
         title: "Badge task two",
         owner_team_member_id: team_member.id,
         due_at: DateTime.add(DateTime.utc_now(), -1, :day)
@@ -36,7 +36,7 @@ defmodule GnomeGardenWeb.NavTaskBadgeTest do
     {:ok, view, _html} = live(conn, ~p"/operations/my-tasks")
     refute has_element?(view, "#nav-badge-ops-my-tasks")
 
-    {:ok, task} = Operations.create_manual_task(%{title: "Fresh assignment"})
+    {:ok, task} = Operations.create_task(%{title: "Fresh assignment"})
     {:ok, _assigned} = Operations.assign_task(task, %{owner_team_member_id: team_member.id})
 
     assert render(view) =~ "New task assigned: Fresh assignment"

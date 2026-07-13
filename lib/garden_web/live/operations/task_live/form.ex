@@ -180,8 +180,6 @@ defmodule GnomeGardenWeb.Operations.TaskLive.Form do
 
   @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    params = stamp_accountability(params, socket)
-
     case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
       {:ok, task} ->
         {:noreply,
@@ -214,41 +212,6 @@ defmodule GnomeGardenWeb.Operations.TaskLive.Form do
     |> Map.take(@initial_param_fields)
     |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
     |> Map.new()
-  end
-
-  defp stamp_accountability(params, socket) do
-    case current_team_member_id(socket) do
-      nil ->
-        params
-
-      member_id ->
-        params
-        |> stamp_created_by(socket.assigns.task, member_id)
-        |> stamp_assigned_by(socket.assigns.task, member_id)
-    end
-  end
-
-  defp stamp_created_by(params, nil, member_id),
-    do: Map.put_new(params, "created_by_team_member_id", member_id)
-
-  defp stamp_created_by(params, _task, _member_id), do: params
-
-  defp stamp_assigned_by(params, task, member_id) do
-    new_owner = params["owner_team_member_id"]
-    previous_owner = if task, do: task.owner_team_member_id
-
-    if new_owner not in [nil, ""] and new_owner != previous_owner do
-      Map.put(params, "assigned_by_team_member_id", member_id)
-    else
-      params
-    end
-  end
-
-  defp current_team_member_id(socket) do
-    case Operations.get_team_member_by_user(socket.assigns.current_user.id, authorize?: false) do
-      {:ok, member} -> member.id
-      {:error, _error} -> nil
-    end
   end
 
   defp cancel_path(task, _params) when not is_nil(task), do: ~p"/operations/tasks/#{task}"

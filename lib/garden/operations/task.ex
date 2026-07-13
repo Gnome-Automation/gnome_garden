@@ -28,7 +28,6 @@ defmodule GnomeGarden.Operations.Task do
     :origin_url,
     :metadata,
     :owner_team_member_id,
-    :created_by_team_member_id,
     :organization_id,
     :person_id,
     :finding_id,
@@ -63,6 +62,7 @@ defmodule GnomeGarden.Operations.Task do
       index [:status, :due_at]
       index [:origin_domain, :origin_resource, :origin_id]
       index [:task_type, :status]
+      index [:owner_team_member_id, :status, :due_at]
     end
 
     references do
@@ -104,12 +104,7 @@ defmodule GnomeGarden.Operations.Task do
       primary? true
       accept @create_and_update_attributes
       validate GnomeGarden.Operations.Validations.AssigneeIsActive
-    end
-
-    create :create_manual do
-      accept @create_and_update_attributes
-      change set_attribute(:origin_domain, :manual)
-      validate GnomeGarden.Operations.Validations.AssigneeIsActive
+      change GnomeGarden.Operations.Changes.StampTaskAccountability
     end
 
     create :create_from_finding do
@@ -117,6 +112,7 @@ defmodule GnomeGarden.Operations.Task do
       change set_attribute(:origin_domain, :acquisition)
       change set_attribute(:origin_resource, "finding")
       validate GnomeGarden.Operations.Validations.AssigneeIsActive
+      change GnomeGarden.Operations.Changes.StampTaskAccountability
     end
 
     create :create_from_agent_run do
@@ -124,6 +120,7 @@ defmodule GnomeGarden.Operations.Task do
       change set_attribute(:origin_domain, :agents)
       change set_attribute(:origin_resource, "agent_run")
       validate GnomeGarden.Operations.Validations.AssigneeIsActive
+      change GnomeGarden.Operations.Changes.StampTaskAccountability
     end
 
     create :create_from_pursuit do
@@ -131,54 +128,47 @@ defmodule GnomeGarden.Operations.Task do
       change set_attribute(:origin_domain, :commercial)
       change set_attribute(:origin_resource, "pursuit")
       validate GnomeGarden.Operations.Validations.AssigneeIsActive
+      change GnomeGarden.Operations.Changes.StampTaskAccountability
     end
 
     update :update do
       require_atomic? false
       accept @create_and_update_attributes
       validate GnomeGarden.Operations.Validations.AssigneeIsActive
+      change GnomeGarden.Operations.Changes.StampTaskAccountability
     end
 
     update :assign do
       require_atomic? false
-      accept [:owner_team_member_id, :assigned_by_team_member_id]
+      accept [:owner_team_member_id]
       validate GnomeGarden.Operations.Validations.AssigneeIsActive
-    end
-
-    update :reschedule do
-      require_atomic? false
-      accept [:due_at]
+      change GnomeGarden.Operations.Changes.StampTaskAccountability
     end
 
     update :start do
-      require_atomic? false
       accept []
       change transition_state(:in_progress)
       change set_attribute(:started_at, &DateTime.utc_now/0)
     end
 
     update :block do
-      require_atomic? false
       accept [:blocked_reason]
       change transition_state(:blocked)
       change set_attribute(:blocked_at, &DateTime.utc_now/0)
     end
 
     update :complete do
-      require_atomic? false
       accept []
       change transition_state(:completed)
       change set_attribute(:completed_at, &DateTime.utc_now/0)
     end
 
     update :cancel do
-      require_atomic? false
       accept []
       change transition_state(:cancelled)
     end
 
     update :reopen do
-      require_atomic? false
       accept []
       change transition_state(:pending)
       change set_attribute(:started_at, nil)
@@ -194,23 +184,6 @@ defmodule GnomeGarden.Operations.Task do
                 sort: [due_at: :asc, priority: :desc, inserted_at: :desc],
                 load: [:status_variant, :priority_variant]
               )
-    end
-
-    read :by_owner do
-      argument :owner_team_member_id, :uuid, allow_nil?: false
-      filter expr(owner_team_member_id == ^arg(:owner_team_member_id))
-      prepare build(sort: [due_at: :asc, inserted_at: :desc])
-    end
-
-    read :open_by_owner do
-      argument :owner_team_member_id, :uuid, allow_nil?: false
-
-      filter expr(
-               owner_team_member_id == ^arg(:owner_team_member_id) and
-                 status in [:pending, :in_progress, :blocked]
-             )
-
-      prepare build(sort: [due_at: :asc, inserted_at: :desc])
     end
 
     read :by_organization do
@@ -284,13 +257,19 @@ defmodule GnomeGarden.Operations.Task do
       run GnomeGarden.Operations.Actions.MyTasksWorkspace
     end
 
-    read :unassigned do
+    read :workspace_items do
+      argument :owner_team_member_id, :uuid, allow_nil?: false
+
       filter expr(
-               is_nil(owner_team_member_id) and
-                 status in [:pending, :in_progress, :blocked]
+               owner_team_member_id == ^arg(:owner_team_member_id) and
+                 (status in [:pending, :in_progress, :blocked] or
+                    (status == :completed and completed_at > ago(7, :day)))
              )
 
-      prepare build(sort: [due_at: :asc, priority: :desc, inserted_at: :desc])
+      prepare build(
+                sort: [due_at: :asc, inserted_at: :desc],
+                load: [:status_variant, :priority_variant, :context_label]
+              )
     end
 
     read :by_origin do
@@ -344,8 +323,17 @@ defmodule GnomeGarden.Operations.Task do
     publish_all :destroy, ["destroyed", :_pkey]
 
     publish_all :create, ["owner", :owner_team_member_id]
-    publish_all :update, ["owner", :owner_team_member_id], previous_values?: true
     publish_all :destroy, ["owner", :owner_team_member_id]
+
+    # Only the owner-changing actions need previous_values? (it forces
+    # non-atomic execution); state transitions publish the current owner.
+    publish :update, ["owner", :owner_team_member_id], previous_values?: true
+    publish :assign, ["owner", :owner_team_member_id], previous_values?: true
+    publish :start, ["owner", :owner_team_member_id]
+    publish :block, ["owner", :owner_team_member_id]
+    publish :complete, ["owner", :owner_team_member_id]
+    publish :cancel, ["owner", :owner_team_member_id]
+    publish :reopen, ["owner", :owner_team_member_id]
 
     publish_all :create, ["organization", :organization_id]
     publish_all :update, ["organization", :organization_id]
@@ -557,6 +545,10 @@ defmodule GnomeGarden.Operations.Task do
   end
 
   calculations do
+    calculate :context_label,
+              :string,
+              {GnomeGarden.Operations.Calculations.TaskContextLabel, []}
+
     calculate :status_variant,
               :atom,
               {GnomeGarden.Calculations.EnumVariant,

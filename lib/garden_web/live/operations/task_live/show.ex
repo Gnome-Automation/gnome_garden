@@ -87,7 +87,11 @@ defmodule GnomeGardenWeb.Operations.TaskLive.Show do
           >
             Start
           </.button>
-          <.button :if={@task.status == :in_progress} phx-click="complete" variant="primary">
+          <.button
+            :if={@task.status in [:pending, :in_progress]}
+            phx-click="complete"
+            variant="primary"
+          >
             Complete
           </.button>
           <.button :if={@task.status in [:completed, :cancelled]} phx-click="reopen">

@@ -228,7 +228,7 @@ defmodule GnomeGardenWeb.OperationsTaskLiveTest do
     {:ok, view, _html} = live(conn, ~p"/operations/tasks/#{task}")
 
     assert has_element?(view, ~s(button[phx-click="start"]))
-    refute has_element?(view, ~s(button[phx-click="complete"]))
+    assert has_element?(view, ~s(button[phx-click="complete"]))
     assert has_element?(view, "#task-block-form")
 
     view

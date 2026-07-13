@@ -6,6 +6,7 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
 
   alias GnomeGarden.Execution
   alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
@@ -307,23 +308,18 @@ defmodule GnomeGardenWeb.Execution.ProjectLive.Show do
   end
 
   defp new_project_task_path(project) do
-    query =
-      %{
-        title: "Follow up: #{project.name}",
-        task_type: :review,
-        origin_domain: :execution,
-        origin_resource: "project",
-        origin_id: project.id,
-        origin_label: project.name,
-        origin_url: ~p"/execution/projects/#{project}",
-        project_id: project.id,
-        organization_id: project.organization_id,
-        return_to: ~p"/execution/projects/#{project}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{project.name}",
+      task_type: :review,
+      origin_domain: :execution,
+      origin_resource: "project",
+      origin_id: project.id,
+      origin_label: project.name,
+      origin_url: ~p"/execution/projects/#{project}",
+      project_id: project.id,
+      organization_id: project.organization_id,
+      return_to: ~p"/execution/projects/#{project}"
+    })
   end
 
   defp load_project!(id, actor) do

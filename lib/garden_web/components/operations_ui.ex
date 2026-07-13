@@ -71,7 +71,7 @@ defmodule GnomeGardenWeb.Components.OperationsUI do
 
             <div class="shrink-0 text-left text-xs text-base-content/50 md:text-right">
               <p>Due {format_datetime(task.due_at)}</p>
-              <p>{task.origin_label || task.origin_resource || "Manual task"}</p>
+              <p>{context_line(task)}</p>
             </div>
           </div>
         </.link>
@@ -82,6 +82,13 @@ defmodule GnomeGardenWeb.Components.OperationsUI do
 
   defp variant(value) when value in [:default, :success, :warning, :error, :info], do: value
   defp variant(_value), do: :default
+
+  defp context_line(task) do
+    case Map.get(task, :context_label) do
+      label when is_binary(label) and label != "" -> label
+      _not_loaded_or_nil -> task.origin_label || task.origin_resource || "Manual task"
+    end
+  end
 
   defp origin_color(:acquisition), do: :emerald
   defp origin_color(:agents), do: :sky

@@ -116,7 +116,6 @@ defmodule GnomeGardenWeb.Operations.MyTasksLive do
           description={description}
           empty_title={"No #{String.downcase(title)} tasks"}
           empty_description={lane_empty_description(key)}
-          new_task_path={nil}
         />
       </div>
     </.page>
@@ -124,7 +123,9 @@ defmodule GnomeGardenWeb.Operations.MyTasksLive do
   end
 
   defp flash_new_assignments(socket, previous, workspace) do
-    known_ids = open_task_ids(previous)
+    # Compare against every previously visible task (including recently
+    # completed ones) so lane moves like reopen never read as new assignments.
+    known_ids = all_task_ids(previous)
     new_tasks = workspace |> open_tasks() |> Enum.reject(&MapSet.member?(known_ids, &1.id))
 
     case new_tasks do
@@ -140,8 +141,11 @@ defmodule GnomeGardenWeb.Operations.MyTasksLive do
     end)
   end
 
-  defp open_task_ids(workspace) do
-    workspace |> open_tasks() |> MapSet.new(& &1.id)
+  defp all_task_ids(workspace) do
+    workspace
+    |> open_tasks()
+    |> Enum.concat(Map.get(workspace, :recently_completed, []))
+    |> MapSet.new(& &1.id)
   end
 
   defp lane_empty_description(:overdue), do: "Nothing is past due. Keep it that way."
@@ -212,12 +216,9 @@ defmodule GnomeGardenWeb.Operations.MyTasksLive do
   end
 
   defp new_task_path(viewing) do
-    query =
-      URI.encode_query(%{
-        owner_team_member_id: viewing.id,
-        return_to: "/operations/my-tasks"
-      })
-
-    "/operations/tasks/new?#{query}"
+    GnomeGardenWeb.Operations.TaskEntry.new_task_path(%{
+      owner_team_member_id: viewing.id,
+      return_to: "/operations/my-tasks"
+    })
   end
 end

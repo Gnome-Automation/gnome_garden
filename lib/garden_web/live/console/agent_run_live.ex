@@ -513,23 +513,18 @@ defmodule GnomeGardenWeb.Console.AgentRunLive do
   end
 
   defp new_agent_run_task_path(run) do
-    query =
-      %{
-        title: "Review agent run: #{agent_run_label(run)}",
-        task_type: :agent_followup,
-        priority: agent_run_task_priority(run),
-        origin_domain: :agents,
-        origin_resource: "agent_run",
-        origin_id: run.id,
-        origin_label: agent_run_label(run),
-        origin_url: ~p"/console/agents/runs/#{run}",
-        agent_run_id: run.id,
-        return_to: ~p"/console/agents/runs/#{run}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
+    GnomeGardenWeb.Operations.TaskEntry.new_task_path(%{
+      title: "Review agent run: #{agent_run_label(run)}",
+      task_type: :agent_followup,
+      priority: agent_run_task_priority(run),
+      origin_domain: :agents,
+      origin_resource: "agent_run",
+      origin_id: run.id,
+      origin_label: agent_run_label(run),
+      origin_url: ~p"/console/agents/runs/#{run}",
+      agent_run_id: run.id,
+      return_to: ~p"/console/agents/runs/#{run}"
+    })
   end
 
   defp agent_run_label(%{deployment: %{name: name}}) when is_binary(name), do: name

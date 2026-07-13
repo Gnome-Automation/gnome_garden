@@ -20,7 +20,7 @@ defmodule GnomeGardenWeb.TaskEntryPointsLiveTest do
       Execution.create_project(%{organization_id: organization.id, name: "Irrigation retrofit"})
 
     {:ok, task} =
-      Operations.create_manual_task(%{
+      Operations.create_task(%{
         title: "Pull county permit",
         project_id: project.id
       })
@@ -56,7 +56,7 @@ defmodule GnomeGardenWeb.TaskEntryPointsLiveTest do
       })
 
     {:ok, _task} =
-      Operations.create_manual_task(%{title: "Order valves", work_item_id: work_item.id})
+      Operations.create_task(%{title: "Order valves", work_item_id: work_item.id})
 
     {:ok, _wi_view, wi_html} = live(conn, ~p"/execution/work-items/#{work_item}")
     assert wi_html =~ "Order valves"

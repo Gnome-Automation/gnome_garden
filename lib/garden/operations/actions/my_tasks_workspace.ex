@@ -9,25 +9,15 @@ defmodule GnomeGarden.Operations.Actions.MyTasksWorkspace do
 
   use Ash.Resource.Actions.Implementation
 
-  require Ash.Query
-
-  @recently_completed_days 7
-
   @impl true
   def run(input, _opts, context) do
     owner_team_member_id = Ash.ActionInput.get_argument(input, :owner_team_member_id)
-    completed_after = DateTime.add(DateTime.utc_now(), -@recently_completed_days, :day)
 
     tasks =
-      GnomeGarden.Operations.Task
-      |> Ash.Query.filter(
-        owner_team_member_id == ^owner_team_member_id and
-          (status in [:pending, :in_progress, :blocked] or
-             (status == :completed and completed_at > ^completed_after))
+      GnomeGarden.Operations.list_my_tasks_workspace_items!(owner_team_member_id,
+        actor: context.actor,
+        authorize?: context.authorize?
       )
-      |> Ash.Query.load([:status_variant, :priority_variant])
-      |> Ash.Query.sort(due_at: :asc, inserted_at: :desc)
-      |> Ash.read!(actor: context.actor, authorize?: context.authorize?)
 
     {open, completed} = Enum.split_with(tasks, &(&1.status != :completed))
     {blocked, actionable} = Enum.split_with(open, &(&1.status == :blocked))

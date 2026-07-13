@@ -10,6 +10,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   alias GnomeGarden.Procurement.SourceCredential
   alias GnomeGarden.Procurement.SourceCredentials
   alias GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog
+  alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @source_load [
@@ -408,22 +409,17 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   defp load_related_tasks(_source, _actor), do: []
 
   defp new_source_task_path(source) do
-    query =
-      %{
-        title: "Follow up: #{source.name}",
-        task_type: :source_cleanup,
-        origin_domain: :procurement,
-        origin_resource: "procurement_source",
-        origin_id: source.procurement_source.id,
-        origin_label: source.name,
-        origin_url: ~p"/acquisition/sources/#{source}",
-        procurement_source_id: source.procurement_source.id,
-        return_to: ~p"/acquisition/sources/#{source}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{source.name}",
+      task_type: :source_cleanup,
+      origin_domain: :procurement,
+      origin_resource: "procurement_source",
+      origin_id: source.procurement_source.id,
+      origin_label: source.name,
+      origin_url: ~p"/acquisition/sources/#{source}",
+      procurement_source_id: source.procurement_source.id,
+      return_to: ~p"/acquisition/sources/#{source}"
+    })
   end
 
   attr :label, :string, required: true
