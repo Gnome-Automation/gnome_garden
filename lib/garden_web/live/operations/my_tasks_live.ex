@@ -55,12 +55,15 @@ defmodule GnomeGardenWeb.Operations.MyTasksLive do
 
   @impl true
   def handle_info(%{topic: "task:owner:" <> _owner_id}, socket) do
+    GnomeGardenWeb.NavBadges.invalidate()
+
+    previous = socket.assigns.workspace
+    workspace = load_workspace(socket.assigns.viewing, socket.assigns.current_user)
+
     {:noreply,
-     assign(
-       socket,
-       :workspace,
-       load_workspace(socket.assigns.viewing, socket.assigns.current_user)
-     )}
+     socket
+     |> flash_new_assignments(previous, workspace)
+     |> assign(:workspace, workspace)}
   end
 
   @impl true
@@ -118,6 +121,27 @@ defmodule GnomeGardenWeb.Operations.MyTasksLive do
       </div>
     </.page>
     """
+  end
+
+  defp flash_new_assignments(socket, previous, workspace) do
+    known_ids = open_task_ids(previous)
+    new_tasks = workspace |> open_tasks() |> Enum.reject(&MapSet.member?(known_ids, &1.id))
+
+    case new_tasks do
+      [] -> socket
+      [task] -> put_flash(socket, :info, "New task assigned: #{task.title}")
+      tasks -> put_flash(socket, :info, "#{length(tasks)} new tasks assigned")
+    end
+  end
+
+  defp open_tasks(workspace) do
+    Enum.flat_map([:overdue, :today, :upcoming, :blocked, :unscheduled], fn lane ->
+      Map.get(workspace, lane, [])
+    end)
+  end
+
+  defp open_task_ids(workspace) do
+    workspace |> open_tasks() |> MapSet.new(& &1.id)
   end
 
   defp lane_empty_description(:overdue), do: "Nothing is past due. Keep it that way."
