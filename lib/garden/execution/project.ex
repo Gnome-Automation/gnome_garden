@@ -309,6 +309,11 @@ defmodule GnomeGarden.Execution.Project do
     has_many :change_orders, GnomeGarden.Commercial.ChangeOrder do
       public? true
     end
+
+    has_many :tasks, GnomeGarden.Operations.Task do
+      destination_attribute :project_id
+      public? true
+    end
   end
 
   calculations do

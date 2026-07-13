@@ -492,6 +492,11 @@ defmodule GnomeGarden.Procurement.Bid do
     has_many :activities, GnomeGarden.Commercial.Activity do
       public? true
     end
+
+    has_many :tasks, GnomeGarden.Operations.Task do
+      destination_attribute :bid_id
+      public? true
+    end
   end
 
   calculations do

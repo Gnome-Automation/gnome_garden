@@ -147,23 +147,18 @@ defmodule GnomeGardenWeb.Components.Acquisition.ShowSections do
   defp research_state_variant(_state), do: :default
 
   defp new_finding_task_path(finding) do
-    query =
-      %{
-        title: "Follow up: #{finding.title}",
-        task_type: :review,
-        origin_domain: :acquisition,
-        origin_resource: "finding",
-        origin_id: finding.id,
-        origin_label: finding.title,
-        origin_url: ~p"/acquisition/findings/#{finding}",
-        finding_id: finding.id,
-        organization_id: finding.organization_id,
-        person_id: finding.person_id,
-        return_to: ~p"/acquisition/findings/#{finding}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
+    GnomeGardenWeb.Operations.TaskEntry.new_task_path(%{
+      title: "Follow up: #{finding.title}",
+      task_type: :review,
+      origin_domain: :acquisition,
+      origin_resource: "finding",
+      origin_id: finding.id,
+      origin_label: finding.title,
+      origin_url: ~p"/acquisition/findings/#{finding}",
+      finding_id: finding.id,
+      organization_id: finding.organization_id,
+      person_id: finding.person_id,
+      return_to: ~p"/acquisition/findings/#{finding}"
+    })
   end
 end

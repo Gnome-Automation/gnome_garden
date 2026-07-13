@@ -7,6 +7,7 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
@@ -474,24 +475,23 @@ defmodule GnomeGardenWeb.Commercial.SignalLive.Show do
   end
 
   defp new_signal_task_path(signal) do
-    query =
-      %{
-        title: "Follow up: #{signal.title}",
-        task_type: :review,
-        origin_domain: :commercial,
-        origin_resource: "signal",
-        origin_id: signal.id,
-        origin_label: signal.title,
-        origin_url: ~p"/commercial/signals/#{signal}",
-        signal_id: signal.id,
-        organization_id: signal.organization_id,
-        return_to: ~p"/commercial/signals/#{signal}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{signal.title}",
+      task_type: :review,
+      origin_domain: :commercial,
+      origin_resource: "signal",
+      origin_id: signal.id,
+      origin_label: signal.title,
+      origin_url: ~p"/commercial/signals/#{signal}",
+      signal_id: signal.id,
+      bid_id: source_bid_id(signal),
+      organization_id: signal.organization_id,
+      return_to: ~p"/commercial/signals/#{signal}"
+    })
   end
+
+  defp source_bid_id(%{procurement_bid: %{id: bid_id}}), do: bid_id
+  defp source_bid_id(_signal), do: nil
 
   defp can_create_pursuit?(signal),
     do: signal.status == :accepted and Enum.empty?(signal.pursuits || [])

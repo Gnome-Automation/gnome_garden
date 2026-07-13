@@ -56,12 +56,14 @@ defmodule GnomeGardenWeb.Layouts do
     area = RailNav.area_for_path(assigns.current_path)
     active = RailNav.active_dest(assigns.current_path, area)
     open_count = length(RailNav.area_dests(area))
+    badges = GnomeGardenWeb.NavBadges.task_badges(assigns.current_user)
 
     assigns =
       assigns
       |> assign(:area, area)
       |> assign(:active, active)
       |> assign(:open_count, open_count)
+      |> assign(:badges, badges)
 
     ~H"""
     <div class="flex h-screen w-full overflow-hidden bg-base-100 text-base-content">
@@ -79,7 +81,7 @@ defmodule GnomeGardenWeb.Layouts do
               <.header_account_controls current_user={@current_user} />
             </:extra>
           </RailNav.area_header>
-          <RailNav.tab_strip area={@area} active_id={@active.id} />
+          <RailNav.tab_strip area={@area} active_id={@active.id} badges={@badges} />
         </div>
 
         <%!-- Mobile chrome --%>
@@ -96,7 +98,7 @@ defmodule GnomeGardenWeb.Layouts do
         </main>
 
         <%!-- Mobile bottom bar --%>
-        <RailNav.mobile_bar area={@area} />
+        <RailNav.mobile_bar area={@area} badges={@badges} />
       </div>
 
       <.flash_group flash={@flash} />

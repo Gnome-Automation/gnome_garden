@@ -1,13 +1,17 @@
 defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Execution.Helpers, only: [format_atom: 1, format_datetime: 1]
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.SourceCredential
   alias GnomeGarden.Procurement.SourceCredentials
   alias GnomeGardenWeb.Acquisition.SourceLive.CredentialDialog
+  alias GnomeGardenWeb.Operations.TaskEntry
+  alias GnomeGardenWeb.Operations.TaskPubSub
 
   @source_load [
     :procurement_source,
@@ -40,10 +44,15 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
 
     case load_source(id, socket.assigns.current_user) do
       {:ok, source} ->
+        if connected?(socket) && source.procurement_source do
+          TaskPubSub.subscribe_related(:procurement_source, source.procurement_source.id)
+        end
+
         {:ok,
          socket
          |> assign(:source, source)
          |> assign(:page_title, source.name)
+         |> assign(:related_tasks, load_related_tasks(source, socket.assigns.current_user))
          |> assign(:source_credential, credential_for_source(source))
          |> assign(:browser_session, browser_session_for_source(source))
          |> assign(:credential_dialog, nil)
@@ -95,6 +104,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
           </.link>
         </:actions>
       </.page_header>
+
+      <.related_tasks_panel
+        :if={@source.procurement_source}
+        tasks={@related_tasks}
+        description="Operator follow-up linked to this procurement source."
+        empty_description="Credential fixes, configuration, and remediation tasks will appear here."
+        new_task_path={new_source_task_path(@source)}
+      />
 
       <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div class="space-y-6">
@@ -367,6 +384,42 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   @impl true
   def handle_info(%{topic: "procurement_source_browser_session:" <> _event}, socket) do
     {:noreply, reload_source(socket)}
+  end
+
+  @impl true
+  def handle_info(%{topic: "task:procurement_source:" <> _procurement_source_id}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :related_tasks,
+       load_related_tasks(socket.assigns.source, socket.assigns.current_user)
+     )}
+  end
+
+  defp load_related_tasks(%{procurement_source: %{id: procurement_source_id}}, actor) do
+    case Operations.list_tasks_by_procurement_source(procurement_source_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load procurement source tasks: #{inspect(error)}"
+    end
+  end
+
+  defp load_related_tasks(_source, _actor), do: []
+
+  defp new_source_task_path(source) do
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{source.name}",
+      task_type: :source_cleanup,
+      origin_domain: :procurement,
+      origin_resource: "procurement_source",
+      origin_id: source.procurement_source.id,
+      origin_label: source.name,
+      origin_url: ~p"/acquisition/sources/#{source}",
+      procurement_source_id: source.procurement_source.id,
+      return_to: ~p"/acquisition/sources/#{source}"
+    })
   end
 
   attr :label, :string, required: true

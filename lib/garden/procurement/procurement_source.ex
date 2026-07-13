@@ -528,6 +528,11 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       description "Independently configured and scanned child sources keyed by portal ID or code"
     end
 
+    has_many :tasks, GnomeGarden.Operations.Task do
+      destination_attribute :procurement_source_id
+      public? true
+    end
+
     has_many :search_filters, GnomeGarden.Procurement.SourceSearchFilter do
       destination_attribute :procurement_source_id
       public? true

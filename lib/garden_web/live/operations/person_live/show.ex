@@ -6,6 +6,7 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
 
   alias GnomeGarden.Operations
   alias GnomeGarden.Operations.IdentityMergeReview
+  alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
@@ -291,22 +292,17 @@ defmodule GnomeGardenWeb.Operations.PersonLive.Show do
   end
 
   defp new_person_task_path(person) do
-    query =
-      %{
-        title: "Follow up: #{person.full_name}",
-        task_type: default_person_task_type(person),
-        origin_domain: :operations,
-        origin_resource: "person",
-        origin_id: person.id,
-        origin_label: person.full_name,
-        origin_url: ~p"/operations/people/#{person}",
-        person_id: person.id,
-        return_to: ~p"/operations/people/#{person}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{person.full_name}",
+      task_type: default_person_task_type(person),
+      origin_domain: :operations,
+      origin_resource: "person",
+      origin_id: person.id,
+      origin_label: person.full_name,
+      origin_url: ~p"/operations/people/#{person}",
+      person_id: person.id,
+      return_to: ~p"/operations/people/#{person}"
+    })
   end
 
   defp default_person_task_type(%{preferred_contact_method: :phone}), do: :call

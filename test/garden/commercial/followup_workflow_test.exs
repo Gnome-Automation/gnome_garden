@@ -7,7 +7,7 @@ defmodule GnomeGarden.Commercial.FollowupWorkflowTest do
   describe "task workflow" do
     test "tracks follow-up tasks through start, complete, and reopen" do
       {:ok, task} =
-        Operations.create_manual_task(%{
+        Operations.create_task(%{
           title: "Call buyer about bid fit",
           task_type: :call,
           priority: :high,
@@ -28,16 +28,18 @@ defmodule GnomeGarden.Commercial.FollowupWorkflowTest do
       refute reopened.completed_at
     end
 
-    test "pending tasks cannot be completed before they are started" do
+    test "quick pending tasks complete directly without a ceremonial start" do
       {:ok, task} =
-        Operations.create_manual_task(%{
+        Operations.create_task(%{
           title: "Review source follow-up",
           task_type: :review,
           priority: :normal
         })
 
       assert task.status == :pending
-      assert {:error, _error} = Operations.complete_task(task)
+      assert {:ok, completed} = Operations.complete_task(task)
+      assert completed.status == :completed
+      assert completed.completed_at
     end
   end
 

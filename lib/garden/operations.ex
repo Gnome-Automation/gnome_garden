@@ -46,6 +46,10 @@ defmodule GnomeGarden.Operations do
       define :create_team_member, action: :create
       define :update_team_member, action: :update
       define :delete_team_member, action: :destroy
+
+      define :ensure_operator_team_member,
+        action: :ensure_operator,
+        args: [:email, :display_name]
     end
 
     resource GnomeGarden.Operations.Organization do
@@ -149,31 +153,40 @@ defmodule GnomeGarden.Operations do
       define :list_task_inbox, action: :inbox
       define :get_task, action: :read, get_by: [:id]
       define :create_task, action: :create
-      define :create_manual_task, action: :create_manual
       define :create_task_from_finding, action: :create_from_finding
       define :create_task_from_agent_run, action: :create_from_agent_run
       define :create_task_from_pursuit, action: :create_from_pursuit
       define :update_task, action: :update
       define :delete_task, action: :destroy
       define :assign_task, action: :assign
-      define :reschedule_task, action: :reschedule
       define :start_task, action: :start
       define :block_task, action: :block
       define :complete_task, action: :complete
       define :cancel_task, action: :cancel
       define :reopen_task, action: :reopen
-      define :list_tasks_by_owner_team_member, action: :by_owner, args: [:owner_team_member_id]
-
-      define :list_open_tasks_by_owner_team_member,
-        action: :open_by_owner,
-        args: [:owner_team_member_id]
-
       define :list_tasks_by_organization, action: :by_organization, args: [:organization_id]
       define :list_tasks_by_person, action: :by_person, args: [:person_id]
       define :list_tasks_by_pursuit, action: :by_pursuit, args: [:pursuit_id]
       define :list_tasks_by_finding, action: :by_finding, args: [:finding_id]
       define :list_tasks_by_signal, action: :by_signal, args: [:signal_id]
       define :list_tasks_by_agent_run, action: :by_agent_run, args: [:agent_run_id]
+
+      define :list_tasks_by_project, action: :by_project, args: [:project_id]
+      define :list_tasks_by_work_item, action: :by_work_item, args: [:work_item_id]
+      define :list_tasks_by_work_order, action: :by_work_order, args: [:work_order_id]
+      define :list_tasks_by_bid, action: :by_bid, args: [:bid_id]
+
+      define :list_tasks_by_procurement_source,
+        action: :by_procurement_source,
+        args: [:procurement_source_id]
+
+      define :get_my_tasks_workspace,
+        action: :my_tasks_workspace,
+        args: [:owner_team_member_id]
+
+      define :list_my_tasks_workspace_items,
+        action: :workspace_items,
+        args: [:owner_team_member_id]
 
       define :list_tasks_by_origin,
         action: :by_origin,

@@ -1,20 +1,37 @@
 defmodule GnomeGardenWeb.Execution.WorkItemLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [related_tasks_panel: 1]
   import GnomeGardenWeb.Execution.Helpers
 
   alias GnomeGarden.Execution
+  alias GnomeGarden.Operations
+  alias GnomeGardenWeb.Operations.TaskEntry
+  alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     actor = socket.assigns.current_user
     work_item = load_work_item!(id, actor)
 
+    if connected?(socket), do: TaskPubSub.subscribe_related(:work_item, work_item.id)
+
     {:ok,
      socket
      |> assign(:page_title, work_item.title)
      |> assign(:work_item, work_item)
+     |> assign(:related_tasks, load_related_tasks(work_item, actor))
      |> assign(:work_item_assignments, load_work_item_assignments!(work_item.id, actor))}
+  end
+
+  @impl true
+  def handle_info(%{topic: "task:work_item:" <> _work_item_id}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :related_tasks,
+       load_related_tasks(socket.assigns.work_item, socket.assigns.current_user)
+     )}
   end
 
   @impl true
@@ -87,6 +104,13 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Show do
           </.button>
         </:actions>
       </.page_header>
+
+      <.related_tasks_panel
+        tasks={@related_tasks}
+        description="Operator follow-up linked to this work item."
+        empty_description="Coordination tasks for this scope item will appear here."
+        new_task_path={new_work_item_task_path(@work_item)}
+      />
 
       <.section
         title="Work Item Actions"
@@ -259,6 +283,31 @@ defmodule GnomeGardenWeb.Execution.WorkItemLive.Show do
       <p class="text-sm font-medium text-base-content">{@value}</p>
     </div>
     """
+  end
+
+  defp load_related_tasks(%{id: work_item_id}, actor) do
+    case Operations.list_tasks_by_work_item(work_item_id,
+           actor: actor,
+           load: [:status_variant, :priority_variant]
+         ) do
+      {:ok, tasks} -> tasks
+      {:error, error} -> raise "failed to load work item tasks: #{inspect(error)}"
+    end
+  end
+
+  defp new_work_item_task_path(work_item) do
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{work_item.title}",
+      task_type: :review,
+      origin_domain: :execution,
+      origin_resource: "work_item",
+      origin_id: work_item.id,
+      origin_label: work_item.title,
+      origin_url: ~p"/execution/work-items/#{work_item}",
+      work_item_id: work_item.id,
+      project_id: work_item.project_id,
+      return_to: ~p"/execution/work-items/#{work_item}"
+    })
   end
 
   defp load_work_item!(id, actor) do

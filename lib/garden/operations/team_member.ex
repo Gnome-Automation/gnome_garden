@@ -68,6 +68,15 @@ defmodule GnomeGarden.Operations.TeamMember do
       argument :user_id, :uuid, allow_nil?: false
       get_by [:user_id]
     end
+
+    action :ensure_operator, :struct do
+      constraints instance_of: __MODULE__
+
+      argument :email, :ci_string, allow_nil?: false
+      argument :display_name, :string, allow_nil?: false
+
+      run GnomeGarden.Operations.Actions.EnsureOperatorTeamMember
+    end
   end
 
   attributes do
@@ -113,6 +122,25 @@ defmodule GnomeGarden.Operations.TeamMember do
 
     belongs_to :person, GnomeGarden.Operations.Person do
       public? true
+    end
+
+    has_many :owned_tasks, GnomeGarden.Operations.Task do
+      destination_attribute :owner_team_member_id
+      public? true
+    end
+  end
+
+  aggregates do
+    count :open_task_count, :owned_tasks do
+      filter expr(status in [:pending, :in_progress, :blocked])
+    end
+
+    exists :has_overdue_tasks, :owned_tasks do
+      filter expr(
+               status in [:pending, :in_progress, :blocked] and
+                 not is_nil(due_at) and
+                 due_at < now()
+             )
     end
   end
 

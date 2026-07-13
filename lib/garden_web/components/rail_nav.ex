@@ -243,6 +243,16 @@ defmodule GnomeGardenWeb.Components.RailNav do
       match: ["/operations/review"]
     },
     %{
+      id: "ops-my-tasks",
+      section: "Operations",
+      icon: "hero-user-circle",
+      label: "My Tasks",
+      path: "/operations/my-tasks",
+      badge: 0,
+      hot: false,
+      match: ["/operations/my-tasks"]
+    },
+    %{
       id: "ops-tasks",
       section: "Operations",
       icon: "hero-inbox-stack",
@@ -610,14 +620,28 @@ defmodule GnomeGardenWeb.Components.RailNav do
     """
   end
 
+  def apply_badges(dests, badges) when badges == %{}, do: dests
+
+  def apply_badges(dests, badges) do
+    Enum.map(dests, fn dest ->
+      case Map.get(badges, dest.id) do
+        %{count: count, hot: hot} -> %{dest | badge: count, hot: hot}
+        nil -> dest
+      end
+    end)
+  end
+
   attr :area, :string, required: true
   attr :active_id, :string, required: true
+  attr :badges, :map, default: %{}
 
   def tab_strip(assigns) do
+    assigns = assign(assigns, :dests, apply_badges(area_dests(assigns.area), assigns.badges))
+
     ~H"""
     <div class="gg-scrollbar-none flex items-end gap-0.5 overflow-x-auto border-b border-base-content/10 bg-base-200 px-2">
       <.link
-        :for={d <- area_dests(@area)}
+        :for={d <- @dests}
         navigate={d.path}
         class={[
           "group relative top-px flex h-8 min-w-[140px] max-w-[220px] items-center gap-2 rounded-t-lg pl-3 pr-2.5 text-[12px] transition",
@@ -631,6 +655,7 @@ defmodule GnomeGardenWeb.Components.RailNav do
         <span class="flex-1 truncate text-left">{d.label}</span>
         <span
           :if={d.badge > 0}
+          id={"nav-badge-#{d.id}"}
           class={[
             "rounded-full px-1.5 py-px text-[9px] font-semibold",
             d.hot && "bg-error text-error-content",
@@ -670,6 +695,8 @@ defmodule GnomeGardenWeb.Components.RailNav do
 
   attr :area, :string, required: true
 
+  attr :badges, :map, default: %{}
+
   def mobile_bar(assigns) do
     ~H"""
     <div class="fixed bottom-0 left-0 right-0 z-40 flex items-stretch border-t border-base-content/10 bg-base-200 px-1 pb-6 pt-1.5 lg:hidden">
@@ -708,11 +735,12 @@ defmodule GnomeGardenWeb.Components.RailNav do
     />
 
     <%!-- One sheet per area, hidden by default --%>
-    <.mobile_sheet :for={a <- bottom_areas()} area_id={a.id} />
+    <.mobile_sheet :for={a <- bottom_areas()} area_id={a.id} badges={@badges} />
     """
   end
 
   attr :area_id, :string, required: true
+  attr :badges, :map, default: %{}
 
   def mobile_sheet(assigns) do
     items =
@@ -725,6 +753,8 @@ defmodule GnomeGardenWeb.Components.RailNav do
         id ->
           area_dests(id)
       end
+
+    items = apply_badges(items, assigns.badges)
 
     title =
       case assigns.area_id do

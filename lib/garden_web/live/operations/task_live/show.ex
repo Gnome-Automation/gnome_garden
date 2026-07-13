@@ -1,6 +1,7 @@
 defmodule GnomeGardenWeb.Operations.TaskLive.Show do
   use GnomeGardenWeb, :live_view
 
+  import GnomeGardenWeb.Components.OperationsUI, only: [context_path: 1]
   import GnomeGardenWeb.Operations.Helpers
 
   alias GnomeGarden.Operations
@@ -87,7 +88,11 @@ defmodule GnomeGardenWeb.Operations.TaskLive.Show do
           >
             Start
           </.button>
-          <.button :if={@task.status == :in_progress} phx-click="complete" variant="primary">
+          <.button
+            :if={@task.status in [:pending, :in_progress]}
+            phx-click="complete"
+            variant="primary"
+          >
             Complete
           </.button>
           <.button :if={@task.status in [:completed, :cancelled]} phx-click="reopen">
@@ -128,13 +133,14 @@ defmodule GnomeGardenWeb.Operations.TaskLive.Show do
               <.property name="Label">{@task.origin_label || "-"}</.property>
               <.property name="Link">
                 <.link
-                  :if={@task.origin_url}
-                  navigate={@task.origin_url}
+                  :if={@task.origin_url || context_path(@task)}
+                  navigate={@task.origin_url || context_path(@task)}
                   class="text-emerald-600 hover:text-primary"
+                  id="task-context-link"
                 >
                   Open source record
                 </.link>
-                <span :if={!@task.origin_url}>-</span>
+                <span :if={!(@task.origin_url || context_path(@task))}>-</span>
               </.property>
             </.properties>
           </.section>

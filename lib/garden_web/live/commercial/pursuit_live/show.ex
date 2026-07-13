@@ -4,6 +4,7 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   import GnomeGardenWeb.Commercial.Helpers
 
   alias GnomeGarden.{Commercial, Operations}
+  alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
   @impl true
@@ -526,24 +527,19 @@ defmodule GnomeGardenWeb.Commercial.PursuitLive.Show do
   end
 
   defp new_pursuit_task_path(pursuit) do
-    query =
-      %{
-        title: "Follow up: #{pursuit.name}",
-        task_type: :proposal,
-        origin_domain: :commercial,
-        origin_resource: "pursuit",
-        origin_id: pursuit.id,
-        origin_label: pursuit.name,
-        origin_url: ~p"/commercial/pursuits/#{pursuit}",
-        pursuit_id: pursuit.id,
-        signal_id: pursuit.signal_id,
-        organization_id: pursuit.organization_id,
-        return_to: ~p"/commercial/pursuits/#{pursuit}"
-      }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-      |> URI.encode_query()
-
-    "/operations/tasks/new?#{query}"
+    TaskEntry.new_task_path(%{
+      title: "Follow up: #{pursuit.name}",
+      task_type: :proposal,
+      origin_domain: :commercial,
+      origin_resource: "pursuit",
+      origin_id: pursuit.id,
+      origin_label: pursuit.name,
+      origin_url: ~p"/commercial/pursuits/#{pursuit}",
+      pursuit_id: pursuit.id,
+      signal_id: pursuit.signal_id,
+      organization_id: pursuit.organization_id,
+      return_to: ~p"/commercial/pursuits/#{pursuit}"
+    })
   end
 
   defp can_create_proposal?(pursuit),

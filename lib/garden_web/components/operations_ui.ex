@@ -71,7 +71,7 @@ defmodule GnomeGardenWeb.Components.OperationsUI do
 
             <div class="shrink-0 text-left text-xs text-base-content/50 md:text-right">
               <p>Due {format_datetime(task.due_at)}</p>
-              <p>{task.origin_label || task.origin_resource || "Manual task"}</p>
+              <p>{context_line(task)}</p>
             </div>
           </div>
         </.link>
@@ -82,6 +82,32 @@ defmodule GnomeGardenWeb.Components.OperationsUI do
 
   defp variant(value) when value in [:default, :success, :warning, :error, :info], do: value
   defp variant(_value), do: :default
+
+  defp context_line(task) do
+    case Map.get(task, :context_label) do
+      label when is_binary(label) and label != "" -> label
+      _not_loaded_or_nil -> task.origin_label || task.origin_resource || "Manual task"
+    end
+  end
+
+  @doc """
+  Route to the most specific record a task is linked to, built from foreign
+  keys so no relationship loading is required. Bid and procurement-source
+  links have no routable page yet and fall through to broader contexts.
+  """
+  def context_path(%{work_item_id: id}) when is_binary(id), do: "/execution/work-items/#{id}"
+  def context_path(%{work_order_id: id}) when is_binary(id), do: "/execution/work-orders/#{id}"
+  def context_path(%{project_id: id}) when is_binary(id), do: "/execution/projects/#{id}"
+  def context_path(%{pursuit_id: id}) when is_binary(id), do: "/commercial/pursuits/#{id}"
+  def context_path(%{signal_id: id}) when is_binary(id), do: "/commercial/signals/#{id}"
+  def context_path(%{finding_id: id}) when is_binary(id), do: "/acquisition/findings/#{id}"
+  def context_path(%{agent_run_id: id}) when is_binary(id), do: "/console/agents/runs/#{id}"
+
+  def context_path(%{organization_id: id}) when is_binary(id),
+    do: "/operations/organizations/#{id}"
+
+  def context_path(%{person_id: id}) when is_binary(id), do: "/operations/people/#{id}"
+  def context_path(_task), do: nil
 
   defp origin_color(:acquisition), do: :emerald
   defp origin_color(:agents), do: :sky
