@@ -172,6 +172,14 @@ defmodule GnomeGarden.Procurement.SourceCredential do
       change set_attribute(:last_test_completed_at, &DateTime.utc_now/0)
     end
 
+    update :mark_test_unavailable do
+      accept [:last_failure_reason]
+
+      change set_attribute(:status, :active)
+      change set_attribute(:test_status, :unavailable)
+      change set_attribute(:last_test_completed_at, &DateTime.utc_now/0)
+    end
+
     update :disable do
       require_atomic? false
       accept []
@@ -262,6 +270,7 @@ defmodule GnomeGarden.Procurement.SourceCredential do
     publish :mark_verified, "updated"
     publish :mark_failed, "updated"
     publish :mark_manual_verification_required, "updated"
+    publish :mark_test_unavailable, "updated"
     publish :disable, "updated"
     publish :compromise, "updated"
   end
@@ -370,7 +379,16 @@ defmodule GnomeGarden.Procurement.SourceCredential do
       allow_nil? false
       default :untested
       public? true
-      constraints one_of: [:untested, :queued, :testing, :verified, :invalid, :manual_required]
+
+      constraints one_of: [
+                    :untested,
+                    :queued,
+                    :testing,
+                    :verified,
+                    :invalid,
+                    :manual_required,
+                    :unavailable
+                  ]
     end
 
     attribute :last_verified_at, :utc_datetime do

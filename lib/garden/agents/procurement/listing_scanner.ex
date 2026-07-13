@@ -25,6 +25,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   """
 
   alias GnomeGarden.Procurement
+  alias GnomeGarden.Procurement.BidNetProvider
   alias GnomeGarden.Procurement.RetrievalPolicy
   alias GnomeGarden.Procurement.TargetingFilter
   alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
@@ -434,7 +435,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     Logger.info("Scanning #{source.name} via BidNet HTML scanner")
     profile_context = profile_context_for_source(source)
 
-    with_bidnet_session(source, context, fn context ->
+    BidNetProvider.with_session(source, context, fn context ->
       with {:ok, %{bids: bids}} <-
              ScanBidNet.run(
                %{
@@ -452,30 +453,6 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
       end
     end)
-  end
-
-  defp with_bidnet_session(source, context, function) do
-    case valid_bidnet_session(source) do
-      nil ->
-        function.(context)
-
-      session ->
-        GnomeGarden.Procurement.BrowserSessionCustody.with_materialized(session, fn path ->
-          context =
-            context
-            |> Map.put(:bidnet_session_id, session.id)
-            |> Map.put(:bidnet_storage_state_path, path)
-
-          function.(context)
-        end)
-    end
-  end
-
-  defp valid_bidnet_session(source) do
-    case Procurement.list_valid_source_browser_sessions_for_source(source.id, authorize?: false) do
-      {:ok, [session | _]} -> session
-      _ -> nil
-    end
   end
 
   defp planetbids_portal_id(%{portal_id: portal_id})

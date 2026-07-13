@@ -43,6 +43,13 @@ values use typed `Browser.type/3` calls and are never interpolated into JavaScri
 errors, run metadata, and `Inspect` output must contain only redacted values and non-sensitive audit
 metadata.
 
+BidNet credential testing is a real provider login, not a generic form heuristic. A successful test
+creates a valid encrypted browser session before marking the credential verified. Invalid credentials
+fail without retry; transient browser failures retry at most twice. Listing extraction asks the BidNet
+provider boundary for access: valid sessions are reused, expired sessions are cleared and refreshed,
+and missing, pending, or invalid credentials are returned as distinct blocked states. Public BidNet
+sources may still use the cookie-free HTML path when login is not required.
+
 ## Releases
 
 Build the runtime package with:

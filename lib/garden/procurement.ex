@@ -156,6 +156,8 @@ defmodule GnomeGarden.Procurement do
       define :mark_source_credential_manual_verification_required,
         action: :mark_manual_verification_required
 
+      define :mark_source_credential_test_unavailable, action: :mark_test_unavailable
+
       define :disable_source_credential, action: :disable
       define :compromise_source_credential, action: :compromise
     end
@@ -171,6 +173,11 @@ defmodule GnomeGarden.Procurement do
       define :list_valid_source_browser_sessions_for_source,
         action: :valid_for_source,
         args: [:procurement_source_id]
+
+      define :get_latest_source_browser_session_for_source,
+        action: :latest_for_source,
+        args: [:procurement_source_id],
+        get?: true
 
       define :list_source_browser_sessions_for_credential,
         action: :for_credential,

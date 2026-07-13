@@ -34,6 +34,20 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
     end
   end
 
+  defmodule RetryRunner do
+    def run(action, payload, opts) do
+      attempt = Process.get(:bidnet_retry_attempt, 0) + 1
+      Process.put(:bidnet_retry_attempt, attempt)
+      send(Process.get(:test_pid), {:runner_attempt, attempt, action, payload, opts})
+
+      if attempt == 1 do
+        {:error, %{"code" => "timeout", "error" => "BidNet timed out."}}
+      else
+        SuccessfulRunner.run(action, payload, opts)
+      end
+    end
+  end
+
   setup do
     Process.put(:test_pid, self())
     :ok
@@ -126,7 +140,7 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
     assert session.source_credential_id == credential.id
   end
 
-  test "records a failed BidNet session refresh without invalidating credentials" do
+  test "invalid credentials fail once and invalidate the credential" do
     source = bidnet_source()
     credential = bidnet_credential(source)
 
@@ -144,6 +158,7 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
 
     assert_receive {:runner, :bidnet_login, payload, _runner_opts}
     refute Map.has_key?(payload, :password)
+    refute_receive {:runner, :bidnet_login, _payload, _runner_opts}
 
     assert failed.status == :invalid
     assert failed.last_failure_reason == "BidNet rejected [REDACTED] for [REDACTED]."
@@ -153,7 +168,30 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
     assert {:ok, unchanged_credential} =
              Procurement.get_source_credential(credential.id, authorize?: false)
 
-    assert unchanged_credential.status == :active
+    assert unchanged_credential.status == :invalid
+    assert unchanged_credential.test_status == :invalid
+
+    assert unchanged_credential.last_failure_reason ==
+             "BidNet rejected [REDACTED] for [REDACTED]."
+  end
+
+  test "transient failures retry within the configured bound" do
+    source = bidnet_source()
+    credential = bidnet_credential(source)
+
+    assert {:ok, _credential} =
+             Procurement.mark_source_credential_verified(credential, %{}, authorize?: false)
+
+    assert {:ok, session} =
+             Procurement.refresh_bidnet_source_session(source,
+               runner: RetryRunner,
+               max_attempts: 2
+             )
+
+    assert_receive {:runner_attempt, 1, :bidnet_login, _payload, _opts}
+    assert_receive {:runner_attempt, 2, :bidnet_login, _payload, _opts}
+    assert session.status == :valid
+    assert session.metadata["attempt_count"] == 2
   end
 
   test "rejects non-BidNet sources" do

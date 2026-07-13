@@ -144,6 +144,13 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
       prepare build(sort: [verified_at: :desc])
     end
 
+    read :latest_for_source do
+      argument :procurement_source_id, :uuid, allow_nil?: false
+
+      filter expr(procurement_source_id == ^arg(:procurement_source_id))
+      prepare build(sort: [updated_at: :desc], limit: 1)
+    end
+
     read :for_credential do
       argument :source_credential_id, :uuid, allow_nil?: false
       filter expr(source_credential_id == ^arg(:source_credential_id))

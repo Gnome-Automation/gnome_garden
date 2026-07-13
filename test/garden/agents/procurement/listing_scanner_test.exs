@@ -382,6 +382,75 @@ defmodule GnomeGarden.Agents.Procurement.ListingScannerTest do
     assert {:ok, []} = Procurement.list_bids_by_external_id("bc2133dc96114c4490a721bdbac20adc")
   end
 
+  test "BidNet listing extraction reuses the provider-managed authenticated session" do
+    {:ok, source} =
+      Procurement.create_procurement_source(%{
+        name: "Private BidNet Session Source",
+        url: @bidnet_url,
+        source_type: :bidnet,
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: true
+      })
+
+    {:ok, source} =
+      Procurement.configure_procurement_source(source, %{
+        scrape_config: %{listing_url: @bidnet_url}
+      })
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        scope: :source,
+        procurement_source_id: source.id,
+        username: "operator@example.com",
+        password: "source-secret"
+      })
+
+    {:ok, credential} =
+      Procurement.mark_source_credential_verified(credential, %{}, authorize?: false)
+
+    {:ok, session} =
+      Procurement.create_source_browser_session(%{
+        procurement_source_id: source.id,
+        source_credential_id: credential.id,
+        provider: :bidnet,
+        session_family: "bidnet"
+      })
+
+    {:ok, session} =
+      Procurement.mark_source_browser_session_valid(session, %{
+        storage_state:
+          Jason.encode!(%{
+            "cookies" => [
+              %{
+                "name" => "BIDNETSESSION",
+                "value" => "authenticated-cookie",
+                "domain" => ".bidnetdirect.com",
+                "path" => "/"
+              }
+            ]
+          }),
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      })
+
+    http_get = fn @bidnet_url, opts ->
+      assert {"cookie", "BIDNETSESSION=authenticated-cookie"} in opts[:headers]
+      {:ok, %{status: 200, body: "<table></table>"}}
+    end
+
+    assert {:ok, result} = ListingScanner.scan(source.id, %{http_get: http_get})
+    assert result.extracted == 0
+    assert result.saved == 0
+
+    assert {:ok, unchanged_session} =
+             Procurement.get_source_browser_session(session.id, authorize?: false)
+
+    assert unchanged_session.status == :valid
+  end
+
   defp listing_html do
     """
     <table>

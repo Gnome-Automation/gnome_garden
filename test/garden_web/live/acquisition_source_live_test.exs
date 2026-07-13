@@ -439,9 +439,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
       })
 
     {:ok, _credential} =
-      Procurement.mark_source_credential_manual_verification_required(credential, %{
-        last_failure_reason: "Use BidNet browser session refresh."
-      })
+      Procurement.mark_source_credential_verified(credential, %{}, authorize?: false)
 
     {:ok, view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}")
 

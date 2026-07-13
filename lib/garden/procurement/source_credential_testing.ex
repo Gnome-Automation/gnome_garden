@@ -14,7 +14,6 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
   alias GnomeGarden.Procurement.SourceCredentialCrypto
 
   @browser_wait_ms 3_500
-  @bidnet_session_refresh_reason "Use BidNet browser session refresh to verify browser access."
   @username_selector "input[type='email'], input[name*='email' i], input[id*='email' i], input[name*='user' i], input[id*='user' i], input[type='text']"
   @password_selector "input[type='password'], input[name*='password' i], input[id*='password' i]"
   @submit_selector "button[type='submit'], input[type='submit'], input[type='button'], button"
@@ -53,9 +52,30 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
   end
 
   def test_credential(%SourceCredential{provider: :bidnet} = credential, opts) do
-    with {:ok, _source} <- source_for_test(credential, opts),
-         {:ok, _credentials} <- username_password_from_credential(credential) do
-      {:error, {:manual_verification_required, @bidnet_session_refresh_reason}}
+    refresh_opts =
+      [
+        credential: credential,
+        runner: Keyword.get(opts, :runner),
+        max_attempts: Keyword.get(opts, :max_attempts, 2),
+        timeout_ms: Keyword.get(opts, :timeout_ms, 60_000)
+      ]
+      |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+
+    with {:ok, source} <- source_for_test(credential, opts) do
+      case Procurement.refresh_bidnet_source_session(source, refresh_opts) do
+        {:ok, session} ->
+          {:ok, %{provider: :bidnet, verified?: true, browser_session_id: session.id}}
+
+        {:error, %{session: session, reason: reason}} ->
+          if session.metadata["failure_code"] == "invalid_credentials" do
+            {:error, reason}
+          else
+            {:error, {:verification_unavailable, reason}}
+          end
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 
@@ -79,8 +99,15 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
     "Manual verification required: #{format_reason(reason)}"
   end
 
+  def format_reason({:verification_unavailable, reason}) do
+    "Credential verification unavailable: #{format_reason(reason)}"
+  end
+
   def format_reason(reason) when is_binary(reason), do: reason
   def format_reason(reason), do: inspect(reason)
+
+  def verification_unavailable?({:verification_unavailable, _reason}), do: true
+  def verification_unavailable?(_reason), do: false
 
   defp api_key_from_credential(%{encrypted_api_key: payload}) when is_map(payload) do
     {:ok, SourceCredentialCrypto.decrypt_secret!(payload)}
