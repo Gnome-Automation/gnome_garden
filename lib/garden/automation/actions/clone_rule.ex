@@ -22,7 +22,8 @@ defmodule GnomeGarden.Automation.Actions.CloneRule do
           trigger_resource: rule.trigger_resource,
           trigger_action: rule.trigger_action,
           criteria: rule.criteria,
-          actions: rule.actions
+          actions: rule.actions,
+          cloned_from_rule_id: rule.id
         },
         opts
       )

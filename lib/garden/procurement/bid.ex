@@ -281,6 +281,19 @@ defmodule GnomeGarden.Procurement.Bid do
       prepare build(sort: [due_at: :asc, score_total: :desc, updated_at: :desc])
     end
 
+    read :due_within do
+      argument :days, :integer, allow_nil?: false
+
+      filter expr(
+               status in [:new, :reviewing, :pursuing] and
+                 not is_nil(due_at) and
+                 due_at > now() and
+                 due_at < datetime_add(now(), ^arg(:days), :day)
+             )
+
+      prepare build(sort: [due_at: :asc])
+    end
+
     read :by_url do
       argument :url, :string, allow_nil?: false
       get_by [:url]

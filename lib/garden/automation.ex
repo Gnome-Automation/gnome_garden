@@ -29,6 +29,8 @@ defmodule GnomeGarden.Automation do
       define :disable_automation_rule, action: :disable
       define :enable_automation_rule, action: :enable
       define :clone_automation_rule, action: :clone
+      define :dry_run_automation_rule, action: :dry_run, args: [:rule_id]
+      define :ensure_starter_automation_rules, action: :ensure_starters
       define :delete_draft_automation_rule, action: :destroy_draft
     end
 
@@ -38,6 +40,7 @@ defmodule GnomeGarden.Automation do
       define :get_automation_event, action: :read, get_by: [:id]
       define :record_automation_event, action: :record
       define :process_automation_event, action: :process
+      define :sweep_automation_time_triggers, action: :sweep_time_triggers
     end
 
     resource GnomeGarden.Automation.Run do

@@ -38,6 +38,14 @@ defmodule GnomeGarden.Automation.Event do
         worker_read_action :read
       end
     end
+
+    scheduled_actions do
+      schedule :sweep_time_triggers, "*/15 * * * *" do
+        action :sweep_time_triggers
+        worker_module_name __MODULE__.AshOban.ActionWorker.SweepTimeTriggers
+        queue :default
+      end
+    end
   end
 
   actions do
@@ -45,8 +53,12 @@ defmodule GnomeGarden.Automation.Event do
 
     create :record do
       primary? true
-      accept [:resource, :action, :record_id, :data, :depth, :occurred_at]
+      accept [:resource, :action, :record_id, :data, :depth, :occurred_at, :dedupe_key]
       change set_new_attribute(:occurred_at, &DateTime.utc_now/0)
+    end
+
+    action :sweep_time_triggers, :map do
+      run GnomeGarden.Automation.Actions.SweepTimeTriggers
     end
 
     update :process do
@@ -104,6 +116,13 @@ defmodule GnomeGarden.Automation.Event do
       public? true
     end
 
+    # Set by time sweeps so a recurring scan can only ever emit one event per
+    # subject (e.g. "bid_due_soon:<bid_id>"); record-triggered events leave it
+    # nil, which the unique index ignores.
+    attribute :dedupe_key, :string do
+      public? true
+    end
+
     timestamps()
   end
 
@@ -112,5 +131,9 @@ defmodule GnomeGarden.Automation.Event do
       destination_attribute :event_id
       public? true
     end
+  end
+
+  identities do
+    identity :unique_dedupe_key, [:dedupe_key], nils_distinct?: true
   end
 end

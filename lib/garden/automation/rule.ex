@@ -29,13 +29,24 @@ defmodule GnomeGarden.Automation.Rule do
 
     create :create do
       primary? true
-      accept [:name, :description, :trigger_resource, :trigger_action, :criteria, :actions]
+
+      accept [
+        :name,
+        :description,
+        :trigger_resource,
+        :trigger_action,
+        :criteria,
+        :actions,
+        :cloned_from_rule_id
+      ]
     end
 
     update :update do
       require_atomic? false
       accept [:name, :description, :trigger_resource, :trigger_action, :criteria, :actions]
-      validate attribute_equals(:status, :draft), message: "published rules are immutable; clone to edit"
+
+      validate attribute_equals(:status, :draft),
+        message: "published rules are immutable; clone to edit"
     end
 
     update :publish do
@@ -49,20 +60,28 @@ defmodule GnomeGarden.Automation.Rule do
     update :disable do
       require_atomic? false
       accept []
-      validate attribute_equals(:status, :published), message: "only published rules can be disabled"
+
+      validate attribute_equals(:status, :published),
+        message: "only published rules can be disabled"
+
       change set_attribute(:status, :disabled)
     end
 
     update :enable do
       require_atomic? false
       accept []
-      validate attribute_equals(:status, :disabled), message: "only disabled rules can be re-enabled"
+
+      validate attribute_equals(:status, :disabled),
+        message: "only disabled rules can be re-enabled"
+
       change set_attribute(:status, :published)
     end
 
     destroy :destroy_draft do
       require_atomic? false
-      validate attribute_equals(:status, :draft), message: "published rules archive their history; disable instead"
+
+      validate attribute_equals(:status, :draft),
+        message: "published rules archive their history; disable instead"
     end
 
     action :clone, :struct do
@@ -70,6 +89,15 @@ defmodule GnomeGarden.Automation.Rule do
       argument :rule_id, :uuid, allow_nil?: false
       argument :new_name, :string
       run GnomeGarden.Automation.Actions.CloneRule
+    end
+
+    action :dry_run, :map do
+      argument :rule_id, :uuid, allow_nil?: false
+      run GnomeGarden.Automation.Actions.DryRunRule
+    end
+
+    action :ensure_starters, :map do
+      run GnomeGarden.Automation.Actions.EnsureStarterRules
     end
 
     read :published do
@@ -96,10 +124,6 @@ defmodule GnomeGarden.Automation.Rule do
     end
   end
 
-  validations do
-    validate {GnomeGarden.Automation.Validations.ValidDefinition, []}
-  end
-
   pub_sub do
     module GnomeGardenWeb.Endpoint
     prefix "automation_rule"
@@ -108,6 +132,10 @@ defmodule GnomeGarden.Automation.Rule do
     publish_all :update, "updated"
     publish_all :update, ["updated", :_pkey]
     publish_all :destroy, "destroyed"
+  end
+
+  validations do
+    validate {GnomeGarden.Automation.Validations.ValidDefinition, []}
   end
 
   attributes do
@@ -161,6 +189,12 @@ defmodule GnomeGarden.Automation.Rule do
   relationships do
     has_many :runs, GnomeGarden.Automation.Run do
       destination_attribute :rule_id
+      public? true
+    end
+
+    # Clone lineage is the rule's change history: published definitions are
+    # immutable, so edits arrive as new drafts pointing at their ancestor.
+    belongs_to :cloned_from_rule, __MODULE__ do
       public? true
     end
   end
