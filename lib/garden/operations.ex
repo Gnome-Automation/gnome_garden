@@ -175,6 +175,17 @@ defmodule GnomeGarden.Operations do
       define :list_tasks_by_signal, action: :by_signal, args: [:signal_id]
       define :list_tasks_by_agent_run, action: :by_agent_run, args: [:agent_run_id]
 
+      define :list_tasks_by_project, action: :by_project, args: [:project_id]
+      define :list_tasks_by_work_item, action: :by_work_item, args: [:work_item_id]
+      define :list_tasks_by_work_order, action: :by_work_order, args: [:work_order_id]
+      define :list_tasks_by_bid, action: :by_bid, args: [:bid_id]
+
+      define :list_tasks_by_procurement_source,
+        action: :by_procurement_source,
+        args: [:procurement_source_id]
+
+      define :list_unassigned_tasks, action: :unassigned
+
       define :list_tasks_by_origin,
         action: :by_origin,
         args: [:origin_domain, :origin_resource, :origin_id]

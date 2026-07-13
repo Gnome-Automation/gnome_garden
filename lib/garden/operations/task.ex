@@ -28,12 +28,18 @@ defmodule GnomeGarden.Operations.Task do
     :origin_url,
     :metadata,
     :owner_team_member_id,
+    :created_by_team_member_id,
     :organization_id,
     :person_id,
     :finding_id,
     :signal_id,
     :pursuit_id,
-    :agent_run_id
+    :agent_run_id,
+    :project_id,
+    :work_item_id,
+    :work_order_id,
+    :bid_id,
+    :procurement_source_id
   ]
 
   admin do
@@ -61,12 +67,19 @@ defmodule GnomeGarden.Operations.Task do
 
     references do
       reference :owner_team_member, on_delete: :nilify
+      reference :created_by_team_member, on_delete: :nilify
+      reference :assigned_by_team_member, on_delete: :nilify
       reference :organization, on_delete: :nilify
       reference :person, on_delete: :nilify
       reference :finding, on_delete: :nilify
       reference :signal, on_delete: :nilify
       reference :pursuit, on_delete: :nilify
       reference :agent_run, on_delete: :nilify
+      reference :project, on_delete: :nilify
+      reference :work_item, on_delete: :nilify
+      reference :work_order, on_delete: :nilify
+      reference :bid, on_delete: :nilify
+      reference :procurement_source, on_delete: :nilify
     end
   end
 
@@ -78,7 +91,7 @@ defmodule GnomeGarden.Operations.Task do
     transitions do
       transition :start, from: [:pending, :blocked], to: :in_progress
       transition :block, from: [:pending, :in_progress], to: :blocked
-      transition :complete, from: [:in_progress], to: :completed
+      transition :complete, from: [:pending, :in_progress], to: :completed
       transition :cancel, from: [:pending, :in_progress, :blocked], to: :cancelled
       transition :reopen, from: [:blocked, :completed, :cancelled], to: :pending
     end
@@ -90,67 +103,82 @@ defmodule GnomeGarden.Operations.Task do
     create :create do
       primary? true
       accept @create_and_update_attributes
+      validate GnomeGarden.Operations.Validations.AssigneeIsActive
     end
 
     create :create_manual do
       accept @create_and_update_attributes
       change set_attribute(:origin_domain, :manual)
+      validate GnomeGarden.Operations.Validations.AssigneeIsActive
     end
 
     create :create_from_finding do
       accept @create_and_update_attributes
       change set_attribute(:origin_domain, :acquisition)
       change set_attribute(:origin_resource, "finding")
+      validate GnomeGarden.Operations.Validations.AssigneeIsActive
     end
 
     create :create_from_agent_run do
       accept @create_and_update_attributes
       change set_attribute(:origin_domain, :agents)
       change set_attribute(:origin_resource, "agent_run")
+      validate GnomeGarden.Operations.Validations.AssigneeIsActive
     end
 
     create :create_from_pursuit do
       accept @create_and_update_attributes
       change set_attribute(:origin_domain, :commercial)
       change set_attribute(:origin_resource, "pursuit")
+      validate GnomeGarden.Operations.Validations.AssigneeIsActive
     end
 
     update :update do
+      require_atomic? false
       accept @create_and_update_attributes
+      validate GnomeGarden.Operations.Validations.AssigneeIsActive
     end
 
     update :assign do
-      accept [:owner_team_member_id]
+      require_atomic? false
+      accept [:owner_team_member_id, :assigned_by_team_member_id]
+      validate GnomeGarden.Operations.Validations.AssigneeIsActive
     end
 
     update :reschedule do
+      require_atomic? false
       accept [:due_at]
     end
 
     update :start do
+      require_atomic? false
       accept []
       change transition_state(:in_progress)
       change set_attribute(:started_at, &DateTime.utc_now/0)
     end
 
     update :block do
+      require_atomic? false
       accept [:blocked_reason]
       change transition_state(:blocked)
       change set_attribute(:blocked_at, &DateTime.utc_now/0)
     end
 
     update :complete do
+      require_atomic? false
       accept []
       change transition_state(:completed)
       change set_attribute(:completed_at, &DateTime.utc_now/0)
     end
 
     update :cancel do
+      require_atomic? false
       accept []
       change transition_state(:cancelled)
     end
 
     update :reopen do
+      require_atomic? false
       accept []
       change transition_state(:pending)
       change set_attribute(:started_at, nil)
@@ -221,6 +249,45 @@ defmodule GnomeGarden.Operations.Task do
       prepare build(sort: [due_at: :asc, inserted_at: :desc])
     end
 
+    read :by_project do
+      argument :project_id, :uuid, allow_nil?: false
+      filter expr(project_id == ^arg(:project_id))
+      prepare build(sort: [due_at: :asc, inserted_at: :desc])
+    end
+
+    read :by_work_item do
+      argument :work_item_id, :uuid, allow_nil?: false
+      filter expr(work_item_id == ^arg(:work_item_id))
+      prepare build(sort: [due_at: :asc, inserted_at: :desc])
+    end
+
+    read :by_work_order do
+      argument :work_order_id, :uuid, allow_nil?: false
+      filter expr(work_order_id == ^arg(:work_order_id))
+      prepare build(sort: [due_at: :asc, inserted_at: :desc])
+    end
+
+    read :by_bid do
+      argument :bid_id, :uuid, allow_nil?: false
+      filter expr(bid_id == ^arg(:bid_id))
+      prepare build(sort: [due_at: :asc, inserted_at: :desc])
+    end
+
+    read :by_procurement_source do
+      argument :procurement_source_id, :uuid, allow_nil?: false
+      filter expr(procurement_source_id == ^arg(:procurement_source_id))
+      prepare build(sort: [due_at: :asc, inserted_at: :desc])
+    end
+
+    read :unassigned do
+      filter expr(
+               is_nil(owner_team_member_id) and
+                 status in [:pending, :in_progress, :blocked]
+             )
+
+      prepare build(sort: [due_at: :asc, priority: :desc, inserted_at: :desc])
+    end
+
     read :by_origin do
       argument :origin_domain, :atom, allow_nil?: false
       argument :origin_resource, :string, allow_nil?: false
@@ -265,116 +332,59 @@ defmodule GnomeGarden.Operations.Task do
     module GnomeGardenWeb.Endpoint
     prefix "task"
 
-    publish :create, "created"
-    publish :create_manual, "created"
-    publish :create_from_finding, "created"
-    publish :create_from_agent_run, "created"
-    publish :create_from_pursuit, "created"
+    publish_all :create, "created"
+    publish_all :update, "updated"
+    publish_all :update, ["updated", :_pkey]
+    publish_all :destroy, "destroyed"
+    publish_all :destroy, ["destroyed", :_pkey]
 
-    publish :create, ["organization", :organization_id]
-    publish :create_manual, ["organization", :organization_id]
-    publish :create_from_finding, ["organization", :organization_id]
-    publish :create_from_agent_run, ["organization", :organization_id]
-    publish :create_from_pursuit, ["organization", :organization_id]
+    publish_all :create, ["owner", :owner_team_member_id]
+    publish_all :update, ["owner", :owner_team_member_id], previous_values?: true
+    publish_all :destroy, ["owner", :owner_team_member_id]
 
-    publish :create, ["person", :person_id]
-    publish :create_manual, ["person", :person_id]
-    publish :create_from_finding, ["person", :person_id]
-    publish :create_from_agent_run, ["person", :person_id]
-    publish :create_from_pursuit, ["person", :person_id]
+    publish_all :create, ["organization", :organization_id]
+    publish_all :update, ["organization", :organization_id]
+    publish_all :destroy, ["organization", :organization_id]
 
-    publish :create, ["finding", :finding_id]
-    publish :create_from_finding, ["finding", :finding_id]
+    publish_all :create, ["person", :person_id]
+    publish_all :update, ["person", :person_id]
+    publish_all :destroy, ["person", :person_id]
 
-    publish :create, ["signal", :signal_id]
-    publish :create_from_pursuit, ["signal", :signal_id]
+    publish_all :create, ["finding", :finding_id]
+    publish_all :update, ["finding", :finding_id]
+    publish_all :destroy, ["finding", :finding_id]
 
-    publish :create, ["pursuit", :pursuit_id]
-    publish :create_from_pursuit, ["pursuit", :pursuit_id]
+    publish_all :create, ["signal", :signal_id]
+    publish_all :update, ["signal", :signal_id]
+    publish_all :destroy, ["signal", :signal_id]
 
-    publish :create, ["agent_run", :agent_run_id]
-    publish :create_from_agent_run, ["agent_run", :agent_run_id]
+    publish_all :create, ["pursuit", :pursuit_id]
+    publish_all :update, ["pursuit", :pursuit_id]
+    publish_all :destroy, ["pursuit", :pursuit_id]
 
-    publish :update, "updated"
-    publish :update, ["updated", :_pkey]
-    publish :update, ["organization", :organization_id]
-    publish :update, ["person", :person_id]
-    publish :update, ["finding", :finding_id]
-    publish :update, ["signal", :signal_id]
-    publish :update, ["pursuit", :pursuit_id]
-    publish :update, ["agent_run", :agent_run_id]
+    publish_all :create, ["agent_run", :agent_run_id]
+    publish_all :update, ["agent_run", :agent_run_id]
+    publish_all :destroy, ["agent_run", :agent_run_id]
 
-    publish :assign, "updated"
-    publish :assign, ["updated", :_pkey]
-    publish :assign, ["organization", :organization_id]
-    publish :assign, ["person", :person_id]
-    publish :assign, ["finding", :finding_id]
-    publish :assign, ["signal", :signal_id]
-    publish :assign, ["pursuit", :pursuit_id]
-    publish :assign, ["agent_run", :agent_run_id]
+    publish_all :create, ["project", :project_id]
+    publish_all :update, ["project", :project_id]
+    publish_all :destroy, ["project", :project_id]
 
-    publish :reschedule, "updated"
-    publish :reschedule, ["updated", :_pkey]
-    publish :reschedule, ["organization", :organization_id]
-    publish :reschedule, ["person", :person_id]
-    publish :reschedule, ["finding", :finding_id]
-    publish :reschedule, ["signal", :signal_id]
-    publish :reschedule, ["pursuit", :pursuit_id]
-    publish :reschedule, ["agent_run", :agent_run_id]
+    publish_all :create, ["work_item", :work_item_id]
+    publish_all :update, ["work_item", :work_item_id]
+    publish_all :destroy, ["work_item", :work_item_id]
 
-    publish :start, "updated"
-    publish :start, ["updated", :_pkey]
-    publish :start, ["organization", :organization_id]
-    publish :start, ["person", :person_id]
-    publish :start, ["finding", :finding_id]
-    publish :start, ["signal", :signal_id]
-    publish :start, ["pursuit", :pursuit_id]
-    publish :start, ["agent_run", :agent_run_id]
+    publish_all :create, ["work_order", :work_order_id]
+    publish_all :update, ["work_order", :work_order_id]
+    publish_all :destroy, ["work_order", :work_order_id]
 
-    publish :block, "updated"
-    publish :block, ["updated", :_pkey]
-    publish :block, ["organization", :organization_id]
-    publish :block, ["person", :person_id]
-    publish :block, ["finding", :finding_id]
-    publish :block, ["signal", :signal_id]
-    publish :block, ["pursuit", :pursuit_id]
-    publish :block, ["agent_run", :agent_run_id]
+    publish_all :create, ["bid", :bid_id]
+    publish_all :update, ["bid", :bid_id]
+    publish_all :destroy, ["bid", :bid_id]
 
-    publish :complete, "updated"
-    publish :complete, ["updated", :_pkey]
-    publish :complete, ["organization", :organization_id]
-    publish :complete, ["person", :person_id]
-    publish :complete, ["finding", :finding_id]
-    publish :complete, ["signal", :signal_id]
-    publish :complete, ["pursuit", :pursuit_id]
-    publish :complete, ["agent_run", :agent_run_id]
-
-    publish :cancel, "updated"
-    publish :cancel, ["updated", :_pkey]
-    publish :cancel, ["organization", :organization_id]
-    publish :cancel, ["person", :person_id]
-    publish :cancel, ["finding", :finding_id]
-    publish :cancel, ["signal", :signal_id]
-    publish :cancel, ["pursuit", :pursuit_id]
-    publish :cancel, ["agent_run", :agent_run_id]
-
-    publish :reopen, "updated"
-    publish :reopen, ["updated", :_pkey]
-    publish :reopen, ["organization", :organization_id]
-    publish :reopen, ["person", :person_id]
-    publish :reopen, ["finding", :finding_id]
-    publish :reopen, ["signal", :signal_id]
-    publish :reopen, ["pursuit", :pursuit_id]
-    publish :reopen, ["agent_run", :agent_run_id]
-
-    publish :destroy, "destroyed"
-    publish :destroy, ["destroyed", :_pkey]
-    publish :destroy, ["organization", :organization_id]
-    publish :destroy, ["person", :person_id]
-    publish :destroy, ["finding", :finding_id]
-    publish :destroy, ["signal", :signal_id]
-    publish :destroy, ["pursuit", :pursuit_id]
-    publish :destroy, ["agent_run", :agent_run_id]
+    publish_all :create, ["procurement_source", :procurement_source_id]
+    publish_all :update, ["procurement_source", :procurement_source_id]
+    publish_all :destroy, ["procurement_source", :procurement_source_id]
   end
 
   attributes do
@@ -509,6 +519,34 @@ defmodule GnomeGarden.Operations.Task do
     end
 
     belongs_to :agent_run, GnomeGarden.Agents.AgentRun do
+      public? true
+    end
+
+    belongs_to :created_by_team_member, GnomeGarden.Operations.TeamMember do
+      public? true
+    end
+
+    belongs_to :assigned_by_team_member, GnomeGarden.Operations.TeamMember do
+      public? true
+    end
+
+    belongs_to :project, GnomeGarden.Execution.Project do
+      public? true
+    end
+
+    belongs_to :work_item, GnomeGarden.Execution.WorkItem do
+      public? true
+    end
+
+    belongs_to :work_order, GnomeGarden.Execution.WorkOrder do
+      public? true
+    end
+
+    belongs_to :bid, GnomeGarden.Procurement.Bid do
+      public? true
+    end
+
+    belongs_to :procurement_source, GnomeGarden.Procurement.ProcurementSource do
       public? true
     end
   end

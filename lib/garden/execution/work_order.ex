@@ -329,6 +329,11 @@ defmodule GnomeGarden.Execution.WorkOrder do
     has_many :material_usages, GnomeGarden.Execution.MaterialUsage do
       public? true
     end
+
+    has_many :tasks, GnomeGarden.Operations.Task do
+      destination_attribute :work_order_id
+      public? true
+    end
   end
 
   calculations do
