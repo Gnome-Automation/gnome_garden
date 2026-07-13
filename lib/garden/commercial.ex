@@ -113,6 +113,7 @@ defmodule GnomeGarden.Commercial do
 
     resource GnomeGarden.Commercial.DiscoveryRun do
       define :list_discovery_runs, action: :read
+      define :list_discovery_runs_for_slo, action: :slo_window, args: [:updated_since]
       define :get_discovery_run, action: :read, get_by: [:id]
       define :get_discovery_run_by_key, action: :by_idempotency_key, args: [:idempotency_key]
 

@@ -266,6 +266,22 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     refute render(attention_view) =~ "Credential gated portal"
   end
 
+  test "credentials queue includes BidNet sources even without a login flag", %{conn: conn} do
+    {:ok, _source} =
+      Procurement.create_procurement_source(%{
+        name: "BidNet implicit credentials #{System.unique_integer([:positive])}",
+        url: "https://example.com/bidnet/implicit-credentials",
+        source_type: :bidnet,
+        region: :ca,
+        priority: :high,
+        status: :approved,
+        requires_login: false
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/acquisition/sources?bucket=credentials_needed")
+    assert render(view) =~ "BidNet implicit credentials"
+  end
+
   test "source registry saves source family credentials from the queue", %{conn: conn} do
     original_username = System.get_env("PLANETBIDS_USERNAME")
     original_password = System.get_env("PLANETBIDS_PASSWORD")

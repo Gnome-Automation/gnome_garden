@@ -18,6 +18,8 @@ defmodule GnomeGarden.Search.Exa do
 
   require Logger
 
+  alias GnomeGarden.Acquisition.Telemetry
+
   @search_endpoint "https://api.exa.ai/search"
   @contents_endpoint "https://api.exa.ai/contents"
   @default_num_results 10
@@ -33,7 +35,11 @@ defmodule GnomeGarden.Search.Exa do
           image: String.t() | nil
         }
 
-  @type search_response :: %{cost: float() | nil, resolved_type: String.t() | nil, results: [result()]}
+  @type search_response :: %{
+          cost: float() | nil,
+          resolved_type: String.t() | nil,
+          results: [result()]
+        }
 
   @type content :: %{
           url: String.t(),
@@ -58,25 +64,31 @@ defmodule GnomeGarden.Search.Exa do
   """
   @spec search(String.t(), keyword()) :: {:ok, search_response()} | {:error, term()}
   def search(query, opts \\ []) when is_binary(query) do
-    with {:ok, api_key} <- api_key() do
-      body = build_body(query, opts)
+    started_at = System.monotonic_time()
 
-      request_options =
-        [json: body, headers: [{"x-api-key", api_key}], receive_timeout: @receive_timeout]
-        |> Keyword.merge(req_options())
+    result =
+      with {:ok, api_key} <- api_key() do
+        body = build_body(query, opts)
 
-      case Req.post(@search_endpoint, request_options) do
-        {:ok, %Req.Response{status: 200, body: payload}} ->
-          {:ok, normalize(payload)}
+        request_options =
+          [json: body, headers: [{"x-api-key", api_key}], receive_timeout: @receive_timeout]
+          |> Keyword.merge(req_options())
 
-        {:ok, %Req.Response{status: status, body: payload}} ->
-          Logger.warning("Exa search failed (#{status}): #{inspect(payload)}")
-          {:error, {:http_error, status, payload}}
+        case Req.post(@search_endpoint, request_options) do
+          {:ok, %Req.Response{status: 200, body: payload}} ->
+            {:ok, normalize(payload)}
 
-        {:error, reason} ->
-          {:error, reason}
+          {:ok, %Req.Response{status: status, body: payload}} ->
+            Logger.warning("Exa search failed (#{status}): #{inspect(payload)}")
+            {:error, {:http_error, status, payload}}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
       end
-    end
+
+    emit_provider(:search, result, started_at)
+    result
   end
 
   @doc """
@@ -97,31 +109,54 @@ defmodule GnomeGarden.Search.Exa do
       return structured data per page (parsed into `:summary`)
     * `:summary_query` — guidance string paired with `:summary_schema`
   """
-  @spec contents([String.t()] | String.t(), keyword()) :: {:ok, contents_response()} | {:error, term()}
+  @spec contents([String.t()] | String.t(), keyword()) ::
+          {:ok, contents_response()} | {:error, term()}
   def contents(urls, opts \\ [])
 
   def contents(url, opts) when is_binary(url), do: contents([url], opts)
 
   def contents(urls, opts) when is_list(urls) do
-    with {:ok, api_key} <- api_key() do
-      body = build_contents_body(urls, opts)
+    started_at = System.monotonic_time()
 
-      request_options =
-        [json: body, headers: [{"x-api-key", api_key}], receive_timeout: @receive_timeout]
-        |> Keyword.merge(req_options())
+    result =
+      with {:ok, api_key} <- api_key() do
+        body = build_contents_body(urls, opts)
 
-      case Req.post(@contents_endpoint, request_options) do
-        {:ok, %Req.Response{status: 200, body: payload}} ->
-          {:ok, normalize_contents(payload)}
+        request_options =
+          [json: body, headers: [{"x-api-key", api_key}], receive_timeout: @receive_timeout]
+          |> Keyword.merge(req_options())
 
-        {:ok, %Req.Response{status: status, body: payload}} ->
-          Logger.warning("Exa contents failed (#{status}): #{inspect(payload)}")
-          {:error, {:http_error, status, payload}}
+        case Req.post(@contents_endpoint, request_options) do
+          {:ok, %Req.Response{status: 200, body: payload}} ->
+            {:ok, normalize_contents(payload)}
 
-        {:error, reason} ->
-          {:error, reason}
+          {:ok, %Req.Response{status: status, body: payload}} ->
+            Logger.warning("Exa contents failed (#{status}): #{inspect(payload)}")
+            {:error, {:http_error, status, payload}}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
       end
-    end
+
+    emit_provider(:contents, result, started_at)
+    result
+  end
+
+  defp emit_provider(operation, result, started_at) do
+    {outcome, cost, result_count} =
+      case result do
+        {:ok, response} -> {:ok, response.cost || 0, length(response.results)}
+        {:error, {:http_error, 429, _body}} -> {:throttled, 0, 0}
+        {:error, :missing_exa_api_key} -> {:auth, 0, 0}
+        {:error, _reason} -> {:error, 0, 0}
+      end
+
+    Telemetry.provider(:exa, operation, outcome, %{
+      duration: Telemetry.elapsed_native(started_at),
+      cost: cost,
+      result_count: result_count
+    })
   end
 
   defp build_body(query, opts) do

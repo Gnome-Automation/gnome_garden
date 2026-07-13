@@ -85,6 +85,10 @@ if brave_api_key = System.get_env("BRAVE_API_KEY") do
     brave_api_key: brave_api_key
 end
 
+if browser_path = System.get_env("GNOME_GARDEN_BROWSER_PATH") do
+  config :jido_browser, agent_browser: [binary_path: browser_path]
+end
+
 garage_access_key = System.get_env("GARAGE_ACCESS_KEY")
 
 if config_env() == :prod and not present?.(garage_access_key) and

@@ -43,6 +43,10 @@ defmodule GnomeGarden.Acquisition do
     resource GnomeGarden.Acquisition.Source do
       define :list_sources, action: :read
       define :list_console_sources, action: :console
+      define :list_console_sources_needing_configuration, action: :console_needs_configuration
+      define :list_console_sources_ready, action: :console_ready
+      define :list_console_sources_needing_credentials, action: :console_credentials_needed
+      define :list_console_sources_needing_attention, action: :console_attention
       define :get_source, action: :read, get_by: [:id]
       define :get_source_by_external_ref, action: :by_external_ref, args: [:external_ref]
       define :get_source_by_url, action: :by_url, args: [:url]
@@ -64,6 +68,29 @@ defmodule GnomeGarden.Acquisition do
 
       define :create_program, action: :create
       define :update_program, action: :update
+    end
+
+    resource GnomeGarden.Acquisition.ProgramSource do
+      define :backfill_program_sources, action: :backfill
+      define :get_program_source, action: :read, get_by: [:id]
+      define :create_program_source, action: :create
+      define :update_program_source_policy, action: :update_policy
+      define :activate_program_source, action: :activate
+      define :pause_program_source, action: :pause
+      define :block_program_source, action: :block
+      define :archive_program_source, action: :archive
+      define :mark_program_source_scheduled, action: :mark_scheduled, args: [:scheduled_at]
+      define :list_program_sources_for_program, action: :for_program, args: [:program_id]
+      define :list_program_sources_for_source, action: :for_source, args: [:source_id]
+      define :list_runnable_program_sources, action: :runnable, args: [:reference_time]
+
+      define :list_runnable_commercial_discovery_sources,
+        action: :runnable_commercial_discovery,
+        args: [:reference_time]
+
+      define :get_active_exa_program_source_for_discovery_program,
+        action: :active_exa_for_discovery_program,
+        args: [:discovery_program_id]
     end
 
     resource GnomeGarden.Acquisition.Finding do
@@ -121,8 +148,10 @@ defmodule GnomeGarden.Acquisition do
     end
 
     resource GnomeGarden.Acquisition.LeadPreviewRun do
+      define :verify_lead_preview_run, action: :verify, args: [:lead_preview_run_id]
       define :create_lead_preview_run, action: :create
       define :get_lead_preview_run, action: :read, get_by: [:id]
+      define :get_lead_preview_run_by_key, action: :by_idempotency_key, args: [:idempotency_key]
       define :list_lead_preview_runs, action: :read
       define :list_recent_lead_preview_runs, action: :recent
     end
@@ -132,6 +161,39 @@ defmodule GnomeGarden.Acquisition do
       define :list_lead_preview_candidates_for_run, action: :for_run, args: [:lead_preview_run_id]
       define :mark_lead_preview_candidate_promoted, action: :mark_promoted
       define :mark_lead_preview_candidate_status, action: :mark_status
+    end
+
+    resource GnomeGarden.Acquisition.LeadCandidateVerification do
+      define :record_lead_candidate_verification, action: :record
+
+      define :get_lead_candidate_verification,
+        action: :by_candidate,
+        args: [:lead_preview_candidate_id]
+    end
+
+    resource GnomeGarden.Acquisition.LeadAdmissionPolicy do
+      define :ensure_lead_admission_policy, action: :ensure_default
+      define :get_lead_admission_policy, action: :by_key, args: [:key]
+    end
+
+    resource GnomeGarden.Acquisition.FindingAdmissionCapacity do
+      define :open_finding_admission_capacity, action: :open
+
+      define :get_finding_admission_capacity,
+        action: :by_scope_key,
+        args: [:scope, :scope_key]
+
+      define :consume_finding_admission_capacity, action: :consume
+    end
+
+    resource GnomeGarden.Acquisition.FindingAdmission do
+      define :create_finding_admission, action: :create
+
+      define :get_finding_admission_by_identity,
+        action: :by_identity_key,
+        args: [:identity_key]
+
+      define :list_finding_admissions_for_run, action: :for_run, args: [:lead_preview_run_id]
     end
 
     resource GnomeGarden.Acquisition.ProviderBudget do

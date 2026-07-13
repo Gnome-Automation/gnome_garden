@@ -8,9 +8,9 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Acquisition.{ProviderBudget, ProviderReservation}
+  alias GnomeGarden.Acquisition.Support
 
   @periods [:hourly, :daily, :monthly]
-  @budget_exceeded_message "provider budget exceeded"
 
   def configured_request(provider, operation, idempotency_key, overrides \\ %{}) do
     overrides = if is_list(overrides), do: Map.new(overrides), else: overrides
@@ -33,9 +33,9 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
 
   def budget_exceeded?(error) do
     error
-    |> error_list()
+    |> Support.errors()
     |> Enum.any?(fn
-      %Ash.Error.Changes.InvalidChanges{message: @budget_exceeded_message} -> true
+      %GnomeGarden.Acquisition.Errors.ProviderCapacityExceeded{} -> true
       _error -> false
     end)
   end
@@ -71,9 +71,44 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
     end
   end
 
+  @doc "Accounts for a failed provider request without under-reporting uncertain spend."
+  def account_failure(reservation, reason, opts \\ []) do
+    if confirmed_zero_cost_failure?(reason) do
+      release(
+        %{
+          idempotency_key: reservation.idempotency_key,
+          failure_reason: inspect(reason)
+        },
+        opts
+      )
+    else
+      settle(
+        %{
+          idempotency_key: reservation.idempotency_key,
+          actual_cost: reservation.estimated_cost,
+          actual_requests: 1,
+          status: :failed,
+          failure_reason: inspect(reason)
+        },
+        opts
+      )
+    end
+  end
+
+  def confirmed_zero_cost_failure?(:missing_exa_api_key), do: true
+
+  def confirmed_zero_cost_failure?({:http_error, status, _body}) when status in 400..499,
+    do: true
+
+  def confirmed_zero_cost_failure?(%{reason: reason})
+      when reason in [:econnrefused, :nxdomain],
+      do: true
+
+  def confirmed_zero_cost_failure?(_reason), do: false
+
   defp create_reservation(request, actor) do
     transaction_result =
-      transact([ProviderBudget, ProviderReservation], fn ->
+      Support.transact([ProviderBudget, ProviderReservation], fn ->
         with {:ok, budget} <- open_window(request, actor),
              {:ok, budget} <-
                update_record(
@@ -114,7 +149,7 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
 
   defp reuse_or_reopen(%{status: :released} = reservation, actor) do
     result =
-      transact([ProviderBudget, ProviderReservation], fn ->
+      Support.transact([ProviderBudget, ProviderReservation], fn ->
         with {:ok, budget} <-
                Acquisition.get_provider_budget_window(
                  reservation.provider_budget.provider,
@@ -156,7 +191,7 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
 
   defp settle_reservation(%{status: :reserved} = reservation, settlement, actor) do
     result =
-      transact([ProviderBudget, ProviderReservation], fn ->
+      Support.transact([ProviderBudget, ProviderReservation], fn ->
         with {:ok, settled} <-
                update_record(
                  reservation,
@@ -194,7 +229,7 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
 
   defp release_reservation(%{status: :reserved} = reservation, reason, actor) do
     result =
-      transact([ProviderBudget, ProviderReservation], fn ->
+      Support.transact([ProviderBudget, ProviderReservation], fn ->
         with {:ok, released} <-
                update_record(
                  reservation,
@@ -442,13 +477,6 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
     end
   end
 
-  defp error_list(%{errors: errors} = error) when is_list(errors) do
-    [error | Enum.flat_map(errors, &error_list/1)]
-  end
-
-  defp error_list(errors) when is_list(errors), do: Enum.flat_map(errors, &error_list/1)
-  defp error_list(error), do: [error]
-
   defp create_reservation_record(attrs, actor) do
     ProviderReservation
     |> Ash.Changeset.for_create(:create, attrs, actor: actor)
@@ -472,12 +500,4 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
   end
 
   defp reuse_after_conflict(result, _idempotency_key, _actor), do: result
-
-  defp transact(resources, function) do
-    case Ash.transact(resources, function) do
-      {:ok, {:ok, result}} -> {:ok, result}
-      {:ok, {:error, error}} -> {:error, error}
-      result -> result
-    end
-  end
 end

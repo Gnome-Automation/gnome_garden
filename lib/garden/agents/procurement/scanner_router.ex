@@ -7,6 +7,7 @@ defmodule GnomeGarden.Agents.Procurement.ScannerRouter do
   alias GnomeGarden.Agents.Procurement.ListingScanner
   alias GnomeGarden.Agents.Procurement.SamGovScanner
   alias GnomeGarden.Procurement.ProcurementSource
+  alias GnomeGarden.Procurement.RetrievalPolicy
 
   require Logger
 
@@ -19,14 +20,26 @@ defmodule GnomeGarden.Agents.Procurement.ScannerRouter do
         ListingScanner.scan(source.id, context)
 
       :company ->
-        SiteScanner.scan(source)
+        RetrievalPolicy.run(
+          source,
+          [%{path: :browser, run: fn -> SiteScanner.scan(source) end}],
+          actor: context_value(context, :actor)
+        )
 
       :sam_gov_api ->
-        SamGovScanner.scan(source, context)
+        RetrievalPolicy.run(
+          source,
+          [%{path: :provider_api, run: fn -> SamGovScanner.scan(source, context) end}],
+          actor: context_value(context, :actor)
+        )
 
       other ->
         Logger.info("[ScannerRouter] #{other} scanner not yet implemented for #{source.name}")
         {:ok, %{skipped: true, reason: "#{other} scanner not yet implemented"}}
     end
+  end
+
+  defp context_value(context, key) do
+    Map.get(context, key) || Map.get(context, Atom.to_string(key))
   end
 end

@@ -43,6 +43,7 @@ defmodule GnomeGarden.Acquisition.Finding do
     references do
       reference :source, on_delete: :nilify
       reference :program, on_delete: :nilify
+      reference :program_source, on_delete: :nilify
       reference :agent_run, on_delete: :nilify
       reference :organization, on_delete: :nilify
       reference :person, on_delete: :nilify
@@ -106,6 +107,7 @@ defmodule GnomeGarden.Acquisition.Finding do
         :metadata,
         :source_id,
         :program_id,
+        :program_source_id,
         :agent_run_id,
         :organization_id,
         :person_id,
@@ -113,9 +115,13 @@ defmodule GnomeGarden.Acquisition.Finding do
         :source_bid_id,
         :source_discovery_record_id
       ]
+
+      validate GnomeGarden.Acquisition.Validations.FindingProgramSourceMatches
     end
 
     update :update do
+      require_atomic? false
+
       accept [
         :title,
         :summary,
@@ -143,6 +149,7 @@ defmodule GnomeGarden.Acquisition.Finding do
         :metadata,
         :source_id,
         :program_id,
+        :program_source_id,
         :agent_run_id,
         :organization_id,
         :person_id,
@@ -150,6 +157,8 @@ defmodule GnomeGarden.Acquisition.Finding do
         :source_bid_id,
         :source_discovery_record_id
       ]
+
+      validate GnomeGarden.Acquisition.Validations.FindingProgramSourceMatches
     end
 
     update :start_review do
@@ -631,6 +640,10 @@ defmodule GnomeGarden.Acquisition.Finding do
   end
 
   relationships do
+    belongs_to :program_source, GnomeGarden.Acquisition.ProgramSource do
+      public? true
+    end
+
     belongs_to :source, GnomeGarden.Acquisition.Source do
       public? true
     end

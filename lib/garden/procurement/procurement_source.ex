@@ -136,14 +136,6 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :status
       ]
 
-      change fn changeset, _context ->
-        if Ash.Changeset.get_attribute(changeset, :source_type) == :bidnet do
-          Ash.Changeset.change_attribute(changeset, :requires_login, true)
-        else
-          changeset
-        end
-      end
-
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
@@ -192,14 +184,6 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :notes,
         :status
       ]
-
-      change fn changeset, _context ->
-        if Ash.Changeset.get_attribute(changeset, :source_type) == :bidnet do
-          Ash.Changeset.change_attribute(changeset, :requires_login, true)
-        else
-          changeset
-        end
-      end
 
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
@@ -560,6 +544,12 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       destination_attribute :procurement_source_id
       public? true
       description "Authenticated browser sessions available to source scanners"
+    end
+
+    has_many :retrieval_runs, GnomeGarden.Procurement.SourceRetrievalRun do
+      destination_attribute :procurement_source_id
+      public? true
+      description "Ordered backend attempts and selected retrieval path for source scans"
     end
   end
 

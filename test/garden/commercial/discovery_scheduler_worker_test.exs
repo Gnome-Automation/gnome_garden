@@ -15,6 +15,7 @@ defmodule GnomeGarden.Commercial.DiscoverySchedulerWorkerTest do
       })
 
     {:ok, _program} = Commercial.activate_discovery_program(program)
+    _program_source = activate_exa_program_source!(program)
     scheduled_at = DateTime.utc_now()
 
     assert :ok = DiscoverySchedulerWorker.perform(%Oban.Job{scheduled_at: scheduled_at})

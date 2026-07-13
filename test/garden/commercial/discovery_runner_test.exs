@@ -1,5 +1,5 @@
 defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
-  use GnomeGarden.DataCase, async: true
+  use GnomeGarden.DataCase, async: false
 
   alias GnomeGarden.Acquisition
   alias GnomeGarden.Commercial
@@ -30,10 +30,15 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         watch_channels: ["company_site"]
       })
 
+    program_source = activate_exa_program_source!(discovery_program)
+
     assert {:ok, %{run: queued, job: job}} =
              Commercial.launch_discovery_program(discovery_program)
 
     assert queued.status == :queued
+    assert queued.program_source_id == program_source.id
+    assert queued.query_provenance["program_source_id"] == program_source.id
+    assert is_binary(queued.query_provenance["policy_hash"])
     assert job.worker == inspect(DiscoveryRunWorker)
     assert :ok = DiscoveryRunWorker.perform(%Oban.Job{args: %{"run_id" => queued.id}, attempt: 1})
 
@@ -65,8 +70,23 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
 
     {:ok, archived_program} = Commercial.archive_discovery_program(discovery_program)
 
-    assert {:error, "Archived discovery programs must be reopened before running."} =
+    assert {:error, "Discovery programs must be active before running."} =
              Commercial.launch_discovery_program(archived_program)
+  end
+
+  test "launch_discovery_program requires an active typed source policy" do
+    {:ok, discovery_program} =
+      Commercial.create_discovery_program(%{
+        name: "No Source Policy #{System.unique_integer([:positive])}",
+        search_terms: ["legacy scope must not execute"]
+      })
+
+    {:ok, discovery_program} = Commercial.activate_discovery_program(discovery_program)
+
+    assert {:error, :active_program_source_required} =
+             Commercial.launch_discovery_program(discovery_program)
+
+    assert {:ok, []} = Commercial.list_discovery_runs()
   end
 
   test "launch_discovery_program reuses the same durable run idempotency key" do
@@ -76,6 +96,8 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         target_regions: ["oc"],
         target_industries: ["food_bev"]
       })
+
+    _program_source = activate_exa_program_source!(discovery_program)
 
     assert {:ok, %{run: first}} =
              Commercial.launch_discovery_program(discovery_program, idempotency_key: "same-run")
@@ -94,6 +116,8 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         target_industries: ["food_bev"]
       })
 
+    _program_source = activate_exa_program_source!(discovery_program)
+
     assert {:ok, %{run: first}} =
              Commercial.launch_discovery_program(discovery_program, idempotency_key: "first-run")
 
@@ -101,6 +125,30 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
 
     assert {:error, :active_run_exists} =
              Commercial.launch_discovery_program(discovery_program, idempotency_key: "second-run")
+  end
+
+  test "concurrent manual launches admit only one active run" do
+    {:ok, discovery_program} =
+      Commercial.create_discovery_program(%{
+        name: "Concurrent Guard #{System.unique_integer([:positive])}",
+        target_regions: ["oc"],
+        target_industries: ["food_bev"]
+      })
+
+    _program_source = activate_exa_program_source!(discovery_program)
+
+    results =
+      ["concurrent-1", "concurrent-2"]
+      |> Task.async_stream(
+        &Commercial.launch_discovery_program(discovery_program, idempotency_key: &1),
+        max_concurrency: 2,
+        ordered: false
+      )
+      |> Enum.map(fn {:ok, result} -> result end)
+
+    assert Enum.count(results, &match?({:ok, _}, &1)) == 1
+    assert Enum.count(results, &match?({:error, :active_run_exists}, &1)) == 1
+    assert {:ok, [_run]} = Commercial.list_discovery_runs()
   end
 
   test "failed Oban insertion rolls back the queued run" do
@@ -111,8 +159,11 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         target_industries: ["food_bev"]
       })
 
+    program_source = activate_exa_program_source!(discovery_program)
+
     assert {:error, _error} =
              GnomeGarden.Commercial.DiscoveryExecution.enqueue(discovery_program,
+               program_source: program_source,
                idempotency_key: "failed-insert",
                insert_fun: fn _job -> {:error, :oban_unavailable} end
              )
@@ -127,6 +178,8 @@ defmodule GnomeGarden.Commercial.DiscoveryRunnerTest do
         target_regions: ["oc"],
         target_industries: ["food_bev"]
       })
+
+    _program_source = activate_exa_program_source!(discovery_program)
 
     assert {:ok, %{run: first}} =
              Commercial.launch_discovery_program(discovery_program, idempotency_key: "latest-1")

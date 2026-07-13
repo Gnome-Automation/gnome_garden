@@ -1,197 +1,274 @@
 defmodule GnomeGarden.Browser do
   @moduledoc """
-  Bounded browser automation facade for application workflows.
+  Bounded browser and HTTP retrieval facade for application workflows.
 
-  Domain scanners should call this module instead of agent-facing browser tools
-  or raw browser commands. The implementation can change without changing the
-  procurement/commercial workflow code.
+  Browser state is owned by `GnomeGarden.Browser.SessionManager`; callers see
+  procurement-shaped values rather than Jido session structs or adapter
+  details. Ordinary HTTP retrieval uses `Jido.Browser.web_fetch/2` without
+  opening a browser session.
   """
 
+  alias GnomeGarden.Browser.{Error, SessionManager}
+
   @default_timeout_ms 30_000
+  @default_max_content_chars 50_000
+  @default_max_download_bytes 25_000_000
+  @download_poll_ms 50
 
-  @doc "Navigate the shared browser session to a URL."
+  @doc "Navigate the managed browser session to a URL."
   def navigate(url, opts \\ []) when is_binary(url) do
-    wait_for_network = Keyword.get(opts, :wait_for_network, true)
-    timeout_ms = Keyword.get(opts, :timeout_ms, @default_timeout_ms)
+    timeout = timeout(opts)
 
-    case open_url(url, timeout_ms) do
-      {output, 0} ->
-        if wait_for_network, do: wait_for_load(timeout_ms)
-        {:ok, %{url: url, title: parse_title(output), status: :ok}}
+    with_session(:navigate, opts, fn client, session ->
+      client.navigate(session, url,
+        timeout: timeout,
+        wait_until: wait_until(opts)
+      )
+    end)
+    |> case do
+      {:ok, result} ->
+        {:ok,
+         %{
+           url: value(result, :url) || url,
+           title: value(result, :title) || "Unknown",
+           status: :ok
+         }}
 
-      {output, _} ->
-        {:error, String.trim(output)}
+      error ->
+        error
     end
   end
 
-  @doc "Navigate to a URL and return a bounded page snapshot with links."
+  @doc "Navigate and return a bounded page snapshot with links and forms."
   def inspect_page(url, opts \\ []) when is_binary(url) do
-    max_links = Keyword.get(opts, :max_links, 100)
-    max_text_chars = Keyword.get(opts, :max_text_chars, 20_000)
+    max_links = positive_integer(opts[:max_links], 100)
+    max_text_chars = positive_integer(opts[:max_text_chars], 20_000)
+    timeout = timeout(opts)
 
-    with {:ok, navigation} <- navigate(url, opts),
-         {:ok, snapshot} <- evaluate(page_snapshot_js(max_links, max_text_chars)) do
-      {:ok,
-       %{
-         url: url,
-         final_url: Map.get(snapshot, "url") || url,
-         title: Map.get(snapshot, "title") || navigation.title,
-         text: Map.get(snapshot, "text") || "",
-         links: Map.get(snapshot, "links") || [],
-         headings: Map.get(snapshot, "headings") || [],
-         forms: Map.get(snapshot, "forms") || []
-       }}
-    end
+    with_session(:inspect_page, opts, fn client, session ->
+      with {:ok, session, navigation} <-
+             client.navigate(session, url,
+               timeout: timeout,
+               wait_until: wait_until(opts)
+             ),
+           {:ok, session, evaluation} <-
+             client.evaluate(session, page_snapshot_js(max_links, max_text_chars),
+               timeout: timeout
+             ),
+           {:ok, snapshot} <- evaluation_result(evaluation) do
+        {:ok, session,
+         %{
+           url: url,
+           final_url: value(snapshot, :url) || value(navigation, :url) || url,
+           title: value(snapshot, :title) || value(navigation, :title) || "Unknown",
+           text: bounded_string(value(snapshot, :text), max_text_chars),
+           links: bounded_list(value(snapshot, :links), max_links),
+           headings: bounded_list(value(snapshot, :headings), 25),
+           forms: bounded_list(value(snapshot, :forms), 10)
+         }}
+      end
+    end)
   end
 
-  @doc "Evaluate JavaScript in the current browser page and JSON-decode the result when possible."
-  def evaluate(js) when is_binary(js) do
-    case cmd(["eval", js]) do
-      {output, 0} ->
-        case Jason.decode(output) do
-          {:ok, data} -> {:ok, data}
-          {:error, _} -> {:ok, String.trim(output)}
+  @doc "Evaluate JavaScript in the managed browser session."
+  def evaluate(script, opts \\ []) when is_binary(script) do
+    with_session(:evaluate, opts, fn client, session ->
+      with {:ok, session, evaluation} <-
+             client.evaluate(session, script, timeout: timeout(opts)),
+           {:ok, result} <- evaluation_result(evaluation) do
+        {:ok, session, result}
+      end
+    end)
+  end
+
+  @doc "Fetch an HTTP resource without starting a browser session."
+  def web_fetch(url, opts \\ []) when is_binary(url) do
+    client = browser_client(opts)
+    max_content_chars = positive_integer(opts[:max_content_chars], @default_max_content_chars)
+
+    fetch_opts =
+      opts
+      |> Keyword.drop([:client, :max_content_chars])
+      |> Keyword.put_new(:timeout, timeout(opts))
+      |> Keyword.put_new(:max_content_tokens, max(div(max_content_chars, 4), 1))
+
+    case client.web_fetch(url, fetch_opts) do
+      {:ok, result} when is_map(result) -> {:ok, bound_fetch_result(result, max_content_chars)}
+      {:error, reason} -> {:error, Error.new(:web_fetch, reason)}
+    end
+  rescue
+    exception -> {:error, Error.new(:web_fetch, exception)}
+  end
+
+  @doc "Download the selected link through the authenticated browser session."
+  def download(selector, target_path, opts \\ [])
+      when is_binary(selector) and is_binary(target_path) do
+    max_bytes = positive_integer(opts[:max_bytes], @default_max_download_bytes)
+
+    result =
+      with_session(:download, opts, fn client, session, context ->
+        before = download_entries(context.download_dir)
+
+        with {:ok, session, _click} <-
+               client.click(session, selector, timeout: timeout(opts)),
+             {:ok, download_path} <-
+               await_download(
+                 context.download_dir,
+                 before,
+                 max_bytes,
+                 System.monotonic_time(:millisecond) + timeout(opts)
+               ) do
+          {:ok, session, download_path}
         end
+      end)
 
-      {output, _} ->
-        {:error, "Extract failed: #{String.trim(output)}"}
+    with {:ok, download_path} <- result,
+         {:ok, stat} <- File.stat(download_path),
+         true <- stat.size <= max_bytes,
+         :ok <- move_download(download_path, target_path) do
+      :ok
+    else
+      {:error, reason} ->
+        {:error, {:browser_download_failed, reason}}
+
+      false ->
+        {:error, {:browser_download_failed, :download_too_large}}
+
+      other ->
+        {:error, {:browser_download_failed, other}}
     end
+  rescue
+    exception -> {:error, {:browser_download_failed, Error.new(:download, exception)}}
   end
 
-  @doc "Inject a browser download command for the selector into the target path."
-  def download(selector, target_path) when is_binary(selector) and is_binary(target_path) do
-    case cmd(["download", selector, target_path]) do
-      {_output, 0} -> :ok
-      {output, _code} -> {:error, {:browser_download_failed, String.trim(output)}}
-    end
-  end
-
-  @doc "Path to the browser automation binary."
-  def binary_path do
-    Application.get_env(:gnome_garden, :browser_path, default_path())
-  end
-
-  # All browser invocations go through here so they share the resolved binary and
-  # a guaranteed-writable runtime dir. agent-browser creates its IPC socket under
-  # XDG_RUNTIME_DIR; in some environments (e.g. WSL2 with no systemd user
-  # session) the inherited value points at a dir that doesn't exist, which fails
-  # with "Failed to create socket directory".
-  defp cmd(args) do
-    System.cmd(binary_path(), args, stderr_to_stdout: true, env: browser_env())
-  end
-
-  defp browser_env do
-    [{"XDG_RUNTIME_DIR", runtime_dir()}]
-  end
-
-  defp runtime_dir do
-    case System.get_env("XDG_RUNTIME_DIR") do
-      dir when is_binary(dir) and dir != "" ->
-        if File.dir?(dir), do: dir, else: fallback_runtime_dir()
-
-      _ ->
-        fallback_runtime_dir()
-    end
-  end
-
-  defp fallback_runtime_dir do
-    dir = Path.join(System.tmp_dir!(), "agent-browser-runtime")
-    File.mkdir_p!(dir)
-    _ = File.chmod(dir, 0o700)
-    dir
-  end
-
-  @doc "Default browser launch args. Headless unless headed mode is explicitly configured."
-  def default_args do
-    browser_mode_args() ++
-      ["--args", "--no-sandbox,--disable-blink-features=AutomationControlled"]
-  end
-
-  @doc "Close the browser daemon if it is running."
+  @doc "End and forget the managed browser session."
   def close do
-    cmd(["close"])
+    SessionManager.close()
   end
 
-  defp open_url(url, timeout_ms) do
-    command = default_args() ++ ["open", url, "--timeout", Integer.to_string(timeout_ms)]
+  defp with_session(operation, opts, function) do
+    client = browser_client(opts)
+    session_opts = session_options(opts)
 
-    case cmd(command) do
-      {_output, 0} = result ->
-        result
+    case SessionManager.execute(client, session_opts, function, timeout(opts) + 5_000) do
+      {:ok, result} -> {:ok, result}
+      {:error, reason} -> {:error, Error.new(operation, reason)}
+    end
+  rescue
+    exception -> {:error, Error.new(operation, exception)}
+  end
 
-      {output, _code} ->
-        if restart_required?(output) do
-          _ = close()
-          cmd(command)
-        else
-          {output, 1}
+  defp browser_client(opts),
+    do: opts[:client] || Application.get_env(:gnome_garden, :browser_client, Jido.Browser)
+
+  defp session_options(opts) do
+    configured = Application.get_env(:gnome_garden, :browser_session_options, [])
+    adapter = opts[:adapter] || Application.get_env(:gnome_garden, :browser_adapter)
+
+    configured
+    |> Keyword.merge(Keyword.take(opts, [:headed, :headless, :executable_path, :allowed_domains]))
+    |> Keyword.put(:timeout, timeout(opts))
+    |> maybe_put(:adapter, adapter)
+  end
+
+  defp timeout(opts),
+    do: positive_integer(opts[:timeout_ms] || opts[:timeout], @default_timeout_ms)
+
+  defp wait_until(opts),
+    do: if(Keyword.get(opts, :wait_for_network, true), do: "networkidle", else: "load")
+
+  defp evaluation_result(%{result: result}), do: {:ok, result}
+  defp evaluation_result(%{"result" => result}), do: {:ok, result}
+  defp evaluation_result(result), do: {:ok, result}
+
+  defp bound_fetch_result(result, max_content_chars) do
+    content = value(result, :content)
+    bounded = bounded_string(content, max_content_chars)
+
+    result
+    |> Map.put(:content, bounded)
+    |> Map.put(:truncated, value(result, :truncated) == true or bounded != content)
+  end
+
+  defp bounded_string(value, limit) when is_binary(value), do: String.slice(value, 0, limit)
+  defp bounded_string(_value, _limit), do: ""
+  defp bounded_list(value, limit) when is_list(value), do: Enum.take(value, limit)
+  defp bounded_list(_value, _limit), do: []
+  defp positive_integer(value, _default) when is_integer(value) and value > 0, do: value
+  defp positive_integer(_value, default), do: default
+
+  defp value(map, key) when is_map(map),
+    do: Map.get(map, key) || Map.get(map, Atom.to_string(key))
+
+  defp value(_map, _key), do: nil
+  defp maybe_put(opts, _key, nil), do: opts
+  defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
+
+  defp download_entries(download_dir) do
+    download_dir
+    |> Path.join("*")
+    |> Path.wildcard()
+    |> Map.new(fn path -> {path, file_signature(path)} end)
+  end
+
+  defp await_download(download_dir, before, max_bytes, deadline, previous \\ nil) do
+    candidates =
+      download_dir
+      |> download_entries()
+      |> Enum.reject(fn {path, signature} ->
+        Map.get(before, path) == signature or partial_download?(path)
+      end)
+      |> Enum.sort_by(fn {_path, {_size, modified}} -> modified end, :desc)
+
+    case candidates do
+      [{_path, {size, _modified}} | _rest] when size > max_bytes ->
+        {:error, :download_too_large}
+
+      [{path, signature} | _rest] when previous == {path, signature} ->
+        {:ok, path}
+
+      [{path, signature} | _rest] ->
+        wait_for_download(download_dir, before, max_bytes, deadline, {path, signature})
+
+      [] ->
+        wait_for_download(download_dir, before, max_bytes, deadline, nil)
+    end
+  end
+
+  defp wait_for_download(download_dir, before, max_bytes, deadline, previous) do
+    if System.monotonic_time(:millisecond) >= deadline do
+      {:error, :download_timeout}
+    else
+      Process.sleep(@download_poll_ms)
+      await_download(download_dir, before, max_bytes, deadline, previous)
+    end
+  end
+
+  defp file_signature(path) do
+    case File.stat(path, time: :posix) do
+      {:ok, stat} -> {stat.size, stat.mtime}
+      {:error, _reason} -> {0, 0}
+    end
+  end
+
+  defp partial_download?(path) do
+    String.ends_with?(path, [".crdownload", ".part", ".tmp"])
+  end
+
+  defp move_download(source, target) do
+    case File.rename(source, target) do
+      :ok ->
+        :ok
+
+      {:error, :exdev} ->
+        with {:ok, _bytes} <- File.copy(source, target),
+             :ok <- File.rm(source) do
+          :ok
         end
+
+      {:error, reason} ->
+        {:error, reason}
     end
-  end
-
-  defp wait_for_load(timeout_ms) do
-    cmd(["wait", "--load", "networkidle", "--timeout", Integer.to_string(timeout_ms)])
-  end
-
-  defp restart_required?(output) when is_binary(output) do
-    String.contains?(output, "--args ignored: daemon already running") or
-      String.contains?(output, "Event stream closed")
-  end
-
-  defp parse_title(output) do
-    case Regex.run(~r/\[1m(.+?)\[0m/, output) do
-      [_, title] -> title
-      _ -> "Unknown"
-    end
-  end
-
-  defp browser_mode_args do
-    case Application.get_env(:gnome_garden, :browser_mode, :auto) do
-      :headed -> ["--headed"]
-      :headless -> []
-      :auto -> []
-    end
-  end
-
-  defp default_path do
-    candidates = vendored_binary_paths()
-
-    # Prefer the vendored release/build binary; otherwise fall back to one
-    # installed on PATH. Return the first vendored candidate as a last resort so
-    # errors name the expected location.
-    Enum.find(candidates, &File.exists?/1) ||
-      System.find_executable("agent-browser") ||
-      List.first(candidates)
-  end
-
-  defp vendored_binary_paths do
-    Enum.map(
-      binary_roots(),
-      &Path.join([&1, "jido_browser-linux_amd64", "agent-browser-linux-x64"])
-    )
-  end
-
-  defp binary_roots do
-    app_dir = Application.app_dir(:gnome_garden)
-
-    (configured_binary_roots() ++
-       [
-         # Release root, e.g. /opt/gnome-garden from
-         # /opt/gnome-garden/lib/gnome_garden-0.1.0.
-         Path.expand(Path.join(app_dir, "../..")),
-         # Mix build root, e.g. _build from _build/test/lib/gnome_garden.
-         Path.expand(Path.join(app_dir, "../../..")),
-         File.cwd!()
-       ])
-    |> Enum.uniq()
-  end
-
-  defp configured_binary_roots do
-    :gnome_garden
-    |> Application.get_env(:browser_binary_roots, [])
-    |> List.wrap()
-    |> Enum.filter(&is_binary/1)
-    |> Enum.map(&Path.expand/1)
   end
 
   defp page_snapshot_js(max_links, max_text_chars) do

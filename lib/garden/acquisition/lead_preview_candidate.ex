@@ -12,7 +12,15 @@ defmodule GnomeGarden.Acquisition.LeadPreviewCandidate do
     extensions: [AshAdmin.Resource]
 
   admin do
-    table_columns [:id, :lead_preview_run_id, :title, :website_domain, :candidate_type, :route, :status]
+    table_columns [
+      :id,
+      :lead_preview_run_id,
+      :title,
+      :website_domain,
+      :candidate_type,
+      :route,
+      :status
+    ]
   end
 
   postgres do
@@ -33,6 +41,9 @@ defmodule GnomeGarden.Acquisition.LeadPreviewCandidate do
 
     create :create do
       primary? true
+      upsert? true
+      upsert_identity :unique_run_url
+      upsert_fields []
 
       accept [
         :lead_preview_run_id,
@@ -124,5 +135,19 @@ defmodule GnomeGarden.Acquisition.LeadPreviewCandidate do
       allow_nil? false
       public? true
     end
+
+    has_one :verification, GnomeGarden.Acquisition.LeadCandidateVerification do
+      destination_attribute :lead_preview_candidate_id
+      public? true
+    end
+
+    has_one :finding_admission, GnomeGarden.Acquisition.FindingAdmission do
+      destination_attribute :lead_preview_candidate_id
+      public? true
+    end
+  end
+
+  identities do
+    identity :unique_run_url, [:lead_preview_run_id, :url]
   end
 end

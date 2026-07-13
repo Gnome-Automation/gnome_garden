@@ -15,7 +15,67 @@
         erlang = beamPkgs.erlang;
         postgres = pkgs.postgresql_18;
         postgresBin = "${postgres}/bin";
-        commonDevTools = [
+        agentBrowserVersion = "0.20.2";
+        agentBrowserArtifact = {
+          x86_64-linux = {
+            name = "agent-browser-linux-x64";
+            hash = "sha256-xmlyDhCW5xV+ZviOGn9Hl4NVpX+XQKFAOU+MhUcrgHE=";
+          };
+          aarch64-linux = {
+            name = "agent-browser-linux-arm64";
+            hash = "sha256-wifi646hgfYJA2EsfnGyxmtqNEL4DlX+gQc4iTaZVJE=";
+          };
+          x86_64-darwin = {
+            name = "agent-browser-darwin-x64";
+            hash = "sha256-q+I8YVtUo4GSJWEchtB/GTnBkUhrKEUYl0y8Kd8puKs=";
+          };
+          aarch64-darwin = {
+            name = "agent-browser-darwin-arm64";
+            hash = "sha256-a4YX9CIrBu8WCq/ldA6Jr1O3cEKGoKG6SoHYHSPmT0U=";
+          };
+        }.${system};
+        agentBrowser = pkgs.stdenvNoCC.mkDerivation {
+          pname = "agent-browser";
+          version = agentBrowserVersion;
+
+          src = pkgs.fetchurl {
+            url = "https://github.com/vercel-labs/agent-browser/releases/download/v${agentBrowserVersion}/${agentBrowserArtifact.name}";
+            inherit (agentBrowserArtifact) hash;
+          };
+
+          dontUnpack = true;
+          nativeBuildInputs = [ pkgs.makeWrapper ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.patchelf ];
+
+          installPhase = ''
+            runHook preInstall
+            install -Dm755 "$src" "$out/libexec/agent-browser"
+            ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+              patchelf \
+                --set-interpreter "${pkgs.stdenv.cc.bintools.dynamicLinker}" \
+                --set-rpath "${pkgs.glibc}/lib" \
+                "$out/libexec/agent-browser"
+            ''}
+            makeWrapper "$out/libexec/agent-browser" "$out/bin/agent-browser" \
+              ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''--set-default AGENT_BROWSER_EXECUTABLE_PATH "${pkgs.chromium}/bin/chromium"''}
+            runHook postInstall
+          '';
+
+          doInstallCheck = true;
+          installCheckPhase = ''
+            "$out/bin/agent-browser" --version | grep -F "agent-browser ${agentBrowserVersion}"
+          '';
+
+          meta = {
+            description = "Browser automation binary pinned by Jido Browser";
+            homepage = "https://github.com/vercel-labs/agent-browser";
+            license = pkgs.lib.licenses.asl20;
+            mainProgram = "agent-browser";
+            platforms = [ system ];
+          };
+        };
+        commonDevTools = builtins.filter
+          (package: pkgs.lib.meta.availableOn pkgs.stdenv.hostPlatform package)
+          [
           elixir
           erlang
           pkgs.nodejs_22
@@ -36,7 +96,8 @@
           pkgs."poppler-utils"
           pkgs.ripgrep
           pkgs.tesseract
-        ];
+          agentBrowser
+          ];
         linuxDevTools = pkgs.lib.optionals pkgs.stdenv.isLinux [
           pkgs.chromium
           pkgs.inotify-tools
@@ -45,6 +106,8 @@
         devTools = commonDevTools ++ linuxDevTools;
       in
       {
+        packages.agent-browser = agentBrowser;
+
         devShells.default = pkgs.mkShell {
           buildInputs = devTools;
 
@@ -55,6 +118,7 @@
             export ERL_AFLAGS="-kernel shell_history enabled"
             export MIX_TAILWIND_PATH="${pkgs.tailwindcss_4}/bin/tailwindcss"
             export MIX_ESBUILD_PATH="${pkgs.esbuild}/bin/esbuild"
+            export GNOME_GARDEN_BROWSER_PATH="${agentBrowser}/bin/agent-browser"
 
             # Load .env if present
             if [ -f .env ]; then

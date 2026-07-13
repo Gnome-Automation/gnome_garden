@@ -31,7 +31,7 @@ defmodule GnomeGarden.Acquisition.Program do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
 
     action :baseline, :map do
       run GnomeGarden.Acquisition.Actions.BuildBaseline

@@ -3,7 +3,7 @@ defmodule GnomeGarden.Acquisition.Validations.ProviderCapacityAvailable do
 
   use Ash.Resource.Validation
 
-  alias Ash.Error.Changes.InvalidChanges
+  alias GnomeGarden.Acquisition.Errors.ProviderCapacityExceeded
 
   @impl true
   def validate(changeset, _opts, _context) do
@@ -21,7 +21,7 @@ defmodule GnomeGarden.Acquisition.Validations.ProviderCapacityAvailable do
 
     if Decimal.compare(cost_after_reservation, budget.spend_limit) == :gt or
          requests_after_reservation > budget.request_limit do
-      {:error, "provider budget exceeded"}
+      {:error, ProviderCapacityExceeded.exception(field: :reserved_cost)}
     else
       :ok
     end
@@ -41,12 +41,6 @@ defmodule GnomeGarden.Acquisition.Validations.ProviderCapacityAvailable do
      expr(
        ^atomic_ref(:reserved_cost) + spent_cost > spend_limit or
          ^atomic_ref(:reserved_requests) + used_requests > request_limit
-     ),
-     expr(
-       error(^InvalidChanges, %{
-         fields: [:reserved_cost, :reserved_requests],
-         message: "provider budget exceeded"
-       })
-     )}
+     ), expr(error(^ProviderCapacityExceeded, %{field: :reserved_cost}))}
   end
 end

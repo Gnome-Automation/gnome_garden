@@ -36,7 +36,9 @@ again instead of creating another ledger entry.
 
 Provider metering values intentionally use Ash `:decimal` attributes rather
 than the Ledger domain's `:money` type. These records represent single-currency
-provider quota arithmetic, not journaled business money.
+provider quota arithmetic, not journaled business money. The same exception
+applies to preview, verification, and discovery-run cost telemetry derived from
+those reservations; operator-authored spend limits remain typed `:money`.
 
 ## Configuration
 
@@ -73,3 +75,11 @@ instead of releasing capacity.
 
 The existing per-run preview ceiling remains a second, narrower guard. Shared
 daily policy is the aggregate guard across programs and concurrent workers.
+
+## Exa Candidate Verification
+
+Scheduled candidate verification reserves the `{"exa", "contents"}` profile
+only after route, suppression, dedupe, identity, and search-score gates pass.
+Successful Contents responses are cached on the reservation for lossless Oban
+replay. Verification stores the actual metering cost and cited first-party
+evidence before the separate Finding-admission transaction runs.

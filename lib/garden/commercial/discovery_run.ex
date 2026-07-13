@@ -14,6 +14,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
 
     references do
       reference :discovery_program, on_delete: :restrict
+      reference :program_source, on_delete: :restrict
     end
 
     custom_indexes do
@@ -48,6 +49,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
     create :create do
       accept [
         :discovery_program_id,
+        :program_source_id,
         :idempotency_key,
         :trigger,
         :query_provenance,
@@ -58,6 +60,7 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
       upsert? true
       upsert_identity :unique_idempotency_key
       upsert_fields []
+      validate present(:program_source_id)
     end
 
     read :by_idempotency_key do
@@ -83,6 +86,12 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
       get? true
       filter expr(discovery_program_id == ^arg(:discovery_program_id))
       prepare build(sort: [inserted_at: :desc], limit: 1)
+    end
+
+    read :slo_window do
+      argument :updated_since, :utc_datetime, allow_nil?: false
+      filter expr(updated_at >= ^arg(:updated_since))
+      prepare build(sort: [updated_at: :desc])
     end
 
     update :start do
@@ -113,7 +122,11 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
         :actual_cost,
         :query_count,
         :candidate_count,
-        :promotable_count
+        :promotable_count,
+        :verified_count,
+        :admitted_count,
+        :unresolved_count,
+        :enrichment_cost
       ]
 
       change transition_state(:completed)
@@ -127,6 +140,10 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
         :query_count,
         :candidate_count,
         :promotable_count,
+        :verified_count,
+        :admitted_count,
+        :unresolved_count,
+        :enrichment_cost,
         :terminal_diagnostics
       ]
 
@@ -183,6 +200,15 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
     attribute :query_count, :integer, allow_nil?: false, default: 0, public?: true
     attribute :candidate_count, :integer, allow_nil?: false, default: 0, public?: true
     attribute :promotable_count, :integer, allow_nil?: false, default: 0, public?: true
+    attribute :verified_count, :integer, allow_nil?: false, default: 0, public?: true
+    attribute :admitted_count, :integer, allow_nil?: false, default: 0, public?: true
+    attribute :unresolved_count, :integer, allow_nil?: false, default: 0, public?: true
+
+    attribute :enrichment_cost, :decimal,
+      allow_nil?: false,
+      default: Decimal.new(0),
+      public?: true
+
     attribute :attempt_count, :integer, allow_nil?: false, default: 0, public?: true
     attribute :attempt_history, {:array, :map}, allow_nil?: false, default: [], public?: true
     attribute :lead_preview_run_id, :uuid, public?: true
@@ -196,6 +222,10 @@ defmodule GnomeGarden.Commercial.DiscoveryRun do
   relationships do
     belongs_to :discovery_program, GnomeGarden.Commercial.DiscoveryProgram do
       allow_nil? false
+      public? true
+    end
+
+    belongs_to :program_source, GnomeGarden.Acquisition.ProgramSource do
       public? true
     end
   end

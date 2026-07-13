@@ -43,10 +43,20 @@ defmodule GnomeGarden.Acquisition.LeadPreviewRun do
   actions do
     defaults [:read]
 
+    action :verify, :map do
+      argument :lead_preview_run_id, :uuid, allow_nil?: false
+      run GnomeGarden.Acquisition.Actions.VerifyLeadPreviewRun
+    end
+
     create :create do
       primary? true
 
+      upsert? true
+      upsert_identity :unique_idempotency_key
+      upsert_fields []
+
       accept [
+        :idempotency_key,
         :source,
         :status,
         :started_at,
@@ -71,10 +81,17 @@ defmodule GnomeGarden.Acquisition.LeadPreviewRun do
     read :recent do
       prepare build(sort: [inserted_at: :desc], limit: 50)
     end
+
+    read :by_idempotency_key do
+      argument :idempotency_key, :string, allow_nil?: false
+      get_by [:idempotency_key]
+    end
   end
 
   attributes do
     uuid_primary_key :id
+
+    attribute :idempotency_key, :string, public?: true
 
     attribute :source, :atom do
       allow_nil? false
@@ -114,5 +131,9 @@ defmodule GnomeGarden.Acquisition.LeadPreviewRun do
     has_many :candidates, GnomeGarden.Acquisition.LeadPreviewCandidate do
       public? true
     end
+  end
+
+  identities do
+    identity :unique_idempotency_key, [:idempotency_key], nils_distinct?: true
   end
 end

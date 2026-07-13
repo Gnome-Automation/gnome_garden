@@ -14,8 +14,8 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   import GnomeGardenWeb.Components.Acquisition.FindingCard, only: [finding_card: 1]
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Acquisition.Finding
   alias GnomeGarden.Procurement.TargetingFeedback
+  alias GnomeGardenWeb.Acquisition.CollectionQueries
 
   @queues [:review, :promoted, :rejected, :suppressed, :parked]
   @families [:all, :procurement, :discovery]
@@ -519,14 +519,13 @@ defmodule GnomeGardenWeb.Acquisition.FindingLive.Index do
   end
 
   defp finding_query(queue, family, source, program, run_id) do
-    Finding
-    |> Ash.Query.for_read(:queue, %{
-      queue: queue,
-      family: family,
-      source_id: filter_id(source),
-      program_id: filter_id(program),
-      agent_run_id: run_id
-    })
+    CollectionQueries.finding(
+      queue,
+      family,
+      filter_id(source),
+      filter_id(program),
+      run_id
+    )
   end
 
   defp count_findings(queue, family, source, program, run_id, actor) do

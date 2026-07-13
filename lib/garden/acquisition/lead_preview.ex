@@ -23,7 +23,14 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   require Logger
 
   alias GnomeGarden.Acquisition
-  alias GnomeGarden.Acquisition.{LeadDedup, LeadPromote, ProviderBudgetPolicy}
+
+  alias GnomeGarden.Acquisition.{
+    LeadDedup,
+    LeadPromote,
+    ProgramSourcePolicy,
+    ProviderBudgetPolicy
+  }
+
   alias GnomeGarden.Commercial
   alias GnomeGarden.Search.Exa
   alias GnomeGarden.Support.WebIdentity
@@ -157,24 +164,37 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       errors: error_strings
     }
 
-    run = persist_run(ranked, opts, summary)
-    ranked = attach_persisted_ids(ranked, run)
+    with {:ok, run} <- persist_run(ranked, opts, summary) do
+      ranked = attach_persisted_ids(ranked, run)
 
-    {:ok,
-     %{
-       run_id: run && run.id,
-       queries_run: executed,
-       total_cost: Float.round(cost, 4),
-       candidate_count: length(ranked),
-       promotable_count: promotable,
-       needs_enrichment_count: needs_enrichment,
-       kept_count: Enum.count(ranked, &(not &1.dedupe.suppress?)),
-       suppressed_count: suppressed,
-       failed_queries: length(errors),
-       errors: error_strings,
-       budget_idempotency_key: Keyword.fetch!(opts, :budget_idempotency_key),
-       candidates: ranked
-     }}
+      GnomeGarden.Acquisition.Telemetry.candidate_routing(
+        %{
+          candidate_count: length(ranked),
+          promotable_count: promotable,
+          needs_enrichment_count: needs_enrichment,
+          suppressed_count: suppressed,
+          failed_query_count: length(errors),
+          cost: Float.round(cost, 4)
+        },
+        %{lead_preview_run_id: run && run.id}
+      )
+
+      {:ok,
+       %{
+         run_id: run && run.id,
+         queries_run: executed,
+         total_cost: Float.round(cost, 4),
+         candidate_count: length(ranked),
+         promotable_count: promotable,
+         needs_enrichment_count: needs_enrichment,
+         kept_count: Enum.count(ranked, &(not &1.dedupe.suppress?)),
+         suppressed_count: suppressed,
+         failed_queries: length(errors),
+         errors: error_strings,
+         budget_idempotency_key: Keyword.fetch!(opts, :budget_idempotency_key),
+         candidates: ranked
+       }}
+    end
   end
 
   defp attach_persisted_ids(ranked, nil), do: ranked
@@ -198,6 +218,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       now = DateTime.truncate(DateTime.utc_now(), :second)
 
       attrs = %{
+        idempotency_key: Keyword.fetch!(opts, :budget_idempotency_key),
         source: :exa,
         status: run_status(summary),
         started_at: now,
@@ -209,22 +230,25 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         suppressed_count: summary.suppressed,
         total_cost: cost_decimal(summary.cost),
         errors: summary.errors,
-        metadata: %{
-          "provider_budget_idempotency_key" => Keyword.fetch!(opts, :budget_idempotency_key)
-        },
+        metadata:
+          %{
+            "provider_budget_idempotency_key" => Keyword.fetch!(opts, :budget_idempotency_key)
+          }
+          |> Map.merge(Keyword.get(opts, :execution_policy_snapshot, %{})),
         discovery_program_id: Keyword.get(opts, :discovery_program_id),
         created_by_id: actor_id(Keyword.get(opts, :actor)),
         candidates: Enum.map(ranked, &candidate_attrs/1)
       }
 
-      case Acquisition.create_lead_preview_run(attrs, actor: Keyword.get(opts, :actor)) do
-        {:ok, run} ->
-          run
+      actor = Keyword.get(opts, :actor)
+      idempotency_key = Keyword.fetch!(opts, :budget_idempotency_key)
 
-        {:error, reason} ->
-          Logger.warning("LeadPreview: failed to persist run: #{inspect(reason)}")
-          nil
+      case Acquisition.get_lead_preview_run_by_key(idempotency_key, actor: actor) do
+        {:ok, run} -> Acquisition.get_lead_preview_run(run.id, actor: actor)
+        {:error, _not_found} -> Acquisition.create_lead_preview_run(attrs, actor: actor)
       end
+    else
+      {:ok, nil}
     end
   end
 
@@ -277,16 +301,9 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   def run_for_program(program, opts \\ [])
 
   def run_for_program(%{} = program, opts) do
-    run(
-      Keyword.merge(
-        [
-          search_terms: List.wrap(program.search_terms),
-          regions: List.wrap(program.target_regions),
-          industries: List.wrap(program.target_industries)
-        ],
-        opts
-      )
-    )
+    with {:ok, policy_opts} <- typed_policy_opts(program, opts) do
+      run(Keyword.merge(opts, policy_opts))
+    end
   end
 
   def run_for_program(id, opts) when is_binary(id) do
@@ -295,6 +312,46 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       error -> error
     end
   end
+
+  defp typed_policy_opts(program, opts) do
+    actor = Keyword.get(opts, :actor)
+
+    case Keyword.get(opts, :execution_policy_snapshot) do
+      %{} = snapshot -> ProgramSourcePolicy.execution_options(snapshot)
+      nil -> current_policy_opts(program, opts, actor)
+    end
+  end
+
+  defp current_policy_opts(program, opts, actor) do
+    with {:ok, policy} <- resolve_program_source(program, opts, actor) do
+      policy |> ProgramSourcePolicy.snapshot() |> ProgramSourcePolicy.execution_options()
+    end
+  end
+
+  defp resolve_program_source(program, opts, actor) do
+    case Keyword.get(opts, :program_source_id) do
+      nil ->
+        Acquisition.get_active_exa_program_source_for_discovery_program(program.id, actor: actor)
+
+      program_source_id ->
+        with {:ok, policy} <- Acquisition.get_program_source(program_source_id, actor: actor),
+             true <- active_exa_policy?(policy, program.id) do
+          {:ok, policy}
+        else
+          _invalid_policy -> {:error, :active_program_source_required}
+        end
+    end
+  end
+
+  defp active_exa_policy?(%{status: :active, enabled: true} = policy, discovery_program_id) do
+    policy = Ash.load!(policy, [:program, :source])
+
+    policy.program.discovery_program_id == discovery_program_id and
+      policy.program.status == :active and policy.source.enabled and
+      policy.source.status == :active and policy.source.external_ref == "provider:exa:search"
+  end
+
+  defp active_exa_policy?(_policy, _discovery_program_id), do: false
 
   @doc "Builds the (deduped) list of `%{text:, intent:}` queries from inputs."
   def build_queries(opts) do
@@ -428,27 +485,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   end
 
   defp account_provider_failure(reservation, reason, actor) do
-    result =
-      if confirmed_zero_cost_failure?(reason) do
-        Acquisition.release_provider_capacity(
-          %{
-            idempotency_key: reservation.idempotency_key,
-            failure_reason: inspect(reason)
-          },
-          actor: actor
-        )
-      else
-        Acquisition.settle_provider_capacity(
-          %{
-            idempotency_key: reservation.idempotency_key,
-            actual_cost: reservation.estimated_cost,
-            actual_requests: 1,
-            status: :failed,
-            failure_reason: inspect(reason)
-          },
-          actor: actor
-        )
-      end
+    result = ProviderBudgetPolicy.account_failure(reservation, reason, actor: actor)
 
     case result do
       {:ok, _result} ->
@@ -458,17 +495,6 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         Logger.warning("LeadPreview: provider accounting failed: #{inspect(error)}")
     end
   end
-
-  defp confirmed_zero_cost_failure?(:missing_exa_api_key), do: true
-
-  defp confirmed_zero_cost_failure?({:http_error, status, _body}) when status in 400..499,
-    do: true
-
-  defp confirmed_zero_cost_failure?(%{reason: reason})
-       when reason in [:econnrefused, :nxdomain],
-       do: true
-
-  defp confirmed_zero_cost_failure?(_reason), do: false
 
   defp cache_response(response) do
     %{
@@ -538,7 +564,13 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
   end
 
   defp rank_key(row) do
-    {if(row.dedupe.suppress?, do: 1, else: 0), Map.get(@context_rank, row.dedupe.context, 9)}
+    score = if is_number(row.score), do: row.score, else: 0.0
+
+    {
+      if(row.dedupe.suppress?, do: 1, else: 0),
+      Map.get(@context_rank, row.dedupe.context, 9),
+      -score
+    }
   end
 
   defp fill(template, industry, region) do

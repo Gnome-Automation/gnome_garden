@@ -183,6 +183,24 @@ defmodule GnomeGarden.Procurement do
       define :delete_source_browser_session, action: :destroy
     end
 
+    resource GnomeGarden.Procurement.SourceRetrievalRun do
+      define :list_source_retrieval_runs, action: :read
+
+      define :list_source_retrieval_runs_for_source,
+        action: :for_source,
+        args: [:procurement_source_id]
+
+      define :get_latest_source_retrieval_run,
+        action: :latest_for_source,
+        args: [:procurement_source_id]
+
+      define :start_source_retrieval_run, action: :start
+      define :complete_source_retrieval_run, action: :complete
+      define :fail_source_retrieval_run, action: :fail
+      define :block_source_retrieval_run, action: :block
+      define :delete_source_retrieval_run, action: :destroy
+    end
+
     resource GnomeGarden.Procurement.SourceSearchFilter do
       define :list_source_search_filters, action: :for_source, args: [:procurement_source_id]
       define :get_source_search_filter, action: :read, get_by: [:id]

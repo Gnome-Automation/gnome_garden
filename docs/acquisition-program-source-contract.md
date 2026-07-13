@@ -50,8 +50,8 @@ erDiagram
     integer cadence_minutes
     integer max_queries_per_run
     integer max_results_per_query
-    decimal spend_limit_per_run
-    decimal spend_limit_per_day
+    money spend_limit_per_run
+    money spend_limit_per_day
     atom enrichment_policy
     integer max_enrichments_per_run
     integer finding_limit_per_run
@@ -74,9 +74,8 @@ the `GnomeGarden.Acquisition` domain.
 
 - Required `belongs_to :program, GnomeGarden.Acquisition.Program`.
 - Required `belongs_to :source, GnomeGarden.Acquisition.Source`.
-- `Program` and `Source` each expose `has_many :program_sources`.
-- `Program` and `Source` may expose read-only `through` relationships to one
-  another when useful. The writable relationship remains the join resource.
+- Program/source traversal uses the intent-named `for_program` and `for_source`
+  reads. The parents do not expose an unbounded generic join relationship.
 - Add nullable `program_source_id` provenance to `Finding` during migration.
   Keep existing `program_id` and `source_id` for compatibility and efficient
   queue filtering; all three IDs must agree when the join is present.
@@ -92,9 +91,9 @@ the `GnomeGarden.Acquisition` domain.
 | `cadence_minutes` | integer | Positive and independent for every program/source pair. |
 | `max_queries_per_run` | integer | Positive hard ceiling. |
 | `max_results_per_query` | integer | Positive hard ceiling. |
-| `spend_limit_per_run` | decimal | Non-negative policy ceiling, not consumption state. |
-| `spend_limit_per_day` | decimal | Non-negative policy ceiling, enforced by budget reservations. |
-| `enrichment_policy` | atom | `none`, `verify_promotable`, or `verify_ranked`. |
+| `spend_limit_per_run` | money | Positive USD policy ceiling, not consumption state. |
+| `spend_limit_per_day` | money | Positive USD policy ceiling, enforced by budget reservations. |
+| `enrichment_policy` | atom | `none` or `verify_promotable`. |
 | `max_enrichments_per_run` | integer | Non-negative hard ceiling. |
 | `finding_limit_per_run` | integer | Non-negative admission cap. |
 | `finding_limit_per_day` | integer | Non-negative admission cap. |
@@ -126,7 +125,6 @@ Actions belong on `ProgramSource`; callers do not assemble runnable queries.
 | `read :for_program` | `list_program_sources_for_program` | Load program execution coverage. |
 | `read :for_source` | `list_program_sources_for_source` | Load source demand and policy. |
 | `read :runnable` | `list_runnable_program_sources` | Return only due, active, enabled pairs with runnable parents. |
-| `read :workspace` | `get_program_source_workspace` | Stable operator detail shape with parents and recent run health. |
 
 `activate` must reject empty query templates for query-driven providers, absent
 or zero ceilings, inactive programs, disabled/blocked sources, and unsupported
@@ -199,16 +197,16 @@ limits belong to `ProgramSource`.
    IDs, then attach `program_source_id` to those findings.
 6. Do not guess ambiguous procurement coverage. Emit unresolved rows for
    operator review and let `gnome_ga-fx2.14` govern portfolio adoption.
-7. Dual-read old scope/metadata only during deployment compatibility; all new
-   writes use typed `ProgramSource` fields.
+7. Existing legacy scope remains readable for historical context, but execution
+   requires an active typed `ProgramSource` and never falls back to legacy fields.
 8. Verify row counts, uniqueness, parent consistency, enabled-state safety, and
    zero newly runnable configurations before enabling the scheduler.
 9. Remove compatibility reads and obsolete metadata keys only in
    `gnome_ga-fx2.35` after the measured pilot.
 
-Rollback disables all `ProgramSource` rows first, returns reads to the existing
-program/source fields, clears nullable provenance references, and then removes
-the new table. No backfill step may activate execution.
+Rollback disables all `ProgramSource` rows first, clears nullable provenance
+references, and then removes the new table. No backfill step may activate
+execution.
 
 ## Downstream Ownership
 
