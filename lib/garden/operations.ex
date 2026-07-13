@@ -46,6 +46,10 @@ defmodule GnomeGarden.Operations do
       define :create_team_member, action: :create
       define :update_team_member, action: :update
       define :delete_team_member, action: :destroy
+
+      define :ensure_operator_team_member,
+        action: :ensure_operator,
+        args: [:email, :display_name]
     end
 
     resource GnomeGarden.Operations.Organization do

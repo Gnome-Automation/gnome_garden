@@ -68,6 +68,15 @@ defmodule GnomeGarden.Operations.TeamMember do
       argument :user_id, :uuid, allow_nil?: false
       get_by [:user_id]
     end
+
+    action :ensure_operator, :struct do
+      constraints instance_of: __MODULE__
+
+      argument :email, :ci_string, allow_nil?: false
+      argument :display_name, :string, allow_nil?: false
+
+      run GnomeGarden.Operations.Actions.EnsureOperatorTeamMember
+    end
   end
 
   attributes do
