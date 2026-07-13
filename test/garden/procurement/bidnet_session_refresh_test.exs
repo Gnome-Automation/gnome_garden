@@ -12,9 +12,12 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
          "finalUrl" => "https://www.bidnetdirect.com/private",
          "title" => "BidNet Direct",
          "status" => 200,
-         "storageStatePath" => payload.storage_state_path,
-         "tracePath" => payload.trace_path,
-         "screenshotPath" => payload.screenshot_path
+         secret_envelope:
+           GnomeGarden.Procurement.PlaywrightRunner.envelope(%{
+             "storageState" => %{
+               "cookies" => [%{"name" => "sid", "value" => "cookie-secret"}]
+             }
+           })
        }}
     end
   end
@@ -24,7 +27,10 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
       send(Process.get(:test_pid), {:runner, action, payload, opts})
 
       {:error,
-       %{"code" => "invalid_credentials", "error" => "BidNet rejected these credentials."}}
+       %{
+         "code" => "invalid_credentials",
+         "error" => "BidNet rejected source-secret for operator@example.com."
+       }}
     end
   end
 
@@ -50,21 +56,22 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
 
     assert_receive {:runner, :bidnet_login, payload, runner_opts}
     assert payload.url == source.url
-    assert payload.username == "operator@example.com"
-    assert payload.password == "source-secret"
-    assert payload.storage_state_path =~ session.id
+    refute Map.has_key?(payload, :username)
+    refute Map.has_key?(payload, :password)
+    refute inspect(runner_opts) =~ "source-secret"
     assert Keyword.fetch!(runner_opts, :timeout_ms) == 15_000
 
     assert session.status == :valid
     assert session.provider == :bidnet
     assert session.session_family == "bidnet"
     assert session.source_credential_id == credential.id
-    assert session.storage_state_path =~ "storage-state.json"
-    assert session.trace_path =~ "trace.zip"
-    assert session.screenshot_path =~ "session.png"
+    assert is_map(session.encrypted_storage_state)
+    refute inspect(session) =~ "cookie-secret"
     assert session.verified_at
     assert session.expires_at
     assert session.metadata["final_url"] == "https://www.bidnetdirect.com/private"
+    refute Jason.encode!(session.metadata) =~ "source-secret"
+    refute Jason.encode!(session.metadata) =~ "cookie-secret"
   end
 
   test "refreshes a BidNet session using Bitwarden-backed credentials" do
@@ -114,8 +121,8 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
              Procurement.refresh_bidnet_source_session(source, runner: SuccessfulRunner)
 
     assert_receive {:runner, :bidnet_login, payload, _runner_opts}
-    assert payload.username == "operator@example.com"
-    assert payload.password == "bitwarden-secret"
+    refute Map.has_key?(payload, :username)
+    refute Map.has_key?(payload, :password)
     assert session.source_credential_id == credential.id
   end
 
@@ -128,14 +135,18 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
                last_failure_reason: "Generic browser verifier cannot validate BidNet."
              })
 
-    assert {:error, %{session: failed, reason: "BidNet rejected these credentials."}} =
+    assert {:error,
+            %{
+              session: failed,
+              reason: "BidNet rejected [REDACTED] for [REDACTED]."
+            }} =
              Procurement.refresh_bidnet_source_session(source, runner: FailingRunner)
 
     assert_receive {:runner, :bidnet_login, payload, _runner_opts}
-    assert payload.password == "source-secret"
+    refute Map.has_key?(payload, :password)
 
     assert failed.status == :invalid
-    assert failed.last_failure_reason == "BidNet rejected these credentials."
+    assert failed.last_failure_reason == "BidNet rejected [REDACTED] for [REDACTED]."
     assert failed.metadata["failure_code"] == "invalid_credentials"
     refute inspect(failed.metadata) =~ "source-secret"
 

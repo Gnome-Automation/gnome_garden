@@ -4,7 +4,7 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
   alias GnomeGarden.Procurement.PlaywrightRunner
   alias GnomeGarden.ProviderContract
 
-  test "runs the Node runner with JSON stdin and secret-free command args" do
+  test "splits public payload and secrets before invoking the Node runner" do
     parent = self()
     contract_case = ProviderContract.load(:playwright, :provider_action, :success)
     fixture_runner = ProviderContract.command_runner(contract_case)
@@ -19,7 +19,6 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
                :probe,
                %{
                  url: "https://www.bidnetdirect.com",
-                 storage_state_path: "/tmp/session/state.json",
                  credentials: %{username: "operator@example.com", password: "super-secret"}
                },
                command_runner: command_runner,
@@ -36,7 +35,11 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
     assert {:ok, payload} = Jason.decode(Keyword.fetch!(opts, :input))
     assert payload["action"] == "probe"
     assert payload["timeoutMs"] == 12_000
-    assert payload["credentials"]["password"] == "super-secret"
+    refute Map.has_key?(payload, "credentials")
+
+    assert {:ok, secrets} = Jason.decode(Keyword.fetch!(opts, :secret_input))
+    assert secrets["credentials"]["password"] == "super-secret"
+    refute inspect(Keyword.delete(opts, :secret_input)) =~ "super-secret"
   end
 
   test "returns runner JSON failures without exposing the input payload" do
@@ -54,7 +57,7 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
     refute inspect(error) =~ "super-secret"
   end
 
-  test "default runner passes payload file path to runner environment" do
+  test "default runner keeps secrets out of the public payload file" do
     original_node_path = Application.get_env(:gnome_garden, :playwright_node_path)
     original_runner_path = Application.get_env(:gnome_garden, :procurement_playwright_runner_path)
     script_path = Path.join(System.tmp_dir!(), "garden-cat-#{System.unique_integer([:positive])}")
@@ -78,7 +81,24 @@ defmodule GnomeGarden.Procurement.PlaywrightRunnerTest do
              })
 
     assert result["action"] == "probe"
-    assert result["password"] == "super-secret"
+    refute Map.has_key?(result, "password")
+    refute inspect(result) =~ "super-secret"
+  end
+
+  test "returns secret output in a redacted envelope and scrubs echoed secrets" do
+    command_runner = fn _command, _args, _opts ->
+      {Jason.encode!(%{"ok" => true, "message" => "password=super-secret"}), 0,
+       %{"storageState" => %{"cookies" => [%{"name" => "sid", "value" => "cookie-secret"}]}}}
+    end
+
+    assert {:ok, result} =
+             PlaywrightRunner.run(:probe, %{url: "https://example.com", password: "super-secret"},
+               command_runner: command_runner
+             )
+
+    assert result["message"] == "password=[REDACTED]"
+    refute inspect(result) =~ "cookie-secret"
+    assert PlaywrightRunner.secret(result, "storageState") =~ "cookie-secret"
   end
 
   test "returns bounded error for invalid runner output" do

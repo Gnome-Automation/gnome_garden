@@ -81,6 +81,20 @@ defmodule GnomeGarden.Browser do
     end)
   end
 
+  @doc "Type a transient value into an element without embedding it in JavaScript source."
+  def type(selector, value, opts \\ []) when is_binary(selector) and is_binary(value) do
+    with_session(:type, opts, fn client, session ->
+      client.type(session, selector, value, timeout: timeout(opts))
+    end)
+  end
+
+  @doc "Click an element in the managed browser session."
+  def click(selector, opts \\ []) when is_binary(selector) do
+    with_session(:click, opts, fn client, session ->
+      client.click(session, selector, timeout: timeout(opts))
+    end)
+  end
+
   @doc "Fetch an HTTP resource without starting a browser session."
   def web_fetch(url, opts \\ []) when is_binary(url) do
     client = browser_client(opts)

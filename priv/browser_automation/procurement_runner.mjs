@@ -7,7 +7,7 @@ import process from 'node:process';
 const defaultUserAgent =
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36';
 
-const input = await readJsonInput();
+const input = deepMerge(await readJsonInput(), await readSecretInput());
 
 try {
   const result = await run(input);
@@ -47,7 +47,6 @@ async function bidnetLogin(payload) {
   const page = await context.newPage();
   const tracePath = stringOrNull(payload.tracePath ?? payload.trace_path);
   const screenshotPath = stringOrNull(payload.screenshotPath ?? payload.screenshot_path);
-  const storageStatePath = stringOrNull(payload.storageStatePath ?? payload.storage_state_path);
 
   try {
     if (tracePath) {
@@ -97,10 +96,7 @@ async function bidnetLogin(payload) {
       });
     }
 
-    if (storageStatePath) {
-      await ensureParentDir(storageStatePath);
-      await context.storageState({ path: storageStatePath });
-    }
+    await writeSecretOutput({ storageState: await context.storageState() });
 
     if (screenshotPath) {
       await ensureParentDir(screenshotPath);
@@ -116,7 +112,6 @@ async function bidnetLogin(payload) {
       finalUrl: page.url(),
       title: await safeTitle(page),
       status: null,
-      storageStatePath,
       tracePath,
       screenshotPath
     };
@@ -166,7 +161,6 @@ async function probe(payload) {
   const page = await context.newPage();
   const tracePath = stringOrNull(payload.tracePath ?? payload.trace_path);
   const screenshotPath = stringOrNull(payload.screenshotPath ?? payload.screenshot_path);
-  const storageStatePath = stringOrNull(payload.storageStatePath ?? payload.storage_state_path);
 
   try {
     if (tracePath) {
@@ -179,10 +173,7 @@ async function probe(payload) {
       timeout: timeoutMs
     });
 
-    if (storageStatePath) {
-      await ensureParentDir(storageStatePath);
-      await context.storageState({ path: storageStatePath });
-    }
+    await writeSecretOutput({ storageState: await context.storageState() });
 
     if (screenshotPath) {
       await ensureParentDir(screenshotPath);
@@ -199,7 +190,6 @@ async function probe(payload) {
       finalUrl: page.url(),
       title: await safeTitle(page),
       status: response ? response.status() : null,
-      storageStatePath,
       tracePath,
       screenshotPath
     };
@@ -314,6 +304,47 @@ async function readJsonInput() {
   }
 
   return await readJsonStdin();
+}
+
+async function readSecretInput() {
+  const secretPath = process.env.GARDEN_PROCUREMENT_RUNNER_SECRET_PATH;
+
+  if (!secretPath) {
+    return {};
+  }
+
+  const raw = await fs.readFile(secretPath, 'utf8');
+  return parseJsonPayload(raw);
+}
+
+async function writeSecretOutput(value) {
+  const outputPath = process.env.GARDEN_PROCUREMENT_RUNNER_SECRET_OUTPUT_PATH;
+
+  if (!outputPath) {
+    return;
+  }
+
+  await ensureParentDir(outputPath);
+  await fs.writeFile(outputPath, JSON.stringify(value), { mode: 0o600 });
+  await fs.chmod(outputPath, 0o600);
+}
+
+function deepMerge(publicValue, secretValue) {
+  if (!publicValue || typeof publicValue !== 'object' || Array.isArray(publicValue)) {
+    return secretValue;
+  }
+
+  if (!secretValue || typeof secretValue !== 'object' || Array.isArray(secretValue)) {
+    return publicValue;
+  }
+
+  const merged = { ...publicValue };
+
+  for (const [key, value] of Object.entries(secretValue)) {
+    merged[key] = key in merged ? deepMerge(merged[key], value) : value;
+  }
+
+  return merged;
 }
 
 async function readJsonStdin() {

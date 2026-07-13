@@ -41,7 +41,7 @@ defmodule GnomeGarden.Procurement.SourceCredential do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
 
     create :create do
       primary? true
@@ -60,7 +60,6 @@ defmodule GnomeGarden.Procurement.SourceCredential do
         :bitwarden_item_id,
         :bitwarden_item_name,
         :bitwarden_notes,
-        :status,
         :notes,
         :metadata
       ]
@@ -69,27 +68,6 @@ defmodule GnomeGarden.Procurement.SourceCredential do
       argument :api_key, :string, sensitive?: true
 
       change GnomeGarden.Procurement.Changes.EncryptSourceCredentialSecret
-    end
-
-    update :update do
-      accept [
-        :provider,
-        :credential_family,
-        :scope,
-        :label,
-        :username,
-        :procurement_source_id,
-        :credential_storage,
-        :bitwarden_server_url,
-        :bitwarden_organization,
-        :bitwarden_collection,
-        :bitwarden_item_id,
-        :bitwarden_item_name,
-        :bitwarden_notes,
-        :status,
-        :notes,
-        :metadata
-      ]
     end
 
     update :rotate_secret do
@@ -103,9 +81,12 @@ defmodule GnomeGarden.Procurement.SourceCredential do
       change set_attribute(:status, :active)
       change set_attribute(:test_status, :untested)
       change set_attribute(:last_failure_reason, nil)
+      change GnomeGarden.Procurement.Changes.InvalidateCredentialBrowserSessions
     end
 
     update :store_in_bitwarden do
+      require_atomic? false
+
       accept [
         :username,
         :bitwarden_server_url,
@@ -127,6 +108,7 @@ defmodule GnomeGarden.Procurement.SourceCredential do
       change set_attribute(:api_key_present, false)
       change set_attribute(:test_status, :untested)
       change set_attribute(:last_failure_reason, nil)
+      change GnomeGarden.Procurement.Changes.InvalidateCredentialBrowserSessions
     end
 
     update :queue_test do
@@ -191,9 +173,21 @@ defmodule GnomeGarden.Procurement.SourceCredential do
     end
 
     update :disable do
+      require_atomic? false
       accept []
 
       change set_attribute(:status, :disabled)
+      change GnomeGarden.Procurement.Changes.InvalidateCredentialBrowserSessions
+    end
+
+    update :compromise do
+      require_atomic? false
+      accept [:last_failure_reason]
+      change set_attribute(:status, :invalid)
+      change set_attribute(:test_status, :invalid)
+
+      change {GnomeGarden.Procurement.Changes.InvalidateCredentialBrowserSessions,
+              mode: :compromise}
     end
 
     action :resolve_username_password, :map do
@@ -260,7 +254,6 @@ defmodule GnomeGarden.Procurement.SourceCredential do
     prefix "procurement_source_credential"
 
     publish :create, "created"
-    publish :update, "updated"
     publish :rotate_secret, "updated"
     publish :store_in_bitwarden, "updated"
     publish :queue_test, "updated"
@@ -270,7 +263,7 @@ defmodule GnomeGarden.Procurement.SourceCredential do
     publish :mark_failed, "updated"
     publish :mark_manual_verification_required, "updated"
     publish :disable, "updated"
-    publish :destroy, "destroyed"
+    publish :compromise, "updated"
   end
 
   attributes do

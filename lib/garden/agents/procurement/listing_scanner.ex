@@ -433,41 +433,47 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   defp do_bidnet_scan(source, context) do
     Logger.info("Scanning #{source.name} via BidNet HTML scanner")
     profile_context = profile_context_for_source(source)
-    context = put_bidnet_session_context(source, context)
 
-    with {:ok, %{bids: bids}} <-
-           ScanBidNet.run(
-             %{
-               url: source.url,
-               source_name: source.name,
-               max_results: 20,
-               detail_limit: 20
-             },
-             context
-           ),
-         filtered = TargetingFilter.filter_bids(bids, profile_context),
-         {:ok, resolved} <- PublicSourceResolver.resolve_bids(filtered.kept, source, context),
-         {:ok, scored} <- score_bids(resolved, source, profile_context),
-         {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
-      complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
-    end
+    with_bidnet_session(source, context, fn context ->
+      with {:ok, %{bids: bids}} <-
+             ScanBidNet.run(
+               %{
+                 url: source.url,
+                 source_name: source.name,
+                 max_results: 20,
+                 detail_limit: 20
+               },
+               context
+             ),
+           filtered = TargetingFilter.filter_bids(bids, profile_context),
+           {:ok, resolved} <- PublicSourceResolver.resolve_bids(filtered.kept, source, context),
+           {:ok, scored} <- score_bids(resolved, source, profile_context),
+           {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
+        complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
+      end
+    end)
   end
 
-  defp put_bidnet_session_context(source, context) do
+  defp with_bidnet_session(source, context, function) do
     case valid_bidnet_session(source) do
       nil ->
-        context
+        function.(context)
 
       session ->
-        context
-        |> Map.put(:bidnet_session_id, session.id)
-        |> Map.put(:bidnet_storage_state_path, session.storage_state_path)
+        GnomeGarden.Procurement.BrowserSessionCustody.with_materialized(session, fn path ->
+          context =
+            context
+            |> Map.put(:bidnet_session_id, session.id)
+            |> Map.put(:bidnet_storage_state_path, path)
+
+          function.(context)
+        end)
     end
   end
 
   defp valid_bidnet_session(source) do
     case Procurement.list_valid_source_browser_sessions_for_source(source.id, authorize?: false) do
-      {:ok, [session | _]} when is_binary(session.storage_state_path) -> session
+      {:ok, [session | _]} -> session
       _ -> nil
     end
   end
@@ -1387,60 +1393,28 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   defp maybe_login(%{source_type: :planetbids, requires_login: true} = source, listing_url) do
     with {:ok, credentials} <- GnomeGarden.Procurement.SourceCredentials.credentials_for(source),
          {:ok, _} <- Browser.navigate(listing_url),
-         {:ok, %{"submitted" => submitted?}} <-
-           Browser.evaluate(planetbids_login_js(credentials)) do
-      if submitted?, do: Process.sleep(3500)
+         {:ok, _} <-
+           Browser.type(
+             "input[type='email'], input[name*='email' i], input[id*='email' i], input[name*='user' i], input[id*='user' i]",
+             credentials.username
+           ),
+         {:ok, _} <-
+           Browser.type(
+             "input[type='password'], input[name*='password' i], input[id*='password' i]",
+             credentials.password
+           ),
+         {:ok, _} <-
+           Browser.click(
+             "button[type='submit'], input[type='submit'], button[id*='login' i], button[class*='login' i]"
+           ) do
+      Process.sleep(3500)
       :ok
     else
       {:error, reason} -> {:error, reason}
-      _ -> :ok
     end
   end
 
   defp maybe_login(_source, _listing_url), do: :ok
-
-  defp planetbids_login_js(%{username: username, password: password}) do
-    encoded_username = Jason.encode!(username)
-    encoded_password = Jason.encode!(password)
-
-    """
-    (function() {
-      var username = #{encoded_username};
-      var password = #{encoded_password};
-      var userInput = document.querySelector('input[type="email"], input[name*="email" i], input[id*="email" i], input[name*="user" i], input[id*="user" i]');
-      var passInput = document.querySelector('input[type="password"], input[name*="password" i], input[id*="password" i]');
-
-      if (!userInput || !passInput) {
-        return {submitted: false, reason: 'no_login_form'};
-      }
-
-      userInput.focus();
-      userInput.value = username;
-      userInput.dispatchEvent(new Event('input', {bubbles: true}));
-      userInput.dispatchEvent(new Event('change', {bubbles: true}));
-
-      passInput.focus();
-      passInput.value = password;
-      passInput.dispatchEvent(new Event('input', {bubbles: true}));
-      passInput.dispatchEvent(new Event('change', {bubbles: true}));
-
-      var form = passInput.closest('form') || userInput.closest('form');
-      var button = document.querySelector('button[type="submit"], input[type="submit"], button[id*="login" i], button[class*="login" i]');
-
-      if (form && form.requestSubmit) {
-        form.requestSubmit();
-      } else if (button) {
-        button.click();
-      } else if (form) {
-        form.submit();
-      } else {
-        return {submitted: false, reason: 'no_submit_control'};
-      }
-
-      return {submitted: true};
-    })()
-    """
-  end
 
   defp maybe_enrich(map, _key, nil, _existing), do: map
   defp maybe_enrich(map, _key, "", _existing), do: map

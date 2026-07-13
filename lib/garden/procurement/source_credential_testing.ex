@@ -15,6 +15,9 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
 
   @browser_wait_ms 3_500
   @bidnet_session_refresh_reason "Use BidNet browser session refresh to verify browser access."
+  @username_selector "input[type='email'], input[name*='email' i], input[id*='email' i], input[name*='user' i], input[id*='user' i], input[type='text']"
+  @password_selector "input[type='password'], input[name*='password' i], input[id*='password' i]"
+  @submit_selector "button[type='submit'], input[type='submit'], input[type='button'], button"
 
   def enqueue(credential_or_id, opts \\ [])
 
@@ -125,28 +128,28 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
     browser = Keyword.get(opts, :browser, browser())
 
     with {:ok, _navigation} <- browser.navigate(url, wait_for_network: true),
-         {:ok, submit_result} <- browser.evaluate(submit_login_js(credentials)),
-         {:ok, submit_result} <- maybe_follow_login_link(browser, submit_result, credentials),
-         :ok <- submitted?(submit_result),
+         {:ok, login_surface} <- browser.evaluate(login_surface_js()),
+         :ok <- maybe_follow_login_link(browser, login_surface),
+         {:ok, _typed} <- browser.type(@username_selector, credentials.username),
+         {:ok, _typed} <- browser.type(@password_selector, credentials.password),
+         {:ok, _clicked} <- browser.click(@submit_selector),
          :ok <- wait_after_submit(opts),
          {:ok, result} <- browser.evaluate(login_result_js()) do
       interpret_login_result(result)
     end
   end
 
-  defp maybe_follow_login_link(browser, %{"login_url" => login_url}, credentials)
+  defp maybe_follow_login_link(browser, %{"login_url" => login_url})
        when is_binary(login_url) and login_url != "" do
-    with {:ok, _navigation} <- browser.navigate(login_url, wait_for_network: true),
-         {:ok, submit_result} <- browser.evaluate(submit_login_js(credentials)) do
-      {:ok, submit_result}
+    case browser.navigate(login_url, wait_for_network: true) do
+      {:ok, _navigation} -> :ok
+      {:error, reason} -> {:error, reason}
     end
   end
 
-  defp maybe_follow_login_link(_browser, submit_result, _credentials), do: {:ok, submit_result}
-
-  defp submitted?(%{"submitted" => true}), do: :ok
-  defp submitted?(%{"reason" => reason}), do: {:error, reason}
-  defp submitted?(_result), do: {:error, "Could not find a login form."}
+  defp maybe_follow_login_link(_browser, %{"has_login_form" => true}), do: :ok
+  defp maybe_follow_login_link(_browser, %{"reason" => reason}), do: {:error, reason}
+  defp maybe_follow_login_link(_browser, _surface), do: {:error, "Could not find a login form."}
 
   defp wait_after_submit(opts) do
     opts
@@ -180,15 +183,10 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
     Application.get_env(:gnome_garden, :source_credential_browser, GnomeGarden.Browser)
   end
 
-  defp submit_login_js(%{username: username, password: password}) do
-    encoded_username = Jason.encode!(username)
-    encoded_password = Jason.encode!(password)
-
+  defp login_surface_js do
     """
     (() => {
       const clean = value => (value || '').replace(/\\s+/g, ' ').trim();
-      const username = #{encoded_username};
-      const password = #{encoded_password};
       const userInput = document.querySelector('input[type="email"], input[name*="email" i], input[id*="email" i], input[name*="user" i], input[id*="user" i], input[type="text"]');
       const passInput = document.querySelector('input[type="password"], input[name*="password" i], input[id*="password" i]');
 
@@ -200,38 +198,13 @@ defmodule GnomeGarden.Procurement.SourceCredentialTesting do
         });
 
         return {
-          submitted: false,
+          has_login_form: false,
           login_url: loginLink && loginLink.href ? loginLink.href : null,
           reason: loginLink ? 'login_link_found' : 'no_login_form'
         };
       }
 
-      userInput.focus();
-      userInput.value = username;
-      userInput.dispatchEvent(new Event('input', {bubbles: true}));
-      userInput.dispatchEvent(new Event('change', {bubbles: true}));
-
-      passInput.focus();
-      passInput.value = password;
-      passInput.dispatchEvent(new Event('input', {bubbles: true}));
-      passInput.dispatchEvent(new Event('change', {bubbles: true}));
-
-      const form = passInput.closest('form');
-      const submit =
-        (form && form.querySelector('button[type="submit"], input[type="submit"], input[type="button"], button')) ||
-        document.querySelector('button[type="submit"], input[type="submit"], input[type="button"], button');
-
-      if (submit) {
-        submit.click();
-        return {submitted: true, method: 'button'};
-      }
-
-      if (form) {
-        form.dispatchEvent(new Event('submit', {bubbles: true, cancelable: true}));
-        return {submitted: true, method: 'submit_event'};
-      }
-
-      return {submitted: false, reason: 'no_submit_control'};
+      return {has_login_form: true};
     })()
     """
   end

@@ -71,7 +71,10 @@ defmodule GnomeGarden.BrowserTest do
     end
 
     @impl true
-    def type(session, _selector, _text, _opts), do: {:ok, session, %{}}
+    def type(session, selector, text, opts) do
+      send(test_pid(session), {:browser_type, selector, text, opts})
+      {:ok, session, %{}}
+    end
 
     @impl true
     def screenshot(session, _opts), do: {:ok, session, %{bytes: <<>>, mime: "image/png"}}
@@ -202,6 +205,12 @@ defmodule GnomeGarden.BrowserTest do
     assert :ok = Browser.download("#download", target)
     assert File.read!(target) == "downloaded"
     assert_received {:browser_click, "#download", _opts}
+    refute_received {:browser_evaluate, _script, _opts}
+  end
+
+  test "types transient values without JavaScript evaluation" do
+    assert {:ok, %{}} = Browser.type("input[type='password']", "super-secret")
+    assert_received {:browser_type, "input[type='password']", "super-secret", _opts}
     refute_received {:browser_evaluate, _script, _opts}
   end
 

@@ -9,12 +9,13 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
   defmodule BrowserSuccess do
     def navigate(url, _opts), do: {:ok, %{url: url, title: "Login", status: :ok}}
 
-    def evaluate(_js) do
+    def evaluate(js) do
+      send(Process.get(:test_pid), {:browser_script, js})
       count = Process.get({__MODULE__, :evaluate_count}, 0)
       Process.put({__MODULE__, :evaluate_count}, count + 1)
 
       if count == 0 do
-        {:ok, %{"submitted" => true}}
+        {:ok, %{"has_login_form" => true}}
       else
         {:ok,
          %{
@@ -27,6 +28,13 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
          }}
       end
     end
+
+    def type(selector, value) do
+      send(Process.get(:test_pid), {:browser_type, selector, value})
+      {:ok, %{}}
+    end
+
+    def click(_selector), do: {:ok, %{}}
   end
 
   defmodule BrowserInvalid do
@@ -37,7 +45,7 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
       Process.put({__MODULE__, :evaluate_count}, count + 1)
 
       if count == 0 do
-        {:ok, %{"submitted" => true}}
+        {:ok, %{"has_login_form" => true}}
       else
         {:ok,
          %{
@@ -50,15 +58,21 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
          }}
       end
     end
+
+    def type(_selector, _value), do: {:ok, %{}}
+    def click(_selector), do: {:ok, %{}}
   end
 
   defmodule BrowserShouldNotRun do
     def navigate(_url, _opts), do: raise("BidNet must not use the generic browser verifier")
 
     def evaluate(_js), do: raise("BidNet must not use the generic browser verifier")
+    def type(_selector, _value), do: raise("BidNet must not use the generic browser verifier")
+    def click(_selector), do: raise("BidNet must not use the generic browser verifier")
   end
 
   setup do
+    Process.put(:test_pid, self())
     original_browser = Application.get_env(:gnome_garden, :source_credential_browser)
     original_wait = Application.get_env(:gnome_garden, :source_credential_login_wait_ms)
 
@@ -113,6 +127,12 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     assert verified.last_test_started_at
     assert verified.last_test_completed_at
     refute verified.last_failure_reason
+
+    assert_receive {:browser_script, discovery_script}
+    assert_receive {:browser_script, result_script}
+    refute discovery_script =~ "source-secret"
+    refute result_script =~ "source-secret"
+    assert_receive {:browser_type, _selector, "source-secret"}
   end
 
   test "worker marks rejected browser credentials invalid" do
