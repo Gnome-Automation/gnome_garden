@@ -24,6 +24,38 @@ isolated session that is reused across navigation and evaluation, closed explici
 retrieval does not open a browser session. Snapshot, fetch, and download output is bounded before
 it crosses the facade.
 
+## Credential and session custody
+
+Provider passwords and API keys enter Ash actions as sensitive arguments and are persisted only as
+encrypted envelopes. Authenticated browser storage state follows the same rule: the database stores
+an AES-GCM envelope authenticated with both the procurement source ID and source credential ID. It
+does not store a reusable filesystem path.
+
+`SourceBrowserSession` records expire by timestamp and are bound to the credential fingerprint that
+created them. Rotating, disabling, or compromising a credential invalidates all bound sessions;
+compromise also deletes the encrypted session payload. Scanners resolve session state through the
+Procurement domain and materialize it into a `0600` temporary file for one operation only.
+
+Playwright receives a public payload and a separate secret envelope through private temporary files.
+Neither command arguments nor the ordinary JSON payload contain credentials. Storage-state output
+uses a separate `0600` file and is encrypted immediately by the caller. Secret-bearing browser form
+values use typed `Browser.type/3` calls and are never interpolated into JavaScript source. Logs,
+errors, run metadata, and `Inspect` output must contain only redacted values and non-sensitive audit
+metadata.
+
+The production `Jido.Browser` client implements `type/4` and `click/3`; credential entry uses the
+agent-browser session transport rather than JavaScript interpolation. The Garden facade discards
+adapter error details from typing operations so an adapter cannot echo the typed value into logs.
+Login submission is a fixed, secret-free script scoped to the password field's nearest form, with
+`requestSubmit()` and submit-event fallbacks. A missing form remains a valid public-listing case.
+
+BidNet credential testing is a real provider login, not a generic form heuristic. A successful test
+creates a valid encrypted browser session before marking the credential verified. Invalid credentials
+fail without retry; transient browser failures retry at most twice. Listing extraction asks the BidNet
+provider boundary for access: valid sessions are reused, expired sessions are cleared and refreshed,
+and missing, pending, or invalid credentials are returned as distinct blocked states. Public BidNet
+sources may still use the cookie-free HTML path when login is not required.
+
 ## Releases
 
 Build the runtime package with:

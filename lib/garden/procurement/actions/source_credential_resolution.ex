@@ -15,6 +15,10 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
     end
   end
 
+  def username_password_for_verification(credential) do
+    resolve_username_password(credential)
+  end
+
   def api_key(family) do
     with {:ok, family} <- require_family(family),
          {:ok, credential} <- resolve_family_credential(family),
@@ -121,7 +125,7 @@ defmodule GnomeGarden.Procurement.Actions.SourceCredentialResolution do
   defp stored_status(%{test_status: :invalid}), do: :invalid
 
   defp stored_status(%{test_status: test_status})
-       when test_status in [:queued, :testing, :untested],
+       when test_status in [:queued, :testing, :untested, :unavailable],
        do: :pending
 
   defp stored_status(%{

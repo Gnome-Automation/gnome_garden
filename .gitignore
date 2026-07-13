@@ -50,7 +50,7 @@ playwright-report/
 .env.*
 
 # Local dependencies
-jido/
+/jido/
 
 # Claude Code local cache
 .claude/

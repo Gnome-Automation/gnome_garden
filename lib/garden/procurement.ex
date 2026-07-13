@@ -134,7 +134,6 @@ defmodule GnomeGarden.Procurement do
 
       define :get_source_credential, action: :read, get_by: [:id]
       define :create_source_credential, action: :create
-      define :update_source_credential, action: :update
       define :rotate_source_credential, action: :rotate_secret
       define :store_source_credential_in_bitwarden, action: :store_in_bitwarden
       define :mark_source_credential_test_queued, action: :queue_test
@@ -157,8 +156,10 @@ defmodule GnomeGarden.Procurement do
       define :mark_source_credential_manual_verification_required,
         action: :mark_manual_verification_required
 
+      define :mark_source_credential_test_unavailable, action: :mark_test_unavailable
+
       define :disable_source_credential, action: :disable
-      define :delete_source_credential, action: :destroy
+      define :compromise_source_credential, action: :compromise
     end
 
     resource GnomeGarden.Procurement.SourceBrowserSession do
@@ -173,13 +174,27 @@ defmodule GnomeGarden.Procurement do
         action: :valid_for_source,
         args: [:procurement_source_id]
 
+      define :get_latest_source_browser_session_for_source,
+        action: :latest_for_source,
+        args: [:procurement_source_id],
+        get?: true
+
+      define :list_source_browser_sessions_for_credential,
+        action: :for_credential,
+        args: [:source_credential_id]
+
       define :create_source_browser_session, action: :create
-      define :update_source_browser_session, action: :update
       define :mark_source_browser_session_refreshing, action: :mark_refreshing
       define :mark_source_browser_session_valid, action: :mark_valid
       define :mark_source_browser_session_failed, action: :mark_failed
       define :expire_source_browser_session, action: :expire
       define :disable_source_browser_session, action: :disable
+      define :compromise_source_browser_session, action: :compromise
+
+      define :resolve_source_browser_session_state,
+        action: :resolve_storage_state,
+        args: [:session_id, :procurement_source_id, :source_credential_id]
+
       define :delete_source_browser_session, action: :destroy
     end
 

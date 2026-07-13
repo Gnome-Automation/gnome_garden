@@ -12,9 +12,12 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
          "finalUrl" => "https://www.bidnetdirect.com/private",
          "title" => "BidNet Direct",
          "status" => 200,
-         "storageStatePath" => payload.storage_state_path,
-         "tracePath" => payload.trace_path,
-         "screenshotPath" => payload.screenshot_path
+         secret_envelope:
+           GnomeGarden.Procurement.PlaywrightRunner.envelope(%{
+             "storageState" => %{
+               "cookies" => [%{"name" => "sid", "value" => "cookie-secret"}]
+             }
+           })
        }}
     end
   end
@@ -24,7 +27,24 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
       send(Process.get(:test_pid), {:runner, action, payload, opts})
 
       {:error,
-       %{"code" => "invalid_credentials", "error" => "BidNet rejected these credentials."}}
+       %{
+         "code" => "invalid_credentials",
+         "error" => "BidNet rejected source-secret for operator@example.com."
+       }}
+    end
+  end
+
+  defmodule RetryRunner do
+    def run(action, payload, opts) do
+      attempt = Process.get(:bidnet_retry_attempt, 0) + 1
+      Process.put(:bidnet_retry_attempt, attempt)
+      send(Process.get(:test_pid), {:runner_attempt, attempt, action, payload, opts})
+
+      if attempt == 1 do
+        {:error, %{"code" => "timeout", "error" => "BidNet timed out."}}
+      else
+        SuccessfulRunner.run(action, payload, opts)
+      end
     end
   end
 
@@ -50,21 +70,22 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
 
     assert_receive {:runner, :bidnet_login, payload, runner_opts}
     assert payload.url == source.url
-    assert payload.username == "operator@example.com"
-    assert payload.password == "source-secret"
-    assert payload.storage_state_path =~ session.id
+    refute Map.has_key?(payload, :username)
+    refute Map.has_key?(payload, :password)
+    refute inspect(runner_opts) =~ "source-secret"
     assert Keyword.fetch!(runner_opts, :timeout_ms) == 15_000
 
     assert session.status == :valid
     assert session.provider == :bidnet
     assert session.session_family == "bidnet"
     assert session.source_credential_id == credential.id
-    assert session.storage_state_path =~ "storage-state.json"
-    assert session.trace_path =~ "trace.zip"
-    assert session.screenshot_path =~ "session.png"
+    assert is_map(session.encrypted_storage_state)
+    refute inspect(session) =~ "cookie-secret"
     assert session.verified_at
     assert session.expires_at
     assert session.metadata["final_url"] == "https://www.bidnetdirect.com/private"
+    refute Jason.encode!(session.metadata) =~ "source-secret"
+    refute Jason.encode!(session.metadata) =~ "cookie-secret"
   end
 
   test "refreshes a BidNet session using Bitwarden-backed credentials" do
@@ -114,12 +135,12 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
              Procurement.refresh_bidnet_source_session(source, runner: SuccessfulRunner)
 
     assert_receive {:runner, :bidnet_login, payload, _runner_opts}
-    assert payload.username == "operator@example.com"
-    assert payload.password == "bitwarden-secret"
+    refute Map.has_key?(payload, :username)
+    refute Map.has_key?(payload, :password)
     assert session.source_credential_id == credential.id
   end
 
-  test "records a failed BidNet session refresh without invalidating credentials" do
+  test "invalid credentials fail once and invalidate the credential" do
     source = bidnet_source()
     credential = bidnet_credential(source)
 
@@ -128,21 +149,78 @@ defmodule GnomeGarden.Procurement.BidNetSessionRefreshTest do
                last_failure_reason: "Generic browser verifier cannot validate BidNet."
              })
 
-    assert {:error, %{session: failed, reason: "BidNet rejected these credentials."}} =
+    assert {:error,
+            %{
+              session: failed,
+              reason: "BidNet rejected [REDACTED] for [REDACTED]."
+            }} =
              Procurement.refresh_bidnet_source_session(source, runner: FailingRunner)
 
     assert_receive {:runner, :bidnet_login, payload, _runner_opts}
-    assert payload.password == "source-secret"
+    refute Map.has_key?(payload, :password)
+    refute_receive {:runner, :bidnet_login, _payload, _runner_opts}
 
     assert failed.status == :invalid
-    assert failed.last_failure_reason == "BidNet rejected these credentials."
+    assert failed.last_failure_reason == "BidNet rejected [REDACTED] for [REDACTED]."
     assert failed.metadata["failure_code"] == "invalid_credentials"
     refute inspect(failed.metadata) =~ "source-secret"
 
     assert {:ok, unchanged_credential} =
              Procurement.get_source_credential(credential.id, authorize?: false)
 
-    assert unchanged_credential.status == :active
+    assert unchanged_credential.status == :invalid
+    assert unchanged_credential.test_status == :invalid
+
+    assert unchanged_credential.last_failure_reason ==
+             "BidNet rejected [REDACTED] for [REDACTED]."
+  end
+
+  test "transient failures retry within the configured bound" do
+    source = bidnet_source()
+    credential = bidnet_credential(source)
+
+    assert {:ok, _credential} =
+             Procurement.mark_source_credential_verified(credential, %{}, authorize?: false)
+
+    assert {:ok, session} =
+             Procurement.refresh_bidnet_source_session(source,
+               runner: RetryRunner,
+               max_attempts: 2
+             )
+
+    assert_receive {:runner_attempt, 1, :bidnet_login, _payload, _opts}
+    assert_receive {:runner_attempt, 2, :bidnet_login, _payload, _opts}
+    assert session.status == :valid
+    assert session.metadata["attempt_count"] == 2
+  end
+
+  test "a refreshed session expires the previously valid session" do
+    source = bidnet_source()
+    credential = bidnet_credential(source)
+
+    assert {:ok, _credential} =
+             Procurement.mark_source_credential_verified(credential, %{}, authorize?: false)
+
+    assert {:ok, first} =
+             Procurement.refresh_bidnet_source_session(source, runner: SuccessfulRunner)
+
+    assert {:ok, second} =
+             Procurement.refresh_bidnet_source_session(source, runner: SuccessfulRunner)
+
+    assert first.id != second.id
+
+    assert {:ok, expired_first} =
+             Procurement.get_source_browser_session(first.id, authorize?: false)
+
+    assert expired_first.status == :expired
+    refute expired_first.encrypted_storage_state
+
+    assert {:ok, [valid]} =
+             Procurement.list_valid_source_browser_sessions_for_source(source.id,
+               authorize?: false
+             )
+
+    assert valid.id == second.id
   end
 
   test "rejects non-BidNet sources" do

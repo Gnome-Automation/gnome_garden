@@ -9,24 +9,37 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
   defmodule BrowserSuccess do
     def navigate(url, _opts), do: {:ok, %{url: url, title: "Login", status: :ok}}
 
-    def evaluate(_js) do
+    def evaluate(js) do
+      send(Process.get(:test_pid), {:browser_script, js})
       count = Process.get({__MODULE__, :evaluate_count}, 0)
       Process.put({__MODULE__, :evaluate_count}, count + 1)
 
-      if count == 0 do
-        {:ok, %{"submitted" => true}}
-      else
-        {:ok,
-         %{
-           "success" => true,
-           "invalid" => false,
-           "has_password" => false,
-           "signal" => "Sign out",
-           "url" => "https://vendors.planetbids.com/account",
-           "title" => "Account"
-         }}
+      case count do
+        0 ->
+          {:ok, %{"has_login_form" => true}}
+
+        1 ->
+          {:ok, %{"submitted" => true, "method" => "form_button"}}
+
+        _ ->
+          {:ok,
+           %{
+             "success" => true,
+             "invalid" => false,
+             "has_password" => false,
+             "signal" => "Sign out",
+             "url" => "https://vendors.planetbids.com/account",
+             "title" => "Account"
+           }}
       end
     end
+
+    def type(selector, value) do
+      send(Process.get(:test_pid), {:browser_type, selector, value})
+      {:ok, %{}}
+    end
+
+    def click(_selector), do: {:ok, %{}}
   end
 
   defmodule BrowserInvalid do
@@ -36,29 +49,66 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
       count = Process.get({__MODULE__, :evaluate_count}, 0)
       Process.put({__MODULE__, :evaluate_count}, count + 1)
 
-      if count == 0 do
-        {:ok, %{"submitted" => true}}
-      else
-        {:ok,
-         %{
-           "success" => false,
-           "invalid" => true,
-           "has_password" => true,
-           "reason" => "The portal rejected these credentials.",
-           "url" => "https://vendors.planetbids.com/login",
-           "title" => "Login"
-         }}
+      case count do
+        0 ->
+          {:ok, %{"has_login_form" => true}}
+
+        1 ->
+          {:ok, %{"submitted" => true, "method" => "form_button"}}
+
+        _ ->
+          {:ok,
+           %{
+             "success" => false,
+             "invalid" => true,
+             "has_password" => true,
+             "reason" => "The portal rejected these credentials.",
+             "url" => "https://vendors.planetbids.com/login",
+             "title" => "Login"
+           }}
       end
     end
+
+    def type(_selector, _value), do: {:ok, %{}}
+    def click(_selector), do: {:ok, %{}}
   end
 
   defmodule BrowserShouldNotRun do
     def navigate(_url, _opts), do: raise("BidNet must not use the generic browser verifier")
 
     def evaluate(_js), do: raise("BidNet must not use the generic browser verifier")
+    def type(_selector, _value), do: raise("BidNet must not use the generic browser verifier")
+    def click(_selector), do: raise("BidNet must not use the generic browser verifier")
+  end
+
+  defmodule SuccessfulBidNetRunner do
+    def run(_action, payload, opts) do
+      send(Process.get(:test_pid), {:bidnet_verification, payload, opts})
+
+      {:ok,
+       %{
+         "finalUrl" => "https://www.bidnetdirect.com/private",
+         "title" => "BidNet Direct",
+         "status" => 200,
+         secret_envelope:
+           GnomeGarden.Procurement.PlaywrightRunner.envelope(%{
+             "storageState" => %{
+               "cookies" => [%{"name" => "sid", "value" => "verified-cookie"}]
+             }
+           })
+       }}
+    end
+  end
+
+  defmodule UnavailableBidNetRunner do
+    def run(_action, _payload, _opts) do
+      send(Process.get(:test_pid), :bidnet_verification_attempt)
+      {:error, %{"code" => "timeout", "error" => "BidNet timed out."}}
+    end
   end
 
   setup do
+    Process.put(:test_pid, self())
     original_browser = Application.get_env(:gnome_garden, :source_credential_browser)
     original_wait = Application.get_env(:gnome_garden, :source_credential_login_wait_ms)
 
@@ -113,6 +163,14 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     assert verified.last_test_started_at
     assert verified.last_test_completed_at
     refute verified.last_failure_reason
+
+    assert_receive {:browser_script, discovery_script}
+    assert_receive {:browser_script, submit_script}
+    assert_receive {:browser_script, result_script}
+    refute discovery_script =~ "source-secret"
+    refute submit_script =~ "source-secret"
+    refute result_script =~ "source-secret"
+    assert_receive {:browser_type, _selector, "source-secret"}
   end
 
   test "worker marks rejected browser credentials invalid" do
@@ -137,8 +195,11 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     assert invalid.last_failure_reason == "The portal rejected these credentials."
   end
 
-  test "worker leaves BidNet credentials active and skips generic browser verification" do
+  test "worker verifies BidNet credentials by creating a browser session" do
     Application.put_env(:gnome_garden, :source_credential_browser, BrowserShouldNotRun)
+    original_runner = Application.get_env(:gnome_garden, :bidnet_session_runner)
+    Application.put_env(:gnome_garden, :bidnet_session_runner, SuccessfulBidNetRunner)
+    on_exit(fn -> restore_app_env(:bidnet_session_runner, original_runner) end)
 
     source = bidnet_source()
     credential = bidnet_credential(source)
@@ -151,16 +212,25 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
                }
              })
 
-    assert {:ok, manual_required} =
+    assert_receive {:bidnet_verification, payload, runner_opts}
+    refute Map.has_key?(payload, :username)
+    refute Map.has_key?(payload, :password)
+    refute inspect(runner_opts) =~ "source-secret"
+
+    assert {:ok, verified} =
              Procurement.get_source_credential(credential.id, authorize?: false)
 
-    assert manual_required.status == :active
-    assert manual_required.test_status == :manual_required
-    assert manual_required.last_test_started_at
-    assert manual_required.last_test_completed_at
+    assert verified.status == :active
+    assert verified.test_status == :verified
+    assert verified.last_test_started_at
+    assert verified.last_test_completed_at
 
-    assert manual_required.last_failure_reason ==
-             "Use BidNet browser session refresh to verify browser access."
+    assert {:ok, [session]} =
+             Procurement.list_valid_source_browser_sessions_for_source(source.id,
+               authorize?: false
+             )
+
+    assert session.source_credential_id == credential.id
   end
 
   test "worker verifies untested BidNet Bitwarden credentials from the vault reference" do
@@ -171,6 +241,8 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
     System.put_env("GARDEN_BITWARDEN_CLI", "/usr/local/bin/bitwarden")
     Application.put_env(:gnome_garden, :bitwarden_session, "test-session")
     Application.put_env(:gnome_garden, :source_credential_browser, BrowserShouldNotRun)
+    original_bidnet_runner = Application.get_env(:gnome_garden, :bidnet_session_runner)
+    Application.put_env(:gnome_garden, :bidnet_session_runner, SuccessfulBidNetRunner)
 
     Application.put_env(:gnome_garden, :bitwarden_command_runner, fn command, args, opts ->
       send(self(), {:bitwarden_cli, command, args, opts})
@@ -189,6 +261,7 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
       restore_env("GARDEN_BITWARDEN_CLI", original_cli)
       restore_app_env(:bitwarden_command_runner, original_runner)
       restore_app_env(:bitwarden_session, original_session)
+      restore_app_env(:bidnet_session_runner, original_bidnet_runner)
     end)
 
     source = bidnet_source()
@@ -215,29 +288,91 @@ defmodule GnomeGarden.Procurement.SourceCredentialTestingTest do
 
     assert {"BW_SESSION", "test-session"} in Keyword.fetch!(opts, :env)
 
-    assert {:ok, manual_required} =
+    assert_receive {:bidnet_verification, payload, runner_opts}
+    refute Map.has_key?(payload, :username)
+    refute Map.has_key?(payload, :password)
+    refute inspect(runner_opts) =~ "vault-secret"
+
+    assert {:ok, verified} =
              Procurement.get_source_credential(credential.id, authorize?: false)
 
-    assert manual_required.status == :active
-    assert manual_required.test_status == :manual_required
-
-    assert manual_required.last_failure_reason ==
-             "Use BidNet browser session refresh to verify browser access."
+    assert verified.status == :active
+    assert verified.test_status == :verified
   end
 
-  test "BidNet manual verification status still resolves saved credentials" do
+  test "transient BidNet outages do not invalidate saved credentials" do
+    original_runner = Application.get_env(:gnome_garden, :bidnet_session_runner)
+    Application.put_env(:gnome_garden, :bidnet_session_runner, UnavailableBidNetRunner)
+    on_exit(fn -> restore_app_env(:bidnet_session_runner, original_runner) end)
+
     source = bidnet_source()
     credential = bidnet_credential(source)
 
-    assert {:ok, _credential} =
-             Procurement.mark_source_credential_manual_verification_required(credential, %{
-               last_failure_reason: "Use BidNet browser session refresh to verify browser access."
+    assert :ok =
+             TestSourceCredential.perform(%Oban.Job{
+               args: %{
+                 "source_credential_id" => credential.id,
+                 "procurement_source_id" => source.id
+               }
              })
 
-    assert GnomeGarden.Procurement.SourceCredentials.credentials_configured?(source)
+    assert_receive :bidnet_verification_attempt
+    assert_receive :bidnet_verification_attempt
+    refute_receive :bidnet_verification_attempt
 
-    assert {:ok, %{username: "bidnet@example.com", password: "source-secret"}} =
-             GnomeGarden.Procurement.SourceCredentials.credentials_for(source)
+    assert {:ok, unavailable} =
+             Procurement.get_source_credential(credential.id, authorize?: false)
+
+    assert unavailable.status == :active
+    assert unavailable.test_status == :unavailable
+    assert unavailable.last_failure_reason =~ "Credential verification unavailable"
+    assert GnomeGarden.Procurement.SourceCredentials.credential_status(source) == :pending
+  end
+
+  test "pre-session Bitwarden failures do not invalidate BidNet credentials" do
+    original_cli = System.get_env("GARDEN_BITWARDEN_CLI")
+    original_runner = Application.get_env(:gnome_garden, :bitwarden_command_runner)
+    original_session = Application.get_env(:gnome_garden, :bitwarden_session)
+
+    System.put_env("GARDEN_BITWARDEN_CLI", "/usr/local/bin/bitwarden")
+    Application.put_env(:gnome_garden, :bitwarden_session, "test-session")
+
+    Application.put_env(:gnome_garden, :bitwarden_command_runner, fn _command, _args, _opts ->
+      {"vault unavailable", 1}
+    end)
+
+    on_exit(fn ->
+      restore_env("GARDEN_BITWARDEN_CLI", original_cli)
+      restore_app_env(:bitwarden_command_runner, original_runner)
+      restore_app_env(:bitwarden_session, original_session)
+    end)
+
+    source = bidnet_source()
+
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        scope: :source,
+        procurement_source_id: source.id,
+        credential_storage: :bitwarden,
+        bitwarden_item_id: "bidnet-item-id"
+      })
+
+    assert :ok =
+             TestSourceCredential.perform(%Oban.Job{
+               args: %{
+                 "source_credential_id" => credential.id,
+                 "procurement_source_id" => source.id
+               }
+             })
+
+    assert {:ok, unavailable} =
+             Procurement.get_source_credential(credential.id, authorize?: false)
+
+    assert unavailable.status == :active
+    assert unavailable.test_status == :unavailable
+    assert unavailable.last_failure_reason =~ "Credential verification unavailable"
   end
 
   test "SAM.gov credentials are verified through the SAM API client" do

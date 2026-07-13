@@ -2,9 +2,8 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
   @moduledoc """
   Durable metadata for authenticated browser sessions used by procurement portals.
 
-  Playwright `storageState` files contain cookies and tokens, so this resource
-  stores only the path and audit metadata. The file content is managed by the
-  browser automation boundary and must be treated as secret runtime state.
+  Playwright `storageState` contains cookies and tokens. It is encrypted with
+  authenticated source/credential identity and is never persisted as a path.
   """
 
   use Ash.Resource,
@@ -38,7 +37,7 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
 
     references do
       reference :procurement_source, on_delete: :delete
-      reference :source_credential, on_delete: :nilify
+      reference :source_credential, on_delete: :restrict
     end
   end
 
@@ -53,37 +52,12 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
         :source_credential_id,
         :provider,
         :session_family,
-        :status,
         :browser_name,
-        :storage_state_path,
-        :storage_state_fingerprint,
         :verified_at,
         :expires_at,
         :last_refresh_started_at,
         :last_refresh_completed_at,
         :last_failure_reason,
-        :trace_path,
-        :screenshot_path,
-        :metadata
-      ]
-    end
-
-    update :update do
-      accept [
-        :source_credential_id,
-        :provider,
-        :session_family,
-        :status,
-        :browser_name,
-        :storage_state_path,
-        :storage_state_fingerprint,
-        :verified_at,
-        :expires_at,
-        :last_refresh_started_at,
-        :last_refresh_completed_at,
-        :last_failure_reason,
-        :trace_path,
-        :screenshot_path,
         :metadata
       ]
     end
@@ -97,16 +71,16 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
     end
 
     update :mark_valid do
+      require_atomic? false
+
       accept [
-        :storage_state_path,
-        :storage_state_fingerprint,
-        :verified_at,
         :expires_at,
-        :trace_path,
-        :screenshot_path,
         :metadata
       ]
 
+      argument :storage_state, :string, allow_nil?: false, sensitive?: true
+
+      change GnomeGarden.Procurement.Changes.EncryptBrowserSessionState
       change set_attribute(:status, :valid)
       change set_attribute(:verified_at, &DateTime.utc_now/0)
       change set_attribute(:last_refresh_completed_at, &DateTime.utc_now/0)
@@ -114,9 +88,11 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
     end
 
     update :mark_failed do
-      accept [:last_failure_reason, :trace_path, :screenshot_path, :metadata]
+      accept [:last_failure_reason, :metadata]
 
       change set_attribute(:status, :invalid)
+      change set_attribute(:encrypted_storage_state, nil)
+      change set_attribute(:credential_fingerprint, nil)
       change set_attribute(:last_refresh_completed_at, &DateTime.utc_now/0)
     end
 
@@ -124,12 +100,30 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
       accept [:last_failure_reason]
 
       change set_attribute(:status, :expired)
+      change set_attribute(:encrypted_storage_state, nil)
+      change set_attribute(:credential_fingerprint, nil)
     end
 
     update :disable do
       accept [:last_failure_reason]
 
       change set_attribute(:status, :disabled)
+      change set_attribute(:encrypted_storage_state, nil)
+      change set_attribute(:credential_fingerprint, nil)
+    end
+
+    update :compromise do
+      accept [:last_failure_reason]
+      change set_attribute(:status, :compromised)
+      change set_attribute(:encrypted_storage_state, nil)
+      change set_attribute(:credential_fingerprint, nil)
+    end
+
+    action :resolve_storage_state, :string do
+      argument :session_id, :uuid, allow_nil?: false
+      argument :procurement_source_id, :uuid, allow_nil?: false
+      argument :source_credential_id, :uuid, allow_nil?: false
+      run GnomeGarden.Procurement.Actions.ResolveBrowserSessionState
     end
 
     read :for_source do
@@ -142,8 +136,25 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
     read :valid_for_source do
       argument :procurement_source_id, :uuid, allow_nil?: false
 
-      filter expr(procurement_source_id == ^arg(:procurement_source_id) and status == :valid)
+      filter expr(
+               procurement_source_id == ^arg(:procurement_source_id) and status == :valid and
+                 expires_at > now() and not is_nil(encrypted_storage_state)
+             )
+
       prepare build(sort: [verified_at: :desc])
+    end
+
+    read :latest_for_source do
+      argument :procurement_source_id, :uuid, allow_nil?: false
+
+      filter expr(procurement_source_id == ^arg(:procurement_source_id))
+      prepare build(sort: [updated_at: :desc], limit: 1)
+    end
+
+    read :for_credential do
+      argument :source_credential_id, :uuid, allow_nil?: false
+      filter expr(source_credential_id == ^arg(:source_credential_id))
+      prepare build(sort: [updated_at: :desc])
     end
   end
 
@@ -152,12 +163,12 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
     prefix "procurement_source_browser_session"
 
     publish :create, "created"
-    publish :update, "updated"
     publish :mark_refreshing, "updated"
     publish :mark_valid, "updated"
     publish :mark_failed, "updated"
     publish :expire, "updated"
     publish :disable, "updated"
+    publish :compromise, "updated"
     publish :destroy, "destroyed"
   end
 
@@ -179,7 +190,16 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
       allow_nil? false
       default :pending
       public? true
-      constraints one_of: [:pending, :refreshing, :valid, :invalid, :expired, :disabled]
+
+      constraints one_of: [
+                    :pending,
+                    :refreshing,
+                    :valid,
+                    :invalid,
+                    :expired,
+                    :compromised,
+                    :disabled
+                  ]
     end
 
     attribute :browser_name, :string do
@@ -188,14 +208,13 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
       public? true
     end
 
-    attribute :storage_state_path, :string do
-      sensitive? true
-      public? true
-    end
+    attribute :encrypted_storage_state, :map, sensitive?: true
 
     attribute :storage_state_fingerprint, :string do
       sensitive? true
     end
+
+    attribute :credential_fingerprint, :string, sensitive?: true
 
     attribute :verified_at, :utc_datetime do
       public? true
@@ -214,14 +233,6 @@ defmodule GnomeGarden.Procurement.SourceBrowserSession do
     end
 
     attribute :last_failure_reason, :string do
-      public? true
-    end
-
-    attribute :trace_path, :string do
-      public? true
-    end
-
-    attribute :screenshot_path, :string do
       public? true
     end
 

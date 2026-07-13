@@ -251,16 +251,6 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
                   label="Credential"
                   value={session_credential_label(@browser_session, @source_credential)}
                 />
-                <.compact_detail
-                  :if={@browser_session.trace_path}
-                  label="Trace"
-                  value={Path.basename(@browser_session.trace_path)}
-                />
-                <.compact_detail
-                  :if={@browser_session.screenshot_path}
-                  label="Screenshot"
-                  value={Path.basename(@browser_session.screenshot_path)}
-                />
               </dl>
               <p :if={@browser_session.last_failure_reason} class="text-sm text-error">
                 {@browser_session.last_failure_reason}

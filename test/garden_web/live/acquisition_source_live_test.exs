@@ -24,9 +24,12 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
          "finalUrl" => "https://www.bidnetdirect.com/private",
          "title" => "BidNet Direct",
          "status" => 200,
-         "storageStatePath" => payload.storage_state_path,
-         "tracePath" => payload.trace_path,
-         "screenshotPath" => payload.screenshot_path
+         secret_envelope:
+           GnomeGarden.Procurement.PlaywrightRunner.envelope(%{
+             "storageState" => %{
+               "cookies" => [%{"name" => "sid", "value" => "cookie-secret"}]
+             }
+           })
        }}
     end
   end
@@ -436,9 +439,7 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
       })
 
     {:ok, _credential} =
-      Procurement.mark_source_credential_manual_verification_required(credential, %{
-        last_failure_reason: "Use BidNet browser session refresh."
-      })
+      Procurement.mark_source_credential_verified(credential, %{}, authorize?: false)
 
     {:ok, view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}")
 
@@ -452,13 +453,12 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
 
     assert_receive {:bidnet_session_runner, :bidnet_login, payload, _opts}
     assert payload.url == procurement_source.url
-    assert payload.username == "operator@example.com"
-    assert payload.password == "source-secret"
+    refute Map.has_key?(payload, :username)
+    refute Map.has_key?(payload, :password)
 
     assert {:ok, [session]} =
              Procurement.list_valid_source_browser_sessions_for_source(procurement_source.id)
 
-    assert payload.storage_state_path =~ session.id
     assert session.source_credential_id == credential.id
 
     html = render(view)
@@ -718,16 +718,27 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")
 
+    {:ok, credential} =
+      Procurement.create_source_credential(%{
+        provider: :bidnet,
+        credential_family: "bidnet",
+        scope: :source,
+        procurement_source_id: source.id,
+        username: "operator@example.com",
+        password: "source-secret"
+      })
+
     {:ok, session} =
       Procurement.create_source_browser_session(%{
         procurement_source_id: source.id,
+        source_credential_id: credential.id,
         provider: :bidnet,
         session_family: "bidnet"
       })
 
     {:ok, _session} =
       Procurement.mark_source_browser_session_valid(session, %{
-        storage_state_path: "/tmp/gnome-garden/browser-sessions/bidnet/storage-state.json",
+        storage_state: Jason.encode!(%{"cookies" => []}),
         expires_at: DateTime.add(DateTime.utc_now(), 86_400, :second)
       })
 

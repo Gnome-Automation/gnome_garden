@@ -1,0 +1,10 @@
+{
+  "url": "https://example.test/bids",
+  "title": "Bid Opportunities",
+  "links": [
+    {
+      "href": "https://example.test/bids/1",
+      "text": "Open bid"
+    }
+  ]
+}
