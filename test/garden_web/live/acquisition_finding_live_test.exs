@@ -148,6 +148,46 @@ defmodule GnomeGardenWeb.AcquisitionFindingLiveTest do
     refute has_element?(view, "#finding-card-#{finding.id}")
   end
 
+  test "procurement rejection captures company capability gaps on the source bid", %{conn: conn} do
+    {:ok, bid} =
+      Procurement.create_bid(%{
+        title: "Bond-gated controls retrofit",
+        url: "https://example.com/bids/bond-gated-#{System.unique_integer([:positive])}",
+        external_id: "BOND-GATED-#{System.unique_integer([:positive])}",
+        agency: "Regional Utility",
+        region: :oc,
+        due_at: future_due_at(30)
+      })
+
+    {:ok, finding} = Acquisition.get_finding_by_external_ref("procurement_bid:#{bid.id}")
+    {:ok, _finding} = Acquisition.start_review_for_finding(finding.id)
+    {:ok, view, _html} = live(conn, ~p"/acquisition/findings/#{finding.id}")
+
+    view
+    |> element("#finding-show-reject")
+    |> render_click()
+
+    assert has_element?(
+             view,
+             "#finding-show-reject-form select[name='capability_gaps[]'][multiple]"
+           )
+
+    view
+    |> form("#finding-show-reject-form", %{
+      "reason_code" => "wrong_service",
+      "reason" => "Bond and certification requirements are not yet met",
+      "feedback_scope" => "",
+      "exclude_terms" => "",
+      "capability_gaps" => ["bond_capacity", "missing_certification"]
+    })
+    |> render_submit()
+
+    {:ok, rejected_bid} = Procurement.get_bid(bid.id)
+    assert rejected_bid.status == :rejected
+    assert rejected_bid.capability_gaps == [:bond_capacity, :missing_certification]
+    assert %DateTime{} = rejected_bid.capability_gaps_recorded_at
+  end
+
   test "acquisition queue shows source and run provenance", %{conn: conn} do
     Agents.TemplateCatalog.sync_templates()
     {:ok, template} = Agents.get_agent_template_by_name("procurement_source_scan")

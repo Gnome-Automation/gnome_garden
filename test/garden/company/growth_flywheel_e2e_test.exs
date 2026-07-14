@@ -31,6 +31,7 @@ defmodule GnomeGarden.Company.GrowthFlywheelE2ETest do
             capability_gaps: [:bond_capacity]
           })
 
+        assert %DateTime{} = bid.capability_gaps_recorded_at
         bid
       end
 
@@ -41,6 +42,7 @@ defmodule GnomeGarden.Company.GrowthFlywheelE2ETest do
     # 2. The scan proposes exactly one recommendation (dedupe on rescan).
     {:ok, [recommendation]} = Company.scan_growth_gaps(window_days: 90, repeat_threshold: 2)
     assert recommendation.target_domain == :company
+    assert String.starts_with?(recommendation.dedupe_key, "company_growth_gap:bond_capacity:")
     {:ok, []} = Company.scan_growth_gaps(window_days: 90, repeat_threshold: 2)
 
     # 3. Operator approval transactionally creates the initiative + evidence.
@@ -54,15 +56,44 @@ defmodule GnomeGarden.Company.GrowthFlywheelE2ETest do
     {:ok, applied} = Operations.get_learning_recommendation(recommendation.id)
     assert applied.status == :applied
 
+    # Dedupe is durable across terminal recommendation states, not just while
+    # the recommendation remains in the pending review queue.
+    assert {:ok, []} = Company.scan_growth_gaps(window_days: 90, repeat_threshold: 2)
+
+    # New evidence starts a new episode, while the evidence identity prevents
+    # old bid receipts from being duplicated when that episode is approved.
+    third_bid = bid_fixture("Bond-blocked bid 3")
+    {:ok, third_bid} = Procurement.review_bid(third_bid)
+    {:ok, third_bid} = Procurement.pursue_bid(third_bid)
+
+    {:ok, _third_bid} =
+      Procurement.lose_bid(third_bid, %{
+        notes: "Same bond requirement on another opportunity",
+        capability_gaps: [:bond_capacity]
+      })
+
+    {:ok, [next_recommendation]} =
+      Company.scan_growth_gaps(window_days: 90, repeat_threshold: 2)
+
+    {:ok, reused_initiative} =
+      Company.approve_growth_recommendation(next_recommendation, actor: actor_user)
+
+    assert reused_initiative.id == initiative.id
+    {:ok, deduped_evidence} = Company.list_growth_initiative_evidence(initiative.id)
+    assert length(deduped_evidence) == 3
+
     # 4. Delivery: plan, start, execute, achieve.
     {:ok, initiative} = Company.plan_growth_initiative(initiative, %{}, actor: actor_user)
     {:ok, initiative} = Company.start_growth_initiative(initiative, actor: actor_user)
 
-    {:ok, _task} =
+    {:ok, task} =
       Operations.create_task(
         %{title: "Secure surety program", company_growth_initiative_id: initiative.id},
         actor: actor_user
       )
+
+    {:ok, task} = Operations.start_task(task, actor: actor_user)
+    {:ok, _completed_task} = Operations.complete_task(task, actor: actor_user)
 
     {:ok, qualification} =
       Company.create_company_qualification(%{
@@ -112,6 +143,7 @@ defmodule GnomeGarden.Company.GrowthFlywheelE2ETest do
     {:ok, events} = Automation.list_unprocessed_automation_events()
     renewal_event = Enum.find(events, &(&1.resource == "company_qualification"))
     assert renewal_event.data["days_until_expiry"] == 10
+    assert renewal_event.data["renewal_bucket"] == 30
 
     {:ok, processed} = Automation.process_automation_event(renewal_event)
     refute processed.error
@@ -120,6 +152,12 @@ defmodule GnomeGarden.Company.GrowthFlywheelE2ETest do
     assert renewal_task.title == "Complete qualification renewal"
     assert renewal_task.owner_team_member_id == actor_member.id
     assert renewal_task.priority == :high
+  end
+
+  test "free-text score risk flags never invent eligibility requirements" do
+    bid = %{capability_gaps: [], score_risk_flags: ["Bond language needs operator review"]}
+
+    assert Company.assess_bid_eligibility(bid, []).required == []
   end
 
   defp operator_fixture do

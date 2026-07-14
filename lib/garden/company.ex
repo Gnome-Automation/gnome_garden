@@ -125,6 +125,7 @@ defmodule GnomeGarden.Company do
 
     resource GnomeGarden.Company.GrowthInitiativeEvidence do
       define :create_growth_initiative_evidence, action: :create
+      define :ensure_growth_initiative_bid_gap_evidence, action: :ensure_bid_gap
       define :delete_growth_initiative_evidence, action: :destroy
 
       define :list_growth_initiative_evidence,

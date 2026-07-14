@@ -4,6 +4,8 @@ defmodule GnomeGarden.Procurement.TargetingFeedback do
   procurement lane, and provides lightweight term suggestions for learning.
   """
 
+  alias GnomeGarden.Company.CapabilityGap
+
   @cctv_terms ["cctv", "video surveillance", "security camera"]
   @access_control_terms ["access control", "badge system", "card access"]
   @fire_alarm_terms ["fire alarm", "alarm monitoring"]
@@ -56,6 +58,7 @@ defmodule GnomeGarden.Procurement.TargetingFeedback do
       reason_code: nil,
       feedback_scope: nil,
       exclude_terms: [],
+      capability_gaps: [],
       source_feedback_category: nil
     }
   end
@@ -69,6 +72,7 @@ defmodule GnomeGarden.Procurement.TargetingFeedback do
       reason_code: reason_code,
       feedback_scope: map_value(params, :feedback_scope) |> normalize_text(),
       exclude_terms: params |> map_value(:exclude_terms) |> parse_terms(),
+      capability_gaps: params |> map_value(:capability_gaps) |> CapabilityGap.normalize(),
       source_feedback_category: source_feedback_category(reason_code)
     }
   end
@@ -107,6 +111,7 @@ defmodule GnomeGarden.Procurement.TargetingFeedback do
       "reason_code" => feedback.reason_code,
       "feedback_scope" => feedback.feedback_scope,
       "exclude_terms" => feedback.exclude_terms,
+      "capability_gaps" => Enum.map(feedback.capability_gaps, &Atom.to_string/1),
       "source_feedback_category" => feedback.source_feedback_category,
       "captured_at" => DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601(),
       "company_profile_key" => Map.get(bid, :score_company_profile_key),

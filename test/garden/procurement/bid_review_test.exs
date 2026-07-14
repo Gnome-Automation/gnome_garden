@@ -25,6 +25,24 @@ defmodule GnomeGarden.Procurement.BidReviewTest do
     assert signal.status == :rejected
   end
 
+  test "pass_bid persists typed capability gaps and their observation time" do
+    bid = bid_fixture()
+
+    assert {:ok, rejected_bid} =
+             BidReview.pass_bid(bid, %{
+               "reason" => "Cannot meet the surety requirement",
+               "capability_gaps" => ["bond_capacity", "missing_certification"]
+             })
+
+    assert rejected_bid.capability_gaps == [:bond_capacity, :missing_certification]
+    assert %DateTime{} = rejected_bid.capability_gaps_recorded_at
+
+    assert get_in(rejected_bid.metadata, ["targeting_feedback", "capability_gaps"]) == [
+             "bond_capacity",
+             "missing_certification"
+           ]
+  end
+
   test "pass_bid can teach the profile to suppress similar bids" do
     bid = cctv_bid_fixture()
 

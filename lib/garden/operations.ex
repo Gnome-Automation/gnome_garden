@@ -302,6 +302,9 @@ defmodule GnomeGarden.Operations do
       define :get_learning_recommendation, action: :read, get_by: [:id]
       define :list_pending_learning_recommendations, action: :pending_review
 
+      define :list_company_growth_gap_recommendations,
+        action: :company_growth_gap_episodes
+
       define :list_learning_recommendations_by_target,
         action: :by_target,
         args: [:target_domain, :target_resource, :target_id]

@@ -14,10 +14,12 @@ defmodule GnomeGarden.Procurement.Calculations.OnboardingState do
     [
       :enabled,
       :status,
+      :source_type,
       :config_status,
       :requires_login,
       :last_scanned_at,
-      credentials: [:status]
+      credentials: [:status, :test_status],
+      browser_sessions: [:status, :expires_at]
     ]
   end
 
@@ -34,7 +36,7 @@ defmodule GnomeGarden.Procurement.Calculations.OnboardingState do
       source.config_status not in [:configured, :scan_failed] ->
         :needs_configuration
 
-      source.requires_login and not has_active_credential?(source) ->
+      source.requires_login and not authentication_ready?(source) ->
         :needs_credentials
 
       is_nil(source.last_scanned_at) ->
@@ -45,6 +47,28 @@ defmodule GnomeGarden.Procurement.Calculations.OnboardingState do
     end
   end
 
-  defp has_active_credential?(source),
-    do: Enum.any?(source.credentials, &(&1.status == :active))
+  defp authentication_ready?(source) do
+    credential_ready?(source) and
+      (source.source_type != :bidnet or has_valid_browser_session?(source))
+  end
+
+  defp credential_ready?(source) do
+    Enum.any?(source.credentials, fn credential ->
+      credential.status == :active and credential.test_status == :verified
+    end) or
+      GnomeGarden.Procurement.SourceCredentials.credential_status(source) in [
+        :verified,
+        :env_configured
+      ]
+  end
+
+  defp has_valid_browser_session?(source) do
+    now = DateTime.utc_now()
+
+    Enum.any?(source.browser_sessions, fn session ->
+      session.status == :valid and
+        match?(%DateTime{}, session.expires_at) and
+        DateTime.after?(session.expires_at, now)
+    end)
+  end
 end

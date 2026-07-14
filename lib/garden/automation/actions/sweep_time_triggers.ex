@@ -87,10 +87,10 @@ defmodule GnomeGarden.Automation.Actions.SweepTimeTriggers do
     |> Enum.find(List.first(@deadline_buckets), &(days_until_due <= &1))
   end
 
-  # Renewal episodes are dynamic per qualification: thresholds derive from
-  # each record's renewal_lead_days (30-90 typical, unlike bid deadlines),
-  # keyed by qualification + expiration date + threshold so a renewed
-  # (re-dated) qualification starts fresh episodes.
+  # Each qualification emits one dynamic episode when it enters its own
+  # renewal window. The key includes the expiration date and configured lead
+  # time, so ordinary sweeps cannot create duplicate tasks while a renewed or
+  # reconfigured qualification starts a fresh episode.
   defp sweep_expiring_qualifications do
     {:ok, qualifications} =
       Company.list_company_qualifications_expiring_within(max_renewal_window(), authorize?: false)
@@ -126,12 +126,10 @@ defmodule GnomeGarden.Automation.Actions.SweepTimeTriggers do
     end)
   end
 
-  defp renewal_bucket(lead_days, days_until_expiry) do
-    [3, 14, lead_days]
-    |> Enum.filter(&(&1 <= lead_days))
-    |> Enum.sort()
-    |> Enum.find(&(days_until_expiry <= &1))
-  end
+  defp renewal_bucket(lead_days, days_until_expiry) when days_until_expiry <= lead_days,
+    do: lead_days
+
+  defp renewal_bucket(_lead_days, _days_until_expiry), do: nil
 
   defp max_renewal_window do
     {:ok, qualifications} = Company.list_active_company_qualifications(authorize?: false)

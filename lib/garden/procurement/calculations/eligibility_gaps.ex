@@ -7,7 +7,7 @@ defmodule GnomeGarden.Procurement.Calculations.EligibilityGaps do
   use Ash.Resource.Calculation
 
   @impl true
-  def load(_query, _opts, _context), do: [:capability_gaps, :score_risk_flags]
+  def load(_query, _opts, _context), do: [:capability_gaps]
 
   @impl true
   def calculate(records, _opts, _context) do

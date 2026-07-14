@@ -596,6 +596,15 @@ defmodule GnomeGardenWeb.Components.AcquisitionUI do
               type="text"
               placeholder="e.g. cctv, municipal ERP, generic admin software"
             />
+            <.input
+              :if={@action_dialog.type == :reject && @action_dialog.family == :procurement}
+              name="capability_gaps[]"
+              value={[]}
+              label="Company capability gaps (optional)"
+              type="select"
+              multiple
+              options={GnomeGarden.Company.CapabilityGap.options()}
+            />
           </div>
           <div class="modal-action">
             <button type="button" phx-click="close_dialog" class="btn btn-ghost">Cancel</button>

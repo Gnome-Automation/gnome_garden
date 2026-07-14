@@ -11,6 +11,9 @@ defmodule Mix.Tasks.Llm.GenerateResourceMap do
 
   This task is intended to keep a low-drift, implemented-only map of the data
   model and action surface in the repository for Codex and similar agents.
+  Existing object-key order is preserved and no wall-clock timestamp is
+  emitted, so unchanged architecture produces byte-identical output while
+  resource changes stay reviewable.
   """
 
   @impl Mix.Task
@@ -37,7 +40,6 @@ defmodule Mix.Tasks.Llm.GenerateResourceMap do
       |> Enum.sort_by(& &1.module)
 
     payload = %{
-      generated_at: DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601(),
       generator: "mix llm.generate_resource_map",
       otp_app: Atom.to_string(app),
       ash_domains_config_path: "config/config.exs",
@@ -67,8 +69,10 @@ defmodule Mix.Tasks.Llm.GenerateResourceMap do
     |> Path.dirname()
     |> File.mkdir_p!()
 
+    existing = read_existing(output_path)
+
     output_path
-    |> File.write!(Jason.encode_to_iodata!(payload, pretty: true))
+    |> File.write!(Jason.encode_to_iodata!(ordered_json(payload, existing), pretty: true))
 
     Mix.shell().info("Generated #{Path.relative_to(output_path, project_root)}")
   end
@@ -505,5 +509,85 @@ defmodule Mix.Tasks.Llm.GenerateResourceMap do
     else
       value
     end
+  end
+
+  defp read_existing(path) do
+    case File.read(path) do
+      {:ok, contents} -> Jason.decode!(contents, objects: :ordered_objects)
+      {:error, :enoent} -> nil
+    end
+  end
+
+  defp ordered_json(value, %Jason.OrderedObject{values: existing}) when is_map(value) do
+    normalized = Map.new(value, fn {key, item} -> {to_string(key), item} end)
+    existing_keys = MapSet.new(existing, &to_string(elem(&1, 0)))
+
+    preserved =
+      existing
+      |> Enum.flat_map(fn {key, old_item} ->
+        key = to_string(key)
+
+        case Map.fetch(normalized, key) do
+          {:ok, item} -> [{key, ordered_json(item, old_item)}]
+          :error -> []
+        end
+      end)
+
+    appended =
+      normalized
+      |> Enum.reject(fn {key, _item} -> MapSet.member?(existing_keys, key) end)
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.map(fn {key, item} -> {key, ordered_json(item, nil)} end)
+
+    Jason.OrderedObject.new(preserved ++ appended)
+  end
+
+  defp ordered_json(value, _existing) when is_map(value) do
+    value
+    |> Enum.map(fn {key, item} -> {to_string(key), ordered_json(item, nil)} end)
+    |> Enum.sort_by(&elem(&1, 0))
+    |> Jason.OrderedObject.new()
+  end
+
+  defp ordered_json(value, existing) when is_list(value) and is_list(existing) do
+    Enum.map(value, fn item ->
+      ordered_json(item, matching_existing(item, existing))
+    end)
+  end
+
+  defp ordered_json(value, _existing) when is_list(value) do
+    Enum.map(value, &ordered_json(&1, nil))
+  end
+
+  defp ordered_json(value, _existing), do: value
+
+  defp matching_existing(item, existing) do
+    case stable_identity(item) do
+      nil -> Enum.at(existing, 0)
+      identity -> Enum.find(existing, &(stable_identity(&1) == identity))
+    end
+  end
+
+  defp stable_identity(item) when is_map(item) do
+    Enum.find_value(["module", "name", "key", "action"], fn key ->
+      case map_value(item, key) do
+        nil -> nil
+        value -> {key, value}
+      end
+    end)
+  end
+
+  defp stable_identity(_item), do: nil
+
+  defp map_value(%Jason.OrderedObject{values: values}, key) do
+    case Enum.find(values, &(to_string(elem(&1, 0)) == key)) do
+      {_key, value} -> value
+      nil -> nil
+    end
+  end
+
+  defp map_value(map, key) do
+    Map.get(map, key) ||
+      Enum.find_value(map, fn {map_key, value} -> if to_string(map_key) == key, do: value end)
   end
 end

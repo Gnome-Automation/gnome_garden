@@ -48,7 +48,7 @@ defmodule GnomeGarden.Automation.Actions.EnsureStarterRules do
     %{
       name: "Qualification renewal due",
       description:
-        "When an active qualification enters its renewal window, file the renewal task to its owner.",
+        "When an active qualification enters its configured renewal window, file one renewal task to its owner.",
       trigger_resource: "company_qualification",
       trigger_action: "expiring",
       criteria: [],
