@@ -11,6 +11,8 @@ live targeting.
   to the immutable policy snapshot used for that run.
 - `LeadPreviewQuery` records every query's provider status, raw result count,
   exact cost, reservation key, and error, including zero-result searches.
+  `replayed_without_results` specifically means a settled reservation was not
+  re-billed during retry, but its cached provider response was unavailable.
 - `LeadPreviewCandidate` records the exact producing query, route, duplicate
   context, and verification lineage for each persisted result.
 - Verification, Finding admission, and Finding review decisions remain the
@@ -20,6 +22,9 @@ live targeting.
 - Historical candidates without a `LeadPreviewQuery` execution ledger are
   reported as `unmeasured_candidate_count` and excluded from cost/yield
   learning rather than receiving fabricated query economics.
+- A `ProgramSource` with discovery-run history is intentionally retained: the
+  foreign key restricts deletion so policy lineage remains auditable. Retire
+  the source through its archive lifecycle instead of deleting it.
 
 ## Metrics
 

@@ -91,6 +91,8 @@ defmodule GnomeGarden.Acquisition.LeadPreviewQuery do
       allow_nil? false
       public? true
       constraints one_of: [:completed, :failed, :blocked, :replayed_without_results]
+
+      description "`:replayed_without_results` means a settled reservation was not re-billed, but its cached provider response was unavailable."
     end
 
     attribute :result_count, :integer, allow_nil?: false, default: 0, public?: true
