@@ -48,6 +48,16 @@ Findings in 90 days with at least a 67% operator rejection/suppression rate,
 and operators can tune them without a deploy. The worker creates a deduplicated
 `LearningRecommendation`; it does not alter `ProgramSource`.
 
+One source failure does not stop evaluation of the remaining portfolio. The
+scan result reports both proposed recommendations and per-source failures; the
+scheduled worker logs failures for operator visibility and tries the source
+again on the next daily sweep.
+
+At most one pending recommendation is kept for a source/query pair. New
+evidence is folded into a later episode only after the current card is decided.
+If policy changes before approval, the stale card expires and the next sweep
+creates a fresh policy-bound episode.
+
 Approval from the Operations review queue performs one transaction:
 
 1. Lock and reload the target `ProgramSource`.

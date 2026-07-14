@@ -11,36 +11,62 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearning do
   alias GnomeGarden.Operations
   alias GnomeGarden.Operations.LearningRecommendation
 
+  require Logger
+
   def scan_and_propose(opts \\ []) do
     with {:ok, program_sources} <-
            Acquisition.list_learning_enabled_commercial_discovery_sources(authorize?: false) do
-      program_sources
-      |> Enum.reduce_while({:ok, []}, fn program_source, {:ok, recommendations} ->
-        case proposals_for(program_source, opts) do
-          {:ok, proposed} -> {:cont, {:ok, recommendations ++ proposed}}
-          {:error, error} -> {:halt, {:error, error}}
-        end
-      end)
+      result =
+        Enum.reduce(
+          program_sources,
+          %{recommendations: [], failures: []},
+          fn program_source, result ->
+            case proposals_for(program_source, opts) do
+              {:ok, proposed} ->
+                %{result | recommendations: Enum.reverse(proposed, result.recommendations)}
+
+              {:error, error} ->
+                failure = %{program_source_id: program_source.id, error: error}
+                %{result | failures: [failure | result.failures]}
+            end
+          end
+        )
+
+      {:ok,
+       %{
+         recommendations: Enum.reverse(result.recommendations),
+         failures: Enum.reverse(result.failures)
+       }}
     end
   end
 
   def approve_and_apply(recommendation, opts \\ []) do
     actor = Keyword.get(opts, :actor)
 
-    with {:ok, _query, expected_policy_hash} <- recommendation_change(recommendation),
-         {:ok, program_source} <-
-           Acquisition.get_program_source(recommendation.target_id, actor: actor),
-         :ok <- current_policy?(program_source, expected_policy_hash) do
-      case Ash.transact([LearningRecommendation, ProgramSource], fn ->
-             approve_transaction(recommendation, actor)
-           end) do
-        {:ok, {:ok, {updated_program_source, notifications}}} ->
-          Ash.Notifier.notify(notifications)
-          {:ok, updated_program_source}
+    result =
+      with {:ok, _query, expected_policy_hash} <- recommendation_change(recommendation),
+           {:ok, program_source} <-
+             Acquisition.get_program_source(recommendation.target_id, actor: actor),
+           :ok <- current_policy?(program_source, expected_policy_hash) do
+        case Ash.transact([LearningRecommendation, ProgramSource], fn ->
+               approve_transaction(recommendation, actor)
+             end) do
+          {:ok, {:ok, {updated_program_source, notifications}}} ->
+            Ash.Notifier.notify(notifications)
+            {:ok, updated_program_source}
 
-        {:error, error} ->
-          {:error, error}
+          {:error, error} ->
+            {:error, error}
+        end
       end
+
+    case result do
+      {:error, :stale_discovery_recommendation} = error ->
+        expire_stale_recommendation(recommendation, actor)
+        error
+
+      result ->
+        result
     end
   end
 
@@ -78,8 +104,11 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearning do
         Decimal.to_float(program_source.learning_noise_threshold)
       )
 
+    snapshot_fun =
+      Keyword.get(opts, :snapshot_fun, &Acquisition.get_discovery_performance_snapshot/2)
+
     with {:ok, snapshot} <-
-           Acquisition.get_discovery_performance_snapshot(
+           snapshot_fun.(
              %{program_source_id: program_source.id, window_days: window_days},
              authorize?: false
            ) do
@@ -104,9 +133,24 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearning do
   defp propose(program_source, query, window_days) do
     expected_policy_hash = policy_hash(program_source)
 
+    with {:ok, pending} <- pending_recommendation(program_source.id, query.query) do
+      case pending do
+        nil -> create_recommendation(program_source, query, window_days, expected_policy_hash)
+        recommendation -> {:ok, recommendation}
+      end
+    end
+  end
+
+  defp create_recommendation(program_source, query, window_days, expected_policy_hash) do
     Operations.propose_learning_recommendation(
       %{
-        dedupe_key: episode_key(program_source.id, query.query, query.finding_ids),
+        dedupe_key:
+          episode_key(
+            program_source.id,
+            query.query,
+            query.finding_ids,
+            expected_policy_hash
+          ),
         title: "Remove noisy discovery query: #{query.query}",
         target_domain: :acquisition,
         target_resource: "program_source",
@@ -138,6 +182,23 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearning do
       },
       authorize?: false
     )
+  end
+
+  defp pending_recommendation(program_source_id, query) do
+    with {:ok, recommendations} <-
+           Operations.list_learning_recommendations_by_target(
+             :acquisition,
+             "program_source",
+             program_source_id,
+             authorize?: false
+           ) do
+      {:ok,
+       Enum.find(recommendations, fn recommendation ->
+         recommendation.status in [:proposed, :needs_review] and
+           recommendation.target_action == "remove_noisy_query" and
+           get_in(recommendation.proposed_change, ["query"]) == query
+       end)}
+    end
   end
 
   defp approve_transaction(recommendation, actor) do
@@ -188,6 +249,16 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearning do
     end
   end
 
+  defp expire_stale_recommendation(recommendation, actor) do
+    case Operations.expire_learning_recommendation(recommendation, actor: actor) do
+      {:ok, _expired} ->
+        :ok
+
+      {:error, error} ->
+        Logger.warning("Could not expire stale discovery recommendation: #{inspect(error)}")
+    end
+  end
+
   defp remove_query(program_source, query, actor) do
     remaining = Enum.reject(program_source.query_templates, &(&1 == query))
 
@@ -203,7 +274,7 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearning do
     end
   end
 
-  defp episode_key(program_source_id, query, finding_ids) do
+  defp episode_key(program_source_id, query, finding_ids, expected_policy_hash) do
     evidence_hash =
       finding_ids
       |> Enum.sort()
@@ -212,7 +283,8 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearning do
       |> Base.encode16(case: :lower)
 
     query_hash = query |> then(&:crypto.hash(:sha256, &1)) |> Base.encode16(case: :lower)
-    "discovery_query_noise:#{program_source_id}:#{query_hash}:#{evidence_hash}"
+
+    "discovery_query_noise:#{program_source_id}:#{query_hash}:#{expected_policy_hash}:#{evidence_hash}"
   end
 
   defp decimal_string(nil), do: nil

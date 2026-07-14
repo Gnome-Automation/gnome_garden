@@ -242,15 +242,15 @@ defmodule GnomeGarden.Acquisition do
         action: :stale_reserved,
         args: [:reserved_before]
     end
-
-    defdelegate scan_discovery_feedback(opts \\ []),
-      to: GnomeGarden.Acquisition.DiscoveryLearning,
-      as: :scan_and_propose
-
-    defdelegate approve_discovery_learning_recommendation(recommendation, opts \\ []),
-      to: GnomeGarden.Acquisition.DiscoveryLearning,
-      as: :approve_and_apply
   end
+
+  defdelegate scan_discovery_feedback(opts \\ []),
+    to: GnomeGarden.Acquisition.DiscoveryLearning,
+    as: :scan_and_propose
+
+  defdelegate approve_discovery_learning_recommendation(recommendation, opts \\ []),
+    to: GnomeGarden.Acquisition.DiscoveryLearning,
+    as: :approve_and_apply
 
   def sync_bid_finding(bid_or_id, opts \\ []), do: Projector.sync_bid(bid_or_id, opts)
 

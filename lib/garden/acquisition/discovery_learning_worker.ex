@@ -4,11 +4,20 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearningWorker do
     max_attempts: 3,
     unique: [period: 86_400]
 
+  require Logger
+
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
     case GnomeGarden.Acquisition.scan_discovery_feedback() do
-      {:ok, _recommendations} -> :ok
-      {:error, error} -> {:error, error}
+      {:ok, %{failures: failures}} ->
+        Enum.each(failures, fn failure ->
+          Logger.warning("Discovery learning source failed: #{inspect(failure)}")
+        end)
+
+        :ok
+
+      {:error, error} ->
+        {:error, error}
     end
   end
 end

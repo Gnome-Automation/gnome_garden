@@ -2,6 +2,7 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearningTest do
   use GnomeGarden.DataCase, async: false
 
   alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.DiscoveryLearning
   alias GnomeGarden.Acquisition.DiscoveryLearningWorker
   alias GnomeGarden.Acquisition.ProgramSourcePolicy
   alias GnomeGarden.Acquisition.Review
@@ -45,7 +46,9 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearningTest do
     assert zero_result_metrics.yield == nil
     assert Decimal.equal?(zero_result_metrics.total_cost, Decimal.new("0.01"))
 
-    assert {:ok, [recommendation]} = Acquisition.scan_discovery_feedback()
+    assert {:ok, %{recommendations: [recommendation], failures: []}} =
+             Acquisition.scan_discovery_feedback()
+
     assert recommendation.status == :needs_review
     assert recommendation.proposed_change["query"] == noisy_query
 
@@ -75,14 +78,20 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearningTest do
                learning_noise_threshold: Decimal.new("0.80")
              })
 
-    assert GnomeGarden.Acquisition.DiscoveryLearning.policy_hash(changed) !=
+    assert DiscoveryLearning.policy_hash(changed) !=
              recommendation.proposed_change["expected_policy_hash"]
 
     assert {:error, :stale_discovery_recommendation} =
              Acquisition.approve_discovery_learning_recommendation(recommendation)
 
-    assert {:ok, pending} = Operations.get_learning_recommendation(recommendation.id)
-    assert pending.status == :needs_review
+    assert {:ok, expired} = Operations.get_learning_recommendation(recommendation.id)
+    assert expired.status == :expired
+
+    assert {:ok, %{recommendations: [fresh], failures: []}} =
+             Acquisition.scan_discovery_feedback()
+
+    assert fresh.id != recommendation.id
+    assert fresh.proposed_change["expected_policy_hash"] == DiscoveryLearning.policy_hash(changed)
   end
 
   test "automated candidate suppression is measured but cannot propose policy changes" do
@@ -131,7 +140,9 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearningTest do
     assert snapshot.profile.operator_suppressed_count == 0
     assert snapshot.profile.reviewed_count == 0
     assert snapshot.profile.noise_rate == nil
-    assert {:ok, []} = Acquisition.scan_discovery_feedback()
+
+    assert {:ok, %{recommendations: [], failures: []}} =
+             Acquisition.scan_discovery_feedback()
   end
 
   test "persisted source controls govern autonomous learning" do
@@ -140,7 +151,8 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearningTest do
     assert {:ok, stricter} =
              Acquisition.update_program_source_policy(program_source, %{learning_min_reviewed: 4})
 
-    assert {:ok, []} = Acquisition.scan_discovery_feedback()
+    assert {:ok, %{recommendations: [], failures: []}} =
+             Acquisition.scan_discovery_feedback()
 
     assert {:ok, disabled} =
              Acquisition.update_program_source_policy(stricter, %{
@@ -148,14 +160,81 @@ defmodule GnomeGarden.Acquisition.DiscoveryLearningTest do
                learning_min_reviewed: 3
              })
 
-    assert {:ok, []} = Acquisition.scan_discovery_feedback()
+    assert {:ok, %{recommendations: [], failures: []}} =
+             Acquisition.scan_discovery_feedback()
 
     assert {:ok, enabled} =
              Acquisition.update_program_source_policy(disabled, %{learning_enabled: true})
 
-    assert {:ok, [_recommendation]} = Acquisition.scan_discovery_feedback()
+    assert {:ok, %{recommendations: [_recommendation], failures: []}} =
+             Acquisition.scan_discovery_feedback()
+
     assert enabled.feedback_window_days == 90
     assert Decimal.equal?(enabled.learning_noise_threshold, Decimal.new("0.67"))
+  end
+
+  test "one source failure does not block learning for the rest of the portfolio" do
+    %{program_source: healthy_source} = discovery_history_fixture!()
+    suffix = System.unique_integer([:positive])
+
+    failing_program =
+      Commercial.create_discovery_program!(%{
+        name: "Failing feedback source #{suffix}",
+        search_terms: ["failing query #{suffix}", "backup query #{suffix}"],
+        cadence_hours: 24
+      })
+
+    failing_source =
+      activate_exa_program_source!(failing_program, %{
+        query_templates: ["failing query #{suffix}", "backup query #{suffix}"]
+      })
+
+    snapshot_fun = fn %{program_source_id: program_source_id} = arguments, opts ->
+      if program_source_id == failing_source.id do
+        {:error, :snapshot_unavailable}
+      else
+        Acquisition.get_discovery_performance_snapshot(arguments, opts)
+      end
+    end
+
+    assert {:ok,
+            %{
+              recommendations: [recommendation],
+              failures: [
+                %{program_source_id: failing_source_id, error: :snapshot_unavailable}
+              ]
+            }} = Acquisition.scan_discovery_feedback(snapshot_fun: snapshot_fun)
+
+    assert recommendation.target_id == healthy_source.id
+    assert failing_source_id == failing_source.id
+  end
+
+  test "an existing pending query recommendation prevents stacked review cards" do
+    %{program_source: program_source, noisy_query: noisy_query} = discovery_history_fixture!()
+
+    assert {:ok, existing} =
+             Operations.propose_learning_recommendation(%{
+               dedupe_key: "existing-discovery-card-#{program_source.id}",
+               title: "Existing noisy-query review",
+               target_domain: :acquisition,
+               target_resource: "program_source",
+               target_id: program_source.id,
+               target_action: "remove_noisy_query",
+               proposed_change: %{
+                 "operation" => "remove_query",
+                 "query" => noisy_query,
+                 "expected_policy_hash" => DiscoveryLearning.policy_hash(program_source)
+               },
+               evidence: %{"finding_ids" => []},
+               source_type: :system
+             })
+
+    assert {:ok, %{recommendations: [returned], failures: []}} =
+             Acquisition.scan_discovery_feedback()
+
+    assert returned.id == existing.id
+    assert {:ok, [pending]} = Operations.list_pending_learning_recommendations()
+    assert pending.id == existing.id
   end
 
   test "legacy candidates without query ledgers are reported but excluded from economics" do

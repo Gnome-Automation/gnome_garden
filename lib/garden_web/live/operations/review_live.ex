@@ -310,6 +310,14 @@ defmodule GnomeGardenWeb.Operations.ReviewLive do
       |> put_flash(:info, "Review decision saved.")
       |> assign_review_items()
     else
+      {:error, :stale_discovery_recommendation} ->
+        socket
+        |> put_flash(
+          :error,
+          "Discovery policy changed after this recommendation was created. No change was applied; a fresh recommendation will be proposed automatically."
+        )
+        |> assign_review_items()
+
       {:error, _error} ->
         socket
         |> put_flash(:error, "Review decision could not be saved.")
