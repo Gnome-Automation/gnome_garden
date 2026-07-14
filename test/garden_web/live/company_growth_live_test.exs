@@ -63,7 +63,10 @@ defmodule GnomeGardenWeb.CompanyGrowthLiveTest do
         due_at: ~U[2026-06-20 23:59:00Z]
       })
 
+    # Genuinely closed: reviewed, pursued, then lost — the receipt case.
     {:ok, lost_bid} = GnomeGarden.Procurement.review_bid(lost_bid)
+    {:ok, lost_bid} = GnomeGarden.Procurement.pursue_bid(lost_bid)
+    {:ok, lost_bid} = GnomeGarden.Procurement.lose_bid(lost_bid, %{})
 
     {:ok, initiative} =
       Company.create_growth_initiative(%{
@@ -163,5 +166,30 @@ defmodule GnomeGardenWeb.CompanyGrowthLiveTest do
     {:ok, _view, html} = live(conn, ~p"/operations/my-tasks")
     assert html =~ "Gather DGS documents"
     assert html =~ "SB certification"
+  end
+
+  test "qualification-linked tasks route back to the qualification", %{conn: conn} do
+    {:ok, profile} = Company.get_primary_company_profile(authorize?: false)
+
+    {:ok, qualification} =
+      Company.create_company_qualification(%{
+        company_profile_id: profile.id,
+        kind: :registration,
+        name: "DIR registration",
+        issuing_authority: "CA DIR",
+        identifier: "1000054321"
+      })
+
+    {:ok, task} =
+      Operations.create_task(%{
+        title: "Renew DIR registration",
+        company_qualification_id: qualification.id
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/operations/tasks/#{task}")
+
+    assert view
+           |> element("#task-context-link")
+           |> render() =~ "/company/qualifications/#{qualification.id}/edit"
   end
 end
