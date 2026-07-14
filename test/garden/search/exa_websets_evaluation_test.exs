@@ -4,7 +4,10 @@ defmodule GnomeGarden.Search.ExaWebsetsEvaluationTest do
   @fixture_root Path.expand("../../fixtures/exa_websets/v0", __DIR__)
 
   defmodule SpikeClient do
-    @moduledoc false
+    @moduledoc """
+    Evaluation spike only; production adoption must use ProviderBudgetPolicy reservations
+    and the callback custody controls documented in the Websets evaluation.
+    """
 
     @base_url "https://api.exa.ai/websets/v0"
 
