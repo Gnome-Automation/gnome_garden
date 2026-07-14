@@ -1,0 +1,64 @@
+{
+  "data": [
+    {
+      "id": "item_acme",
+      "object": "webset_item",
+      "source": "search",
+      "sourceId": "search_acme",
+      "websetId": "webset_garden_shadow",
+      "properties": {
+        "type": "company",
+        "url": "https://acme.example.com",
+        "description": "A Southern California food manufacturer operating automated production lines.",
+        "company": {"name": "Acme Manufacturing", "location": "Orange County, California"}
+      },
+      "evaluations": [
+        {
+          "criterion": "Company operates a manufacturing facility in Southern California",
+          "reasoning": "The company site identifies an Orange County production plant.",
+          "satisfied": "yes",
+          "references": [
+            {
+              "title": "Acme Manufacturing facilities",
+              "snippet": "Our Orange County production facility serves food manufacturers.",
+              "url": "https://acme.example.com/facilities"
+            }
+          ]
+        },
+        {
+          "criterion": "Company is a plausible buyer of industrial controls or automation services",
+          "reasoning": "The facility description references PLC-controlled packaging lines.",
+          "satisfied": "yes",
+          "references": [
+            {
+              "title": "Acme Manufacturing capabilities",
+              "snippet": "PLC-controlled filling and packaging lines operate across the plant.",
+              "url": "https://acme.example.com/capabilities"
+            }
+          ]
+        }
+      ],
+      "enrichments": [
+        {
+          "object": "enrichment_result",
+          "status": "completed",
+          "format": "email",
+          "result": ["operations@acme.example.com"],
+          "reasoning": "The address appears on the official contact page.",
+          "references": [
+            {
+              "title": "Contact Acme Manufacturing",
+              "snippet": "Operations inquiries: operations@acme.example.com",
+              "url": "https://acme.example.com/contact"
+            }
+          ],
+          "enrichmentId": "enrichment_contact_email"
+        }
+      ],
+      "createdAt": "2026-07-14T00:00:00Z",
+      "updatedAt": "2026-07-14T00:03:00Z"
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null
+}

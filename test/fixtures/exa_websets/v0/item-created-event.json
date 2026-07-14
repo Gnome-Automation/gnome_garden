@@ -1,0 +1,23 @@
+{
+  "id": "event_item_acme_created",
+  "object": "event",
+  "type": "webset.item.created",
+  "data": {
+    "id": "item_acme",
+    "object": "webset_item",
+    "source": "search",
+    "sourceId": "search_acme",
+    "websetId": "webset_garden_shadow",
+    "properties": {
+      "type": "company",
+      "url": "https://acme.example.com",
+      "description": "A Southern California food manufacturer operating automated production lines.",
+      "company": {"name": "Acme Manufacturing", "location": "Orange County, California"}
+    },
+    "evaluations": [],
+    "enrichments": null,
+    "createdAt": "2026-07-14T00:00:00Z",
+    "updatedAt": "2026-07-14T00:00:00Z"
+  },
+  "createdAt": "2026-07-14T00:00:01Z"
+}

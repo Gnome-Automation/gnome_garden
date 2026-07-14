@@ -1,0 +1,25 @@
+{
+  "search": {
+    "entity": {"type": "company"},
+    "criteria": [
+      {"description": "Company operates a manufacturing facility in Southern California"},
+      {"description": "Company is a plausible buyer of industrial controls or automation services"}
+    ]
+  },
+  "enrichments": [
+    {"description": "General contact email address", "format": "email"},
+    {"description": "Primary industry vertical", "format": "options", "options": [{"label": "Food and beverage"}, {"label": "Packaging"}, {"label": "Other"}]}
+  ],
+  "items": [
+    {
+      "id": "item_preview_acme",
+      "properties": {
+        "type": "company",
+        "url": "https://acme.example.com",
+        "description": "A Southern California food manufacturer operating automated production lines.",
+        "company": {"name": "Acme Manufacturing", "location": "Orange County, California"}
+      },
+      "createdAt": "2026-07-14T00:00:00Z"
+    }
+  ]
+}
