@@ -100,7 +100,7 @@ if config_env() == :prod and not present?.(garage_access_key) and
   """
 end
 
-if present?.(garage_access_key) do
+if config_env() != :test and present?.(garage_access_key) do
   garage_secret_key =
     blank_to_nil.(System.get_env("GARAGE_SECRET_KEY")) ||
       raise "Missing environment variable `GARAGE_SECRET_KEY` for acquisition document storage."

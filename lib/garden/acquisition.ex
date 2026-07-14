@@ -48,6 +48,7 @@ defmodule GnomeGarden.Acquisition do
       define :list_console_sources_needing_credentials, action: :console_credentials_needed
       define :list_console_sources_needing_attention, action: :console_attention
       define :get_source, action: :read, get_by: [:id]
+      define :get_source_workspace, action: :workspace, args: [:id]
       define :get_source_by_external_ref, action: :by_external_ref, args: [:external_ref]
       define :get_source_by_url, action: :by_url, args: [:url]
       define :search_sources, action: :search, args: [:query]

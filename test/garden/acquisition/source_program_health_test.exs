@@ -39,6 +39,8 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
         }
       })
 
+    procurement_source = adopt_source!(procurement_source)
+
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
 
@@ -135,6 +137,8 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
           listing_url: procurement_source.url
         }
       })
+
+    procurement_source = adopt_source!(procurement_source)
 
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
@@ -546,7 +550,7 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
     assert [%{"value" => "541330", "returned" => 1}] = search_filter_counts
   end
 
-  test "sam.gov source scans record failure diagnostics on API errors" do
+  test "sam.gov rate limits defer source scans until the provider retry window" do
     {:ok, procurement_source} =
       Procurement.create_procurement_source(%{
         name: "SAM Rate Limited Source",
@@ -571,7 +575,7 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
       {:ok, %{status: 429, body: %{"message" => "rate limited"}}}
     end
 
-    assert {:error, "SAM.gov rate limit exceeded (1000/day)"} =
+    assert {:error, {:deferred, {:rate_limited, retry_at}, retry_at}} =
              Procurement.run_source_scan(
                %{source_id: procurement_source.id},
                scanner_context: %{sam_gov_api_key: "test-sam-key", http_get: http_get},
@@ -579,12 +583,10 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
              )
 
     assert {:ok, source} = Procurement.get_procurement_source(procurement_source.id)
-    assert source.config_status == :scan_failed
-    assert source.metadata["last_scan_status"] == "failed"
-    assert source.metadata["last_scan_summary"]["diagnosis"] == "scan_failed"
-
-    assert source.metadata["last_scan_summary"]["reason"] ==
-             "SAM.gov rate limit exceeded (1000/day)"
+    assert source.config_status == :configured
+    assert source.deferred_until == DateTime.truncate(retry_at, :second)
+    assert source.last_health_action == :deferred
+    assert source.health_action_reason =~ "rate_limited"
   end
 
   test "sam.gov sources show needs login health when API key is missing" do
@@ -695,6 +697,8 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
         }
       })
 
+    procurement_source = adopt_source!(procurement_source)
+
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
 
@@ -782,6 +786,8 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
         }
       })
 
+    procurement_source = adopt_source!(procurement_source)
+
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
 
@@ -818,6 +824,8 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
           listing_url: procurement_source.url
         }
       })
+
+    procurement_source = adopt_source!(procurement_source)
 
     {:ok, credential} =
       Procurement.create_source_credential(%{
@@ -945,6 +953,16 @@ defmodule GnomeGarden.Acquisition.SourceProgramHealthTest do
 
   defp restore_env(name, nil), do: System.delete_env(name)
   defp restore_env(name, value), do: System.put_env(name, value)
+
+  defp adopt_source!(source) do
+    Procurement.review_procurement_source_portfolio!(source, %{
+      portfolio_decision: :adopt,
+      compliance_decision: :adopt,
+      expected_coverage: source.expected_coverage,
+      adapter_owner: source.adapter_owner,
+      allowed_retrieval_paths: source.allowed_retrieval_paths
+    })
+  end
 
   test "console programs detect stale cadence from scope" do
     {:ok, discovery_program} =

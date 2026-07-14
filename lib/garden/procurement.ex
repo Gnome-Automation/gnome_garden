@@ -42,6 +42,12 @@ defmodule GnomeGarden.Procurement do
       define :retry_procurement_source_config, action: :retry_config
       define :retry_procurement_source_scan, action: :retry_scan
       define :mark_procurement_source_scanned, action: :mark_scanned
+      define :review_procurement_source_portfolio, action: :review_portfolio
+      define :defer_procurement_source_scan, action: :defer_scan
+      define :clear_procurement_source_scan_deferral, action: :clear_scan_deferral
+      define :pause_procurement_source_for_health, action: :pause_for_health
+      define :adjust_procurement_source_scan_cadence, action: :adjust_scan_cadence
+      define :route_procurement_source_health_issue, action: :route_health_issue
 
       define :list_procurement_sources_needing_configuration, action: :needs_configuration
 
@@ -54,6 +60,11 @@ defmodule GnomeGarden.Procurement do
       define :list_procurement_sources_by_type,
         action: :by_type,
         args: [:source_type]
+
+      define :list_procurement_source_portfolio, action: :portfolio
+
+      define :list_procurement_source_health_routing_candidates,
+        action: :health_routing_candidates
 
       define :list_procurement_sources_by_organization,
         action: :by_organization,
@@ -203,6 +214,10 @@ defmodule GnomeGarden.Procurement do
 
       define :list_source_retrieval_runs_for_source,
         action: :for_source,
+        args: [:procurement_source_id]
+
+      define :list_recent_source_retrieval_runs,
+        action: :recent_for_source,
         args: [:procurement_source_id]
 
       define :get_latest_source_retrieval_run,

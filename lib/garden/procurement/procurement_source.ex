@@ -63,7 +63,10 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         where expr(
                 enabled == true and
                   status == :approved and
+                  portfolio_decision == :adopt and
+                  compliance_decision == :adopt and
                   config_status in [:configured, :scan_failed] and
+                  (is_nil(deferred_until) or deferred_until <= now()) and
                   (is_nil(last_scanned_at) or
                      last_scanned_at < ago(scan_frequency_hours, :hour))
               )
@@ -114,7 +117,32 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       upsert_identity :unique_url
 
       upsert_fields {:replace_all_except,
-                     [:id, :inserted_at, :status, :enabled, :config_status, :scrape_config]}
+                     [
+                       :id,
+                       :inserted_at,
+                       :status,
+                       :enabled,
+                       :config_status,
+                       :scrape_config,
+                       :portfolio_decision,
+                       :expected_coverage,
+                       :adapter_owner,
+                       :launch_prerequisites,
+                       :compliance_decision,
+                       :allowed_retrieval_paths,
+                       :terms_url,
+                       :robots_policy,
+                       :authentication_policy,
+                       :retention_days,
+                       :rate_limit_per_day,
+                       :policy_reviewed_at,
+                       :governance_notes,
+                       :deferred_until,
+                       :defer_reason,
+                       :last_health_action,
+                       :health_action_reason,
+                       :health_action_at
+                     ]}
 
       accept [
         :name,
@@ -136,6 +164,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
         :status
       ]
 
+      change GnomeGarden.Procurement.Changes.InitializeSourceGovernance
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
@@ -158,6 +187,7 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       change set_attribute(:configured_at, &DateTime.utc_now/0)
       change set_attribute(:added_by, :agent)
       change set_attribute(:status, :approved)
+      change GnomeGarden.Procurement.Changes.InitializeSourceGovernance
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
@@ -221,6 +251,91 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       accept []
       change set_attribute(:status, :candidate)
       change set_attribute(:enabled, true)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
+    end
+
+    update :review_portfolio do
+      description "Record the governed adopt/defer/reject and provider-compliance decision"
+      require_atomic? false
+
+      accept [
+        :portfolio_decision,
+        :expected_coverage,
+        :adapter_owner,
+        :launch_prerequisites,
+        :compliance_decision,
+        :allowed_retrieval_paths,
+        :terms_url,
+        :robots_policy,
+        :authentication_policy,
+        :retention_days,
+        :rate_limit_per_day,
+        :governance_notes
+      ]
+
+      validate GnomeGarden.Procurement.Validations.SourceGovernanceReady
+      change set_attribute(:policy_reviewed_at, &DateTime.utc_now/0)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
+    end
+
+    update :defer_scan do
+      description "Defer source execution until a provider or quota reset time"
+      require_atomic? false
+      accept [:deferred_until, :defer_reason]
+      validate present([:deferred_until, :defer_reason])
+      change set_attribute(:last_health_action, :deferred)
+      change set_attribute(:health_action_at, &DateTime.utc_now/0)
+      change GnomeGarden.Procurement.Changes.CopyDeferReason
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
+    end
+
+    update :clear_scan_deferral do
+      description "Clear an expired or operator-resolved source deferral"
+      require_atomic? false
+      accept []
+      change set_attribute(:deferred_until, nil)
+      change set_attribute(:defer_reason, nil)
+      change set_attribute(:last_health_action, :resumed)
+      change set_attribute(:health_action_at, &DateTime.utc_now/0)
+      change set_attribute(:health_action_reason, "Deferral cleared")
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
+    end
+
+    update :pause_for_health do
+      description "Pause a persistently failing or noisy source with operator-visible rationale"
+      require_atomic? false
+      accept [:health_action_reason]
+      validate present(:health_action_reason)
+      change set_attribute(:enabled, false)
+      change set_attribute(:last_health_action, :paused)
+      change set_attribute(:health_action_at, &DateTime.utc_now/0)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
+    end
+
+    update :adjust_scan_cadence do
+      description "Change source cadence from measured portfolio performance"
+      require_atomic? false
+      accept [:scan_frequency_hours, :last_health_action, :health_action_reason]
+      validate compare(:scan_frequency_hours, greater_than: 0, less_than_or_equal_to: 720)
+      validate attribute_in(:last_health_action, [:cadence_lowered, :prioritized])
+      validate present(:health_action_reason)
+      change set_attribute(:health_action_at, &DateTime.utc_now/0)
+      change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
+    end
+
+    update :route_health_issue do
+      description "Route a recoverable source issue without deleting or silently disabling it"
+      require_atomic? false
+      accept [:last_health_action, :health_action_reason]
+
+      validate attribute_in(:last_health_action, [
+                 :credential_attention,
+                 :configuration_attention,
+                 :operator_attention
+               ])
+
+      validate present(:health_action_reason)
+      change set_attribute(:health_action_at, &DateTime.utc_now/0)
       change GnomeGarden.Procurement.Changes.SyncAcquisitionSource
     end
 
@@ -345,7 +460,10 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       filter expr(
                enabled == true and
                  status == :approved and
+                 portfolio_decision == :adopt and
+                 compliance_decision == :adopt and
                  config_status in [:configured, :scan_failed] and
+                 (is_nil(deferred_until) or deferred_until <= now()) and
                  (is_nil(last_scanned_at) or last_scanned_at < ago(^arg(:since_hours), :hour))
              )
     end
@@ -405,6 +523,15 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
                 load: [:status_variant, :config_status_variant, :enabled_variant]
               )
     end
+
+    read :portfolio do
+      prepare build(sort: [portfolio_decision: :asc, priority: :asc, name: :asc])
+    end
+
+    read :health_routing_candidates do
+      filter expr(status == :approved and portfolio_decision == :adopt)
+      prepare build(sort: [priority: :asc, updated_at: :asc])
+    end
   end
 
   pub_sub do
@@ -417,6 +544,12 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
     publish :scan_fail, "scan_failed"
     publish :mark_scanned, "scanned"
     publish :queue, "queued"
+    publish :review_portfolio, "portfolio_reviewed"
+    publish :defer_scan, "deferred"
+    publish :clear_scan_deferral, "resumed"
+    publish :pause_for_health, "health_paused"
+    publish :adjust_scan_cadence, "cadence_changed"
+    publish :route_health_issue, "attention_routed"
   end
 
   attributes do
@@ -496,6 +629,76 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
     attribute :scan_frequency_hours, :integer, default: 24, public?: true
     attribute :enabled, :boolean, default: true, public?: true
 
+    attribute :portfolio_decision, :atom do
+      allow_nil? false
+      default :defer
+      public? true
+      constraints one_of: [:adopt, :defer, :reject]
+    end
+
+    attribute :expected_coverage, :string, public?: true
+    attribute :adapter_owner, :string, public?: true
+
+    attribute :launch_prerequisites, {:array, :string} do
+      allow_nil? false
+      default []
+      public? true
+    end
+
+    attribute :compliance_decision, :atom do
+      allow_nil? false
+      default :defer
+      public? true
+      constraints one_of: [:adopt, :defer, :reject]
+    end
+
+    attribute :allowed_retrieval_paths, {:array, :atom} do
+      allow_nil? false
+      default []
+      public? true
+
+      constraints items: [
+                    one_of: [:provider_api, :http, :browser, :playwright, :browserless]
+                  ]
+    end
+
+    attribute :terms_url, :string, public?: true
+
+    attribute :robots_policy, :atom do
+      public? true
+      constraints one_of: [:respect, :not_applicable, :operator_review]
+    end
+
+    attribute :authentication_policy, :atom do
+      public? true
+      constraints one_of: [:public, :api_key, :credentialed_session, :none]
+    end
+
+    attribute :retention_days, :integer, public?: true
+    attribute :rate_limit_per_day, :integer, public?: true
+    attribute :policy_reviewed_at, :utc_datetime, public?: true
+    attribute :governance_notes, :string, public?: true
+    attribute :deferred_until, :utc_datetime, public?: true
+    attribute :defer_reason, :string, public?: true
+
+    attribute :last_health_action, :atom do
+      public? true
+
+      constraints one_of: [
+                    :deferred,
+                    :resumed,
+                    :paused,
+                    :cadence_lowered,
+                    :prioritized,
+                    :credential_attention,
+                    :configuration_attention,
+                    :operator_attention
+                  ]
+    end
+
+    attribute :health_action_reason, :string, public?: true
+    attribute :health_action_at, :utc_datetime, public?: true
+
     attribute :metadata, :map,
       default: %{},
       public?: true,
@@ -564,6 +767,10 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
   end
 
   calculations do
+    calculate :provider_budget_state,
+              :map,
+              GnomeGarden.Procurement.Calculations.ProviderBudgetState
+
     calculate :onboarding_state,
               :atom,
               {GnomeGarden.Procurement.Calculations.OnboardingState, []}

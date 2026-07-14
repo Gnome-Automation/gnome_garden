@@ -14,6 +14,8 @@ defmodule GnomeGarden.Acquisition.PilotSeedsTest do
     assert Enum.all?(programs, &(&1.status == :active))
     assert Enum.all?(sources, &(&1.status == :approved))
     assert Enum.all?(sources, &(&1.config_status == :configured))
+    assert Enum.all?(sources, &(&1.portfolio_decision == :defer))
+    assert Enum.all?(sources, &(&1.compliance_decision == :defer))
 
     assert {:ok, %{programs: second_programs, sources: second_sources}} =
              PilotSeeds.ensure_defaults()
@@ -70,6 +72,6 @@ defmodule GnomeGarden.Acquisition.PilotSeedsTest do
     assert Enum.any?(active_programs, &(&1.name == "Seven Day Food Plant Automation Sweep"))
 
     assert {:ok, ready_sources} = Procurement.list_procurement_sources_ready_for_scan(24)
-    assert Enum.any?(ready_sources, &(&1.name == "City of Anaheim OpenGov"))
+    refute Enum.any?(ready_sources, &(&1.name == "City of Anaheim OpenGov"))
   end
 end

@@ -137,7 +137,7 @@ defmodule GnomeGarden.Procurement.SourcePipelineTest do
     assert Enum.map(candidates, & &1.payload["title"]) == ["SCADA Controls Upgrade RFP"]
   end
 
-  test "source scans run through the Lua source pipeline" do
+  test "source scans run directly through the typed source pipeline" do
     {:ok, source} =
       Procurement.create_procurement_source(%{
         name: "Ready Scanner Source",

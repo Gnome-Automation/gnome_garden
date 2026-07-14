@@ -36,6 +36,12 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
       {:ok, _payload} = ok ->
         ok
 
+      {:error, {:rate_limited, retry_at} = reason} ->
+        defer_scan(source, reason, retry_at)
+
+      {:error, {:budget_exhausted, reset_at, _remaining} = reason} ->
+        defer_scan(source, reason, reset_at)
+
       {:error, reason} ->
         fail_scan(source, reason)
     end
@@ -80,10 +86,14 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
   defp query_param_sets(source, profile_context) do
     base = query_params(source, profile_context)
 
-    case source_search_filters(source) do
+    source_search_filters(source)
+    |> case do
       [] -> fallback_query_param_sets(base)
       filters -> Enum.map(filters, &filter_query_params(base, &1))
     end
+    |> Enum.map(&normalize_query_params/1)
+    |> Enum.uniq_by(&query_identity/1)
+    |> Enum.map(&with_query_identity(&1, source))
   end
 
   defp fallback_query_param_sets(base) do
@@ -270,6 +280,16 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
     diagnostics = scan_diagnostics(scored, saved, excluded)
     record_search_filter_counts(query_result, saved)
 
+    source =
+      if source.deferred_until do
+        case Procurement.clear_procurement_source_scan_deferral(source, authorize?: false) do
+          {:ok, source} -> source
+          {:error, _error} -> source
+        end
+      else
+        source
+      end
+
     Procurement.mark_procurement_source_scanned!(
       source,
       %{
@@ -311,6 +331,22 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
       )
 
     {:error, reason}
+  end
+
+  defp defer_scan(source, reason, deferred_until) do
+    source = current_source(source)
+
+    case Procurement.defer_procurement_source_scan(
+           source,
+           %{
+             deferred_until: deferred_until,
+             defer_reason: format_reason(reason)
+           },
+           authorize?: false
+         ) do
+      {:ok, _source} -> {:error, {:deferred, reason, deferred_until}}
+      {:error, error} -> {:error, {:deferral_failed, reason, error}}
+    end
   end
 
   defp scan_failure_summary(reason) do
@@ -429,6 +465,97 @@ defmodule GnomeGarden.Agents.Procurement.SamGovScanner do
   defp bid_identity(bid) do
     bid_value(bid, :external_id) || bid_value(bid, :url) || bid_value(bid, :title)
   end
+
+  defp normalize_query_params(params) do
+    params
+    |> normalize_keywords()
+    |> normalize_naics_codes()
+    |> normalize_state()
+    |> normalize_limit()
+  end
+
+  defp normalize_keywords(params) do
+    case Map.get(params, :keywords) do
+      value when is_binary(value) ->
+        Map.put(params, :keywords, String.trim(value))
+
+      _value ->
+        Map.delete(params, :keywords)
+    end
+  end
+
+  defp normalize_naics_codes(params) do
+    codes =
+      params
+      |> Map.get(:naics_codes, [])
+      |> List.wrap()
+      |> Enum.map(&(&1 |> to_string() |> String.trim()))
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    if codes == [],
+      do: Map.delete(params, :naics_codes),
+      else: Map.put(params, :naics_codes, codes)
+  end
+
+  defp normalize_state(params) do
+    case Map.get(params, :state) do
+      value when is_binary(value) ->
+        Map.put(params, :state, value |> String.trim() |> String.upcase())
+
+      _value ->
+        Map.delete(params, :state)
+    end
+  end
+
+  defp normalize_limit(params) do
+    limit = params |> Map.get(:limit, @default_limit) |> normalize_integer(@default_limit)
+    Map.put(params, :limit, min(max(limit, 1), 1_000))
+  end
+
+  defp normalize_integer(value, _default) when is_integer(value), do: value
+
+  defp normalize_integer(value, default) when is_binary(value) do
+    case Integer.parse(value) do
+      {integer, ""} -> integer
+      _error -> default
+    end
+  end
+
+  defp normalize_integer(_value, default), do: default
+
+  defp query_identity(params) do
+    params
+    |> Map.drop([:source_search_filter, :idempotency_key, :source_id])
+    |> Map.update(:keywords, nil, fn
+      value when is_binary(value) -> String.downcase(value)
+      value -> value
+    end)
+    |> Enum.sort()
+  end
+
+  defp with_query_identity(params, source) do
+    fingerprint =
+      params
+      |> query_identity()
+      |> :erlang.term_to_binary()
+      |> then(&:crypto.hash(:sha256, &1))
+      |> Base.encode16(case: :lower)
+
+    params
+    |> Map.put(:source_id, source.id)
+    |> maybe_put_provider_request_limit(source.rate_limit_per_day)
+    |> Map.put(
+      :idempotency_key,
+      "sam_gov:#{source.id}:#{Date.to_iso8601(Date.utc_today())}:#{fingerprint}"
+    )
+  end
+
+  defp maybe_put_provider_request_limit(params, limit) when is_integer(limit) and limit > 0,
+    do: Map.put(params, :provider_request_limit, limit)
+
+  defp maybe_put_provider_request_limit(params, _limit), do: params
 
   defp query_summary(results) do
     results

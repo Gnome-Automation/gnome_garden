@@ -1,9 +1,10 @@
 # Acquisition Telemetry and SLOs
 
 Acquisition emits bounded-cardinality telemetry under `[:gnome_garden, :acquisition, ...]` for
-provider calls, durable commercial runs, candidate routing, admission, promotion latency, and SLO
-alerts. Run and preview IDs are trace metadata only; metrics tag provider, operation, outcome, alert
-kind, and severity.
+provider calls, durable commercial runs, candidate routing, admission, promotion latency, staged
+retrieval, and SLO alerts. Run and preview IDs are trace metadata only. Retrieval metrics tag only
+source type, path, outcome, and a bounded reason class; source and retrieval-run IDs remain trace
+metadata.
 
 Default warning thresholds are defined by `GnomeGarden.Acquisition.Telemetry.thresholds/0`:
 
@@ -15,5 +16,5 @@ Default warning thresholds are defined by `GnomeGarden.Acquisition.Telemetry.thr
 - 3 consecutive zero-yield runs
 
 Operators can trace `DiscoveryRun` → `LeadPreviewRun` → routing → verification/admission → Finding
-promotion from event metadata without parsing logs. Retrieval-stage metrics remain isolated in
-`gnome_ga-fx2.38` so this core SLO layer does not couple to provider fallback implementation.
+promotion from event metadata without parsing logs. Procurement retrieval emits one event per
+attempted stage plus one terminal event, while `SourceRetrievalRun` remains the durable evidence.

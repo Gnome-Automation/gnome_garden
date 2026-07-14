@@ -11,9 +11,12 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   - 541519: Other Computer Related Services
   - 238210: Electrical Contractors
 
-  API limit: 1000 requests/day
+  Every request reserves the configured SAM.gov daily request budget before
+  network access. Retries reuse a deterministic query key and replay a cached
+  successful response instead of consuming another provider request.
   """
 
+  alias GnomeGarden.Acquisition.ProviderBudgetPolicy
   alias GnomeGarden.Company.ProfileContext, as: CompanyProfileContext
   alias GnomeGarden.Procurement.SourceCredentials
 
@@ -22,46 +25,213 @@ defmodule GnomeGarden.Agents.Tools.Procurement.QuerySamGov do
   @sam_api_base "https://api.sam.gov/opportunities/v2/search"
 
   def run(params, context) do
-    case get_api_key(context) do
-      {:ok, api_key} ->
-        query_params = build_query_params(params, context, api_key)
-
-        Logger.info(
-          "[QuerySamGov] Searching with params: #{inspect(Map.delete(query_params, :api_key))}"
-        )
-
-        request = context_value(context, [:http_get]) || (&Req.get/2)
-
-        case request.(@sam_api_base, sam_request_options(query_params)) do
-          {:ok, %{status: 200, body: body}} ->
-            opportunities = parse_response(body)
-            Logger.info("[QuerySamGov] Found #{length(opportunities)} opportunities")
-
-            {:ok,
-             %{
-               source_type: :sam_gov,
-               query: Map.get(params, :keywords),
-               bids_found: length(opportunities),
-               bids: opportunities
-             }}
-
-          {:ok, %{status: 429}} ->
-            {:error, "SAM.gov rate limit exceeded (1000/day)"}
-
-          {:ok, %{status: 401}} ->
-            {:error,
-             "SAM.gov API key was rejected. Generate a public API key in SAM.gov and update SAM_GOV_API_KEY."}
-
-          {:ok, %{status: status, body: body}} ->
-            Logger.warning("[QuerySamGov] API returned status #{status}: #{inspect(body)}")
-            {:error, "SAM.gov API error: status #{status}"}
-
-          {:error, reason} ->
-            {:error, "SAM.gov request failed: #{inspect(reason)}"}
+    with {:ok, api_key} <- get_api_key(context),
+         query_params = build_query_params(params, context, api_key),
+         idempotency_key <- idempotency_key(params, query_params, context),
+         {:ok, request} <-
+           ProviderBudgetPolicy.configured_request(
+             "sam_gov",
+             "search",
+             idempotency_key,
+             metadata: %{
+               "query_fingerprint" => query_fingerprint(query_params),
+               "source_id" => Map.get(params, :source_id)
+             }
+           ),
+         {:ok, %{reservation: reservation, budget: budget}} <-
+           ProviderBudgetPolicy.reserve(request, reserve_options(params, context)) do
+      execute_or_replay(params, query_params, reservation, budget, context)
+    else
+      {:error, error} ->
+        if ProviderBudgetPolicy.budget_exceeded?(error) do
+          with {:ok, budget} <-
+                 ProviderBudgetPolicy.current_window(
+                   "sam_gov",
+                   "search",
+                   reserve_options(params, context)
+                 ) do
+            {:error, {:budget_exhausted, budget.resets_at, budget.remaining_requests}}
+          end
+        else
+          {:error, error}
         end
+    end
+  end
+
+  defp execute_or_replay(
+         params,
+         query_params,
+         %{status: :reserved} = reservation,
+         budget,
+         context
+       ) do
+    Logger.info(
+      "[QuerySamGov] Searching with params: #{inspect(Map.delete(query_params, :api_key))}"
+    )
+
+    request = context_value(context, [:http_get]) || (&Req.get/2)
+
+    case request.(@sam_api_base, sam_request_options(query_params)) do
+      {:ok, %{status: 200, body: body}} ->
+        settle_success(params, body, reservation, budget, context)
+
+      {:ok, %{status: 429} = response} ->
+        retry_at = retry_at(response, context)
+
+        _ =
+          ProviderBudgetPolicy.account_failure(reservation, {:http_error, 429, nil},
+            actor: context_value(context, [:actor])
+          )
+
+        {:error, {:rate_limited, retry_at}}
+
+      {:ok, %{status: 401}} ->
+        _ =
+          ProviderBudgetPolicy.account_failure(reservation, {:http_error, 401, nil},
+            actor: context_value(context, [:actor])
+          )
+
+        {:error,
+         "SAM.gov API key was rejected. Generate a public API key in SAM.gov and update SAM_GOV_API_KEY."}
+
+      {:ok, %{status: status, body: body}} ->
+        Logger.warning("[QuerySamGov] API returned status #{status}: #{inspect(body)}")
+
+        _ =
+          ProviderBudgetPolicy.account_failure(reservation, {:http_error, status, body},
+            actor: context_value(context, [:actor])
+          )
+
+        {:error, {:http_error, status}}
 
       {:error, reason} ->
-        {:error, reason}
+        _ =
+          ProviderBudgetPolicy.account_failure(reservation, reason,
+            actor: context_value(context, [:actor])
+          )
+
+        {:error, {:transport_error, reason}}
+    end
+  end
+
+  defp execute_or_replay(
+         params,
+         _query_params,
+         %{status: :settled} = reservation,
+         budget,
+         _context
+       ) do
+    case reservation.metadata do
+      %{"response" => body} -> response(params, body, budget, true)
+      _metadata -> {:error, {:provider_reservation_finalized, :settled}}
+    end
+  end
+
+  defp execute_or_replay(_params, _query_params, reservation, budget, _context) do
+    {:error, {:provider_reservation_finalized, reservation.status, budget.resets_at}}
+  end
+
+  defp settle_success(params, body, reservation, budget, context) do
+    with {:ok, %{budget: settled_budget}} <-
+           ProviderBudgetPolicy.settle(
+             %{
+               idempotency_key: reservation.idempotency_key,
+               actual_cost: 0,
+               actual_requests: 1,
+               status: :settled,
+               metadata: %{"response" => cacheable_response(body)}
+             },
+             actor: context_value(context, [:actor])
+           ) do
+      response(params, body, settled_budget || budget, false)
+    end
+  end
+
+  defp response(params, body, budget, replayed?) do
+    opportunities = parse_response(body)
+    Logger.info("[QuerySamGov] Found #{length(opportunities)} opportunities")
+
+    {:ok,
+     %{
+       source_type: :sam_gov,
+       query: Map.get(params, :keywords),
+       bids_found: length(opportunities),
+       bids: opportunities,
+       replayed?: replayed?,
+       budget: budget_summary(budget)
+     }}
+  end
+
+  defp cacheable_response(%{"opportunitiesData" => opportunities})
+       when is_list(opportunities),
+       do: %{"opportunitiesData" => opportunities}
+
+  defp cacheable_response(%{"_embedded" => %{"results" => results}}) when is_list(results),
+    do: %{"_embedded" => %{"results" => results}}
+
+  defp cacheable_response(body) when is_list(body), do: body
+  defp cacheable_response(_body), do: %{"opportunitiesData" => []}
+
+  defp budget_summary(budget) do
+    %{
+      remaining_requests:
+        max(budget.request_limit - budget.reserved_requests - budget.used_requests, 0),
+      resets_at: budget.resets_at,
+      request_limit: budget.request_limit
+    }
+  end
+
+  defp idempotency_key(params, query_params, context) do
+    Map.get(params, :idempotency_key) ||
+      context_value(context, [:idempotency_key]) ||
+      "sam_gov:#{Date.to_iso8601(Date.utc_today())}:#{query_fingerprint(query_params)}"
+  end
+
+  defp reserve_options(params, context) do
+    [actor: context_value(context, [:actor])]
+    |> maybe_put_option(:request_limit, Map.get(params, :provider_request_limit))
+  end
+
+  defp maybe_put_option(options, _key, nil), do: options
+  defp maybe_put_option(options, key, value), do: Keyword.put(options, key, value)
+
+  defp query_fingerprint(query_params) do
+    query_params
+    |> Map.delete(:api_key)
+    |> Enum.sort()
+    |> :erlang.term_to_binary()
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
+  end
+
+  defp retry_at(response, context) do
+    now = context_value(context, [:now]) || DateTime.utc_now()
+    retry_after = retry_after_seconds(Map.get(response, :headers) || Map.get(response, "headers"))
+    DateTime.add(now, min(max(retry_after || 900, 60), 3_600), :second)
+  end
+
+  defp retry_after_seconds(headers) when is_map(headers) do
+    headers
+    |> Enum.find_value(fn {key, value} ->
+      if String.downcase(to_string(key)) == "retry-after", do: parse_retry_after(value)
+    end)
+  end
+
+  defp retry_after_seconds(headers) when is_list(headers) do
+    headers
+    |> Enum.find_value(fn {key, value} ->
+      if String.downcase(to_string(key)) == "retry-after", do: parse_retry_after(value)
+    end)
+  end
+
+  defp retry_after_seconds(_headers), do: nil
+
+  defp parse_retry_after([value | _values]), do: parse_retry_after(value)
+
+  defp parse_retry_after(value) do
+    case Integer.parse(to_string(value)) do
+      {seconds, ""} -> seconds
+      _error -> nil
     end
   end
 

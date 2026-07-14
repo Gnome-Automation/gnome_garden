@@ -81,9 +81,15 @@ defmodule GnomeGarden.Calculations.AcquisitionSourceRunnable do
     end
   end
 
-  defp procurement_source_ready?(%{config_status: status})
-       when status in [:configured, :scan_failed],
-       do: true
+  defp procurement_source_ready?(%{
+         config_status: status,
+         portfolio_decision: :adopt,
+         compliance_decision: :adopt,
+         deferred_until: deferred_until
+       })
+       when status in [:configured, :scan_failed] do
+    is_nil(deferred_until) or DateTime.compare(deferred_until, DateTime.utc_now()) != :gt
+  end
 
   defp procurement_source_ready?(_procurement_source), do: false
 

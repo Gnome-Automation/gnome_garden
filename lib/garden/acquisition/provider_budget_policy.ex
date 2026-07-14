@@ -40,6 +40,50 @@ defmodule GnomeGarden.Acquisition.ProviderBudgetPolicy do
     end)
   end
 
+  def current_window(provider, operation, opts \\ []) do
+    requested_at = Keyword.get(opts, :requested_at, DateTime.utc_now())
+    actor = Keyword.get(opts, :actor)
+
+    with {:ok, profile} <- provider_profile(provider, operation),
+         {:ok, configured_request_limit} <-
+           nonnegative_integer(map_value(profile, :request_limit)),
+         {:ok, request_limit} <- trusted_request_limit(opts, configured_request_limit),
+         {:ok, configured_spend_limit} <- decimal(map_value(profile, :spend_limit)),
+         {:ok, spend_limit} <- trusted_spend_limit(opts, configured_spend_limit),
+         {:ok, period} <- period(map_value(profile, :period)),
+         {window_key, window_started_at, resets_at} <- window(period, requested_at) do
+      window_key =
+        scoped_window_key(
+          window_key,
+          spend_limit,
+          configured_spend_limit,
+          request_limit,
+          configured_request_limit
+        )
+
+      case Acquisition.get_provider_budget_window(provider, operation, window_key, actor: actor) do
+        {:ok, budget} ->
+          {:ok, budget}
+
+        {:error, _not_found} ->
+          {:ok,
+           %{
+             provider: provider,
+             operation: operation,
+             window_key: window_key,
+             window_started_at: window_started_at,
+             resets_at: resets_at,
+             spend_limit: spend_limit,
+             request_limit: request_limit,
+             remaining_cost: spend_limit,
+             remaining_requests: request_limit,
+             reserved_requests: 0,
+             used_requests: 0
+           }}
+      end
+    end
+  end
+
   def reserve(request, opts \\ []) when is_map(request) do
     actor = Keyword.get(opts, :actor)
 

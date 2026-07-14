@@ -91,14 +91,20 @@ defmodule GnomeGarden.Procurement.SourceRetrievalRun do
     read :for_source do
       argument :procurement_source_id, :uuid, allow_nil?: false
       filter expr(procurement_source_id == ^arg(:procurement_source_id))
-      prepare build(sort: [started_at: :desc])
+      prepare build(sort: [started_at: :desc, inserted_at: :desc])
     end
 
     read :latest_for_source do
       argument :procurement_source_id, :uuid, allow_nil?: false
       get? true
       filter expr(procurement_source_id == ^arg(:procurement_source_id))
-      prepare build(sort: [started_at: :desc], limit: 1)
+      prepare build(sort: [started_at: :desc, inserted_at: :desc], limit: 1)
+    end
+
+    read :recent_for_source do
+      argument :procurement_source_id, :uuid, allow_nil?: false
+      filter expr(procurement_source_id == ^arg(:procurement_source_id))
+      prepare build(sort: [started_at: :desc, inserted_at: :desc], limit: 3)
     end
   end
 
