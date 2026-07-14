@@ -73,6 +73,7 @@ defmodule GnomeGarden.Acquisition do
     resource GnomeGarden.Acquisition.ProgramSource do
       define :backfill_program_sources, action: :backfill
       define :get_program_source, action: :read, get_by: [:id]
+      define :get_discovery_performance_snapshot, action: :discovery_performance_snapshot
       define :create_program_source, action: :create
       define :update_program_source_policy, action: :update_policy
       define :activate_program_source, action: :activate
@@ -91,6 +92,9 @@ defmodule GnomeGarden.Acquisition do
       define :get_active_exa_program_source_for_discovery_program,
         action: :active_exa_for_discovery_program,
         args: [:discovery_program_id]
+
+      define :list_learning_enabled_commercial_discovery_sources,
+        action: :learning_enabled_commercial_discovery
     end
 
     resource GnomeGarden.Acquisition.Finding do
@@ -159,8 +163,29 @@ defmodule GnomeGarden.Acquisition do
     resource GnomeGarden.Acquisition.LeadPreviewCandidate do
       define :get_lead_preview_candidate, action: :read, get_by: [:id]
       define :list_lead_preview_candidates_for_run, action: :for_run, args: [:lead_preview_run_id]
+
+      define :list_lead_preview_candidates_for_feedback,
+        action: :feedback_window,
+        args: [:recorded_since]
+
+      define :list_lead_preview_candidates_for_program_source_feedback,
+        action: :feedback_window_for_program_source,
+        args: [:program_source_id, :recorded_since]
+
       define :mark_lead_preview_candidate_promoted, action: :mark_promoted
       define :mark_lead_preview_candidate_status, action: :mark_status
+    end
+
+    resource GnomeGarden.Acquisition.LeadPreviewQuery do
+      define :list_lead_preview_queries_for_run, action: :for_run, args: [:lead_preview_run_id]
+
+      define :list_lead_preview_queries_for_feedback,
+        action: :feedback_window,
+        args: [:recorded_since]
+
+      define :list_lead_preview_queries_for_program_source_feedback,
+        action: :feedback_window_for_program_source,
+        args: [:program_source_id, :recorded_since]
     end
 
     resource GnomeGarden.Acquisition.LeadCandidateVerification do
@@ -217,6 +242,14 @@ defmodule GnomeGarden.Acquisition do
         action: :stale_reserved,
         args: [:reserved_before]
     end
+
+    defdelegate scan_discovery_feedback(opts \\ []),
+      to: GnomeGarden.Acquisition.DiscoveryLearning,
+      as: :scan_and_propose
+
+    defdelegate approve_discovery_learning_recommendation(recommendation, opts \\ []),
+      to: GnomeGarden.Acquisition.DiscoveryLearning,
+      as: :approve_and_apply
   end
 
   def sync_bid_finding(bid_or_id, opts \\ []), do: Projector.sync_bid(bid_or_id, opts)

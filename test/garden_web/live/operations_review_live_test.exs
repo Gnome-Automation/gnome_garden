@@ -5,6 +5,9 @@ defmodule GnomeGardenWeb.OperationsReviewLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.DiscoveryLearning
+  alias GnomeGarden.Commercial
   alias GnomeGarden.Operations
 
   test "renders pending memory and learning proposals", %{conn: conn} do
@@ -95,5 +98,51 @@ defmodule GnomeGardenWeb.OperationsReviewLiveTest do
              Operations.get_learning_recommendation(recommendation.id)
 
     assert approved_recommendation.status == :approved
+  end
+
+  test "approving discovery learning applies the still-current query policy", %{conn: conn} do
+    suffix = System.unique_integer([:positive])
+    noisy_query = "generic software #{suffix}"
+
+    discovery_program =
+      Commercial.create_discovery_program!(%{
+        name: "Review learning #{suffix}",
+        search_terms: [noisy_query, "industrial controls"],
+        cadence_hours: 24
+      })
+
+    program_source =
+      GnomeGarden.DataCase.activate_exa_program_source!(discovery_program, %{
+        query_templates: [noisy_query, "industrial controls"]
+      })
+
+    {:ok, recommendation} =
+      Operations.propose_learning_recommendation(%{
+        title: "Remove noisy discovery query",
+        target_domain: :acquisition,
+        target_resource: "program_source",
+        target_id: program_source.id,
+        target_action: "remove_noisy_query",
+        proposed_change: %{
+          "operation" => "remove_query",
+          "query" => noisy_query,
+          "expected_policy_hash" => DiscoveryLearning.policy_hash(program_source)
+        },
+        evidence: %{"reviewed_count" => 3},
+        risk_level: :medium,
+        source_type: :system
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/operations/review")
+
+    view
+    |> element("#approve-learning-#{recommendation.id}")
+    |> render_click()
+
+    assert {:ok, updated} = Acquisition.get_program_source(program_source.id)
+    assert updated.query_templates == ["industrial controls"]
+
+    assert {:ok, applied} = Operations.get_learning_recommendation(recommendation.id)
+    assert applied.status == :applied
   end
 end

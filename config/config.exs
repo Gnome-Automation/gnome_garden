@@ -126,6 +126,7 @@ config :gnome_garden, Oban,
        {"* * * * *", GnomeGarden.Agents.DeploymentSchedulerWorker},
        {"17 * * * *", GnomeGarden.Agents.AgentEvalSweepWorker},
        {"13 * * * *", GnomeGarden.Commercial.DiscoverySchedulerWorker},
+       {"43 4 * * *", GnomeGarden.Acquisition.DiscoveryLearningWorker},
        {"*/5 * * * *", GnomeGarden.Acquisition.ProviderReservationReaperWorker},
        {"*/5 * * * *", GnomeGarden.Acquisition.SloEvaluatorWorker},
        {"0 6 * * *", GnomeGarden.Finance.InvoiceSchedulerWorker}
