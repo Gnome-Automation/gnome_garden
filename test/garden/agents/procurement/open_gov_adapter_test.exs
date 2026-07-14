@@ -70,9 +70,53 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapterTest do
     assert diagnostics["normalized"] == 1
   end
 
+  test "offline targeting corpus keeps a true solicitation and excludes a vendor list" do
+    source = source_fixture()
+    body = File.read!("test/fixtures/acquisition_eval/v1/opengov/project-list-targeting.html")
+
+    assert {:ok, %{bids: bids, diagnostics: diagnostics}} =
+             OpenGovAdapter.fetch(source, :http, %{
+               http_get: fn _url, _opts -> {:ok, %{status: 200, body: body}} end
+             })
+
+    assert diagnostics["schema"] == "embedded_state"
+    assert Enum.map(bids, & &1.external_id) == ["900001", "900002"]
+
+    {:ok, filter} =
+      Procurement.create_source_search_filter(%{
+        procurement_source_id: source.id,
+        filter_type: :keyword,
+        value: "qualified contractors",
+        metadata: %{"targeting_mode" => "exclude"}
+      })
+
+    result =
+      GnomeGarden.Procurement.TargetingFilter.filter_bids(
+        bids,
+        %{exclude_keywords: []},
+        source_filters: [filter]
+      )
+
+    assert Enum.map(result.kept, & &1.external_id) == ["900001"]
+    assert Enum.map(result.excluded, & &1.external_id) == ["900002"]
+    assert [%{"matched" => 1, "mode" => "exclude"}] = result.filter_stats
+  end
+
   test "scanner router uses the OpenGov provider API path and persists retrieval evidence" do
     source = source_fixture()
     contract_case = ProviderContract.load(:opengov, :projects, :success)
+
+    {:ok, filter} =
+      Procurement.create_source_search_filter(%{
+        procurement_source_id: source.id,
+        filter_type: :keyword,
+        value: "Water Treatment",
+        label: "Exclude qualification/list notices",
+        metadata: %{
+          "targeting_mode" => "exclude",
+          "reason" => "Not an active controls opportunity"
+        }
+      })
 
     assert {:ok, result} =
              ScannerRouter.scan(source, %{
@@ -81,13 +125,27 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapterTest do
              })
 
     assert result.extracted == 1
+    assert result.excluded == 1
+    assert result.saved == 0
+    assert result.economics["retrieval_cost_status"] == "known"
+    assert result.economics["retrieval_cost_usd"] == "0.00"
     refute result.diagnostics["diagnosis"] == "selector_failed"
     assert result.retrieval["retrieval_path"] == "provider_api"
+
+    assert [%{"id" => id, "matched" => 1, "mode" => "exclude"}] =
+             result.diagnostics["targeting_filters"]
+
+    assert id == filter.id
 
     assert {:ok, retrieval_run} = Procurement.get_latest_source_retrieval_run(source.id)
     assert retrieval_run.status == :completed
     assert retrieval_run.retrieval_path == :provider_api
     assert retrieval_run.diagnostics["extraction"]["provider"] == "opengov"
+    assert retrieval_run.diagnostics["economics"]["total_cost_usd"] == "0.00"
+
+    assert {:ok, filter} = Procurement.get_source_search_filter(filter.id)
+    assert filter.last_returned_count == 1
+    assert filter.last_saved_count == 0
   end
 
   defp source_fixture do

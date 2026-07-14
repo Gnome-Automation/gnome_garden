@@ -165,12 +165,14 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
           )
 
           profile_context = profile_context_for_source(source)
-          filtered = TargetingFilter.filter_bids(bids, profile_context)
 
-          with {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
+          with {:ok, filtered} <- filter_bids_for_source(bids, source, profile_context),
+               {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
                {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
             complete_scan(source, bids, filtered.excluded, scored, saved, 0,
-              listing_url: listing_url
+              listing_url: listing_url,
+              targeting: filtered.filter_stats,
+              retrieval_path: :http
             )
           end
         else
@@ -332,14 +334,16 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
            ),
          {:ok, bids, extraction} <- extract_bids(config),
          [_ | _] <- bids,
-         filtered = TargetingFilter.filter_bids(bids, profile_context),
+         {:ok, filtered} <- filter_bids_for_source(bids, source, profile_context),
          {:ok, prepared} <-
            prepare_bids_for_final_scoring(filtered.kept, source, listing_url, profile_context),
          {:ok, scored} <- score_bids(prepared, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, enrich_bids(saved),
         extraction: extraction,
-        listing_url: listing_url
+        listing_url: listing_url,
+        targeting: filtered.filter_stats,
+        retrieval_path: :browser
       )
     else
       [] -> {:error, :no_rows_extracted}
@@ -355,12 +359,14 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     Logger.info("Scanning #{source.name} from inspected candidate links")
 
     with {:ok, bids, extraction} <- candidate_link_bids(source, inspection_run_id),
-         filtered = TargetingFilter.filter_bids(bids, profile_context),
+         {:ok, filtered} <- filter_bids_for_source(bids, source, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, listing_url, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, 0,
         extraction: extraction,
-        listing_url: listing_url
+        listing_url: listing_url,
+        targeting: filtered.filter_stats,
+        retrieval_path: :browser
       )
     end
   end
@@ -430,13 +436,15 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
              context
            ),
          [_ | _] <- bids,
-         filtered = TargetingFilter.filter_bids(bids, profile_context),
+         {:ok, filtered} <- filter_bids_for_source(bids, source, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
       # Skip detail-page browser enrichment for the HTTP path.
       complete_scan(source, bids, filtered.excluded, scored, saved, 0,
         extraction: Map.get(scan, :extraction, %{}),
-        listing_url: source.url
+        listing_url: source.url,
+        targeting: filtered.filter_stats,
+        retrieval_path: :provider_api
       )
     else
       [] -> {:error, :no_rows_extracted}
@@ -450,12 +458,14 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
     with {:ok, %{bids: bids, diagnostics: extraction}} <-
            OpenGovAdapter.fetch(source, path, context),
-         filtered = TargetingFilter.filter_bids(bids, profile_context),
+         {:ok, filtered} <- filter_bids_for_source(bids, source, profile_context),
          {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
          {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
       complete_scan(source, bids, filtered.excluded, scored, saved, 0,
         extraction: extraction,
-        listing_url: source.url
+        listing_url: source.url,
+        targeting: filtered.filter_stats,
+        retrieval_path: path
       )
     end
   end
@@ -475,11 +485,15 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
                },
                context
              ),
-           filtered = TargetingFilter.filter_bids(bids, profile_context),
+           {:ok, filtered} <- filter_bids_for_source(bids, source, profile_context),
            {:ok, resolved} <- PublicSourceResolver.resolve_bids(filtered.kept, source, context),
            {:ok, scored} <- score_bids(resolved, source, profile_context),
            {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
-        complete_scan(source, bids, filtered.excluded, scored, saved, 0, listing_url: source.url)
+        complete_scan(source, bids, filtered.excluded, scored, saved, 0,
+          listing_url: source.url,
+          targeting: filtered.filter_stats,
+          retrieval_path: :playwright
+        )
       end
     end)
   end
@@ -502,6 +516,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     diagnostics = scan_diagnostics(scored, saved, excluded, opts)
     source = maybe_mark_requires_login(source, diagnostics)
 
+    record_source_filter_runs(Keyword.get(opts, :targeting, []), scored, saved)
+
     Procurement.mark_procurement_source_scanned!(
       source,
       %{metadata: scan_metadata(source, bids, excluded, scored, saved, enriched, diagnostics)}
@@ -518,8 +534,52 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
        saved: length(saved),
        enriched: enriched,
        diagnostics: diagnostics,
+       economics: scan_economics(opts, scored, saved),
        bids: saved
      }}
+  end
+
+  defp filter_bids_for_source(bids, source, profile_context) do
+    case Procurement.list_enabled_source_search_filters(source.id, authorize?: false) do
+      {:ok, source_filters} ->
+        {:ok, TargetingFilter.filter_bids(bids, profile_context, source_filters: source_filters)}
+
+      {:error, reason} ->
+        Logger.error(
+          "Could not load targeting filters for #{source.name}; refusing to broaden intake: #{inspect(reason)}"
+        )
+
+        {:error, {:source_targeting_unavailable, reason}}
+    end
+  end
+
+  defp record_source_filter_runs(filter_stats, scored, saved) do
+    saved_keys =
+      saved
+      |> Enum.flat_map(fn result -> [bid_value(result, :url), bid_value(result, :title)] end)
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    Enum.each(filter_stats, fn %{"id" => id, "matched" => matched} ->
+      saved_count =
+        Enum.count(scored, fn bid ->
+          bid_value(bid, :search_filter_id) == id and
+            MapSet.member?(saved_keys, bid_value(bid, :url))
+        end)
+
+      with {:ok, filter} <- Procurement.get_source_search_filter(id, authorize?: false),
+           {:ok, _filter} <-
+             Procurement.record_source_search_filter_run(
+               filter,
+               %{last_returned_count: matched, last_saved_count: saved_count},
+               authorize?: false
+             ) do
+        :ok
+      else
+        {:error, reason} ->
+          Logger.warning("Could not record source targeting filter run #{id}: #{inspect(reason)}")
+      end
+    end)
   end
 
   defp maybe_mark_requires_login(source, %{"diagnosis" => "login_required"}) do
@@ -570,6 +630,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       "extraction" => diagnostics["extraction"],
       "top_unsaved" => diagnostics["top_unsaved"],
       "saved_examples" => diagnostics["saved_examples"],
+      "targeting_filters" => diagnostics["targeting_filters"],
+      "economics" => diagnostics["economics"],
       "excluded_examples" =>
         excluded
         |> Enum.take(3)
@@ -599,6 +661,8 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp scan_diagnostics(scored, saved, excluded, opts) do
     extraction = Keyword.get(opts, :extraction, %{})
+    targeting_filters = Keyword.get(opts, :targeting, [])
+    economics = scan_economics(opts, scored, saved)
 
     saved_keys =
       saved
@@ -628,9 +692,35 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
       "diagnosis" => scan_diagnosis(scored, saved, excluded, top_unsaved, extraction),
       "extraction" => extraction,
       "top_unsaved" => top_unsaved,
-      "saved_examples" => saved_examples
+      "saved_examples" => saved_examples,
+      "targeting_filters" => targeting_filters,
+      "economics" => economics
     }
   end
+
+  defp scan_economics(opts, scored, saved) do
+    retrieval_path = Keyword.get(opts, :retrieval_path)
+    retrieval_metering = retrieval_cost(retrieval_path)
+    saved_count = length(saved)
+
+    %{
+      "retrieval_path" => retrieval_path && Atom.to_string(retrieval_path),
+      "retrieval_cost_usd" => retrieval_metering.cost,
+      "retrieval_cost_status" => retrieval_metering.status,
+      "scoring_cost_usd" => "0.00",
+      "scoring_cost_status" => "known",
+      "total_cost_usd" => retrieval_metering.cost,
+      "cost_per_saved_candidate_usd" =>
+        if(saved_count > 0, do: retrieval_metering.cost, else: nil),
+      "scored_candidate_count" => length(scored),
+      "saved_candidate_count" => saved_count
+    }
+  end
+
+  defp retrieval_cost(path) when path in [:provider_api, :http],
+    do: %{cost: "0.00", status: "known"}
+
+  defp retrieval_cost(_path), do: %{cost: nil, status: "not_metered"}
 
   defp diagnostic_score(bid) do
     case bid_value(bid, :score) do
@@ -975,8 +1065,23 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
         risk_flags: Map.get(score, :risk_flags, []),
         source_confidence: Map.get(score, :source_confidence),
         save_candidate?: Map.get(score, :save_candidate?, false)
-      }
+      },
+      targeting: targeting_metadata(bid)
     })
+  end
+
+  defp targeting_metadata(bid) do
+    case bid_value(bid, :search_filter_id) do
+      id when is_binary(id) ->
+        %{
+          "source_search_filter_id" => id,
+          "filter_type" => bid_value(bid, :search_filter_type) |> stringify_value(),
+          "filter_value" => bid_value(bid, :search_filter_value)
+        }
+
+      _other ->
+        %{}
+    end
   end
 
   defp score_keywords(bid) do
@@ -1003,6 +1108,10 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   end
 
   defp metadata_value(_metadata, _key), do: nil
+
+  defp stringify_value(nil), do: nil
+  defp stringify_value(value) when is_atom(value), do: Atom.to_string(value)
+  defp stringify_value(value), do: to_string(value)
 
   defp blank?(value), do: value in [nil, ""]
 

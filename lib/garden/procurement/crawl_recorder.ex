@@ -159,8 +159,12 @@ defmodule GnomeGarden.Procurement.CrawlRecorder do
     %{
       "ordinal" => index,
       "score" => score_payload(value(bid, :score)),
-      "source_url" => value(bid, :source_url)
+      "source_url" => value(bid, :source_url),
+      "source_search_filter_id" => value(bid, :search_filter_id),
+      "source_search_filter_value" => value(bid, :search_filter_value)
     }
+    |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+    |> Map.new()
   end
 
   defp score_payload(nil), do: %{}
