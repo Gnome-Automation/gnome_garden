@@ -41,6 +41,35 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapterTest do
              })
   end
 
+  test "normalizes current OpenGov embedded project-list state" do
+    source = source_fixture()
+    body = File.read!("test/fixtures/acquisition_eval/v1/opengov/project-list-embedded.html")
+
+    source =
+      Procurement.update_procurement_source!(source, %{
+        scrape_config: %{
+          "listing_url" => "https://procurement.opengov.com/portal/embed/tustin/project-list"
+        }
+      })
+
+    assert {:ok, %{bids: [bid], diagnostics: diagnostics}} =
+             OpenGovAdapter.fetch(source, :http, %{
+               http_get: fn _url, _opts -> {:ok, %{status: 200, body: body}} end
+             })
+
+    assert bid.external_id == 276_839
+
+    assert bid.url ==
+             "https://procurement.opengov.com/portal/embed/tustin/projects/276839"
+
+    assert bid.posted_at == ~U[2026-06-18 07:00:00.000Z]
+    assert bid.due_at == ~U[2026-07-31 23:00:00.000Z]
+    assert bid.metadata["opengov"]["financial_id"] == "RFP-2026 #1"
+    assert diagnostics["schema"] == "embedded_state"
+    assert diagnostics["rows"] == 1
+    assert diagnostics["normalized"] == 1
+  end
+
   test "scanner router uses the OpenGov provider API path and persists retrieval evidence" do
     source = source_fixture()
     contract_case = ProviderContract.load(:opengov, :projects, :success)

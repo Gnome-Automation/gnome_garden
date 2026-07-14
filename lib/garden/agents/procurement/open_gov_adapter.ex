@@ -137,6 +137,33 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapter do
   defp parse_payload(_body), do: {:error, :opengov_schema_drift}
 
   defp parse_html(body) do
+    case embedded_projects(body) do
+      {:ok, projects} ->
+        {:ok, projects, "embedded_state"}
+
+      :not_found ->
+        parse_html_links(body)
+    end
+  end
+
+  defp embedded_projects(body) do
+    case Regex.run(
+           ~r/"govProjects"\s*:\s*\{"count"\s*:\s*\d+\s*,\s*"rows"\s*:\s*(\[.*?\])\s*\}\s*,\s*"downloadFilePath"/s,
+           body,
+           capture: :all_but_first
+         ) do
+      [projects_json] ->
+        case Jason.decode(projects_json) do
+          {:ok, projects} when is_list(projects) -> {:ok, projects}
+          _error -> :not_found
+        end
+
+      _other ->
+        :not_found
+    end
+  end
+
+  defp parse_html_links(body) do
     with {:ok, document} <- Floki.parse_document(body) do
       projects =
         document
@@ -186,13 +213,14 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapter do
 
   defp normalize_project(project, source, endpoint) when is_map(project) do
     title = value(project, "title") || value(project, "name")
-    url = absolutize(value(project, "url") || value(project, "link"), source.url)
+    project_id = value(project, "id") || value(project, "projectId")
+    url = project_url(project, endpoint, source.url, project_id)
 
     if blank?(title) or blank?(url) do
       nil
     else
       %{
-        external_id: value(project, "id") || value(project, "projectId"),
+        external_id: project_id,
         title: title,
         description: value(project, "description") || value(project, "summary") || "",
         agency: source.name,
@@ -200,16 +228,21 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapter do
         url: url,
         source_url: endpoint,
         source_type: :opengov,
-        posted_at: parse_datetime(value(project, "publishedDate") || value(project, "createdAt")),
+        posted_at:
+          parse_datetime(
+            value(project, "publishedDate") || value(project, "releaseProjectDate") ||
+              value(project, "createdAt") || value(project, "created_at")
+          ),
         due_at:
           parse_datetime(
             value(project, "dueDate") || value(project, "closeDate") ||
-              value(project, "deadline")
+              value(project, "deadline") || value(project, "proposalDeadline")
           ),
         metadata: %{
           "opengov" => %{
             "status" => value(project, "status"),
-            "project_id" => value(project, "id") || value(project, "projectId")
+            "project_id" => project_id,
+            "financial_id" => value(project, "financialId")
           }
         }
       }
@@ -245,12 +278,32 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapter do
 
   defp parse_datetime(_value), do: nil
 
-  defp absolutize(nil, _base), do: nil
-
   defp absolutize(url, base) do
     base |> URI.merge(url) |> URI.to_string()
   rescue
     _error -> url
+  end
+
+  defp project_url(project, endpoint, base, project_id) do
+    case value(project, "url") || value(project, "link") do
+      url when is_binary(url) and url != "" ->
+        absolutize(url, base)
+
+      _other when not is_nil(project_id) ->
+        endpoint
+        |> URI.parse()
+        |> then(fn uri ->
+          path =
+            (uri.path || "")
+            |> String.replace(~r{/project-list/?$}, "/projects/#{project_id}")
+
+          %{uri | path: path, query: nil, fragment: nil}
+        end)
+        |> URI.to_string()
+
+      _other ->
+        nil
+    end
   end
 
   defp region_location(:oc), do: "Orange County, CA"

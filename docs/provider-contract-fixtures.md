@@ -34,3 +34,7 @@ parser. Do not silently rewrite an existing fixture version after downstream ada
 Optional provider evaluations that are not production contracts stay outside v1. The deferred Exa
 Websets spike uses `test/fixtures/exa_websets/v0/` and a test-only Req client so it can validate the
 documented async/criteria/monitor/event shapes without advertising a runtime integration.
+
+Workflow-level evaluations may reference this contract instead of copying its transport fixtures.
+The acquisition routing corpus does so from `test/fixtures/acquisition_eval/v1/`; see
+`docs/acquisition-evaluation-corpus.md`.
