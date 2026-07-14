@@ -26,6 +26,8 @@ defmodule GnomeGarden.Operations.PlaybookRun do
       reference :procurement_source, on_delete: :nilify
       reference :organization, on_delete: :nilify
       reference :signal, on_delete: :nilify
+      reference :company_growth_initiative, on_delete: :nilify
+      reference :company_qualification, on_delete: :nilify
     end
   end
 
@@ -42,7 +44,9 @@ defmodule GnomeGarden.Operations.PlaybookRun do
         :bid_id,
         :procurement_source_id,
         :organization_id,
-        :signal_id
+        :signal_id,
+        :company_growth_initiative_id,
+        :company_qualification_id
       ]
 
       # Owner for :applier steps when there is no acting operator (rule
@@ -87,6 +91,18 @@ defmodule GnomeGarden.Operations.PlaybookRun do
       filter expr(signal_id == ^arg(:signal_id))
       prepare build(sort: [inserted_at: :desc], load: [:task_count, :completed_task_count])
     end
+
+    read :for_growth_initiative do
+      argument :company_growth_initiative_id, :uuid, allow_nil?: false
+      filter expr(company_growth_initiative_id == ^arg(:company_growth_initiative_id))
+      prepare build(sort: [inserted_at: :desc], load: [:task_count, :completed_task_count])
+    end
+
+    read :for_company_qualification do
+      argument :company_qualification_id, :uuid, allow_nil?: false
+      filter expr(company_qualification_id == ^arg(:company_qualification_id))
+      prepare build(sort: [inserted_at: :desc], load: [:task_count, :completed_task_count])
+    end
   end
 
   pub_sub do
@@ -100,6 +116,8 @@ defmodule GnomeGarden.Operations.PlaybookRun do
     publish_all :create, ["procurement_source", :procurement_source_id]
     publish_all :create, ["organization", :organization_id]
     publish_all :create, ["signal", :signal_id]
+    publish_all :create, ["growth_initiative", :company_growth_initiative_id]
+    publish_all :create, ["company_qualification", :company_qualification_id]
   end
 
   attributes do
@@ -144,6 +162,14 @@ defmodule GnomeGarden.Operations.PlaybookRun do
     end
 
     belongs_to :signal, GnomeGarden.Commercial.Signal do
+      public? true
+    end
+
+    belongs_to :company_growth_initiative, GnomeGarden.Company.GrowthInitiative do
+      public? true
+    end
+
+    belongs_to :company_qualification, GnomeGarden.Company.Qualification do
       public? true
     end
 

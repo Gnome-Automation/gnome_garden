@@ -18,7 +18,9 @@ defmodule GnomeGarden.Operations.Changes.ApplyPlaybookSteps do
     :bid_id,
     :procurement_source_id,
     :organization_id,
-    :signal_id
+    :signal_id,
+    :company_growth_initiative_id,
+    :company_qualification_id
   ]
 
   @impl true
