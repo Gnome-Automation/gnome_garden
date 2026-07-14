@@ -98,7 +98,18 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapter do
           receive_timeout: 30_000
         )
       else
-        Browser.web_fetch(url, format: :html, timeout_ms: 30_000)
+        case Req.get(url,
+               headers: [
+                 {"accept", "application/json,text/html;q=0.9"},
+                 {"user-agent", "GnomeGarden OpenGov Adapter/1.0"}
+               ],
+               redirect: true,
+               retry: false,
+               receive_timeout: 30_000
+             ) do
+          {:ok, response} -> {:ok, %{status: response.status, body: response.body}}
+          {:error, reason} -> {:error, reason}
+        end
       end
 
     case result do
