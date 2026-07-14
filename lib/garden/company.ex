@@ -172,4 +172,16 @@ defmodule GnomeGarden.Company do
       define :delete_company_source_review_item, action: :destroy
     end
   end
+
+  defdelegate scan_growth_gaps(opts \\ []),
+    to: GnomeGarden.Company.GrowthRecommendations,
+    as: :scan_and_propose
+
+  defdelegate approve_growth_recommendation(recommendation, opts \\ []),
+    to: GnomeGarden.Company.GrowthRecommendations,
+    as: :approve_into_initiative
+
+  defdelegate assess_bid_eligibility(bid, qualifications \\ nil),
+    to: GnomeGarden.Company.Eligibility,
+    as: :assess
 end

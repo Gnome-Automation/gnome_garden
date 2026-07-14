@@ -11,7 +11,8 @@ defmodule GnomeGarden.Automation.Triggers do
     {"pursuit", "qualified", "Pursuit qualified"},
     {"pursuit", "proposed", "Pursuit proposed"},
     {"source_credential", "failed", "Source credential failed"},
-    {"task", "overdue", "Task overdue"}
+    {"task", "overdue", "Task overdue"},
+    {"company_qualification", "expiring", "Qualification expiring"}
   ]
 
   def known?(resource, action),

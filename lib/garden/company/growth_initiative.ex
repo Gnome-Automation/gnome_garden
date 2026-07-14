@@ -32,6 +32,7 @@ defmodule GnomeGarden.Company.GrowthInitiative do
       reference :owner_team_member, on_delete: :nilify
       reference :created_by_team_member, on_delete: :nilify
       reference :decided_by_team_member, on_delete: :nilify
+      reference :procurement_source, on_delete: :nilify
     end
   end
 
@@ -66,7 +67,8 @@ defmodule GnomeGarden.Company.GrowthInitiative do
         :expected_benefit,
         :effort_estimate,
         :target_date,
-        :owner_team_member_id
+        :owner_team_member_id,
+        :procurement_source_id
       ]
 
       change GnomeGarden.Company.Changes.StampInitiativeActors
@@ -82,7 +84,8 @@ defmodule GnomeGarden.Company.GrowthInitiative do
         :expected_benefit,
         :effort_estimate,
         :target_date,
-        :owner_team_member_id
+        :owner_team_member_id,
+        :procurement_source_id
       ]
 
       validate attribute_does_not_equal(:status, :achieved),
@@ -268,6 +271,12 @@ defmodule GnomeGarden.Company.GrowthInitiative do
     end
 
     belongs_to :decided_by_team_member, GnomeGarden.Operations.TeamMember do
+      public? true
+    end
+
+    # Market-access initiatives track the portal they activate; "activated"
+    # is the source's own derived onboarding_state, never copied here.
+    belongs_to :procurement_source, GnomeGarden.Procurement.ProcurementSource do
       public? true
     end
 

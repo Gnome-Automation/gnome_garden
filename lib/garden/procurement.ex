@@ -257,6 +257,11 @@ defmodule GnomeGarden.Procurement do
       define :score_bid, action: :score
       define :list_bids_due_within, action: :due_within, args: [:days]
       define :list_recent_bids_for_evidence, action: :recent_for_evidence
+
+      define :list_bids_with_capability_gaps,
+        action: :recent_with_capability_gaps,
+        args: [:since_days]
+
       define :record_bid_document_ingest, action: :record_document_ingest
       define :list_active_bids, action: :active
       define :list_parked_bids, action: :parked

@@ -46,6 +46,24 @@ defmodule GnomeGarden.Automation.Actions.EnsureStarterRules do
       ]
     },
     %{
+      name: "Qualification renewal due",
+      description:
+        "When an active qualification enters its renewal window, file the renewal task to its owner.",
+      trigger_resource: "company_qualification",
+      trigger_action: "expiring",
+      criteria: [],
+      actions: [
+        %{
+          "type" => "create_task",
+          "title" => "Complete qualification renewal",
+          "task_type" => "finance",
+          "priority" => "high",
+          "due_offset_days" => 7,
+          "owner_from_event" => true
+        }
+      ]
+    },
+    %{
       name: "Bid deadline approaching",
       description: "A week before an open bid is due, create an urgent submission-check task.",
       trigger_resource: "bid",

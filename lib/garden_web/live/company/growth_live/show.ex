@@ -273,6 +273,26 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
       </div>
 
       <.section
+        :if={@linked_source}
+        title="Source Activation"
+        description="Activated means the source's own derived state — first successful scan, not account creation."
+      >
+        <.properties>
+          <.property name="Source">{@linked_source.name}</.property>
+          <.property name="Onboarding state">
+            <.status_badge status={
+              if(@linked_source.onboarding_state == :active, do: :success, else: :warning)
+            }>
+              {format_atom(@linked_source.onboarding_state)}
+            </.status_badge>
+          </.property>
+          <.property name="Last scanned">
+            {format_datetime(@linked_source.last_scanned_at)}
+          </.property>
+        </.properties>
+      </.section>
+
+      <.section
         title="Evidence"
         description="Which bids exposed this gap — what they required versus what Gnome had."
         body_class="p-0"
@@ -399,6 +419,7 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
     |> assign(:playbook_runs, runs)
     |> assign(:playbooks, playbooks)
     |> assign(:recent_bids, recent_bids)
+    |> assign(:linked_source, load_linked_source(initiative, actor))
   end
 
   defp assign_evidence_form(socket) do
@@ -424,6 +445,18 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
       company_growth_initiative_id: initiative.id,
       return_to: "/company/growth/#{initiative.id}"
     })
+  end
+
+  defp load_linked_source(%{procurement_source_id: nil}, _actor), do: nil
+
+  defp load_linked_source(%{procurement_source_id: source_id}, actor) do
+    case GnomeGarden.Procurement.get_procurement_source(source_id,
+           actor: actor,
+           load: [:onboarding_state]
+         ) do
+      {:ok, source} -> source
+      {:error, _error} -> nil
+    end
   end
 
   defp gap_options do

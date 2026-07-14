@@ -138,7 +138,7 @@ defmodule GnomeGarden.Automation.Evaluator do
         task_type: existing_atom(action["task_type"], :other),
         priority: existing_atom(action["priority"], :normal),
         due_at: due_at(action["due_offset_days"]),
-        owner_team_member_id: resolve_owner(action),
+        owner_team_member_id: resolve_owner(action, event),
         origin_domain: :operations,
         origin_resource: "automation_run",
         origin_id: run.id,
@@ -159,7 +159,7 @@ defmodule GnomeGarden.Automation.Evaluator do
            event
            |> playbook_context()
            |> Map.put(:playbook_id, playbook.id)
-           |> Map.put(:default_owner_team_member_id, resolve_owner(action))
+           |> Map.put(:default_owner_team_member_id, resolve_owner(action, event))
            |> Operations.apply_playbook(authorize?: false) do
       {:ok, "playbook run #{run.id}"}
     else
@@ -170,9 +170,17 @@ defmodule GnomeGarden.Automation.Evaluator do
   defp execute_action(action, _run, _event),
     do: {:error, "unknown action type #{inspect(action["type"])}"}
 
-  # Owners come only from explicit rule params: a team member id, or an
-  # email resolved through the registered user. Unresolvable owners leave
+  # Owners come only from explicit rule params: the event subject's own
+  # owner (e.g. a qualification's owner for renewals), a team member id, or
+  # an email resolved through the registered user. Unresolvable owners leave
   # the task unassigned rather than guessing.
+  defp resolve_owner(%{"owner_from_event" => true} = action, event) do
+    event.data["owner_team_member_id"] ||
+      resolve_owner(Map.delete(action, "owner_from_event"), event)
+  end
+
+  defp resolve_owner(action, _event), do: resolve_owner(action)
+
   defp resolve_owner(%{"owner_team_member_id" => member_id}) when is_binary(member_id),
     do: member_id
 
@@ -202,6 +210,9 @@ defmodule GnomeGarden.Automation.Evaluator do
 
   defp context_links(%{resource: "source_credential"} = event),
     do: %{procurement_source_id: event.data["procurement_source_id"]}
+
+  defp context_links(%{resource: "company_qualification", record_id: id}),
+    do: %{company_qualification_id: id}
 
   defp context_links(_event), do: %{}
 

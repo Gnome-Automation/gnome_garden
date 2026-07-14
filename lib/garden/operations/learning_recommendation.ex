@@ -169,6 +169,7 @@ defmodule GnomeGarden.Operations.LearningRecommendation do
                     :acquisition,
                     :agents,
                     :commercial,
+                    :company,
                     :execution,
                     :finance,
                     :operations,
