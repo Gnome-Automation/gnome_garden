@@ -11,36 +11,62 @@ defmodule GnomeGardenWeb.Company.QualificationLive.Form do
     {:ok,
      socket
      |> assign(:qualification, qualification)
-     |> assign(:page_title, if(qualification, do: "Edit Qualification", else: "New Qualification"))
+     |> assign(
+       :page_title,
+       if(qualification, do: "Edit Qualification", else: "New Qualification")
+     )
      |> assign(:team_members, load_team_members(socket.assigns.current_user))
+     |> assign(:details_text, initial_details_text(qualification))
+     |> assign(:details_error, nil)
      |> assign_form()}
   end
 
+  # Details JSON is kept as raw text while typing (validating a half-typed
+  # `{` would otherwise clobber the textarea) and only parsed at save.
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
-    form = AshPhoenix.Form.validate(socket.assigns.form, normalize(params, socket))
-    {:noreply, assign(socket, form: to_form(form))}
+    form =
+      AshPhoenix.Form.validate(
+        socket.assigns.form,
+        params |> Map.delete("details") |> normalize(socket)
+      )
+
+    {:noreply,
+     socket
+     |> assign(:details_text, params["details"] || "")
+     |> assign(form: to_form(form))}
   end
 
   @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    case AshPhoenix.Form.submit(socket.assigns.form, params: normalize(params, socket)) do
-      {:ok, _qualification} ->
+    with {:ok, details} <- parse_details(params["details"]),
+         {:ok, _qualification} <-
+           AshPhoenix.Form.submit(socket.assigns.form,
+             params: params |> Map.put("details", details) |> normalize(socket)
+           ) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "Qualification saved")
+       |> push_navigate(to: ~p"/company/qualifications")}
+    else
+      {:invalid_json, message} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Qualification saved")
-         |> push_navigate(to: ~p"/company/qualifications")}
+         |> assign(:details_text, params["details"] || "")
+         |> assign(:details_error, message)}
 
       {:error, form} ->
-        {:noreply, assign(socket, form: to_form(form))}
+        {:noreply,
+         socket
+         |> assign(:details_text, params["details"] || "")
+         |> assign(form: to_form(form))}
     end
   end
 
-  # unlocks arrives as a comma-separated string; details as JSON text.
+  # unlocks arrives as a comma-separated string.
   defp normalize(params, socket) do
     params
     |> Map.update("unlocks", [], &split_list/1)
-    |> Map.update("details", %{}, &parse_details/1)
     |> maybe_put_profile(socket)
   end
 
@@ -57,13 +83,17 @@ defmodule GnomeGardenWeb.Company.QualificationLive.Form do
 
   defp parse_details(value) when is_binary(value) and value != "" do
     case Jason.decode(value) do
-      {:ok, %{} = details} -> details
-      _invalid -> value
+      {:ok, %{} = details} -> {:ok, details}
+      {:ok, _not_object} -> {:invalid_json, "details must be a JSON object"}
+      {:error, _error} -> {:invalid_json, "details is not valid JSON"}
     end
   end
 
-  defp parse_details(value) when is_binary(value), do: %{}
-  defp parse_details(value), do: value
+  defp parse_details(_blank), do: {:ok, %{}}
+
+  defp initial_details_text(nil), do: ""
+  defp initial_details_text(%{details: details}) when map_size(details) == 0, do: ""
+  defp initial_details_text(%{details: details}), do: Jason.encode!(details, pretty: true)
 
   @impl true
   def render(assigns) do
@@ -78,7 +108,13 @@ defmodule GnomeGardenWeb.Company.QualificationLive.Form do
         </:actions>
       </.page_header>
 
-      <.form for={@form} id="qualification-form" phx-change="validate" phx-submit="save" class="space-y-6">
+      <.form
+        for={@form}
+        id="qualification-form"
+        phx-change="validate"
+        phx-submit="save"
+        class="space-y-6"
+      >
         <.form_section title="Capability">
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-6">
             <div class="sm:col-span-2">
@@ -138,7 +174,8 @@ defmodule GnomeGardenWeb.Company.QualificationLive.Form do
             name="form[details]"
             rows="4"
             class="block w-full rounded-md bg-white px-3 py-1.5 font-mono text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10"
-          >{details_value(@form)}</textarea>
+          >{@details_text}</textarea>
+          <p :if={@details_error} class="mt-2 text-sm text-error">{@details_error}</p>
         </.form_section>
 
         <.section body_class="px-6 py-5 sm:px-7">
@@ -155,13 +192,6 @@ defmodule GnomeGardenWeb.Company.QualificationLive.Form do
   defp unlocks_value(form) do
     case AshPhoenix.Form.value(form.source, :unlocks) do
       list when is_list(list) -> Enum.join(list, ", ")
-      _other -> ""
-    end
-  end
-
-  defp details_value(form) do
-    case AshPhoenix.Form.value(form.source, :details) do
-      details when is_map(details) and map_size(details) > 0 -> Jason.encode!(details, pretty: true)
       _other -> ""
     end
   end

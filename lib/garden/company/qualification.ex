@@ -25,7 +25,9 @@ defmodule GnomeGarden.Company.Qualification do
     repo GnomeGarden.Repo
 
     references do
-      reference :company_profile, on_delete: :delete
+      # Restrict: qualifications are the durable capability record; profile
+      # deletion must not erase them.
+      reference :company_profile, on_delete: :restrict
       reference :owner_team_member, on_delete: :nilify
       reference :growth_initiative, on_delete: :nilify
       reference :evidence_document, on_delete: :nilify
@@ -271,6 +273,11 @@ defmodule GnomeGarden.Company.Qualification do
   end
 
   identities do
-    identity :unique_capability, [:company_profile_id, :kind, :issuing_authority, :name]
+    # The issued identifier is the durable external key: the same authority
+    # may issue same-named qualifications with different identifiers, and a
+    # renamed record must not allow a duplicated identifier. Records without
+    # an identifier yet (pending applications) stay distinct.
+    identity :unique_capability, [:company_profile_id, :kind, :issuing_authority, :identifier],
+      nils_distinct?: true
   end
 end

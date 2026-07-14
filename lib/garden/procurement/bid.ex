@@ -281,6 +281,10 @@ defmodule GnomeGarden.Procurement.Bid do
       prepare build(sort: [due_at: :asc, score_total: :desc, updated_at: :desc])
     end
 
+    read :recent_for_evidence do
+      prepare build(sort: [updated_at: :desc], limit: 50)
+    end
+
     read :due_within do
       argument :days, :integer, allow_nil?: false
 

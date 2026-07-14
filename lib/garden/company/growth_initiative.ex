@@ -26,7 +26,9 @@ defmodule GnomeGarden.Company.GrowthInitiative do
     repo GnomeGarden.Repo
 
     references do
-      reference :company_profile, on_delete: :delete
+      # Restrict: profile deletion must never cascade away decided-initiative
+      # history (the destroy_idea validation would be bypassed in SQL).
+      reference :company_profile, on_delete: :restrict
       reference :owner_team_member, on_delete: :nilify
       reference :created_by_team_member, on_delete: :nilify
       reference :decided_by_team_member, on_delete: :nilify

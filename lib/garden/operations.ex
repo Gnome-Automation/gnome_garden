@@ -251,6 +251,10 @@ defmodule GnomeGarden.Operations do
       define :list_playbook_runs_for_growth_initiative,
         action: :for_growth_initiative,
         args: [:company_growth_initiative_id]
+
+      define :list_playbook_runs_for_company_qualification,
+        action: :for_company_qualification,
+        args: [:company_qualification_id]
     end
 
     resource GnomeGarden.Operations.MemoryBlock do

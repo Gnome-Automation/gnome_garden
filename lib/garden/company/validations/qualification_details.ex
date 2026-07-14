@@ -37,8 +37,7 @@ defmodule GnomeGarden.Company.Validations.QualificationDetails do
 
       kind == :bonding and not limits_present?(details) ->
         {:error,
-         field: :details,
-         message: "bonding requires single_project_limit and aggregate_limit"}
+         field: :details, message: "bonding requires single_project_limit and aggregate_limit"}
 
       true ->
         :ok
@@ -46,5 +45,7 @@ defmodule GnomeGarden.Company.Validations.QualificationDetails do
   end
 
   defp limits_present?(details),
-    do: is_binary(details["single_project_limit"]) and is_binary(details["aggregate_limit"])
+    do: filled?(details["single_project_limit"]) and filled?(details["aggregate_limit"])
+
+  defp filled?(value), do: is_binary(value) and String.trim(value) != ""
 end

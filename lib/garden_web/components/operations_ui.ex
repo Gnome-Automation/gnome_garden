@@ -150,6 +150,9 @@ defmodule GnomeGardenWeb.Components.OperationsUI do
   keys so no relationship loading is required. Bid and procurement-source
   links have no routable page yet and fall through to broader contexts.
   """
+  def context_path(%{company_qualification_id: id}) when is_binary(id),
+    do: "/company/qualifications/#{id}/edit"
+
   def context_path(%{company_growth_initiative_id: id}) when is_binary(id),
     do: "/company/growth/#{id}"
 

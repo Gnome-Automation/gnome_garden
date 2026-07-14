@@ -11,21 +11,24 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
   alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
-  @transition_actions [
+  # Plain transitions execute immediately; decision transitions (hold,
+  # achieve, decline) first prompt for the notes that become the permanent
+  # record — they are the only actions that can capture them.
+  @plain_transitions [
     {"evaluate", :idea, "Evaluate"},
     {"plan", :idea, "Plan"},
     {"plan", :evaluating, "Plan"},
     {"start", :planned, "Start"},
-    {"hold", :evaluating, "Hold"},
-    {"hold", :planned, "Hold"},
-    {"hold", :in_progress, "Hold"},
     {"resume", :on_hold, "Resume"},
-    {"achieve", :in_progress, "Mark Achieved"},
-    {"decline", :idea, "Decline"},
-    {"decline", :evaluating, "Decline"},
-    {"decline", :planned, "Decline"},
-    {"decline", :on_hold, "Decline"},
     {"reconsider", :declined, "Reconsider"}
+  ]
+
+  @decision_transitions [
+    {"hold", [:evaluating, :planned, :in_progress], "Hold",
+     "Why is this on hold, and what unblocks it?"},
+    {"achieve", [:in_progress], "Mark Achieved", "What was the outcome?"},
+    {"decline", [:idea, :evaluating, :planned, :on_hold], "Decline",
+     "Why is Gnome passing on this?"}
   ]
 
   @impl true
@@ -42,6 +45,7 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
      socket
      |> assign(:page_title, initiative.title)
      |> assign(:initiative, initiative)
+     |> assign(:pending_decision, nil)
      |> assign_related()
      |> assign_evidence_form()}
   end
@@ -56,10 +60,7 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
         "evaluate" -> Company.evaluate_growth_initiative(initiative, actor: actor)
         "plan" -> Company.plan_growth_initiative(initiative, %{}, actor: actor)
         "start" -> Company.start_growth_initiative(initiative, actor: actor)
-        "hold" -> Company.hold_growth_initiative(initiative, %{}, actor: actor)
         "resume" -> Company.resume_growth_initiative(initiative, actor: actor)
-        "achieve" -> Company.achieve_growth_initiative(initiative, %{}, actor: actor)
-        "decline" -> Company.decline_growth_initiative(initiative, %{}, actor: actor)
         "reconsider" -> Company.reconsider_growth_initiative(initiative, actor: actor)
       end
 
@@ -72,6 +73,46 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, "Could not update initiative: #{inspect(error)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("request_decision", %{"action" => action}, socket) do
+    {:noreply, assign(socket, :pending_decision, action)}
+  end
+
+  @impl true
+  def handle_event("cancel_decision", _params, socket) do
+    {:noreply, assign(socket, :pending_decision, nil)}
+  end
+
+  @impl true
+  def handle_event("confirm_decision", %{"notes" => notes}, socket) do
+    initiative = socket.assigns.initiative
+    actor = socket.assigns.current_user
+
+    result =
+      case socket.assigns.pending_decision do
+        "hold" ->
+          Company.hold_growth_initiative(initiative, %{decision_notes: notes}, actor: actor)
+
+        "achieve" ->
+          Company.achieve_growth_initiative(initiative, %{outcome_notes: notes}, actor: actor)
+
+        "decline" ->
+          Company.decline_growth_initiative(initiative, %{decision_notes: notes}, actor: actor)
+      end
+
+    case result do
+      {:ok, updated} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Decision recorded")
+         |> assign(:pending_decision, nil)
+         |> assign(:initiative, load_initiative!(updated.id, actor))}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, "Could not record decision: #{inspect(error)}")}
     end
   end
 
@@ -135,7 +176,10 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :transitions, @transition_actions)
+    assigns =
+      assigns
+      |> assign(:plain_transitions, @plain_transitions)
+      |> assign(:decision_transitions, @decision_transitions)
 
     ~H"""
     <.page max_width="max-w-5xl" class="pb-8">
@@ -161,16 +205,46 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
             Edit
           </.button>
           <.button
-            :for={{action, from, label} <- @transitions}
+            :for={{action, from, label} <- @plain_transitions}
             :if={@initiative.status == from}
             phx-click="transition"
             phx-value-action={action}
-            variant={if(action in ["achieve", "start", "plan"], do: "primary")}
+            variant={if(action in ["start", "plan"], do: "primary")}
+          >
+            {label}
+          </.button>
+          <.button
+            :for={{action, from_states, label, _prompt} <- @decision_transitions}
+            :if={@initiative.status in from_states}
+            phx-click="request_decision"
+            phx-value-action={action}
+            variant={if(action == "achieve", do: "primary")}
           >
             {label}
           </.button>
         </:actions>
       </.page_header>
+
+      <.section
+        :for={{action, _from, label, prompt} <- @decision_transitions}
+        :if={@pending_decision == action}
+        title={label}
+        description={prompt}
+      >
+        <form id="decision-form" phx-submit="confirm_decision" class="space-y-4">
+          <textarea
+            id="decision-notes"
+            name="notes"
+            rows="3"
+            required
+            class="block w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-emerald-600 dark:bg-white/5 dark:text-white dark:outline-white/10"
+          ></textarea>
+          <div class="flex items-center gap-3">
+            <.button type="submit" variant="primary">Confirm {label}</.button>
+            <.button type="button" phx-click="cancel_decision">Cancel</.button>
+          </div>
+        </form>
+      </.section>
 
       <div class="grid gap-6 lg:grid-cols-2">
         <.section title="Why">
@@ -266,6 +340,12 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
             <div class="sm:col-span-3">
               <.input field={@evidence_form[:note]} label="Note" />
             </div>
+            <div class="sm:col-span-3">
+              <.input field={@evidence_form[:observed_value]} label="What Gnome had" />
+            </div>
+            <div class="sm:col-span-3">
+              <.input field={@evidence_form[:required_value]} label="What the bid required" />
+            </div>
             <div class="col-span-full">
               <.button type="submit">Add Evidence</.button>
             </div>
@@ -309,14 +389,16 @@ defmodule GnomeGardenWeb.Company.GrowthLive.Show do
         {:error, _error} -> []
       end
 
-    {:ok, recent_bids} = GnomeGarden.Procurement.list_active_bids(actor: actor)
+    # Closed bids included deliberately: lost and rejected bids are exactly
+    # the receipts this evidence workflow captures.
+    {:ok, recent_bids} = GnomeGarden.Procurement.list_recent_bids_for_evidence(actor: actor)
 
     socket
     |> assign(:evidence, evidence)
     |> assign(:related_tasks, tasks)
     |> assign(:playbook_runs, runs)
     |> assign(:playbooks, playbooks)
-    |> assign(:recent_bids, Enum.take(recent_bids, 30))
+    |> assign(:recent_bids, recent_bids)
   end
 
   defp assign_evidence_form(socket) do
