@@ -171,15 +171,17 @@ defmodule GnomeGarden.Procurement.Bid do
 
     update :mark_lost do
       require_atomic? false
-      accept [:notes]
+      accept [:notes, :capability_gaps]
       change transition_state(:lost)
+      change set_attribute(:capability_gaps_recorded_at, &DateTime.utc_now/0)
       change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
     update :reject do
       require_atomic? false
-      accept [:notes]
+      accept [:notes, :capability_gaps]
       change transition_state(:rejected)
+      change set_attribute(:capability_gaps_recorded_at, &DateTime.utc_now/0)
       change {GnomeGarden.Procurement.Changes.SyncBidFinding, []}
     end
 
@@ -283,6 +285,18 @@ defmodule GnomeGarden.Procurement.Bid do
 
     read :recent_for_evidence do
       prepare build(sort: [updated_at: :desc], limit: 50)
+    end
+
+    read :recent_with_capability_gaps do
+      argument :since_days, :integer, allow_nil?: false
+
+      filter expr(
+               capability_gaps != [] and
+                 status in [:lost, :rejected] and
+                 capability_gaps_recorded_at > ago(^arg(:since_days), :day)
+             )
+
+      prepare build(sort: [updated_at: :desc])
     end
 
     read :due_within do
@@ -479,6 +493,21 @@ defmodule GnomeGarden.Procurement.Bid do
     # Tracking
     attribute :notes, :string, public?: true
 
+    attribute :capability_gaps, {:array, :atom} do
+      allow_nil? false
+      default []
+      public? true
+
+      constraints items: [one_of: GnomeGarden.Company.CapabilityGap.values()]
+
+      description "Structured reasons Gnome could not pursue or win, recorded at pass/reject/loss"
+    end
+
+    attribute :capability_gaps_recorded_at, :utc_datetime do
+      public? true
+      description "When capability gaps were recorded during a terminal bid decision"
+    end
+
     attribute :metadata, :map, default: %{}, public?: true
 
     timestamps()
@@ -522,6 +551,10 @@ defmodule GnomeGarden.Procurement.Bid do
   end
 
   calculations do
+    calculate :eligibility_gaps,
+              {:array, :atom},
+              {GnomeGarden.Procurement.Calculations.EligibilityGaps, []}
+
     calculate :status_variant,
               :atom,
               {GnomeGarden.Calculations.EnumVariant,

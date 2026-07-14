@@ -739,6 +739,13 @@ defmodule GnomeGarden.Acquisition.Review do
             "source_feedback_category",
             feedback_value(feedback, :source_feedback_category)
           )
+          |> maybe_put_metadata(
+            "capability_gaps",
+            feedback
+            |> feedback_value(:capability_gaps)
+            |> List.wrap()
+            |> Enum.map(&to_string/1)
+          )
           |> Map.put("decision_snapshot", snapshot)
       },
       actor: actor

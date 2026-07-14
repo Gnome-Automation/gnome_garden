@@ -556,9 +556,18 @@ defmodule GnomeGarden.Procurement.ProcurementSource do
       public? true
       description "Ordered backend attempts and selected retrieval path for source scans"
     end
+
+    has_many :credentials, GnomeGarden.Procurement.SourceCredential do
+      destination_attribute :procurement_source_id
+      public? true
+    end
   end
 
   calculations do
+    calculate :onboarding_state,
+              :atom,
+              {GnomeGarden.Procurement.Calculations.OnboardingState, []}
+
     calculate :status_variant,
               :atom,
               {GnomeGarden.Calculations.EnumVariant,

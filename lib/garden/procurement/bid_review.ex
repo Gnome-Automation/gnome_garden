@@ -36,7 +36,11 @@ defmodule GnomeGarden.Procurement.BidReview do
 
     with {:ok, bid} <- load_bid(bid_or_id, actor, [:signal]),
          {:ok, rejected_bid} <-
-           Procurement.reject_bid(bid, %{notes: feedback.reason}, actor: actor),
+           Procurement.reject_bid(
+             bid,
+             %{notes: feedback.reason, capability_gaps: feedback.capability_gaps},
+             actor: actor
+           ),
          persisted_bid <- maybe_capture_feedback(rejected_bid, feedback, actor),
          :ok <- maybe_reject_signal(bid.signal, feedback.reason, actor),
          :ok <- log_event(:passed, bid, feedback.reason, "rejected", actor),
@@ -413,7 +417,12 @@ defmodule GnomeGarden.Procurement.BidReview do
     end
   end
 
-  defp maybe_capture_feedback(bid, %{feedback_scope: nil, exclude_terms: []}, _actor), do: bid
+  defp maybe_capture_feedback(
+         bid,
+         %{feedback_scope: nil, exclude_terms: [], capability_gaps: []},
+         _actor
+       ),
+       do: bid
 
   defp maybe_capture_feedback(bid, feedback, actor) do
     feedback = %{feedback | exclude_terms: learned_terms_for_bid(bid, feedback)}

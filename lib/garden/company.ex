@@ -125,6 +125,7 @@ defmodule GnomeGarden.Company do
 
     resource GnomeGarden.Company.GrowthInitiativeEvidence do
       define :create_growth_initiative_evidence, action: :create
+      define :ensure_growth_initiative_bid_gap_evidence, action: :ensure_bid_gap
       define :delete_growth_initiative_evidence, action: :destroy
 
       define :list_growth_initiative_evidence,
@@ -172,4 +173,16 @@ defmodule GnomeGarden.Company do
       define :delete_company_source_review_item, action: :destroy
     end
   end
+
+  defdelegate scan_growth_gaps(opts \\ []),
+    to: GnomeGarden.Company.GrowthRecommendations,
+    as: :scan_and_propose
+
+  defdelegate approve_growth_recommendation(recommendation, opts \\ []),
+    to: GnomeGarden.Company.GrowthRecommendations,
+    as: :approve_into_initiative
+
+  defdelegate assess_bid_eligibility(bid, qualifications \\ nil),
+    to: GnomeGarden.Company.Eligibility,
+    as: :assess
 end

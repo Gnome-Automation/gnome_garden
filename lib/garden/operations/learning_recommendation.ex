@@ -16,6 +16,7 @@ defmodule GnomeGarden.Operations.LearningRecommendation do
 
   @create_attributes [
     :title,
+    :dedupe_key,
     :target_domain,
     :target_resource,
     :target_id,
@@ -79,6 +80,9 @@ defmodule GnomeGarden.Operations.LearningRecommendation do
     create :propose do
       primary? true
       accept @create_attributes
+      upsert? true
+      upsert_identity :unique_dedupe_key
+      upsert_fields []
       change set_attribute(:status, :needs_review)
     end
 
@@ -134,6 +138,17 @@ defmodule GnomeGarden.Operations.LearningRecommendation do
       filter expr(source_agent_run_id == ^arg(:source_agent_run_id))
       prepare build(sort: [inserted_at: :desc])
     end
+
+    read :company_growth_gap_episodes do
+      filter expr(
+               target_domain == :company and
+                 target_resource == "growth_initiative" and
+                 target_action == "approve_into_initiative" and
+                 not is_nil(dedupe_key)
+             )
+
+      prepare build(sort: [inserted_at: :desc])
+    end
   end
 
   pub_sub do
@@ -161,6 +176,11 @@ defmodule GnomeGarden.Operations.LearningRecommendation do
       public? true
     end
 
+    attribute :dedupe_key, :string do
+      public? true
+      description "Stable identity for a recommendation evidence episode"
+    end
+
     attribute :target_domain, :atom do
       allow_nil? false
       public? true
@@ -169,6 +189,7 @@ defmodule GnomeGarden.Operations.LearningRecommendation do
                     :acquisition,
                     :agents,
                     :commercial,
+                    :company,
                     :execution,
                     :finance,
                     :operations,
@@ -299,5 +320,9 @@ defmodule GnomeGarden.Operations.LearningRecommendation do
                  critical: :error
                ],
                default: :default}
+  end
+
+  identities do
+    identity :unique_dedupe_key, [:dedupe_key], nils_distinct?: true
   end
 end

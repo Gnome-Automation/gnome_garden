@@ -17,6 +17,8 @@ defmodule GnomeGarden.Company.GrowthInitiativeEvidence do
     table "company_growth_initiative_evidence"
     repo GnomeGarden.Repo
 
+    identity_index_names unique_initiative_bid_gap: "growth_evidence_bid_gap_uidx"
+
     references do
       reference :growth_initiative, on_delete: :delete
       reference :bid, on_delete: :nilify
@@ -39,6 +41,22 @@ defmodule GnomeGarden.Company.GrowthInitiativeEvidence do
         :quoted_requirement,
         :observed_value,
         :required_value,
+        :confidence,
+        :note
+      ]
+
+      change GnomeGarden.Company.Changes.StampInitiativeActors
+    end
+
+    create :ensure_bid_gap do
+      upsert? true
+      upsert_identity :unique_initiative_bid_gap
+      upsert_fields []
+
+      accept [
+        :growth_initiative_id,
+        :bid_id,
+        :gap_category,
         :confidence,
         :note
       ]
@@ -122,5 +140,10 @@ defmodule GnomeGarden.Company.GrowthInitiativeEvidence do
     belongs_to :created_by_team_member, GnomeGarden.Operations.TeamMember do
       public? true
     end
+  end
+
+  identities do
+    identity :unique_initiative_bid_gap, [:growth_initiative_id, :bid_id, :gap_category],
+      nils_distinct?: true
   end
 end

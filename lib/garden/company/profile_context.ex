@@ -135,6 +135,33 @@ defmodule GnomeGarden.Company.ProfileContext do
     |> normalize_terms()
   end
 
+  @doc """
+  Active qualifications as an immutable snapshot for eligibility checks.
+
+  Loaded fresh per call (like the profile itself); qualifications are never
+  copied into the profile — this is the read path bead gkc.5 pins.
+  """
+  @spec active_qualifications() :: [map()]
+  def active_qualifications do
+    case Company.list_active_company_qualifications(authorize?: false) do
+      {:ok, qualifications} ->
+        Enum.map(qualifications, fn qualification ->
+          %{
+            kind: qualification.kind,
+            name: qualification.name,
+            issuing_authority: qualification.issuing_authority,
+            identifier: qualification.identifier,
+            expires_on: qualification.expires_on,
+            unlocks: qualification.unlocks,
+            details: qualification.details
+          }
+        end)
+
+      _unavailable ->
+        []
+    end
+  end
+
   defp profile_to_map(profile) do
     %{
       key: profile.key,

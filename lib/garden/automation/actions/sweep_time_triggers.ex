@@ -14,6 +14,7 @@ defmodule GnomeGarden.Automation.Actions.SweepTimeTriggers do
   use Ash.Resource.Actions.Implementation
 
   alias GnomeGarden.Automation
+  alias GnomeGarden.Company
   alias GnomeGarden.Operations
   alias GnomeGarden.Procurement
 
@@ -25,7 +26,8 @@ defmodule GnomeGarden.Automation.Actions.SweepTimeTriggers do
     {:ok,
      %{
        "task_overdue" => sweep_overdue_tasks(),
-       "bid_due_soon" => sweep_bids_due_soon()
+       "bid_due_soon" => sweep_bids_due_soon(),
+       "qualification_expiring" => sweep_expiring_qualifications()
      }}
   end
 
@@ -83,6 +85,58 @@ defmodule GnomeGarden.Automation.Actions.SweepTimeTriggers do
     @deadline_buckets
     |> Enum.reverse()
     |> Enum.find(List.first(@deadline_buckets), &(days_until_due <= &1))
+  end
+
+  # Each qualification emits one dynamic episode when it enters its own
+  # renewal window. The key includes the expiration date and configured lead
+  # time, so ordinary sweeps cannot create duplicate tasks while a renewed or
+  # reconfigured qualification starts a fresh episode.
+  defp sweep_expiring_qualifications do
+    {:ok, qualifications} =
+      Company.list_company_qualifications_expiring_within(max_renewal_window(), authorize?: false)
+
+    Enum.count(qualifications, fn qualification ->
+      days_until_expiry = Date.diff(qualification.expires_on, Date.utc_today())
+
+      case renewal_bucket(qualification.renewal_lead_days, days_until_expiry) do
+        nil ->
+          false
+
+        bucket ->
+          record_once(
+            "qualification_renewal:#{qualification.id}:#{qualification.expires_on}:#{bucket}",
+            %{
+              resource: "company_qualification",
+              action: "expiring",
+              record_id: qualification.id,
+              data: %{
+                "name" => qualification.name,
+                "kind" => Atom.to_string(qualification.kind),
+                "issuing_authority" => qualification.issuing_authority,
+                "identifier" => qualification.identifier,
+                "expires_on" => Date.to_iso8601(qualification.expires_on),
+                "days_until_expiry" => days_until_expiry,
+                "renewal_bucket" => bucket,
+                "renewal_lead_days" => qualification.renewal_lead_days,
+                "owner_team_member_id" => qualification.owner_team_member_id
+              }
+            }
+          )
+      end
+    end)
+  end
+
+  defp renewal_bucket(lead_days, days_until_expiry) when days_until_expiry <= lead_days,
+    do: lead_days
+
+  defp renewal_bucket(_lead_days, _days_until_expiry), do: nil
+
+  defp max_renewal_window do
+    {:ok, qualifications} = Company.list_active_company_qualifications(authorize?: false)
+
+    qualifications
+    |> Enum.map(& &1.renewal_lead_days)
+    |> Enum.max(fn -> 90 end)
   end
 
   defp record_once(dedupe_key, attrs) do

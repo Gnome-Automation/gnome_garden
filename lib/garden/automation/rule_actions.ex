@@ -25,7 +25,8 @@ defmodule GnomeGarden.Automation.RuleActions do
       optional_non_negative_integer(action, "due_offset_days") and
       optional_string(action, "description") and
       optional_string(action, "owner_email") and
-      optional_string(action, "owner_team_member_id")
+      optional_string(action, "owner_team_member_id") and
+      optional_boolean(action, "owner_from_event")
   end
 
   defp valid_action?(%{"type" => "apply_playbook", "playbook_name" => name} = action)
@@ -47,6 +48,13 @@ defmodule GnomeGarden.Automation.RuleActions do
     case Map.get(action, key) do
       nil -> true
       value -> is_integer(value) and value >= 0
+    end
+  end
+
+  defp optional_boolean(action, key) do
+    case Map.get(action, key) do
+      nil -> true
+      value -> is_boolean(value)
     end
   end
 
