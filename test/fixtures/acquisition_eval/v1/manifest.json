@@ -13,6 +13,7 @@
   "provider_contract_version": "provider-contract/v1",
   "query": "Southern California industrial controls companies",
   "exa_fixture": "exa/search-routing.json",
+  "opengov_targeting_fixture": "opengov/project-list-targeting.html",
   "setup": {
     "organizations": [
       {

@@ -202,9 +202,21 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
         _other -> diagnostics
       end
     end)
+    |> maybe_copy_diagnostics(result, :economics)
+    |> maybe_copy_diagnostics(result, :targeting_filters)
   end
 
   defp result_diagnostics(_result), do: %{}
+
+  defp maybe_copy_diagnostics(diagnostics, result, key) do
+    case Map.get(result, key, Map.get(result, Atom.to_string(key))) do
+      value when is_map(value) or is_list(value) ->
+        Map.put(diagnostics, Atom.to_string(key), value)
+
+      _other ->
+        diagnostics
+    end
+  end
 
   defp attempt(path, status, duration_ms, reason) do
     %{

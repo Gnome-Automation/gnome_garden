@@ -39,3 +39,25 @@ and reason class.
 The same terminal summary is projected into acquisition-source metadata as `last_retrieval`.
 Ash calculations expose the latest path, status, and blocked flag, while source health reports
 retrieval failures and blocked stages separately from selector and scoring failures.
+
+## Source Targeting And Scan Economics
+
+`Procurement.SourceSearchFilter` is also the persisted source-targeting boundary. Existing
+provider filters remain query-only unless their metadata explicitly sets:
+
+```elixir
+%{"targeting_mode" => "exclude"}
+```
+
+Keyword filters with `targeting_mode` set to `"exclude"` remove matching listings before scoring;
+`"include"` keeps only listings matching at least one such filter. This lets operators tune a
+source without hard-coding a portal catalog or silently changing provider query semantics. Each
+targeted scan records matched and saved counts on the filter, and carries the filter identity into
+saved bid provenance for later review feedback.
+
+Scan evidence records economics separately from operator outcomes. Public provider/API and HTTP
+retrieval are recorded as known `$0.00` direct retrieval cost when the path has no metered charge;
+local deterministic scoring is also `$0.00`. Browser, Playwright, and Browserless paths are
+recorded as `not_metered` until their provider billing is integrated. Saved, reviewed, accepted,
+and promoted counts must not be conflated: only the latter outcomes come from persisted review
+decisions and promotion records.
