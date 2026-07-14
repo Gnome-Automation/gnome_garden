@@ -116,6 +116,14 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
       assert Decimal.equal?(run.total_cost, Decimal.new("0.01"))
       assert run.metadata["provider_budget_idempotency_key"] == budget_idempotency_key
 
+      assert {:ok, [query]} =
+               GnomeGarden.Acquisition.list_lead_preview_queries_for_run(run_id)
+
+      assert query.query == "manufacturing manufacturer california"
+      assert query.status == :completed
+      assert query.result_count == 1
+      assert Decimal.equal?(query.cost, Decimal.new("0.01"))
+
       assert {:ok, reservation} =
                GnomeGarden.Acquisition.get_provider_reservation_by_key(
                  "#{budget_idempotency_key}:search:0"
@@ -242,6 +250,7 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
 
       assert preview.queries_run == 0
       assert preview.failed_queries == 1
+      assert preview.total_cost == 0.0
       assert preview.candidate_count == 0
     end
 
@@ -263,6 +272,7 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
 
       assert preview.queries_run == 1
       assert preview.failed_queries == 1
+      assert preview.total_cost == 0.0
 
       assert {:ok, reservation} =
                GnomeGarden.Acquisition.get_provider_reservation_by_key(
@@ -341,6 +351,7 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
                )
 
       assert preview.failed_queries == 1
+      assert preview.total_cost == 0.05
 
       assert {:ok, reservation} =
                GnomeGarden.Acquisition.get_provider_reservation_by_key(
@@ -366,6 +377,7 @@ defmodule GnomeGarden.Acquisition.LeadPreviewTest do
 
       assert retried.queries_run == 1
       assert retried.failed_queries == 1
+      assert retried.total_cost == 0.05
     end
   end
 end

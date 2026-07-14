@@ -126,7 +126,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         start_published_date: Keyword.get(opts, :start_published_date)
       ]
 
-    %{cost: cost, candidates: raw, executed: executed, errors: errors} =
+    search =
       search_all(
         queries,
         search_opts,
@@ -134,6 +134,8 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         Keyword.fetch!(opts, :budget_idempotency_key),
         actor
       )
+
+    %{cost: cost, candidates: raw, executed: executed, errors: errors} = search
 
     candidates =
       raw
@@ -161,7 +163,8 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
       promotable: promotable,
       needs_enrichment: needs_enrichment,
       suppressed: suppressed,
-      errors: error_strings
+      errors: error_strings,
+      query_results: Enum.reverse(search.query_results)
     }
 
     with {:ok, run} <- persist_run(ranked, opts, summary) do
@@ -235,8 +238,10 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
             "provider_budget_idempotency_key" => Keyword.fetch!(opts, :budget_idempotency_key)
           }
           |> Map.merge(Keyword.get(opts, :execution_policy_snapshot, %{})),
+        program_source_id: Keyword.get(opts, :program_source_id),
         discovery_program_id: Keyword.get(opts, :discovery_program_id),
         created_by_id: actor_id(Keyword.get(opts, :actor)),
+        queries: summary.query_results,
         candidates: Enum.map(ranked, &candidate_attrs/1)
       }
 
@@ -379,7 +384,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     queries
     |> Enum.with_index()
     |> Enum.reduce_while(
-      %{cost: 0.0, candidates: [], executed: 0, errors: []},
+      %{cost: 0.0, candidates: [], executed: 0, errors: [], query_results: []},
       fn {query, query_index}, acc ->
         if acc.cost >= ceiling do
           {:halt, acc}
@@ -392,13 +397,40 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
                 acc
                 | cost: acc.cost + (cost || 0.0),
                   candidates: acc.candidates ++ tag(results, query),
-                  executed: acc.executed + 1
+                  executed: acc.executed + 1,
+                  query_results: [
+                    query_result(
+                      query,
+                      query_index,
+                      reservation_key,
+                      :completed,
+                      length(results),
+                      cost
+                    )
+                    | acc.query_results
+                  ]
               }
 
               if acc.cost >= ceiling, do: {:halt, acc}, else: {:cont, acc}
 
             {:skip, cost} ->
-              {:cont, %{acc | cost: acc.cost + cost, executed: acc.executed + 1}}
+              {:cont,
+               %{
+                 acc
+                 | cost: acc.cost + cost,
+                   executed: acc.executed + 1,
+                   query_results: [
+                     query_result(
+                       query,
+                       query_index,
+                       reservation_key,
+                       :replayed_without_results,
+                       0,
+                       cost
+                     )
+                     | acc.query_results
+                   ]
+               }}
 
             {:failed_skip, cost, reason} ->
               {:cont,
@@ -406,14 +438,36 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
                  acc
                  | cost: acc.cost + cost,
                    executed: acc.executed + 1,
-                   errors: [reason | acc.errors]
+                   errors: [reason | acc.errors],
+                   query_results: [
+                     query_result(query, query_index, reservation_key, :failed, 0, cost, reason)
+                     | acc.query_results
+                   ]
+               }}
+
+            {:failed, cost, reason} ->
+              {:cont,
+               %{
+                 acc
+                 | cost: acc.cost + cost,
+                   executed: acc.executed + 1,
+                   errors: [reason | acc.errors],
+                   query_results: [
+                     query_result(query, query_index, reservation_key, :failed, 0, cost, reason)
+                     | acc.query_results
+                   ]
                }}
 
             {:error, {:provider_budget, reason}} ->
-              {:halt, %{acc | errors: [reason | acc.errors]}}
-
-            {:error, reason} ->
-              {:cont, %{acc | executed: acc.executed + 1, errors: [reason | acc.errors]}}
+              {:halt,
+               %{
+                 acc
+                 | errors: [reason | acc.errors],
+                   query_results: [
+                     query_result(query, query_index, reservation_key, :blocked, 0, 0, reason)
+                     | acc.query_results
+                   ]
+               }}
           end
         end
       end
@@ -458,8 +512,7 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
         end
 
       {:error, reason} ->
-        account_provider_failure(reservation, reason, actor)
-        {:error, reason}
+        {:failed, account_provider_failure(reservation, reason, actor), reason}
     end
   end
 
@@ -488,12 +541,26 @@ defmodule GnomeGarden.Acquisition.LeadPreview do
     result = ProviderBudgetPolicy.account_failure(reservation, reason, actor: actor)
 
     case result do
-      {:ok, _result} ->
-        :ok
+      {:ok, %{reservation: reservation}} ->
+        Decimal.to_float(reservation.actual_cost)
 
       {:error, error} ->
         Logger.warning("LeadPreview: provider accounting failed: #{inspect(error)}")
+        0.0
     end
+  end
+
+  defp query_result(query, query_index, reservation_key, status, result_count, cost, error \\ nil) do
+    %{
+      query: query.text,
+      intent: query.intent,
+      query_index: query_index,
+      status: status,
+      result_count: result_count,
+      cost: cost_decimal(cost || 0),
+      reservation_key: reservation_key,
+      error: error && inspect(error)
+    }
   end
 
   defp cache_response(response) do

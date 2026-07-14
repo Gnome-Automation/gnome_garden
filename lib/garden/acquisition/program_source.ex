@@ -19,6 +19,10 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
     :max_enrichments_per_run,
     :finding_limit_per_run,
     :finding_limit_per_day,
+    :learning_enabled,
+    :feedback_window_days,
+    :learning_min_reviewed,
+    :learning_noise_threshold,
     :next_run_at,
     :last_run_at
   ]
@@ -57,6 +61,18 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
 
     action :backfill, :map do
       run GnomeGarden.Acquisition.Actions.BackfillProgramSources
+    end
+
+    action :discovery_performance_snapshot, :map do
+      argument :program_source_id, :uuid
+
+      argument :window_days, :integer do
+        allow_nil? false
+        default 90
+        constraints min: 1, max: 365
+      end
+
+      run GnomeGarden.Acquisition.Actions.BuildDiscoveryPerformanceSnapshot
     end
 
     create :create do
@@ -177,6 +193,18 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
 
       prepare build(load: [:program, :source])
     end
+
+    read :learning_enabled_commercial_discovery do
+      filter expr(
+               learning_enabled == true and enabled == true and status == :active and
+                 program.status == :active and program.program_family == :discovery and
+                 program.program_type == :discovery_run and
+                 not is_nil(program.discovery_program_id) and source.enabled == true and
+                 source.status == :active and source.external_ref == "provider:exa:search"
+             )
+
+      prepare build(sort: [priority: :desc, inserted_at: :asc], load: [:program, :source])
+    end
   end
 
   attributes do
@@ -245,6 +273,29 @@ defmodule GnomeGarden.Acquisition.ProgramSource do
       default: 25,
       public?: true,
       constraints: [min: 0]
+
+    attribute :learning_enabled, :boolean,
+      allow_nil?: false,
+      default: true,
+      public?: true
+
+    attribute :feedback_window_days, :integer,
+      allow_nil?: false,
+      default: 90,
+      public?: true,
+      constraints: [min: 1, max: 365]
+
+    attribute :learning_min_reviewed, :integer,
+      allow_nil?: false,
+      default: 3,
+      public?: true,
+      constraints: [min: 1]
+
+    attribute :learning_noise_threshold, :decimal,
+      allow_nil?: false,
+      default: Decimal.new("0.67"),
+      public?: true,
+      constraints: [min: Decimal.new(0), max: Decimal.new(1)]
 
     attribute :next_run_at, :utc_datetime, public?: true
     attribute :last_run_at, :utc_datetime, public?: true

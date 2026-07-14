@@ -34,9 +34,16 @@ defmodule GnomeGarden.Acquisition.LeadPreviewRun do
     table "acquisition_lead_preview_runs"
     repo GnomeGarden.Repo
 
+    references do
+      reference :program_source, on_delete: :restrict
+    end
+
     custom_indexes do
       index [:inserted_at]
       index [:discovery_program_id, :inserted_at]
+
+      index [:program_source_id, :inserted_at],
+        name: "lead_preview_runs_program_source_inserted_index"
     end
   end
 
@@ -69,13 +76,16 @@ defmodule GnomeGarden.Acquisition.LeadPreviewRun do
         :total_cost,
         :errors,
         :metadata,
+        :program_source_id,
         :discovery_program_id,
         :created_by_id
       ]
 
       argument :candidates, {:array, :map}, allow_nil?: true
+      argument :queries, {:array, :map}, allow_nil?: true
 
       change manage_relationship(:candidates, :candidates, type: :create)
+      change manage_relationship(:queries, :queries, type: :create)
     end
 
     read :recent do
@@ -128,7 +138,15 @@ defmodule GnomeGarden.Acquisition.LeadPreviewRun do
   end
 
   relationships do
+    belongs_to :program_source, GnomeGarden.Acquisition.ProgramSource do
+      public? true
+    end
+
     has_many :candidates, GnomeGarden.Acquisition.LeadPreviewCandidate do
+      public? true
+    end
+
+    has_many :queries, GnomeGarden.Acquisition.LeadPreviewQuery do
       public? true
     end
   end

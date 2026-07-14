@@ -78,6 +78,45 @@ defmodule GnomeGarden.Acquisition.LeadPreviewCandidate do
       filter expr(lead_preview_run_id == ^arg(:lead_preview_run_id))
       prepare build(sort: [rank: :asc])
     end
+
+    read :feedback_window do
+      argument :recorded_since, :utc_datetime, allow_nil?: false
+
+      filter expr(
+               inserted_at >= ^arg(:recorded_since) and
+                 not is_nil(lead_preview_run.program_source_id)
+             )
+
+      prepare build(
+                sort: [inserted_at: :desc],
+                load: [
+                  :verification,
+                  :finding_admission,
+                  lead_preview_run: :program_source,
+                  finding: :review_decisions
+                ]
+              )
+    end
+
+    read :feedback_window_for_program_source do
+      argument :program_source_id, :uuid, allow_nil?: false
+      argument :recorded_since, :utc_datetime, allow_nil?: false
+
+      filter expr(
+               inserted_at >= ^arg(:recorded_since) and
+                 lead_preview_run.program_source_id == ^arg(:program_source_id)
+             )
+
+      prepare build(
+                sort: [inserted_at: :desc],
+                load: [
+                  :verification,
+                  :finding_admission,
+                  lead_preview_run: :program_source,
+                  finding: :review_decisions
+                ]
+              )
+    end
   end
 
   attributes do
@@ -143,6 +182,11 @@ defmodule GnomeGarden.Acquisition.LeadPreviewCandidate do
 
     has_one :finding_admission, GnomeGarden.Acquisition.FindingAdmission do
       destination_attribute :lead_preview_candidate_id
+      public? true
+    end
+
+    has_one :finding, GnomeGarden.Acquisition.Finding do
+      through [:finding_admission, :finding]
       public? true
     end
   end

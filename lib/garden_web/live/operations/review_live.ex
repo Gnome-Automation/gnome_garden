@@ -3,6 +3,8 @@ defmodule GnomeGardenWeb.Operations.ReviewLive do
 
   import GnomeGardenWeb.Operations.Helpers
 
+  alias GnomeGarden.Acquisition
+  alias GnomeGarden.Acquisition.DiscoveryLearning
   alias GnomeGarden.Operations
 
   @topics [
@@ -70,11 +72,15 @@ defmodule GnomeGardenWeb.Operations.ReviewLive do
   def handle_event("approve_learning", %{"id" => id}, socket) do
     {:noreply,
      review_update(socket, &Operations.get_learning_recommendation/2, id, fn record, actor ->
-       Operations.approve_learning_recommendation(
-         record,
-         %{review_note: "Approved from review queue"},
-         actor: actor
-       )
+       if DiscoveryLearning.recommendation?(record) do
+         Acquisition.approve_discovery_learning_recommendation(record, actor: actor)
+       else
+         Operations.approve_learning_recommendation(
+           record,
+           %{review_note: "Approved from review queue"},
+           actor: actor
+         )
+       end
      end)}
   end
 
@@ -304,6 +310,14 @@ defmodule GnomeGardenWeb.Operations.ReviewLive do
       |> put_flash(:info, "Review decision saved.")
       |> assign_review_items()
     else
+      {:error, :stale_discovery_recommendation} ->
+        socket
+        |> put_flash(
+          :error,
+          "Discovery policy changed after this recommendation was created. No change was applied; a fresh recommendation will be proposed automatically."
+        )
+        |> assign_review_items()
+
       {:error, _error} ->
         socket
         |> put_flash(:error, "Review decision could not be saved.")
