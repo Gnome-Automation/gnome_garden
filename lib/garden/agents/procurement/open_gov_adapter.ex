@@ -148,7 +148,7 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapter do
 
   defp embedded_projects(body) do
     case Regex.run(
-           ~r/"govProjects"\s*:\s*\{"count"\s*:\s*\d+\s*,\s*"rows"\s*:\s*(\[.*?\])\s*\}\s*,\s*"downloadFilePath"/s,
+           ~r/"govProjects"\s*:\s*\{"count"\s*:\s*\d+\s*,\s*"rows"\s*:\s*(\[.*?\])\s*\}/s,
            body,
            capture: :all_but_first
          ) do
