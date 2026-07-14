@@ -798,16 +798,19 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
 
   defp scan_diagnosis(scored, _saved, _excluded, top_unsaved, extraction) do
     extraction_present? = map_size(extraction) > 0
+    provider_extraction? = extraction_value(extraction, "provider") == "opengov"
+    extracted_row_count = extraction_count(extraction, "row_count")
+    extracted_title_count = extraction_count(extraction, "title_count")
 
     cond do
       login_required_extraction?(extraction) ->
         "login_required"
 
-      extraction_present? and extraction_count(extraction, "row_count") == 0 ->
+      extraction_present? and not provider_extraction? and extracted_row_count == 0 ->
         "listing_selector_matched_no_rows"
 
-      extraction_present? and extraction_count(extraction, "row_count") > 0 and
-          extraction_count(extraction, "title_count") == 0 ->
+      extraction_present? and not provider_extraction? and extracted_row_count > 0 and
+          extracted_title_count == 0 ->
         "title_selector_matched_no_titles"
 
       Enum.any?(top_unsaved, &(&1["score_tier"] == :rejected or &1["score_tier"] == "rejected")) ->

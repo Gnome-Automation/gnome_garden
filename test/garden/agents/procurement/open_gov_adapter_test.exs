@@ -129,6 +129,7 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapterTest do
     assert result.saved == 0
     assert result.economics["retrieval_cost_status"] == "known"
     assert result.economics["retrieval_cost_usd"] == "0.00"
+    assert result.diagnostics["diagnosis"] == "all_candidates_filtered_before_scoring"
     refute result.diagnostics["diagnosis"] == "selector_failed"
     assert result.retrieval["retrieval_path"] == "provider_api"
 
