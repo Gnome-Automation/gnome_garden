@@ -29,6 +29,7 @@ directly:
 - `release_provider_capacity/2`
 - `get_provider_reservation_by_key/2`
 - `get_provider_budget_window/4`
+- `ProviderBudgetPolicy.current_window/3` for operator-facing remaining/reset state
 
 Retries reuse the same idempotency key. A settled reservation remains settled;
 a released zero-cost reservation reopens the same row and reserves capacity
@@ -53,9 +54,12 @@ apply a narrower ceiling or a deterministic clock through
 Narrow trusted limits receive a deterministic, separate window key, so a
 canary cannot clamp the shared production window.
 
-Scoped override windows do not debit the shared production window and must not
-be used for production traffic. Limit changes are immutable within an open
-window and take effect when the next configured window opens.
+Scoped override windows do not debit the broader configured window. They are
+not general-purpose canary limits. The production exception is a persisted,
+reviewed provider-account authority such as `ProcurementSource.rate_limit_per_day`
+for SAM.gov. Every request using that authority must pass the same limit so it
+shares the same scoped window. Limit changes are immutable within an open
+window and take effect when the next window opens.
 
 ## Exa Preview Flow
 

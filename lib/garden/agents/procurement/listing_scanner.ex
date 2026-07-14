@@ -32,6 +32,7 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
   alias GnomeGarden.Browser
   alias GnomeGarden.Browser.LoginForm
   alias GnomeGarden.Agents.Procurement.PublicSourceResolver
+  alias GnomeGarden.Agents.Procurement.OpenGovAdapter
   alias GnomeGarden.Agents.Tools.Procurement.{SaveBid, ScoreBid, ScanBidNet, ScanPlanetBids}
 
   require Logger
@@ -94,6 +95,9 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
               do_bidnet_scan(source, context)
             end)
           ]
+
+        :opengov ->
+          opengov_stages(source, context)
 
         _other ->
           [
@@ -233,6 +237,14 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     else
       [provider_stage, stage(:browser, fn -> do_browser_scan(source, context) end)]
     end
+  end
+
+  defp opengov_stages(source, context) do
+    paths = source.allowed_retrieval_paths || []
+
+    [:provider_api, :http, :browser]
+    |> Enum.filter(&(&1 in paths))
+    |> Enum.map(fn path -> stage(path, fn -> do_opengov_scan(source, context, path) end) end)
   end
 
   defp context_value(context, key) do
@@ -429,6 +441,22 @@ defmodule GnomeGarden.Agents.Procurement.ListingScanner do
     else
       [] -> {:error, :no_rows_extracted}
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp do_opengov_scan(source, context, path) do
+    Logger.info("Scanning #{source.name} via OpenGov #{path} adapter")
+    profile_context = profile_context_for_source(source)
+
+    with {:ok, %{bids: bids, diagnostics: extraction}} <-
+           OpenGovAdapter.fetch(source, path, context),
+         filtered = TargetingFilter.filter_bids(bids, profile_context),
+         {:ok, scored} <- score_bids(filtered.kept, source, profile_context),
+         {:ok, saved} <- save_qualifying_bids(scored, source, source.url, context) do
+      complete_scan(source, bids, filtered.excluded, scored, saved, 0,
+        extraction: extraction,
+        listing_url: source.url
+      )
     end
   end
 

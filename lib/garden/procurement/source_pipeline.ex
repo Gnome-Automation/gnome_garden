@@ -79,27 +79,6 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
   return configured
   """
 
-  @scan_script """
-  if source_context.requires_login then
-    return {
-      ok = false,
-      mode = "credentials_needed",
-      source_id = source_context.id,
-      error = "Source requires credentials before scanning."
-    }
-  end
-
-  local scan = source.scan(source_context.id)
-
-  if not scan.ok then
-    scan.mode = "scan_failed"
-    return scan
-  end
-
-  scan.mode = "scanned"
-  return scan
-  """
-
   @type pipeline_result :: {:ok, map()} | {:error, term()}
 
   @spec inspect_source(ProcurementSource.t() | Ecto.UUID.t(), keyword()) :: pipeline_result
@@ -166,23 +145,40 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
 
   @spec scan_source(ProcurementSource.t() | Ecto.UUID.t(), keyword()) :: pipeline_result
   def scan_source(source_or_id, opts \\ []) do
-    with {:ok, source} <- fetch_source(source_or_id, Keyword.get(opts, :actor)),
-         {:ok, script_result, messages} <- run_lua(source, @scan_script, opts) do
-      if truthy?(script_result["ok"]) do
-        with {:ok, scan_result} <- source_message(messages, :scan) do
-          {:ok, put_pipeline(scan_result, script_result)}
-        end
-      else
-        {:error, script_result["error"] || "Source scan pipeline failed."}
-      end
+    actor = Keyword.get(opts, :actor)
+    scanner = Keyword.get(opts, :scanner, ScannerRouter)
+    scanner_context = Keyword.get(opts, :scanner_context, %{actor: actor})
+
+    with {:ok, source} <- fetch_source(source_or_id, actor),
+         :ok <- ensure_scannable(source),
+         {:ok, scan_result} <- scanner.scan(source, scanner_context) do
+      {:ok, put_pipeline(scan_result, scan_pipeline(scan_result))}
     end
   end
+
+  defp ensure_scannable(%ProcurementSource{requires_login: true}),
+    do: {:error, :credentials_needed}
+
+  defp ensure_scannable(%ProcurementSource{}), do: :ok
+
+  defp scan_pipeline(result) do
+    %{
+      "ok" => true,
+      "mode" => "scanned",
+      "extracted" => map_value(result, :extracted, 0),
+      "excluded" => map_value(result, :excluded, 0),
+      "scored" => map_value(result, :scored, 0),
+      "saved" => map_value(result, :saved, 0),
+      "enriched" => map_value(result, :enriched, 0)
+    }
+  end
+
+  defp map_value(map, key, default) when is_map(map),
+    do: Map.get(map, key, Map.get(map, Atom.to_string(key), default))
 
   defp run_lua(source, script, opts) do
     actor = Keyword.get(opts, :actor)
     async? = Keyword.get(opts, :async?, true)
-    scanner = Keyword.get(opts, :scanner, ScannerRouter)
-    scanner_context = Keyword.get(opts, :scanner_context, %{actor: actor})
     ref = make_ref()
     caller = self()
 
@@ -195,7 +191,6 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
         [:source, :configure_from_inspection],
         configure_from_inspection_function(ref, caller, actor)
       )
-      |> Lua.set!([:source, :scan], scan_function(ref, caller, source, scanner, scanner_context))
       |> then(
         &AshLua.new(otp_app: :gnome_garden, actor: actor, context: lua_context(opts), lua: &1)
       )
@@ -251,15 +246,6 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
 
       send(caller, {ref, :configuration, result})
       encode_lua_result(lua, serialize_configuration_result(result))
-    end
-  end
-
-  defp scan_function(ref, caller, source, scanner, scanner_context) do
-    fn [_source_id], lua ->
-      result = scanner.scan(source, scanner_context)
-
-      send(caller, {ref, :scan, result})
-      encode_lua_result(lua, serialize_scan_result(result))
     end
   end
 
@@ -369,31 +355,6 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
     }
   end
 
-  defp serialize_scan_result({:ok, result}) when is_map(result) do
-    %{
-      "ok" => true,
-      "extracted" => value(result, :extracted) || 0,
-      "excluded" => value(result, :excluded) || 0,
-      "scored" => value(result, :scored) || 0,
-      "saved" => value(result, :saved) || 0,
-      "enriched" => value(result, :enriched) || 0
-    }
-    |> maybe_put_serialized("diagnosis", value(result, :diagnosis))
-    |> maybe_put_serialized("reason", value(result, :reason))
-  end
-
-  defp serialize_scan_result({:ok, _result}) do
-    %{"ok" => true}
-  end
-
-  defp serialize_scan_result({:error, error}) do
-    %{
-      "ok" => false,
-      "mode" => "scan_failed",
-      "error" => format_error(error)
-    }
-  end
-
   defp fetch_source(%ProcurementSource{} = source, _actor), do: {:ok, source}
 
   defp fetch_source(id, actor) when is_binary(id) do
@@ -418,24 +379,15 @@ defmodule GnomeGarden.Procurement.SourcePipeline do
   defp mode_atom("inspection_failed"), do: :inspection_failed
   defp mode_atom("page_unavailable"), do: :page_unavailable
   defp mode_atom("inspected"), do: :inspected
-  defp mode_atom("scanned"), do: :scanned
-  defp mode_atom("scan_failed"), do: :scan_failed
   defp mode_atom(_mode), do: :unknown
 
   defp truthy?(true), do: true
   defp truthy?(_value), do: false
 
-  defp value(map, key) when is_map(map) do
-    Map.get(map, key) || Map.get(map, Atom.to_string(key))
-  end
-
   defp put_pipeline(result, pipeline) when is_map(result),
     do: Map.put(result, :pipeline, pipeline)
 
   defp put_pipeline(result, pipeline), do: %{result: result, pipeline: pipeline}
-
-  defp maybe_put_serialized(map, _key, nil), do: map
-  defp maybe_put_serialized(map, key, value), do: Map.put(map, key, value)
 
   defp format_error(error) when is_binary(error), do: error
   defp format_error(error) when is_exception(error), do: Exception.message(error)

@@ -35,6 +35,9 @@ defmodule GnomeGarden.Acquisition.Source do
     :procurement_source
   ]
 
+  @workspace_loads List.delete(@console_loads, :procurement_source) ++
+                     [procurement_source: [:provider_budget_state]]
+
   admin do
     table_columns [:name, :source_family, :source_kind, :status, :enabled, :scan_strategy]
   end
@@ -101,6 +104,13 @@ defmodule GnomeGarden.Acquisition.Source do
       get_by [:external_ref]
     end
 
+    read :workspace do
+      argument :id, :uuid, allow_nil?: false
+      get? true
+      filter expr(id == ^arg(:id))
+      prepare {GnomeGarden.Acquisition.Preparations.SourceConsole, loads: @workspace_loads}
+    end
+
     read :by_url do
       argument :url, :string, allow_nil?: false
       get_by [:url]
@@ -129,7 +139,12 @@ defmodule GnomeGarden.Acquisition.Source do
 
       filter expr(
                enabled == true and status == :active and
-                 (procurement_source.config_status in [:configured, :scan_failed] or
+                 ((not is_nil(procurement_source_id) and
+                     procurement_source.config_status in [:configured, :scan_failed] and
+                     procurement_source.portfolio_decision == :adopt and
+                     procurement_source.compliance_decision == :adopt and
+                     (is_nil(procurement_source.deferred_until) or
+                        procurement_source.deferred_until <= now())) or
                     (is_nil(procurement_source_id) and scan_strategy in [:agentic, :deterministic]))
              )
 

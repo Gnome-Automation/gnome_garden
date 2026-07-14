@@ -10,6 +10,7 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
 
   alias GnomeGarden.Procurement
   alias GnomeGarden.Procurement.ProcurementSource
+  alias GnomeGarden.Acquisition.Telemetry
 
   @type retrieval_path :: :provider_api | :http | :browser | :playwright | :browserless
   @type stage :: %{required(:path) => retrieval_path(), required(:run) => (-> term())}
@@ -37,7 +38,7 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
   defp execute_stages(source, run, stages, actor, started_at) do
     stages
     |> Enum.reduce_while({[], nil, nil}, fn stage, {attempts, first_reason, _last_reason} ->
-      case execute_stage(stage) do
+      case execute_stage(stage, source, run) do
         {:ok, result, attempt} ->
           {:halt, {:ok, stage.path, result, attempts ++ [attempt], first_reason}}
 
@@ -51,7 +52,7 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
     |> finish(source, run, actor, started_at)
   end
 
-  defp execute_stage(%{path: path, run: function}) when is_function(function, 0) do
+  defp execute_stage(%{path: path, run: function}, source, run) when is_function(function, 0) do
     started_at = System.monotonic_time()
 
     result =
@@ -67,19 +68,24 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
 
     case result do
       {:ok, value} ->
+        emit_stage(source, run, path, :completed, nil, duration_ms, value)
         {:ok, value, attempt(path, :completed, duration_ms, nil)}
 
       {:error, {:blocked, reason}} ->
+        emit_stage(source, run, path, :blocked, reason, duration_ms)
         {:blocked, reason, attempt(path, :blocked, duration_ms, reason)}
 
       {:blocked, reason} ->
+        emit_stage(source, run, path, :blocked, reason, duration_ms)
         {:blocked, reason, attempt(path, :blocked, duration_ms, reason)}
 
       {:error, reason} ->
+        emit_stage(source, run, path, :failed, reason, duration_ms)
         {:error, reason, attempt(path, :failed, duration_ms, reason)}
 
       other ->
         reason = {:invalid_stage_result, other}
+        emit_stage(source, run, path, :failed, reason, duration_ms)
         {:error, reason, attempt(path, :failed, duration_ms, reason)}
     end
   end
@@ -98,6 +104,7 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
 
     with {:ok, completed_run} <- Procurement.complete_source_retrieval_run(run, attrs),
          :ok <- persist_source_health(source, completed_run, actor) do
+      emit_terminal(source, completed_run, :completed, nil)
       {:ok, normalize_result(value, completed_run)}
     end
   end
@@ -115,6 +122,7 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
 
     with {:ok, blocked_run} <- Procurement.block_source_retrieval_run(run, attrs),
          :ok <- persist_source_health(source, blocked_run, actor) do
+      emit_terminal(source, blocked_run, :blocked, reason)
       {:error, reason}
     end
   end
@@ -132,6 +140,7 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
 
     with {:ok, failed_run} <- Procurement.fail_source_retrieval_run(run, attrs),
          :ok <- persist_source_health(source, failed_run, actor) do
+      emit_terminal(source, failed_run, :failed, terminal_reason)
       {:error, terminal_reason}
     end
   end
@@ -178,12 +187,21 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
   end
 
   defp result_diagnostics(result) when is_map(result) do
-    result
-    |> Map.get(:diagnostics, Map.get(result, "diagnostics", %{}))
-    |> case do
-      diagnostics when is_map(diagnostics) -> diagnostics
-      _other -> %{}
-    end
+    diagnostics =
+      result
+      |> Map.get(:diagnostics, Map.get(result, "diagnostics", %{}))
+      |> case do
+        diagnostics when is_map(diagnostics) -> diagnostics
+        _other -> %{}
+      end
+
+    [:extracted, :excluded, :scored, :saved, :enriched, :bids_found, :result_count]
+    |> Enum.reduce(diagnostics, fn key, diagnostics ->
+      case Map.get(result, key, Map.get(result, Atom.to_string(key))) do
+        value when is_integer(value) -> Map.put(diagnostics, Atom.to_string(key), value)
+        _other -> diagnostics
+      end
+    end)
   end
 
   defp result_diagnostics(_result), do: %{}
@@ -196,6 +214,79 @@ defmodule GnomeGarden.Procurement.RetrievalPolicy do
       "reason" => reason && format_reason(reason)
     }
   end
+
+  defp emit_stage(source, run, path, outcome, reason, duration_ms, value \\ nil) do
+    Telemetry.retrieval_stage(
+      source.source_type,
+      path,
+      outcome,
+      reason_class(reason),
+      %{duration_ms: duration_ms, result_count: result_count(value)},
+      %{procurement_source_id: source.id, source_retrieval_run_id: run.id}
+    )
+  end
+
+  defp emit_terminal(source, run, outcome, reason) do
+    Telemetry.retrieval_terminal(
+      source.source_type,
+      run.retrieval_path || :none,
+      outcome,
+      reason_class(reason),
+      %{
+        duration_ms: run.duration_ms || 0,
+        attempt_count: length(run.attempts || []),
+        result_count: diagnostic_result_count(run.diagnostics)
+      },
+      %{procurement_source_id: source.id, source_retrieval_run_id: run.id}
+    )
+  end
+
+  defp result_count(nil), do: 0
+
+  defp result_count(value) when is_list(value), do: length(value)
+
+  defp result_count(value) when is_map(value) do
+    [:saved, :extracted, :bids_found, :result_count]
+    |> Enum.find_value(0, fn key ->
+      case Map.get(value, key, Map.get(value, Atom.to_string(key))) do
+        count when is_integer(count) -> count
+        list when is_list(list) -> length(list)
+        _other -> nil
+      end
+    end)
+  end
+
+  defp result_count(_value), do: 0
+
+  defp diagnostic_result_count(diagnostics) when is_map(diagnostics) do
+    diagnostics
+    |> Map.get("saved", Map.get(diagnostics, "rows", Map.get(diagnostics, "extracted", 0)))
+    |> case do
+      count when is_integer(count) -> count
+      _other -> 0
+    end
+  end
+
+  defp diagnostic_result_count(_diagnostics), do: 0
+
+  defp reason_class(nil), do: :none
+  defp reason_class({:http_status, status}) when status in [401, 403], do: :authentication
+  defp reason_class({:http_status, 429}), do: :rate_limit
+  defp reason_class({:http_error, status}) when status in [401, 403], do: :authentication
+  defp reason_class({:http_error, 429}), do: :rate_limit
+  defp reason_class({:budget_exhausted, _reset_at, _remaining}), do: :rate_limit
+  defp reason_class({:rate_limited, _retry_at}), do: :rate_limit
+  defp reason_class(reason) when reason in [:credentials_required, :needs_login], do: :credentials
+  defp reason_class(reason) when reason in [:waf_challenge, :cloudflare_challenge], do: :waf
+
+  defp reason_class(reason)
+       when reason in [:timeout, :econnrefused, :nxdomain, :browser_unavailable],
+       do: :transport
+
+  defp reason_class({:transport_error, _reason}), do: :transport
+  defp reason_class({:invalid_stage_result, _result}), do: :contract
+  defp reason_class(reason) when reason in [:schema_drift, :opengov_schema_drift], do: :schema
+  defp reason_class(_reason), do: :other
 
   defp elapsed_ms(started_at) do
     started_at

@@ -11,10 +11,10 @@ defmodule GnomeGardenWeb.AcquisitionSourceRegistryLiveTest do
   test "acquisition source registry renders synced procurement sources", %{conn: conn} do
     {:ok, source} =
       Procurement.create_procurement_source(%{
-        name: "California BidNet Direct - SCADA",
-        url: "https://example.com/bidnet/scada",
-        source_type: :bidnet,
-        portal_id: "ca-scada",
+        name: "California OpenGov - SCADA",
+        url: "https://example.com/opengov/scada",
+        source_type: :opengov,
+        portal_id: "ca-opengov-scada",
         region: :ca,
         priority: :high,
         status: :approved,
@@ -35,9 +35,18 @@ defmodule GnomeGardenWeb.AcquisitionSourceRegistryLiveTest do
     {:ok, _source} =
       Procurement.configure_procurement_source(
         source,
-        %{scrape_config: %{"provider" => "bidnet_direct"}},
+        %{scrape_config: %{"provider" => "opengov"}},
         actor: nil
       )
+
+    {:ok, _source} =
+      Procurement.review_procurement_source_portfolio(source, %{
+        portfolio_decision: :adopt,
+        compliance_decision: :adopt,
+        expected_coverage: "Reviewed public OpenGov opportunities",
+        adapter_owner: source.adapter_owner,
+        allowed_retrieval_paths: [:http, :browser]
+      })
 
     {:ok, acquisition_source} =
       Acquisition.get_source_by_external_ref("procurement_source:#{source.id}")

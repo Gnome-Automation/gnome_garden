@@ -83,6 +83,15 @@ defmodule GnomeGardenWeb.PageControllerTest do
         actor: nil
       )
 
+    {:ok, _source} =
+      Procurement.review_procurement_source_portfolio(source, %{
+        portfolio_decision: :adopt,
+        compliance_decision: :adopt,
+        expected_coverage: source.expected_coverage,
+        adapter_owner: source.adapter_owner,
+        allowed_retrieval_paths: source.allowed_retrieval_paths
+      })
+
     {:ok, discovery_program} =
       Commercial.create_discovery_program(%{
         name: "Industrial Accounts West",

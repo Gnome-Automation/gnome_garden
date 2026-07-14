@@ -101,6 +101,20 @@ defmodule GnomeGardenWeb.Telemetry do
       counter("gnome_garden.acquisition.slo.alert.count",
         tags: [:kind, :severity]
       ),
+      summary("gnome_garden.acquisition.retrieval.stage.duration_ms",
+        tags: [:source_type, :path, :outcome, :reason_class],
+        unit: :millisecond
+      ),
+      sum("gnome_garden.acquisition.retrieval.stage.result_count",
+        tags: [:source_type, :path, :outcome, :reason_class]
+      ),
+      summary("gnome_garden.acquisition.retrieval.terminal.duration_ms",
+        tags: [:source_type, :path, :outcome, :reason_class],
+        unit: :millisecond
+      ),
+      sum("gnome_garden.acquisition.retrieval.terminal.attempt_count",
+        tags: [:source_type, :path, :outcome, :reason_class]
+      ),
 
       # VM Metrics
       summary("vm.memory.total", unit: {:byte, :kilobyte}),

@@ -32,6 +32,38 @@ defmodule GnomeGarden.Acquisition.Telemetry do
   def admission(measurements, trace), do: execute([:candidate, :admitted], measurements, trace)
   def review(measurements, trace), do: execute([:review, :promoted], measurements, trace)
 
+  def retrieval_stage(source_type, path, outcome, reason_class, measurements, trace \\ %{}) do
+    execute(
+      [:retrieval, :stage],
+      measurements,
+      Map.merge(
+        %{
+          source_type: source_type,
+          path: path,
+          outcome: outcome,
+          reason_class: reason_class
+        },
+        trace
+      )
+    )
+  end
+
+  def retrieval_terminal(source_type, path, outcome, reason_class, measurements, trace \\ %{}) do
+    execute(
+      [:retrieval, :terminal],
+      measurements,
+      Map.merge(
+        %{
+          source_type: source_type,
+          path: path,
+          outcome: outcome,
+          reason_class: reason_class
+        },
+        trace
+      )
+    )
+  end
+
   def evaluate_slos(snapshot) when is_map(snapshot) do
     [
       alert(

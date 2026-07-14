@@ -15,33 +15,20 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   alias GnomeGardenWeb.Operations.TaskEntry
   alias GnomeGardenWeb.Operations.TaskPubSub
 
-  @source_load [
-    :procurement_source,
-    :organization,
-    :source_family_label,
-    :source_kind_label,
-    :scan_strategy_label,
-    :status_label,
-    :health_label,
-    :health_note,
-    :finding_count,
-    :review_finding_count,
-    :accepted_finding_count,
-    :parked_finding_count,
-    :rejected_finding_count,
-    :promoted_finding_count,
-    :latest_run_id,
-    :health_status,
-    :health_variant,
-    :status_variant,
-    :runnable
-  ]
-
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     if connected?(socket) do
       GnomeGardenWeb.Endpoint.subscribe("procurement_source_browser_session:created")
       GnomeGardenWeb.Endpoint.subscribe("procurement_source_browser_session:updated")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source:portfolio_reviewed")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source:deferred")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source:resumed")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source:health_paused")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source:cadence_changed")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source:attention_routed")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_retrieval_run:completed")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_retrieval_run:failed")
+      GnomeGardenWeb.Endpoint.subscribe("procurement_source_retrieval_run:blocked")
     end
 
     case load_source(id, socket.assigns.current_user) do
@@ -62,6 +49,7 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
          |> assign_playbook_context(source)
          |> assign(:source_credential, credential_for_source(source))
          |> assign(:browser_session, browser_session_for_source(source))
+         |> assign_portfolio_form(source)
          |> assign(:credential_dialog, nil)
          |> assign(:credential_form, nil)}
 
@@ -199,6 +187,50 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
               <.detail_row label="Last Scanned">
                 {format_datetime(@source.procurement_source.last_scanned_at)}
               </.detail_row>
+              <.detail_row label="Portfolio Decision">
+                {format_atom(@source.procurement_source.portfolio_decision)}
+              </.detail_row>
+              <.detail_row label="Compliance Decision">
+                {format_atom(@source.procurement_source.compliance_decision)}
+              </.detail_row>
+              <.detail_row label="Allowed Retrieval">
+                {format_paths(@source.procurement_source.allowed_retrieval_paths)}
+              </.detail_row>
+              <.detail_row label="Adapter Owner">
+                <span class="break-all">
+                  {@source.procurement_source.adapter_owner || "Not assigned"}
+                </span>
+              </.detail_row>
+              <.detail_row label="Expected Coverage">
+                {@source.procurement_source.expected_coverage || "Not reviewed"}
+              </.detail_row>
+              <.detail_row label="Launch Prerequisites">
+                {format_list(@source.procurement_source.launch_prerequisites)}
+              </.detail_row>
+              <.detail_row label="Policy Reviewed">
+                {format_datetime(@source.procurement_source.policy_reviewed_at)}
+              </.detail_row>
+              <.detail_row :if={@source.procurement_source.deferred_until} label="Deferred Until">
+                {format_datetime(@source.procurement_source.deferred_until)}
+              </.detail_row>
+              <.detail_row :if={@source.procurement_source.defer_reason} label="Deferral Reason">
+                {@source.procurement_source.defer_reason}
+              </.detail_row>
+              <.detail_row :if={@source.procurement_source.last_health_action} label="Health Action">
+                {format_atom(@source.procurement_source.last_health_action)}
+              </.detail_row>
+              <.detail_row
+                :if={@source.procurement_source.health_action_reason}
+                label="Health Rationale"
+              >
+                {@source.procurement_source.health_action_reason}
+              </.detail_row>
+              <.detail_row :if={latest_retrieval(@source.procurement_source)} label="Latest Retrieval">
+                {format_retrieval(latest_retrieval(@source.procurement_source))}
+              </.detail_row>
+              <.detail_row :if={provider_budget(@source.procurement_source)} label="Provider Budget">
+                {format_provider_budget(provider_budget(@source.procurement_source))}
+              </.detail_row>
               <.detail_row :if={@source.procurement_source.notes} label="Notes">
                 {@source.procurement_source.notes}
               </.detail_row>
@@ -206,6 +238,106 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
             <div :if={!@source.procurement_source} class="px-4 py-5 text-sm text-base-content/60">
               This acquisition source is not linked to a procurement source.
             </div>
+          </.section>
+
+          <.section
+            :if={@source.procurement_source && @portfolio_form}
+            title="Governance Review"
+            body_class="px-4 py-5"
+          >
+            <.form
+              for={@portfolio_form}
+              id="source-portfolio-form"
+              phx-change="validate_portfolio"
+              phx-submit="save_portfolio"
+              class="grid gap-4 sm:grid-cols-2"
+            >
+              <.input
+                field={@portfolio_form[:portfolio_decision]}
+                type="select"
+                label="Portfolio decision"
+                options={[{"Adopt", :adopt}, {"Defer", :defer}, {"Reject", :reject}]}
+              />
+              <.input
+                field={@portfolio_form[:compliance_decision]}
+                type="select"
+                label="Compliance decision"
+                options={[{"Adopt", :adopt}, {"Defer", :defer}, {"Reject", :reject}]}
+              />
+              <div class="sm:col-span-2">
+                <.input
+                  field={@portfolio_form[:expected_coverage]}
+                  type="textarea"
+                  label="Expected coverage"
+                />
+              </div>
+              <div class="sm:col-span-2">
+                <.input
+                  field={@portfolio_form[:adapter_owner]}
+                  type="text"
+                  label="Adapter owner"
+                />
+              </div>
+              <div class="sm:col-span-2">
+                <.input
+                  field={@portfolio_form[:allowed_retrieval_paths]}
+                  type="select"
+                  multiple
+                  label="Allowed retrieval paths"
+                  options={retrieval_path_options()}
+                />
+              </div>
+              <.input field={@portfolio_form[:terms_url]} type="url" label="Terms URL" />
+              <.input
+                field={@portfolio_form[:rate_limit_per_day]}
+                type="number"
+                min="0"
+                label="Daily request limit"
+              />
+              <.input
+                field={@portfolio_form[:retention_days]}
+                type="number"
+                min="0"
+                label="Retention days"
+              />
+              <.input
+                field={@portfolio_form[:authentication_policy]}
+                type="select"
+                label="Authentication policy"
+                options={[
+                  {"Not reviewed", ""},
+                  {"Public", :public},
+                  {"API key", :api_key},
+                  {"Credentialed session", :credentialed_session},
+                  {"None", :none}
+                ]}
+              />
+              <div class="sm:col-span-2">
+                <.input
+                  field={@portfolio_form[:robots_policy]}
+                  type="select"
+                  label="Robots and automated-access policy"
+                  options={[
+                    {"Not reviewed", ""},
+                    {"Respect published policy", :respect},
+                    {"Not applicable", :not_applicable},
+                    {"Operator review required", :operator_review}
+                  ]}
+                />
+              </div>
+              <div class="sm:col-span-2">
+                <.input
+                  field={@portfolio_form[:governance_notes]}
+                  type="textarea"
+                  label="Governance notes"
+                />
+              </div>
+              <div class="flex justify-end sm:col-span-2">
+                <button class="btn btn-primary" type="submit" phx-disable-with="Saving...">
+                  Save Governance Review
+                </button>
+              </div>
+            </.form>
           </.section>
         </div>
 
@@ -341,6 +473,24 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
     {:noreply, clear_credential_form(socket)}
   end
 
+  def handle_event("validate_portfolio", %{"form" => params}, socket) do
+    form = AshPhoenix.Form.validate(socket.assigns.portfolio_form.source, params)
+    {:noreply, assign(socket, :portfolio_form, to_form(form))}
+  end
+
+  def handle_event("save_portfolio", %{"form" => params}, socket) do
+    case AshPhoenix.Form.submit(socket.assigns.portfolio_form.source, params: params) do
+      {:ok, _source} ->
+        {:noreply,
+         socket
+         |> reload_source()
+         |> put_flash(:info, "Source governance review saved.")}
+
+      {:error, form} ->
+        {:noreply, assign(socket, :portfolio_form, to_form(form))}
+    end
+  end
+
   @impl true
   def handle_event("validate_credential", %{"form" => params}, socket) do
     form = AshPhoenix.Form.validate(socket.assigns.credential_form.source, params)
@@ -416,6 +566,14 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
 
   @impl true
   def handle_info(%{topic: "procurement_source_browser_session:" <> _event}, socket) do
+    {:noreply, reload_source(socket)}
+  end
+
+  def handle_info(%{topic: "procurement_source:" <> _event}, socket) do
+    {:noreply, reload_source(socket)}
+  end
+
+  def handle_info(%{topic: "procurement_source_retrieval_run:" <> _event}, socket) do
     {:noreply, reload_source(socket)}
   end
 
@@ -523,7 +681,35 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
   end
 
   defp load_source(id, actor) do
-    Acquisition.get_source(id, actor: actor, load: @source_load)
+    Acquisition.get_source_workspace(id, actor: actor)
+  end
+
+  defp latest_retrieval(%{metadata: metadata}) when is_map(metadata),
+    do: metadata["last_retrieval"]
+
+  defp latest_retrieval(_source), do: nil
+
+  defp provider_budget(%{provider_budget_state: budget}) when is_map(budget), do: budget
+  defp provider_budget(_source), do: nil
+
+  defp format_paths(paths), do: paths |> List.wrap() |> Enum.map_join(" → ", &format_atom/1)
+
+  defp format_list([]), do: "None"
+  defp format_list(values), do: Enum.join(values, ", ")
+
+  defp format_retrieval(retrieval) do
+    path = retrieval["retrieval_path"] || "no path"
+    status = retrieval["status"] || "unknown"
+    "#{status} via #{path} · #{retrieval["duration_ms"] || 0} ms"
+  end
+
+  defp format_provider_budget(%{"error" => _error}), do: "Unavailable"
+
+  defp format_provider_budget(budget) do
+    remaining = budget["remaining_requests"] || 0
+    limit = budget["request_limit"] || 0
+    reset = budget["resets_at"] || "unknown reset"
+    "#{remaining} of #{limit} requests remain · resets #{reset}"
   end
 
   defp reload_source(socket) do
@@ -533,10 +719,34 @@ defmodule GnomeGardenWeb.Acquisition.SourceLive.Show do
         |> assign(:source, source)
         |> assign(:source_credential, credential_for_source(source))
         |> assign(:browser_session, browser_session_for_source(source))
+        |> assign_portfolio_form(source)
 
       {:error, _error} ->
         socket
     end
+  end
+
+  defp assign_portfolio_form(socket, %{procurement_source: procurement_source})
+       when not is_nil(procurement_source) do
+    form =
+      AshPhoenix.Form.for_update(procurement_source, :review_portfolio,
+        actor: socket.assigns.current_user,
+        domain: Procurement
+      )
+
+    assign(socket, :portfolio_form, to_form(form))
+  end
+
+  defp assign_portfolio_form(socket, _source), do: assign(socket, :portfolio_form, nil)
+
+  defp retrieval_path_options do
+    [
+      {"Provider API", :provider_api},
+      {"HTTP", :http},
+      {"Browser", :browser},
+      {"Playwright", :playwright},
+      {"Browserless", :browserless}
+    ]
   end
 
   defp assign_credential_form(socket, source) do

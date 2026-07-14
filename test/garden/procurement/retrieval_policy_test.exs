@@ -8,6 +8,8 @@ defmodule GnomeGarden.Procurement.RetrievalPolicyTest do
   test "falls through failed stages and persists the selected normalized path" do
     source = source_fixture()
     test_pid = self()
+    handler = attach_retrieval_telemetry()
+    on_exit(fn -> :telemetry.detach(handler) end)
 
     assert {:ok, result} =
              RetrievalPolicy.run(source, [
@@ -42,7 +44,7 @@ defmodule GnomeGarden.Procurement.RetrievalPolicyTest do
     assert run.status == :completed
     assert run.retrieval_path == :http
     assert Enum.map(run.attempts, & &1["path"]) == ["provider_api", "http"]
-    assert run.diagnostics == %{"rows" => 4}
+    assert run.diagnostics == %{"rows" => 4, "saved" => 2}
 
     assert {:ok, refreshed_source} = Procurement.get_procurement_source(source.id)
     assert refreshed_source.metadata["last_retrieval"]["run_id"] == run.id
@@ -59,6 +61,18 @@ defmodule GnomeGarden.Procurement.RetrievalPolicyTest do
     refute acquisition_source.last_retrieval_blocked
     assert acquisition_source.last_retrieval_path == :http
     assert acquisition_source.last_retrieval_status == :completed
+
+    assert_receive {[:gnome_garden, :acquisition, :retrieval, :stage],
+                    %{duration_ms: _, result_count: 0, count: 1},
+                    %{path: :provider_api, outcome: :failed, reason_class: :other}}
+
+    assert_receive {[:gnome_garden, :acquisition, :retrieval, :stage],
+                    %{duration_ms: _, result_count: 2, count: 1},
+                    %{path: :http, outcome: :completed, reason_class: :none}}
+
+    assert_receive {[:gnome_garden, :acquisition, :retrieval, :terminal],
+                    %{attempt_count: 2, count: 1},
+                    %{path: :http, outcome: :completed, reason_class: :none}}
   end
 
   test "an explicitly blocked stage halts later fallbacks and records source health" do
@@ -127,5 +141,27 @@ defmodule GnomeGarden.Procurement.RetrievalPolicyTest do
       status: :approved,
       added_by: :manual
     })
+  end
+
+  defp attach_retrieval_telemetry do
+    handler = "retrieval-policy-#{System.unique_integer([:positive])}"
+
+    :ok =
+      :telemetry.attach_many(
+        handler,
+        [
+          [:gnome_garden, :acquisition, :retrieval, :stage],
+          [:gnome_garden, :acquisition, :retrieval, :terminal]
+        ],
+        fn event, measurements, metadata, pid ->
+          bounded_metadata =
+            Map.take(metadata, [:source_type, :path, :outcome, :reason_class])
+
+          send(pid, {event, measurements, bounded_metadata})
+        end,
+        self()
+      )
+
+    handler
   end
 end

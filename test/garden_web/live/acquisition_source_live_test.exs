@@ -396,6 +396,68 @@ defmodule GnomeGardenWeb.AcquisitionSourceLiveTest do
     assert html =~ "Portal rejected these credentials."
   end
 
+  test "source show renders and refreshes governed retrieval state", %{conn: conn} do
+    {:ok, procurement_source} =
+      Procurement.create_procurement_source(%{
+        name: "Governed SAM Console",
+        url: "https://sam.gov/opportunities/governed-console",
+        source_type: :sam_gov,
+        region: :national,
+        priority: :high,
+        status: :approved
+      })
+
+    {:ok, procurement_source} =
+      Procurement.review_procurement_source_portfolio(procurement_source, %{
+        portfolio_decision: :adopt,
+        compliance_decision: :adopt,
+        expected_coverage: "Active federal opportunities",
+        adapter_owner: procurement_source.adapter_owner,
+        allowed_retrieval_paths: [:provider_api],
+        launch_prerequisites: ["verified SAM.gov API key"],
+        rate_limit_per_day: 10
+      })
+
+    assert {:ok, _result} =
+             GnomeGarden.Procurement.RetrievalPolicy.run(procurement_source, [
+               %{
+                 path: :provider_api,
+                 run: fn -> {:ok, %{diagnostics: %{"rows" => 3}}} end
+               }
+             ])
+
+    {:ok, acquisition_source} =
+      Acquisition.get_source_by_external_ref("procurement_source:#{procurement_source.id}")
+
+    {:ok, view, html} = live(conn, ~p"/acquisition/sources/#{acquisition_source.id}")
+
+    assert html =~ "Portfolio Decision"
+    assert html =~ "Compliance Decision"
+    assert html =~ "Provider Api"
+    assert html =~ "completed via provider_api"
+    assert html =~ "10 of 10 requests remain"
+
+    html =
+      render_submit(view, "save_portfolio", %{
+        "form" => %{"governance_notes" => "Reviewed from the operator console"}
+      })
+
+    assert html =~ "Source governance review saved."
+
+    assert {:ok, reviewed_source} = Procurement.get_procurement_source(procurement_source.id)
+    assert reviewed_source.governance_notes == "Reviewed from the operator console"
+
+    assert {:ok, _deferred} =
+             Procurement.defer_procurement_source_scan(procurement_source, %{
+               deferred_until: DateTime.add(DateTime.utc_now(), 900, :second),
+               defer_reason: "Provider reset window"
+             })
+
+    html = render(view)
+    assert html =~ "Deferred Until"
+    assert html =~ "Provider reset window"
+  end
+
   test "source show refreshes BidNet browser sessions with stored credentials", %{conn: conn} do
     original_runner = Application.get_env(:gnome_garden, :bidnet_session_runner)
     original_pid = Application.get_env(:gnome_garden, :bidnet_session_test_pid)

@@ -29,7 +29,8 @@ defmodule GnomeGardenWeb.AcquisitionDashboardLiveTest do
       |> render_click()
 
     assert html =~ "Seven Day Food Plant Automation Sweep"
-    assert html =~ "SAM.gov Contract Opportunities"
+    refute html =~ "City of Anaheim OpenGov"
+    refute html =~ "SAM.gov Contract Opportunities"
   end
 
   test "dashboard links to reviewable findings", %{conn: conn} do

@@ -1,5 +1,5 @@
 defmodule GnomeGarden.Agents.Procurement.PublicSourceResolverTest do
-  use ExUnit.Case, async: true
+  use GnomeGarden.DataCase, async: true
 
   alias GnomeGarden.Agents.Procurement.PublicSourceResolver
 

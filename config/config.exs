@@ -129,6 +129,7 @@ config :gnome_garden, Oban,
        {"43 4 * * *", GnomeGarden.Acquisition.DiscoveryLearningWorker},
        {"*/5 * * * *", GnomeGarden.Acquisition.ProviderReservationReaperWorker},
        {"*/5 * * * *", GnomeGarden.Acquisition.SloEvaluatorWorker},
+       {"13 5 * * *", GnomeGarden.Procurement.SourcePortfolioWorker},
        {"0 6 * * *", GnomeGarden.Finance.InvoiceSchedulerWorker}
      ],
      timezone: "Etc/UTC"}
