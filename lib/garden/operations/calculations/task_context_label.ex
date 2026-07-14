@@ -23,7 +23,9 @@ defmodule GnomeGarden.Operations.Calculations.TaskContextLabel do
       finding: [:title],
       signal: [:title],
       organization: [:name],
-      person: [:first_name, :last_name]
+      person: [:first_name, :last_name],
+      company_growth_initiative: [:title],
+      company_qualification: [:name]
     ]
   end
 
@@ -34,6 +36,8 @@ defmodule GnomeGarden.Operations.Calculations.TaskContextLabel do
 
   defp label(task) do
     task.origin_label ||
+      related(task.company_qualification, :name) ||
+      related(task.company_growth_initiative, :title) ||
       related(task.bid, :title) ||
       related(task.pursuit, :name) ||
       related(task.work_item, :title) ||

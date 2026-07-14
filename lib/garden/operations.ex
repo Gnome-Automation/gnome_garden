@@ -180,6 +180,14 @@ defmodule GnomeGarden.Operations do
         action: :by_procurement_source,
         args: [:procurement_source_id]
 
+      define :list_tasks_by_growth_initiative,
+        action: :by_growth_initiative,
+        args: [:company_growth_initiative_id]
+
+      define :list_tasks_by_company_qualification,
+        action: :by_company_qualification,
+        args: [:company_qualification_id]
+
       define :get_my_tasks_workspace,
         action: :my_tasks_workspace,
         args: [:owner_team_member_id]
@@ -239,6 +247,10 @@ defmodule GnomeGarden.Operations do
         args: [:organization_id]
 
       define :list_playbook_runs_for_signal, action: :for_signal, args: [:signal_id]
+
+      define :list_playbook_runs_for_growth_initiative,
+        action: :for_growth_initiative,
+        args: [:company_growth_initiative_id]
     end
 
     resource GnomeGarden.Operations.MemoryBlock do

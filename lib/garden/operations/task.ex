@@ -38,7 +38,9 @@ defmodule GnomeGarden.Operations.Task do
     :work_item_id,
     :work_order_id,
     :bid_id,
-    :procurement_source_id
+    :procurement_source_id,
+    :company_growth_initiative_id,
+    :company_qualification_id
   ]
 
   admin do
@@ -82,6 +84,8 @@ defmodule GnomeGarden.Operations.Task do
       reference :playbook_run, on_delete: :nilify
       reference :playbook_step, on_delete: :nilify
       reference :procurement_source, on_delete: :nilify
+      reference :company_growth_initiative, on_delete: :nilify
+      reference :company_qualification, on_delete: :nilify
     end
   end
 
@@ -264,6 +268,18 @@ defmodule GnomeGarden.Operations.Task do
       prepare build(sort: [due_at: :asc, inserted_at: :desc])
     end
 
+    read :by_growth_initiative do
+      argument :company_growth_initiative_id, :uuid, allow_nil?: false
+      filter expr(company_growth_initiative_id == ^arg(:company_growth_initiative_id))
+      prepare build(sort: [due_at: :asc, inserted_at: :desc])
+    end
+
+    read :by_company_qualification do
+      argument :company_qualification_id, :uuid, allow_nil?: false
+      filter expr(company_qualification_id == ^arg(:company_qualification_id))
+      prepare build(sort: [due_at: :asc, inserted_at: :desc])
+    end
+
     action :my_tasks_workspace, :map do
       argument :owner_team_member_id, :uuid, allow_nil?: false
       run GnomeGarden.Operations.Actions.MyTasksWorkspace
@@ -390,6 +406,14 @@ defmodule GnomeGarden.Operations.Task do
     publish_all :create, ["procurement_source", :procurement_source_id]
     publish_all :update, ["procurement_source", :procurement_source_id]
     publish_all :destroy, ["procurement_source", :procurement_source_id]
+
+    publish_all :create, ["company_growth_initiative", :company_growth_initiative_id]
+    publish_all :update, ["company_growth_initiative", :company_growth_initiative_id]
+    publish_all :destroy, ["company_growth_initiative", :company_growth_initiative_id]
+
+    publish_all :create, ["company_qualification", :company_qualification_id]
+    publish_all :update, ["company_qualification", :company_qualification_id]
+    publish_all :destroy, ["company_qualification", :company_qualification_id]
   end
 
   attributes do
@@ -556,6 +580,14 @@ defmodule GnomeGarden.Operations.Task do
     end
 
     belongs_to :procurement_source, GnomeGarden.Procurement.ProcurementSource do
+      public? true
+    end
+
+    belongs_to :company_growth_initiative, GnomeGarden.Company.GrowthInitiative do
+      public? true
+    end
+
+    belongs_to :company_qualification, GnomeGarden.Company.Qualification do
       public? true
     end
 

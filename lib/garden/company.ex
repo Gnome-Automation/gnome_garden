@@ -101,6 +101,55 @@ defmodule GnomeGarden.Company do
       define :delete_company_compliance_obligation, action: :destroy
     end
 
+    resource GnomeGarden.Company.GrowthInitiative do
+      define :list_growth_initiatives, action: :read
+      define :list_growth_initiative_workspace, action: :workspace
+
+      define :list_growth_initiatives_for_profile,
+        action: :for_profile,
+        args: [:company_profile_id]
+
+      define :get_growth_initiative, action: :read, get_by: [:id]
+      define :create_growth_initiative, action: :create
+      define :update_growth_initiative, action: :update
+      define :evaluate_growth_initiative, action: :evaluate
+      define :plan_growth_initiative, action: :plan
+      define :start_growth_initiative, action: :start
+      define :hold_growth_initiative, action: :hold
+      define :resume_growth_initiative, action: :resume
+      define :achieve_growth_initiative, action: :achieve
+      define :decline_growth_initiative, action: :decline
+      define :reconsider_growth_initiative, action: :reconsider
+      define :delete_growth_initiative_idea, action: :destroy_idea
+    end
+
+    resource GnomeGarden.Company.GrowthInitiativeEvidence do
+      define :create_growth_initiative_evidence, action: :create
+      define :delete_growth_initiative_evidence, action: :destroy
+
+      define :list_growth_initiative_evidence,
+        action: :for_initiative,
+        args: [:growth_initiative_id]
+    end
+
+    resource GnomeGarden.Company.Qualification do
+      define :list_company_qualifications, action: :read
+      define :list_company_qualification_registry, action: :registry
+      define :list_active_company_qualifications, action: :active
+
+      define :list_company_qualifications_expiring_within,
+        action: :expiring_within,
+        args: [:days]
+
+      define :get_company_qualification, action: :read, get_by: [:id]
+      define :create_company_qualification, action: :create
+      define :update_company_qualification, action: :update
+      define :activate_company_qualification, action: :activate
+      define :suspend_company_qualification, action: :suspend
+      define :expire_company_qualification, action: :expire
+      define :retire_company_qualification, action: :retire
+    end
+
     resource GnomeGarden.Company.SourceReviewItem do
       define :list_company_source_review_items, action: :read
 

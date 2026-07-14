@@ -137,6 +137,13 @@ defmodule GnomeGardenWeb.Router do
       live "/company/documents", Company.DocumentLive.Index, :index
       live "/company/compliance", Company.ComplianceLive.Index, :index
       live "/company/sources", Company.SourceReviewLive.Index, :index
+      live "/company/growth", Company.GrowthLive.Index, :index
+      live "/company/growth/new", Company.GrowthLive.Form, :new
+      live "/company/growth/:id", Company.GrowthLive.Show, :show
+      live "/company/growth/:id/edit", Company.GrowthLive.Form, :edit
+      live "/company/qualifications", Company.QualificationLive.Index, :index
+      live "/company/qualifications/new", Company.QualificationLive.Form, :new
+      live "/company/qualifications/:id/edit", Company.QualificationLive.Form, :edit
       live "/company/vendor-packet", Commercial.VendorPacketLive, :index
       live "/commercial/signals", Commercial.SignalLive.Index, :index
       live "/commercial/leads/new", Commercial.LeadLive.New, :new

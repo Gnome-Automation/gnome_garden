@@ -26,6 +26,8 @@ defmodule GnomeGardenWeb.Operations.TaskLive.Form do
     work_order_id
     bid_id
     procurement_source_id
+    company_growth_initiative_id
+    company_qualification_id
   ]
 
   @impl true
@@ -167,6 +169,8 @@ defmodule GnomeGardenWeb.Operations.TaskLive.Form do
         <.input field={@form[:work_order_id]} type="hidden" />
         <.input field={@form[:bid_id]} type="hidden" />
         <.input field={@form[:procurement_source_id]} type="hidden" />
+        <.input field={@form[:company_growth_initiative_id]} type="hidden" />
+        <.input field={@form[:company_qualification_id]} type="hidden" />
       </.form>
     </.page>
     """

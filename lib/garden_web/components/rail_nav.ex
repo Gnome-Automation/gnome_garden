@@ -102,6 +102,26 @@ defmodule GnomeGardenWeb.Components.RailNav do
       hot: false,
       match: ["/company/sources"]
     },
+    %{
+      id: "company-growth",
+      section: "Company",
+      icon: "hero-light-bulb",
+      label: "Growth",
+      path: "/company/growth",
+      badge: 0,
+      hot: false,
+      match: ["/company/growth"]
+    },
+    %{
+      id: "company-qualifications",
+      section: "Company",
+      icon: "hero-shield-check",
+      label: "Qualifications",
+      path: "/company/qualifications",
+      badge: 0,
+      hot: false,
+      match: ["/company/qualifications"]
+    },
 
     # Acquisition
     %{
