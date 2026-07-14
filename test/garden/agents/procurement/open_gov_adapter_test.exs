@@ -57,7 +57,7 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapterTest do
                http_get: fn _url, _opts -> {:ok, %{status: 200, body: body}} end
              })
 
-    assert bid.external_id == 276_839
+    assert bid.external_id == "276839"
 
     assert bid.url ==
              "https://procurement.opengov.com/portal/embed/tustin/projects/276839"

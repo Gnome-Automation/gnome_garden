@@ -231,7 +231,7 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapter do
       nil
     else
       %{
-        external_id: project_id,
+        external_id: normalize_external_id(project_id),
         title: title,
         description: value(project, "description") || value(project, "summary") || "",
         agency: source.name,
@@ -288,6 +288,10 @@ defmodule GnomeGarden.Agents.Procurement.OpenGovAdapter do
   end
 
   defp parse_datetime(_value), do: nil
+
+  defp normalize_external_id(nil), do: nil
+  defp normalize_external_id(value) when is_binary(value), do: value
+  defp normalize_external_id(value), do: to_string(value)
 
   defp absolutize(url, base) do
     base |> URI.merge(url) |> URI.to_string()
