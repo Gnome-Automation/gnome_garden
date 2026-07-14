@@ -30,3 +30,7 @@ env -u PHX_SERVER -u PORT MIX_ENV=test mix test \
 
 When a provider changes shape, add a new versioned fixture and provenance note before changing the
 parser. Do not silently rewrite an existing fixture version after downstream adapters depend on it.
+
+Optional provider evaluations that are not production contracts stay outside v1. The deferred Exa
+Websets spike uses `test/fixtures/exa_websets/v0/` and a test-only Req client so it can validate the
+documented async/criteria/monitor/event shapes without advertising a runtime integration.

@@ -1,0 +1,15 @@
+{
+  "captured_at": "2026-07-14",
+  "api_version": "websets/v0",
+  "source": "synthetic payloads derived from official Exa Websets API documentation",
+  "official_docs": [
+    "https://exa.ai/docs/websets/api/websets/preview-a-webset",
+    "https://exa.ai/docs/websets/api/websets/items/list-all-items-for-a-webset",
+    "https://exa.ai/docs/websets/api/monitors/create-a-monitor",
+    "https://exa.ai/docs/websets/api/webhooks/create-a-webhook",
+    "https://exa.ai/docs/websets/api/webhooks/verifying-signatures"
+  ],
+  "redacted": true,
+  "live_network_required": false,
+  "secrets_required": false
+}

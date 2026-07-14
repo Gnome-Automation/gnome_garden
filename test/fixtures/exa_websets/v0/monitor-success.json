@@ -1,0 +1,24 @@
+{
+  "id": "monitor_garden_shadow",
+  "object": "monitor",
+  "status": "enabled",
+  "websetId": "webset_garden_shadow",
+  "cadence": {"cron": "0 9 * * 1", "timezone": "America/Los_Angeles"},
+  "behavior": {
+    "type": "search",
+    "config": {
+      "count": 10,
+      "query": "Southern California manufacturers with recent automation expansion signals",
+      "criteria": [
+        {"description": "Company operates a manufacturing facility in Southern California"}
+      ],
+      "entity": {"type": "company"},
+      "behavior": "append"
+    }
+  },
+  "lastRun": null,
+  "nextRunAt": "2026-07-20T16:00:00Z",
+  "metadata": {"program_source_id": "00000000-0000-4000-8000-000000000001"},
+  "createdAt": "2026-07-14T00:00:00Z",
+  "updatedAt": "2026-07-14T00:00:00Z"
+}
