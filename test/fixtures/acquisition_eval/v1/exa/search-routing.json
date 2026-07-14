@@ -1,0 +1,42 @@
+{
+  "costDollars": {"total": 0.021},
+  "resolvedSearchType": "neural",
+  "results": [
+    {
+      "title": "Duplicate Manufacturer",
+      "url": "https://duplicate.example.test/about",
+      "publishedDate": "2026-04-04T00:00:00.000Z",
+      "score": 0.99
+    },
+    {
+      "title": "Existing Controls Bid",
+      "url": "https://existing-bid.example.test/opportunities/42",
+      "publishedDate": "2026-05-05T00:00:00.000Z",
+      "score": 0.98
+    },
+    {
+      "title": "Configured Public Source Listing",
+      "url": "https://configured-source.example.test/listing/9",
+      "publishedDate": "2026-06-06T00:00:00.000Z",
+      "score": 0.97
+    },
+    {
+      "title": "SCADA Upgrade Agenda",
+      "url": "https://agenda.example.gov/meetings/scada-upgrade",
+      "publishedDate": "2026-07-01T00:00:00.000Z",
+      "score": 0.72
+    },
+    {
+      "title": "Known Manufacturer Expansion",
+      "url": "https://known-careers.example.test/expansion",
+      "publishedDate": "2026-07-02T00:00:00.000Z",
+      "score": 0.61
+    },
+    {
+      "title": "New Manufacturer",
+      "url": "https://new-manufacturer.example.test",
+      "publishedDate": "2026-07-03T00:00:00.000Z",
+      "score": 0.55
+    }
+  ]
+}

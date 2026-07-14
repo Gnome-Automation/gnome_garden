@@ -1,0 +1,105 @@
+{
+  "version": "acquisition-evaluation/v1",
+  "provenance": {
+    "captured_at": "2026-07-14",
+    "source": "redacted reconstructions of recurring acquisition review outcomes plus frozen provider-contract fixtures",
+    "historical_outcomes_represented": true,
+    "synthetic_identifiers": true,
+    "redacted": true,
+    "live_network_required": false,
+    "browser_required": false,
+    "secrets_required": false
+  },
+  "provider_contract_version": "provider-contract/v1",
+  "query": "Southern California industrial controls companies",
+  "exa_fixture": "exa/search-routing.json",
+  "setup": {
+    "organizations": [
+      {
+        "name": "Known Careers Manufacturer",
+        "website": "https://known-careers.example.test"
+      },
+      {
+        "name": "Duplicate Manufacturer",
+        "website": "https://duplicate.example.test"
+      }
+    ],
+    "procurement_sources": [
+      {
+        "name": "Configured Public Source",
+        "url": "https://configured-source.example.test",
+        "source_type": "custom"
+      }
+    ],
+    "bids": [
+      {
+        "title": "Existing Controls Bid",
+        "url": "https://existing-bid.example.test/opportunities/42"
+      }
+    ]
+  },
+  "candidate_expectations": [
+    {
+      "url": "https://new-manufacturer.example.test",
+      "historical_outcome": "promoted",
+      "candidate_type": "company",
+      "dedupe_context": "new",
+      "route": "promote",
+      "suppressed": false,
+      "rank": 0
+    },
+    {
+      "url": "https://known-careers.example.test/expansion",
+      "historical_outcome": "accepted",
+      "candidate_type": "signal",
+      "dedupe_context": "known_organization_new_signal",
+      "route": "promote",
+      "suppressed": false,
+      "rank": 1
+    },
+    {
+      "url": "https://agenda.example.gov/meetings/scada-upgrade",
+      "historical_outcome": "rejected",
+      "candidate_type": "signal",
+      "dedupe_context": "known_bid_source",
+      "route": "needs_enrichment",
+      "suppressed": false,
+      "rank": 2
+    },
+    {
+      "url": "https://existing-bid.example.test/opportunities/42",
+      "historical_outcome": "rejected",
+      "candidate_type": "company",
+      "dedupe_context": "existing_bid_related",
+      "route": "skip",
+      "suppressed": true,
+      "rank": 3
+    },
+    {
+      "url": "https://configured-source.example.test/listing/9",
+      "historical_outcome": "suppressed",
+      "candidate_type": "company",
+      "dedupe_context": "known_procurement_source",
+      "route": "skip",
+      "suppressed": true,
+      "rank": 4
+    },
+    {
+      "url": "https://duplicate.example.test/about",
+      "historical_outcome": "duplicate",
+      "candidate_type": "company",
+      "dedupe_context": "duplicate_existing_lead",
+      "route": "skip",
+      "suppressed": true,
+      "rank": 5
+    }
+  ],
+  "provider_failure_cases": [
+    {"provider": "exa", "operation": "search", "scenario": "throttled"},
+    {"provider": "exa", "operation": "contents", "scenario": "timeout"},
+    {"provider": "opengov", "operation": "projects", "scenario": "schema_drift"},
+    {"provider": "bidnet", "operation": "listings", "scenario": "auth"},
+    {"provider": "jido", "operation": "web_fetch", "scenario": "waf"},
+    {"provider": "playwright", "operation": "provider_action", "scenario": "malformed"}
+  ]
+}
