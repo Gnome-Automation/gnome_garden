@@ -30,7 +30,7 @@ defmodule GnomeGarden.Acquisition.Actions.BuildBaseline do
     execution_profile = DiscoveryPipeline.execution_profile()
 
     %{
-      schema_version: 1,
+      schema_version: 2,
       generated_at: DateTime.utc_now() |> DateTime.truncate(:second),
       maturity: %{
         procurement: %{
@@ -45,7 +45,6 @@ defmodule GnomeGarden.Acquisition.Actions.BuildBaseline do
           execution: execution_profile,
           program_count: length(discovery_programs),
           programs_with_runs: Enum.count(discovery_programs, &present?(&1.last_run_at)),
-          programs_with_seed_candidates: Enum.count(discovery_programs, &seed_candidates?/1),
           finding_count: length(discovery_findings),
           scheduled_live_search_run_count:
             Enum.count(preview_runs, &present?(&1.discovery_program_id))
@@ -141,13 +140,6 @@ defmodule GnomeGarden.Acquisition.Actions.BuildBaseline do
   defp provider_type(%{procurement_source: %Ash.NotLoaded{}}), do: nil
   defp provider_type(%{procurement_source: nil}), do: nil
   defp provider_type(%{procurement_source: source}), do: source.source_type
-
-  defp seed_candidates?(program) do
-    program.metadata
-    |> metadata_value("seed_candidates")
-    |> List.wrap()
-    |> Enum.any?()
-  end
 
   defp metadata_value(metadata, key) when is_map(metadata) do
     Map.get(metadata, key) || existing_atom_value(metadata, key)

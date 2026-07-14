@@ -26,11 +26,10 @@ defmodule GnomeGarden.Acquisition.BaselineTest do
 
     {:ok, program} =
       Acquisition.create_program(%{
-        name: "Seed-only Discovery Baseline",
+        name: "Discovery Baseline",
         external_ref: "baseline-program-#{System.unique_integer([:positive])}",
         program_family: :discovery,
-        program_type: :discovery_run,
-        metadata: %{"seed_candidates" => [%{"company_name" => "Seed Co"}]}
+        program_type: :discovery_run
       })
 
     {:ok, finding} =
@@ -65,7 +64,7 @@ defmodule GnomeGarden.Acquisition.BaselineTest do
 
     assert {:ok, report} = Acquisition.build_baseline()
 
-    assert report.schema_version == 1
+    assert report.schema_version == 2
     assert report.maturity.procurement.execution_mode == :live_source_scanning
     assert report.maturity.procurement.source_count == 1
     assert report.maturity.procurement.sources_with_runs == 1
@@ -75,7 +74,7 @@ defmodule GnomeGarden.Acquisition.BaselineTest do
     assert report.maturity.commercial_discovery.execution.mode == :live_exa_verified
     assert report.maturity.commercial_discovery.execution.finding_admission? == true
     assert report.maturity.commercial_discovery.execution.preview_only? == false
-    assert report.maturity.commercial_discovery.programs_with_seed_candidates == 1
+    refute Map.has_key?(report.maturity.commercial_discovery, :programs_with_seed_candidates)
     assert report.maturity.commercial_discovery.scheduled_live_search_run_count == 0
 
     assert report.sources.by_health.selector_failed == 1
