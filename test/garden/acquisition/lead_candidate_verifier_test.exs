@@ -79,6 +79,48 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifierTest do
     assert reasons[duplicate_domain] == :duplicate_context
   end
 
+  test "verifies candidates when Exa omits its optional relevance score" do
+    program = program("Optional Search Score")
+    domain = unique_domain("optional-score")
+
+    preview_run =
+      preview_run(program, [
+        candidate(domain, metadata: %{"related" => []})
+      ])
+
+    stub_contents(fn conn -> contents_response(conn, domain) end)
+
+    assert {:ok, result} = Acquisition.verify_lead_preview_run(preview_run.id)
+    assert result.verified == 1
+    assert result.admitted == 1
+    assert result.ineligible == 0
+
+    assert {:ok, [candidate]} = Acquisition.list_lead_preview_candidates_for_run(preview_run.id)
+    assert {:ok, verification} = Acquisition.get_lead_candidate_verification(candidate.id)
+    assert is_nil(verification.search_score)
+    assert verification.verification_score == 50
+  end
+
+  test "still rejects candidates below the configured search-score floor" do
+    program = program("Low Search Score")
+    domain = unique_domain("low-score")
+
+    preview_run =
+      preview_run(program, [
+        candidate(domain, metadata: %{"related" => [], "exa_score" => 0.05})
+      ])
+
+    Req.Test.stub(Exa, fn _conn -> flunk("below-score candidates must not call Exa Contents") end)
+
+    assert {:ok, result} = Acquisition.verify_lead_preview_run(preview_run.id)
+    assert result.verified == 0
+    assert result.ineligible == 1
+
+    assert {:ok, [candidate]} = Acquisition.list_lead_preview_candidates_for_run(preview_run.id)
+    assert {:ok, verification} = Acquisition.get_lead_candidate_verification(candidate.id)
+    assert verification.reason == :below_search_score
+  end
+
   test "enrichment policy none skips Exa Contents and records an explicit reason" do
     program = program("No Enrichment")
     domain = unique_domain("no-enrichment")

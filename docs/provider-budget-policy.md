@@ -83,7 +83,10 @@ daily policy is the aggregate guard across programs and concurrent workers.
 ## Exa Candidate Verification
 
 Scheduled candidate verification reserves the `{"exa", "contents"}` profile
-only after route, suppression, dedupe, identity, and search-score gates pass.
+only after route, suppression, dedupe, and identity gates pass. When Exa
+returns a relevance score, the configured search-score floor is also enforced;
+because that score is optional for some Exa result shapes, a missing score is
+treated as unknown and the paid Contents evidence gate remains mandatory.
 Successful Contents responses are cached on the reservation for lossless Oban
 replay. Verification stores the actual metering cost and cited first-party
 evidence before the separate Finding-admission transaction runs.

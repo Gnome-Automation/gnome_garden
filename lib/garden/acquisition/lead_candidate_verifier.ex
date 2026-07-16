@@ -2,7 +2,8 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
   @moduledoc """
   Verifies persisted Exa candidates and admits only evidenced companies.
 
-  Cheap routing, dedupe, identity, and score gates run before paid enrichment.
+  Cheap routing, dedupe, identity, and available-score gates run before paid
+  enrichment.
   Exa Contents calls use provider reservations and cache their response for
   idempotent Oban retries.
   """
@@ -219,7 +220,10 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
 
     cond do
       is_nil(domain) -> {:ineligible, :invalid_company_identity}
-      is_nil(score) -> {:ineligible, :below_search_score}
+      # Exa's relevance score is optional for some search modes and result
+      # shapes. A missing score is unknown, not evidence that the candidate is
+      # below the configured floor; Contents evidence remains mandatory.
+      is_nil(score) -> :eligible
       Decimal.compare(score, config.min_search_score) == :lt -> {:ineligible, :below_search_score}
       true -> :eligible
     end
@@ -374,7 +378,10 @@ defmodule GnomeGarden.Acquisition.LeadCandidateVerifier do
 
   defp verification_score(candidate, evidence_characters, config) do
     search_points =
-      candidate |> search_score() |> Decimal.to_float() |> Kernel.*(40) |> round() |> min(40)
+      case search_score(candidate) do
+        nil -> 0
+        score -> score |> Decimal.to_float() |> Kernel.*(40) |> round() |> min(40)
+      end
 
     evidence_points =
       min(div(evidence_characters, max(config.min_evidence_characters, 1)) * 10, 40)
