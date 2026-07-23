@@ -94,6 +94,7 @@ if config_env() == :prod do
     auth: :always,
     ssl: ssl,
     tls: tls,
+    tls_options: [verify: :verify_peer, cacertfile: CAStore.file_path()],
     no_mx_lookups: true,
     retries: 2
 
