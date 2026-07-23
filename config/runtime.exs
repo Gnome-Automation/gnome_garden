@@ -85,6 +85,13 @@ if config_env() == :prod do
       _ -> {false, :always}
     end
 
+  tls_options = [
+    verify: :verify_peer,
+    cacertfile: CAStore.file_path(),
+    depth: 10,
+    server_name_indication: String.to_charlist(smtp_host)
+  ]
+
   config :gnome_garden, GnomeGarden.Mailer,
     adapter: Swoosh.Adapters.SMTP,
     relay: smtp_host,
@@ -94,7 +101,8 @@ if config_env() == :prod do
     auth: :always,
     ssl: ssl,
     tls: tls,
-    tls_options: [verify: :verify_peer, cacertfile: CAStore.file_path()],
+    tls_options: tls_options,
+    sockopts: if(ssl, do: tls_options, else: []),
     no_mx_lookups: true,
     retries: 2
 
