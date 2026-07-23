@@ -1,7 +1,13 @@
 import Config
 
 # Load .env file if it exists (for local development)
-if File.exists?(".env") do
+env_readable? =
+  case File.stat(".env") do
+    {:ok, %{type: :regular, access: access}} when access in [:read, :read_write] -> true
+    _ -> false
+  end
+
+if env_readable? do
   Dotenvy.source!(".env")
 end
 
@@ -57,6 +63,41 @@ end
 # deployment secret management; the Nix dev shell loads an untracked root .env.
 if exa_api_key = System.get_env("EXA_API_KEY") do
   config :gnome_garden, :exa, api_key: exa_api_key
+end
+
+if config_env() == :prod do
+  smtp_host = System.fetch_env!("SMTP_HOST")
+  smtp_port = System.fetch_env!("SMTP_PORT") |> String.to_integer()
+  smtp_username = System.fetch_env!("SMTP_USERNAME")
+  smtp_password = System.fetch_env!("SMTP_PASSWORD")
+  smtp_from = System.fetch_env!("SMTP_FROM")
+  smtp_from_name = System.get_env("SMTP_FROM_NAME", "Gnome Garden")
+  smtp_security = System.get_env("SMTP_SECURITY", "starttls")
+  normalized_security = String.replace(String.downcase(smtp_security), ~r/[^a-z]/, "")
+
+  {ssl, tls} =
+    case normalized_security do
+      security when security in ["ssl", "smtps"] -> {true, :never}
+      "tls" when smtp_port == 465 -> {true, :never}
+      "tls" -> {false, :always}
+      "starttls" -> {false, :always}
+      _ when smtp_port == 465 -> {true, :never}
+      _ -> {false, :always}
+    end
+
+  config :gnome_garden, GnomeGarden.Mailer,
+    adapter: Swoosh.Adapters.SMTP,
+    relay: smtp_host,
+    port: smtp_port,
+    username: smtp_username,
+    password: smtp_password,
+    auth: :always,
+    ssl: ssl,
+    tls: tls,
+    no_mx_lookups: true,
+    retries: 2
+
+  config :gnome_garden, :mailer_from, {smtp_from_name, smtp_from}
 end
 
 if config_env() == :prod do

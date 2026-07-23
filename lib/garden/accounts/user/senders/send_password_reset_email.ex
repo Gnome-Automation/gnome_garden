@@ -12,7 +12,13 @@ defmodule GnomeGarden.Accounts.User.Senders.SendPasswordResetEmail do
     reset_url = url(~p"/password-reset/#{token}")
 
     new()
-    |> from({"Gnome Garden", "noreply@gnomeautomation.com"})
+    |> from(
+      Application.get_env(
+        :gnome_garden,
+        :mailer_from,
+        {"Gnome Garden", "noreply@gnomeautomation.com"}
+      )
+    )
     |> to(to_string(user.email))
     |> subject("Reset your Gnome Garden password")
     |> html_body(body(user.email, reset_url))

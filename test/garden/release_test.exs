@@ -65,6 +65,16 @@ defmodule GnomeGarden.ReleaseTest do
            end) =~ "PC: #{pc_email} -> admin, active, PC"
   end
 
+  test "rejects admin identities that are not email addresses" do
+    put_admin_env("pc", "first-valid-password", "bhammoud@example.com", "second-valid-password")
+
+    assert_raise RuntimeError,
+                 ~r/GARDEN_ADMIN_PC_EMAIL must contain a deliverable email address/,
+                 fn ->
+                   Release.bootstrap_admins()
+                 end
+  end
+
   defp put_admin_env(pc_email, pc_password, bhammoud_email, bhammoud_password) do
     System.put_env("GARDEN_ADMIN_PC_EMAIL", pc_email)
     System.put_env("GARDEN_ADMIN_PC_PASSWORD", pc_password)

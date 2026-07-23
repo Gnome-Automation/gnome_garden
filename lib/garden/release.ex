@@ -154,7 +154,7 @@ defmodule GnomeGarden.Release do
   end
 
   defp ensure_admin!(default_display_name, env_prefix) do
-    email = fetch_env!("#{env_prefix}_EMAIL")
+    email = fetch_email!("#{env_prefix}_EMAIL")
     password = fetch_env!("#{env_prefix}_PASSWORD")
     display_name = System.get_env("#{env_prefix}_DISPLAY_NAME", default_display_name)
 
@@ -261,6 +261,16 @@ defmodule GnomeGarden.Release do
     case System.fetch_env(name) do
       {:ok, value} when value != "" -> value
       _ -> raise "Missing required environment variable #{name}"
+    end
+  end
+
+  defp fetch_email!(name) do
+    email = fetch_env!(name)
+
+    if Regex.match?(~r/^[^@\s]+@[^@\s]+\.[^@\s]+$/, email) do
+      email
+    else
+      raise "Environment variable #{name} must contain a deliverable email address"
     end
   end
 
